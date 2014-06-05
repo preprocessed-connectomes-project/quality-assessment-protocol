@@ -10,8 +10,6 @@ import pandas as pd
 import scipy.ndimage as nd
 import scipy.stats as stats
 
-
-
 def summary_mask(anat_data, mask_data):
     """
     Will calculate the three values (mean, stdev, and size).
@@ -92,6 +90,9 @@ def efc(anat_data):
     # Calculate EFC (add 1e-16 to the image data to keep log happy)
     efc     = (1.0 / efc_max) * np.sum((anat_data / b_max) * np.log((anat_data + 1e-16) / b_max))
     
+    if np.isnan(efc): 
+        print "NaN found for efc"
+    
     return efc
 
 def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
@@ -109,17 +110,17 @@ def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
     background[bg_mask != 1] = 0
     
     # If this is float then downgrade the data to an integer with some checks
-    if background.dtype in [np.float, np.float16, np.float32, np.float64, np.float128]:
-        background2 = background.astype('int')    
+    if np.issubdtype(background.dtype, float):
+        background2 = background.astype('int32')    
         # Ensure downgrading datatype didn't really change the values
-        if np.abs(background2.astype('float') - background).mean() > 0.05:
+        if np.abs(background2.astype('float32') - background).mean() > 0.05:
             print "WARNING: Downgraded float to an int but values are different by more than 0.05"
         background = background2
         del background2
     
     # We only allow integer values for now
-    if background.dtype not in [np.int, np.int16, np.int32, np.int64]:
-        print "QI1 can not be calculated for data that is not integer or floating point"
+    if np.issubdtype(background.dtype, int):
+        print "QI1 can not be calculated for data that is not integer or floating point: %s" % background.dtype
         raise TypeError
     
     # Find the background threshold (the most frequently occurring value excluding 0)
