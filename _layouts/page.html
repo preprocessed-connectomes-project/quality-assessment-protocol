@@ -31,6 +31,8 @@
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
+        <div class="toc"></div>
+        
         {{ content }}
       </section>
     </div>
@@ -46,4 +48,13 @@
     
 
   </body>
+  
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js" ></script>
+  <script src="javascripts/toc.js" ></script>  
+  <script type="text/javascript">
+    $(document).ready(function() {
+        $('.toc').toc();
+    });
+  </script>
+  
 </html>
