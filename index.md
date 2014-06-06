@@ -1,4 +1,7 @@
-# Quality Assessment Protocol
+---
+layout: page
+title: PCP Quality Assurance Protocol
+---
 
 Here we detail running our different QC measures. We assume that the [quality-assessment-protocol repository](https://github.com/preprocessed-connectomes-project/quality-assessment-protocol) is in your python path as `qap`.
 
