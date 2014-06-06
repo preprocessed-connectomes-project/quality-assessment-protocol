@@ -2,8 +2,18 @@
 layout: page
 title: PCP Quality Assurance Protocol
 ---
+  
+  
+Here we detail running our different QC measures. We assume that the [quality-assessment-protocol repository](https://github.com/preprocessed-connectomes-project/quality-assessment-protocol) is in your python path as `qap`. You can download via the links given above or clone the repository as follows:
 
-Here we detail running our different QC measures. We assume that the [quality-assessment-protocol repository](https://github.com/preprocessed-connectomes-project/quality-assessment-protocol) is in your python path as `qap`.
+    git clone https://github.com/preprocessed-connectomes-project/quality-assessment-protocol.git qap
+
+If you then want to add this to your python path from within your python code, you can append it to your path.
+
+    import sys
+    sys.path.append(".")  # assume that qap is in your current directory
+
+In what follows, we guide you through loading some data and then applying various QA metrics. We close with a brief section on how to determine if an image is an outlier.
 
 **Table of Contents**
 
@@ -12,7 +22,8 @@ Here we detail running our different QC measures. We assume that the [quality-as
 * [Spatial QA metrics of functional data](#spatial-functional)
 * [Temporal QA metrics of functional data](#temporal-functional)
 * [How to determine outliers](#determining-outliers)
-* [References](#references)
+
+---
 
 ## Load Data
 
