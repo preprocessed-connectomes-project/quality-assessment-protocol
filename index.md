@@ -5,6 +5,15 @@ title: PCP Quality Assurance Protocol
 
 Here we detail running our different QC measures. We assume that the [quality-assessment-protocol repository](https://github.com/preprocessed-connectomes-project/quality-assessment-protocol) is in your python path as `qap`.
 
+**Table of Contents**
+
+* [How to load your data](#load-data)
+* [Spatial QA metrics of anatomical data](#spatial-anatomical)
+* [Spatial QA metrics of functional data](#spatial-functional)
+* [Temporal QA metrics of functional data](#temporal-functional)
+* [How to determine outliers](#determining-outliers)
+* [References](#references)
+
 ## Load Data
 
 You can use some wrapper functions to load and mask the data. QC measures use five different files as inputs: anatomical data, anatomical head mask, functional time-series data, mean functional data, and functional head mask. Here, we show how to load or calculate each of those files. Ideally, the anatomical and functional data should be as 'raw' as possible. With our CPAC pipeline, we use anatomical data that has only been reoriented and use functional data that has been slice time and motion corrected.
