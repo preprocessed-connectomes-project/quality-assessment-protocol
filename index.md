@@ -87,7 +87,7 @@ We first compute the mean image values within gray matter (mean_gm) and within w
 
 ### EFC
 
-	from qap import etc
+	from qap import efc
 	anat_efc		= efc(anat_data)
 
 ### FBER
