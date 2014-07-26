@@ -13,6 +13,7 @@ from tempfile import mkdtemp
 
 # DVARS
 from dvars import mean_dvars_wrapper
+from utils import remove_oblique_warning
 
 # MeanFD
 ## borrowed from C-PAC
@@ -147,11 +148,13 @@ def outlier_timepoints(func_file, mask_file, out_fraction=True):
     # or -legendre to remove any trend
     cmd     = "3dToutcount %s" % str_opts
     out     = commands.getoutput(cmd)
-    
+    out     = remove_oblique_warning(out)
+
     # Extract time-series in output
     lines   = out.splitlines()
     ## remove general information
     lines   = [ l for l in lines if l[:2] != "++" ]
+    
     ## string => floats
     outliers= [ float(l.strip()) for l in lines ] # note: don't really need strip
     
@@ -164,7 +167,7 @@ def mean_outlier_timepoints(*args, **kwrds):
 
 
 # 3dTqual
-def quality_timepoints(func_file, automask=True):
+def quality_timepoints(func_file, mask=None):
     """
     Calculates a 'quality index' for each timepoint in the 4D functional dataset.
     Low values are good and indicate that the timepoint is not very different from the norm.
@@ -172,8 +175,11 @@ def quality_timepoints(func_file, automask=True):
     import subprocess
     
     opts    = []
-    if automask:
-        opts.append("-automask")
+    if mask:
+        if mask=="auto":
+            opts.append("-automask")
+        else:
+            opts.append("-mask %s"%mask)
     opts.append(func_file)
     str_opts= " ".join(opts)
     
@@ -189,7 +195,7 @@ def quality_timepoints(func_file, automask=True):
     # Extract time-series in output
     lines   = out.splitlines()
     ## remove general information
-    lines   = [ l for l in lines if l[:2] != "++" ]
+    lines   = [ l for l in lines if l[:2] not in "++" ]
     ## string => floats
     outliers= [ float(l.strip()) for l in lines ] # note: don't really need strip
     

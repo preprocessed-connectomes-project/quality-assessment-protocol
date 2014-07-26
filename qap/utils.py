@@ -86,3 +86,11 @@ def gen_file_map(sink_dir, resource_paths=None):
     
     return analysis_map
 
+def remove_oblique_warning(out_str):
+    new_lines = []
+    for i, line in enumerate(out_str.splitlines()):
+        if line.startswith("*+ WARNING:   If you are performing spatial transformations on an oblique dset,"):
+            break
+        new_lines.append(line)
+    new_lines += out_str.splitlines()[i+7:]
+    return "\n".join(new_lines)
