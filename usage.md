@@ -118,7 +118,7 @@ The spatial functional measures will make use of the mean functional image and i
 You should know the phase encoding direction to decide if you want to use `func_ghost_x` (RL/LR) or `func_ghost_y` (AP/PA).
 	
 	from qap import ghost_all
-	func_ghost_x,func_ghost_y = ghost_all(mean_func_data, func_mask_data)
+	func_ghost_x, func_ghost_y, _ = ghost_all(mean_func_data, func_mask_data)
 
 
 ## Temporal Functional
@@ -147,10 +147,10 @@ The `out_fraction` option if `True` will return the mean _fraction_ of time-poin
 
 ### Median Distance Index
 
-The `auto_mask` option if `True` will automatically compute the brain mask from the data otherwise the whole dataset will be used.
+The `mask` allows you to specify a mask file. If set to "auto" mask will be calculated from data. If not set the whole dataset will be used.
 
 	from qap import mean_quality_timepoints
-	func_quality	= mean_quality_timepoints(func_file, automask=True)
+	func_quality	= mean_quality_timepoints(func_file, mask="auto")
 
 ### FD
 
