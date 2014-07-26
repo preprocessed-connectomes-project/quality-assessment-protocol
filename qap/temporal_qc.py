@@ -78,7 +78,7 @@ def summarize_fd(in_file, threshold=0.2):
     ## Number and Percent of frames (time points) where 
     ## movement (FD) exceeded threshold
     num_fd      = (fd>threshold).sum()
-    percent_fd  = (num_fd*100.0)/(len(fd))    
+    percent_fd  = (num_fd*100.0)/len(fd)    
     
     return (mean_fd, num_fd, percent_fd)
 
