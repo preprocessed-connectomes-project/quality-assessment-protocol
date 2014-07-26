@@ -156,7 +156,7 @@ The `mask` allows you to specify a mask file. If set to "auto" mask will be calc
 
 Here we describe computing `mean_fd`, `num_fd`, and `perc_fd`. This requires that you have the input coordinate transforms that is output by AFNI's `3dvolreg` during motion correction. The option `threshold` sets the threshold for determining the number and percent of volumes with FD greater than said threshold.
 
-	from qap import mean_fd_wrapper
+	from qap import summarize_fd
 	mean_fd, num_fd, perc_fd = summarize_fd(motion_matrix_file, threshold=0.2)
 
 
