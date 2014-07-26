@@ -48,11 +48,9 @@ def fd_jenkinson(in_file):
 
     # The default radius (as in FSL) of a sphere represents the brain
     rmax = 50.0
-
-    #rigid body transformation matrix
-    T_rb_prev = np.matrix(np.eye(4))
     
-    FDs = [0]
+    FDs = []
+    T_rb_prev = np.matrix(pm[0].reshape(4,4))
     for i in range(1, pm.shape[0]):
         T_rb = np.matrix(pm[i].reshape(4,4)) # making use of the fact that the order of aff12 matrix is "row-by-row"
         M = np.dot(T_rb, T_rb_prev.I) - np.eye(4)
@@ -78,7 +76,7 @@ def summarize_fd(in_file, threshold=0.2):
     ## Number and Percent of frames (time points) where 
     ## movement (FD) exceeded threshold
     num_fd      = (fd>threshold).sum()
-    percent_fd  = (num_fd*100.0)/len(fd)    
+    percent_fd  = (num_fd*100.0)/(len(fd))    
     
     return (mean_fd, num_fd, percent_fd)
 
