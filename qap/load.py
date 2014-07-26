@@ -56,7 +56,6 @@ def load_mask(mask_file, ref_file=None):
     """
     mask_img    = nib.load(mask_file)
     mask_dat    = mask_img.get_data()
-    ref_img     = nib.load(ref_file)
     
     # Check that the specified mask is binary.
     mask_vals   = np.unique(mask_dat)
@@ -65,6 +64,7 @@ def load_mask(mask_file, ref_file=None):
         raise Exception("")
     
     if ref_file is not None:
+        ref_img     = nib.load(ref_file)
         # Verify that the mask and anatomical images have the same dimensions.
         if ref_img.shape != mask_img.shape:
             raise Exception("Error: Mask and anatomical image are different dimensions")
