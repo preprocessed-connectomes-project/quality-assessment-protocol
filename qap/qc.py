@@ -3,7 +3,8 @@ Serves to wrap together spatial_qc.py and temporal_qc.py with relevant inputs.
 """
 
 from spatial_qc import summary_mask, snr, cnr, fber, efc, artifacts, fwhm, ghost_all
-from temporal_qc import mean_dvars_wrapper, mean_fd_wrapper, mean_outlier_timepoints, mean_quality_timepoints
+from temporal_qc import mean_dvars_wrapper, mean_outlier_timepoints, mean_quality_timepoints, summarize_fd
+from load import load_image, load_mask
 
 
 ###
@@ -94,7 +95,7 @@ def run_qc_temporal(func_path, mask_path,
     
     # Mean FD (Jenkinson)
     if verbose: print "...mean FD"
-    mean_fd     = mean_fd_wrapper(motion_matrix)
+    mean_fd     = summarize_fd(motion_matrix)
     
     # 3dTout
     if verbose: print "...3dTout"

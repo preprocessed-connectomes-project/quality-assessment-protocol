@@ -157,7 +157,7 @@ def quality_timepoints(func_file, mask=None):
     p       = subprocess.Popen(cmd.split(" "), 
                                 stdout=subprocess.PIPE, 
                                 stderr=subprocess.PIPE)
-    out,err = p.communicate()
+    out, _ = p.communicate()
     
     #import code
     #code.interact(local=locals())

@@ -159,12 +159,12 @@ def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
 
         # divide by the standard deviation
         bgNoiseZ    = bgNoise / bgNoise.std()
-        bgChiParams = ss.chi.fit(bgNoiseZ)
+        bgChiParams = stats.chi.fit(bgNoiseZ)
         #print bgChiParams
     
         # now generate values that are consistent with the histogram
         yx          = range(0,H.size)/bgNoise.std()
-        rvs         = ss.chi.pdf(yx,bgChiParams[0],loc=bgChiParams[1],scale=bgChiParams[2])
+        rvs         = stats.chi.pdf(yx,bgChiParams[0],loc=bgChiParams[1],scale=bgChiParams[2])
 
         # now we can calculate the goodness of fit
         gof         = np.average(np.absolute(H[halfMaxRightTail:]-rvs[halfMaxRightTail:]))
@@ -251,8 +251,8 @@ def ghost_mask(epi_data, mask_data, direction, ref_file=None, out_file=None):
     
     # Save mask
     if ref_file is not None and out_file is not None:
-        ref = nib.load(ref_file)
-        out = nib.Nifti1Image(n2_mask_data, ref.get_affine(), ref.get_header()) 
+        ref = nb.load(ref_file)
+        out = nb.Nifti1Image(n2_mask_data, ref.get_affine(), ref.get_header()) 
         out.to_filename(out_file)
     
     return(n2_mask_data)
