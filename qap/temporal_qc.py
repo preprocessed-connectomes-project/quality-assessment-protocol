@@ -173,3 +173,14 @@ def mean_quality_timepoints(*args, **kwrds):
     qualities       = quality_timepoints(*args, **kwrds)
     mean_qualities  = np.mean(qualities)
     return mean_qualities
+
+def median_tsnr(func_data, mask_data):
+    """ Calculates median of temporal Signal to Noise ratio within a mask"""
+    
+    data_std = func_data.std(axis=0)
+    # exclude voxels with no variance
+    std_mask = (data_std !=0)
+    tsnr = func_data.mean(axis=0)[std_mask]/data_std[std_mask]
+    print tsnr.shape
+    
+    return np.median(tsnr)

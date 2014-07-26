@@ -129,6 +129,7 @@ You should know the phase encoding direction to decide if you want to use `func_
 * **Mean Fractional Displacement - Jenkinson [func_mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 50mm radius sphere [^5][^8]. _Uses functional time-series._
 * **Number of volumes with FD greater than 0.2mm [func_num_fd]:** _Uses functional time-series._
 * **Percent of volumes with FD greater than 0.2mm [func_perc_fd]:** _Uses functional time-series._
+* **Median temporal Signal to Noise ratio [tsnr]:** _Uses functional time-series and a mask._
 
 
 ### Standardized DVARS
@@ -158,6 +159,13 @@ Here we describe computing `mean_fd`, `num_fd`, and `perc_fd`. This requires tha
 
 	from qap import summarize_fd
 	mean_fd, num_fd, perc_fd = summarize_fd(motion_matrix_file, threshold=0.2)
+	
+### tSNR
+
+tSNR is a ratio of signal (mean across time) and noise (standard deviation around the mean across time) averaged over all voxels withing the specified mask
+
+    from qap import median_tsnr
+	tsnr = median_tsnr(func_data, func_mask_data)
 
 
 ## Determining Outliers
