@@ -46,8 +46,8 @@ def fd_jenkinson(in_file):
     pm[:,:12]=pm_
     pm[:,12:]=[0.0, 0.0, 0.0, 1.0]
 
-    #The default radius (as in FSL) of a sphere represents the brain
-    rmax = 80.0
+    # The default radius (as in FSL) of a sphere represents the brain
+    rmax = 50.0
 
     #rigid body transformation matrix
     T_rb_prev = np.matrix(np.eye(4))
