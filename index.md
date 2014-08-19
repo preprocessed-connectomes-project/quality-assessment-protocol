@@ -57,12 +57,12 @@ Note that we will be using the above anatomical and functional outputs for our m
 
 We calculate the measures below with the associated variable in square brackets followed by a brief description and possible link to a reference.
 
-* **Contrast to Noise Ratio (CNR) [anat_cnr]:** Calculated as the mean of the gray matter values minus the mean of the white matter values, divided by the standard deviation of the air values [^1].
-* **Entopy Focus Criterion (EFC) [anat_efc]:** 
-* **Foreground to Background Energy Ratio (FBER) [anat_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head.
-* **Smoothness of Voxels (FWHM) [anat_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values [^3].
-* **Artifact Detection (Qi1) [anat_qi1]:** The proportion of voxels with intensity corrupted by artifacts normalized by the number of voxels in the background [^4].
-* **Signal-to-Noise Ratio (SNR) [anat_snr]:** The mean of image values within gray matter divided by the standard deviation of the image values within air (i.e., outside the head) [^1].
+* **Contrast to Noise Ratio (CNR) [anat_cnr]:** Calculated as the mean of the gray matter values minus the mean of the white matter values, divided by the standard deviation of the air values, higher values are better [^1].
+* **Entopy Focus Criterion (EFC) [anat_efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion, lower is better [^2].
+* **Foreground to Background Energy Ratio (FBER) [anat_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head, higher values are better.
+* **Smoothness of Voxels (FWHM) [anat_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels, lower values are better [^3].
+* **Artifact Detection (Qi1) [anat_qi1]:** The proportion of voxels with intensity corrupted by artifacts normalized by the number of voxels in the background, lower values are better [^4].
+* **Signal-to-Noise Ratio (SNR) [anat_snr]:** The mean of image values within gray matter divided by the standard deviation of the image values within air (i.e., outside the head), higher values are better [^1].
 
 ### CNR
 
@@ -131,10 +131,10 @@ We first compute the mean image values within gray matter (mean_gm) and the stan
 
 The spatial functional measures will make use of the mean functional image and include EFC, FBER, and FWHM (code which has been described above) along with GSR (code which has been described below).
 
-* **Entopy Focus Criterion [func_efc]:** Shannon’s entropy is used to summarize the principal directions distribution, higher energy indicating the distribution is more uniform (i.e., less noisy) [^2]. _Uses mean functional._
-* **Foreground to Background Energy Ratio [func_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head. _Uses mean functional._
-* **Smoothness of Voxels [func_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values. _Uses mean functional._
-* **Ghost to Signal Ratio (GSR) [func_gsr]:** A measure of the mean signal in the ‘ghost’ image (signal present outside the brain due to acquisition in the phase encoding direction) relative to mean signal within the brain. _Uses mean functional._
+* **Entopy Focus Criterion [func_efc]:** SUses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion, lower is better [^2]. _Uses mean functional._
+* **Foreground to Background Energy Ratio [func_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head, higher values are better. _Uses mean functional._
+* **Smoothness of Voxels [func_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels, lower values are better. _Uses mean functional._
+* **Ghost to Signal Ratio (GSR) [func_gsr]:** A measure of the mean signal in the ‘ghost’ image (signal present outside the brain due to acquisition in the phase encoding direction) relative to mean signal within the brain, lower values are better. _Uses mean functional._
 
 ### GSR
 
@@ -146,12 +146,12 @@ You should know the phase encoding direction to decide if you want to use `func_
 
 ## Temporal Functional
 
-* **Standardized DVARS [func_dvars]:** The spatial standard deviation of the temporal derivative of the data, normalized by the temporal standard deviation and temporal autocorrelation [^5][^6]. _Uses functional time-series._
-* **Outlier Detection [func_outlier]:** The mean fraction of outliers found in each volume using 3dTout command in AFNI (http://afni.nimh.nih.gov/afni) [^7]. _Uses functional time-series._
-* **Median Distance Index [func_quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s 3dTqual command (http://afni.nimh.nih.gov/afni) [^7]. _Uses functional time-series._
-* **Mean Fractional Displacement - Jenkinson [func_mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere [^8][^10]. _Uses functional time-series._
-* **Number of volumes with FD greater than 0.2mm [func_num_fd]:** _Uses functional time-series._
-* **Percent of volumes with FD greater than 0.2mm [func_perc_fd]:** _Uses functional time-series._
+* **Standardized DVARS [func_dvars]:** The spatial standard deviation of the temporal derivative of the data, normalized by the temporal standard deviation and temporal autocorrelation, lower values are better [^5][^6]. _Uses functional time-series._
+* **Outlier Detection [func_outlier]:** The mean fraction of outliers found in each volume using 3dTout command in AFNI (http://afni.nimh.nih.gov/afni), lower values are better [^7]. _Uses functional time-series._
+* **Median Distance Index [func_quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s 3dTqual command (http://afni.nimh.nih.gov/afni), lower values are better [^7]. _Uses functional time-series._
+* **Mean Fractional Displacement - Jenkinson [func_mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere, lower values are better [^8][^10]. _Uses functional time-series._
+* **Number of volumes with FD greater than 0.2mm [func_num_fd]:** Lower values are better _Uses functional time-series._
+* **Percent of volumes with FD greater than 0.2mm [func_perc_fd]:** Lower values are better _Uses functional time-series._
 
 
 ### Standardized DVARS
@@ -192,7 +192,7 @@ If you run the above procedure on an array of subjects, then you can take 1.5x o
 
 [^1]: Magnotta, V. A., & Friedman, L. (2006). Measurement of signal-to-noise and contrast-to-noise in the fBIRN multicenter imaging study. Journal of Digital Imaging, 19(2), 140-147.
 
-[^2]: Farzinfar, M., Dietrich, C., Smith, R. G., Li, Y., Gupta, A., Liu, Z., & Styner, M. A. (2012, May). Entropy based DTI quality control via regional orientation distribution. In Biomedical Imaging (ISBI), 2012 9th IEEE International Symposium on (pp. 22-25). IEEE.
+[^2]: Atkinson D, Hill DL, Stoyle PN, Summers PE, Keevil SF (1997). Automatic correction of motion artifacts in magnetic resonance images using an entropy focus criterion. IEEE Trans Med Imaging. 16(6):903-10.
 
 [^3]: Friedman, L., Stern, H., Brown, G. G., Mathalon, D. H., Turner, J., Glover, G. H., ... & Potkin, S. G. (2008). Test–retest and between‐site reliability in a multicenter fMRI study. Human brain mapping, 29(8), 958-972.
 
