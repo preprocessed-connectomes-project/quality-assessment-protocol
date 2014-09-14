@@ -9,4 +9,4 @@ To install do the following:
 
 Then ensure to add the `qap` folder to your python path.
 
-Further usage details can be found at http://preprocessed-connectomes-project.github.io/quality-assessment-protocol. If this link currently isn't working so please use the usage.md file within this repo in the interim.
+Further usage details can be found at http://preprocessed-connectomes-project.github.io/quality-assessment-protocol. If this link isn't working then please use the usage.md file within this repo in the interim.
