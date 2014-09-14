@@ -15,8 +15,11 @@ If you then want to add this to your python path from within your python code, y
 
 In what follows, we guide you through loading some data and then applying various QA metrics. We close with a brief section on how to determine if an image is an outlier.
 
+**If are interested in our recent resting-state poster and associated code, please see the [qap_poster github repository](http://github.com/czarrar/qap_poster).**
+
 **Table of Contents**
 
+* [How to use normative metrics (ABIDE and CoRR)](#normative-metrics)
 * [How to load your data](#load-data)
 * [Spatial QA metrics of anatomical data](#spatial-anatomical)
 * [Spatial QA metrics of functional data](#spatial-functional)
@@ -24,6 +27,16 @@ In what follows, we guide you through loading some data and then applying variou
 * [How to determine outliers](#determining-outliers)
 
 ---
+
+## Normative Metrics
+
+We have gathered QA metrics for two multi-site resting-state datasets: ABIDE (1,110+ subject across 20+ sites) and CoRR (1,400+ subjects across 30+ sites). The QA metrics for these datasets have been made publically available. They can be used for a variety of applications, for instance, as a comparison to the QA results from your own data. For each link below, please right click and select save as:
+
+* [ABIDE - Anatomical Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/abide_anat.csv)
+* [ABIDE - Functional Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/abide_func.csv)
+* [CoRR - Anatomical Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/corr_anat.csv)
+* [CoRR - Functional Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/corr_func.csv)
+
 
 ## Load Data
 
