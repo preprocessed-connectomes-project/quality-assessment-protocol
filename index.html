@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset='utf-8' />
+        <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+        <meta name="description" content="Preprocessed Connectomes Project" />
+        <link rel="stylesheet" href="stylesheets/bib-publication-list.css"/>
+        <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+	    <script src="http://code.jquery.com/jquery-latest.min.js" type="text/javascript"></script>
+        <script src="javascripts/menu_script.js"></script>
+        <title>PCP Quality Assessment Protocol</title>
+    </head>
+
+    <body>
+      
+        <div id="container">
+
+        <!-- HEADER -->
+            <header>
+                <!--<a id="forkme_banner" href="https://github.com/ccraddock/abide_preproc">View on GitHub</a>-->
+
+                <h1 id="project_title">PCP Quality Assessment Protocol</h1><br>
+  		        <div id='cssmenu'>
+  		            <ul>
+  		                <li><a href='index.html'>Overview</a></li>
+                        <li class='active'><a href='publications.html'>Publications</a></li>
+                        <li class='active'><a href='https://groups.google.com/d/forum/pcp_forum' target="_blank">Forum</a></li>
+                        <li class='active'><a href='https://preprocessed-connectomes-project.github.io' target="_blank">PCP</a></li>
+  		                <li class='active'><a href='https://github.com/preprocessed-connectomes-project/quality-assessment-protocol' target="_blank">View on Github</a></li>
+
+  		            </ul>
+  		        </div>
+            </header>
+            
+                <div id="main_content_wrap" class="outer">
+                    <section id="main_content" class="inner">
+                        <p>Here we detail running our different QC measures. We assume that the <a href="https://github.com/preprocessed-connectomes-project/quality-assessment-protocol">quality-assessment-protocol repository</a> is in your python path as <code>qap</code>. You can download via the links given above or clone the repository as follows:</p>
+
+<pre><code>git clone https://github.com/preprocessed-connectomes-project/quality-assessment-protocol.git qap
+</code></pre>
+
+<p>If you then want to add this to your python path from within your python code, you can append it to your path.</p>
+
+<pre><code>import sys
+sys.path.append(".")  # assume that qap is in your current directory
+</code></pre>
+
+<p>In what follows, we guide you through loading some data and then applying various QA metrics. We close with a brief section on how to determine if an image is an outlier.</p>
+
+<p><strong>If are interested in our recent resting-state poster and associated code, please see the <a href="http://github.com/czarrar/qap_poster">qap_poster github repository</a>.</strong></p>
+
+<p><strong>Table of Contents</strong></p>
+
+<ul>
+  <li><a href="#normative-metrics">How to use normative metrics (ABIDE and CoRR)</a></li>
+  <li><a href="#load-data">How to load your data</a></li>
+  <li><a href="#spatial-anatomical">Spatial QA metrics of anatomical data</a></li>
+  <li><a href="#spatial-functional">Spatial QA metrics of functional data</a></li>
+  <li><a href="#temporal-functional">Temporal QA metrics of functional data</a></li>
+  <li><a href="#determining-outliers">How to determine outliers</a></li>
+</ul>
+
+<hr />
+
+<h2 id="normative-metrics">Normative Metrics</h2>
+
+<p>We have gathered QA metrics for two multi-site resting-state datasets: ABIDE (1,110+ subject across 20+ sites) and CoRR (1,400+ subjects across 30+ sites). The QA metrics for these datasets have been made publically available. They can be used for a variety of applications, for instance, as a comparison to the QA results from your own data. For each link below, please right click and select save as:</p>
+
+<ul>
+  <li><a href="https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/abide_anat.csv">ABIDE - Anatomical Measures</a></li>
+  <li><a href="https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/abide_func.csv">ABIDE - Functional Measures</a></li>
+  <li><a href="https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/corr_anat.csv">CoRR - Anatomical Measures</a></li>
+  <li><a href="https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/corr_func.csv">CoRR - Functional Measures</a></li>
+</ul>
+
+<h2 id="load-data">Load Data</h2>
+
+<p>You can use some wrapper functions to load and mask the data. QC measures use five different files as inputs: anatomical data, anatomical head mask, functional time-series data, mean functional data, and functional head mask. Here, we show how to load or calculate each of those files. Ideally, the anatomical and functional data should be as ‘raw’ as possible. With our CPAC pipeline, we use anatomical data that has only been reoriented and use functional data that has been slice time and motion corrected.</p>
+
+<pre><code>from qap import load_image, load_mask, load_func
+
+anat_file			= "test_anat.nii.gz"
+anat_mask_file	= "test_anat_mask.nii.gz"
+anat_data			= load_image(anat_file)
+anat_mask			= load_mask(anat_mask_file, anat_file)
+
+func_file			= "test_func.nii.gz"
+func_mask_file	= "test_anat_mask.nii.gz"
+func_data			= load_func(func_file, func_mask_file)
+</code></pre>
+
+<p>The mean functional data can be generated from the functional time-series via the following code, which will generate the mean functional image without any masking (e.g., preserving values outside the head, which are needed for various spatial metrics).</p>
+
+<pre><code>from qap import calc_mean_func, load_mask
+
+func_file 		= "test_func.nii.gz"
+func_mask_file	= "test_anat_mask.nii.gz"
+mean_func 		= calc_mean_func(func_file)
+func_mask			= load_mask(func_mask_file)
+</code></pre>
+
+<p>Note that we will be using the above anatomical and functional outputs for our metrics described below.</p>
+
+<h2 id="spatial-anatomical">Spatial Anatomical</h2>
+
+<p>We calculate the measures below with the associated variable in square brackets followed by a brief description and possible link to a reference.</p>
+
+<ul>
+  <li><strong>Contrast to Noise Ratio (CNR) [anat_cnr]:</strong> Calculated as the mean of the gray matter values minus the mean of the white matter values, divided by the standard deviation of the air values, higher values are better <sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup>.</li>
+  <li><strong>Entopy Focus Criterion (EFC) [anat_efc]:</strong> Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion, lower is better <sup id="fnref:2"><a href="#fn:2" class="footnote">2</a></sup>.</li>
+  <li><strong>Foreground to Background Energy Ratio (FBER) [anat_fber]:</strong> Mean energy of image values (i.e., mean of squares) within the head relative to outside the head, higher values are better.</li>
+  <li><strong>Smoothness of Voxels (FWHM) [anat_fwhm]:</strong> The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels, lower values are better <sup id="fnref:3"><a href="#fn:3" class="footnote">3</a></sup>.</li>
+  <li><strong>Artifact Detection (Qi1) [anat_qi1]:</strong> The proportion of voxels with intensity corrupted by artifacts normalized by the number of voxels in the background, lower values are better <sup id="fnref:4"><a href="#fn:4" class="footnote">4</a></sup>.</li>
+  <li><strong>Signal-to-Noise Ratio (SNR) [anat_snr]:</strong> The mean of image values within gray matter divided by the standard deviation of the image values within air (i.e., outside the head), higher values are better <sup id="fnref:1:1"><a href="#fn:1" class="footnote">1</a></sup>.</li>
+</ul>
+
+<h3 id="cnr">CNR</h3>
+
+<p>We first compute the mean image values within gray matter (mean_gm) and within white-matter (mean_wm), and we will divide the difference of those values by standard deviation within the air (std_bg). Note that the air is considered anything outside the head mask.</p>
+
+<pre><code>from qap import load_mask, summary_mask, cnr
+
+# Load the different masks
+fg_mask_data = anat_mask_data
+bg_mask_data = 1 - fg_mask_data
+gm_mask_data = load_mask(gm_mask_file, anat_mask_file)
+wm_mask_data = load_mask(wm_mask_file, anat_mask_file)
+
+# Calculate mean grey-matter, mean white-matter 
+# and standard deviation air
+mean_gm,_,_	= summary_mask(anat_data, gm_mask_data)
+mean_wm,_,_	= summary_mask(anat_data, wm_mask_data)
+_,std_bg,_	= summary_mask(anat_data, bg_mask_data)
+
+# SNR
+anat_cnr 		= cnr(mean_gm, mean_wm, std_bg)
+</code></pre>
+
+<h3 id="efc">EFC</h3>
+
+<pre><code>from qap import efc
+anat_efc		= efc(anat_data)
+</code></pre>
+
+<h3 id="fber">FBER</h3>
+
+<pre><code>from qap import fber
+anat_fber 	= fber(anat_data, anat_mask_data):
+</code></pre>
+
+<h3 id="fwhm">FWHM</h3>
+
+<p>While the other spatial metrics exclusively use python code, the smoothness measures makes use of AFNI’s command-line tool <code>3dFWHMx</code>. The option <code>out_vox</code> to the function <code>fwhm</code> indicates if the fwhm output is given in mm (<code>out_vox=False</code>) or in number of voxels (<code>out_vox=True</code>).</p>
+
+<pre><code>from qap import fwhm
+anat_fwhm 	= fwhm(anat_file, anat_mask_file, out_vox=False)
+</code></pre>
+
+<h3 id="qi1">Qi1</h3>
+
+<pre><code>from qap import artifacts
+anat_qi1		= artifacts(anat_data, anat_mask_data, calculate_qi2=False)
+</code></pre>
+
+<h3 id="snr">SNR</h3>
+
+<p>We first compute the mean image values within gray matter (mean_gm) and the standard deviation within the air (std_bg). Note that the air is considered anything outside the head mask.</p>
+
+<pre><code>from qap import load_mask, summary_mask, snr
+
+# Load the different masks
+fg_mask_data = anat_mask_data
+bg_mask_data = 1 - fg_mask_data
+gm_mask_data = load_mask(gm_mask_file, anat_mask_file)
+
+# Calculate mean grey-matter and standard deviation air
+mean_gm,_,_	= summary_mask(anat_data, gm_mask_data)
+_,std_bg,_	= summary_mask(anat_data, bg_mask_data)
+
+# SNR
+anat_snr 		= snr(mean_gm, std_bg)
+</code></pre>
+
+<h2 id="spatial-functional">Spatial Functional</h2>
+
+<p>The spatial functional measures will make use of the mean functional image and include EFC, FBER, and FWHM (code which has been described above) along with GSR (code which has been described below).</p>
+
+<ul>
+  <li><strong>Entopy Focus Criterion [func_efc]:</strong> SUses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion, lower is better <sup id="fnref:2:1"><a href="#fn:2" class="footnote">2</a></sup>. <em>Uses mean functional.</em></li>
+  <li><strong>Foreground to Background Energy Ratio [func_fber]:</strong> Mean energy of image values (i.e., mean of squares) within the head relative to outside the head, higher values are better. <em>Uses mean functional.</em></li>
+  <li><strong>Smoothness of Voxels [func_fwhm]:</strong> The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels, lower values are better. <em>Uses mean functional.</em></li>
+  <li><strong>Ghost to Signal Ratio (GSR) [func_gsr]:</strong> A measure of the mean signal in the ‘ghost’ image (signal present outside the brain due to acquisition in the phase encoding direction) relative to mean signal within the brain, lower values are better. <em>Uses mean functional.</em></li>
+</ul>
+
+<h3 id="gsr">GSR</h3>
+
+<p>You should know the phase encoding direction to decide if you want to use <code>func_ghost_x</code> (RL/LR) or <code>func_ghost_y</code> (AP/PA).</p>
+
+<pre><code>from qap import ghost_all
+func_ghost_x,func_ghost_y = ghost_all(mean_func_data, func_mask_data)
+</code></pre>
+
+<h2 id="temporal-functional">Temporal Functional</h2>
+
+<ul>
+  <li><strong>Standardized DVARS [func_dvars]:</strong> The spatial standard deviation of the temporal derivative of the data, normalized by the temporal standard deviation and temporal autocorrelation, lower values are better <sup id="fnref:5"><a href="#fn:5" class="footnote">5</a></sup><sup id="fnref:6"><a href="#fn:6" class="footnote">6</a></sup>. <em>Uses functional time-series.</em></li>
+  <li><strong>Outlier Detection [func_outlier]:</strong> The mean fraction of outliers found in each volume using 3dTout command in AFNI (http://afni.nimh.nih.gov/afni), lower values are better <sup id="fnref:7"><a href="#fn:7" class="footnote">7</a></sup>. <em>Uses functional time-series.</em></li>
+  <li><strong>Median Distance Index [func_quality]:</strong> The mean distance (1 – spearman’s rho) between each time-point’s volume and the median volume using AFNI’s 3dTqual command (http://afni.nimh.nih.gov/afni), lower values are better <sup id="fnref:7:1"><a href="#fn:7" class="footnote">7</a></sup>. <em>Uses functional time-series.</em></li>
+  <li><strong>Mean Fractional Displacement - Jenkinson [func_mean_fd]:</strong> A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere, lower values are better <sup id="fnref:8"><a href="#fn:8" class="footnote">8</a></sup><sup id="fnref:10"><a href="#fn:10" class="footnote">9</a></sup>. <em>Uses functional time-series.</em></li>
+  <li><strong>Number of volumes with FD greater than 0.2mm [func_num_fd]:</strong> Lower values are better <em>Uses functional time-series.</em></li>
+  <li><strong>Percent of volumes with FD greater than 0.2mm [func_perc_fd]:</strong> Lower values are better <em>Uses functional time-series.</em></li>
+</ul>
+
+<h3 id="standardized-dvars">Standardized DVARS</h3>
+
+<p>The <code>output_all</code> option if <code>True</code> will spit out a three column matrix with standardized DVARS, regular DVARS, and a voxelwise standardization of DVARS.</p>
+
+<pre><code>from qap import calc_dvars
+func_dvars	= calc_dvars(func_data, output_all=False)
+</code></pre>
+
+<h3 id="outlier-detection">Outlier Detection</h3>
+
+<p>The <code>out_fraction</code> option if <code>True</code> will return the mean <em>fraction</em> of time-points per voxel that are outliers, whereas <code>False</code> will return the mean <em>number</em> of time-points per voxel that are outliers.</p>
+
+<pre><code>from qap import mean_outlier_timepoints
+func_outlier	= mean_outlier_timepoints(func_file, func_mask_file, out_fraction=True)
+</code></pre>
+
+<h3 id="median-distance-index">Median Distance Index</h3>
+
+<p>The <code>auto_mask</code> option if <code>True</code> will automatically compute the brain mask from the data otherwise the whole dataset will be used.</p>
+
+<pre><code>from qap import mean_quality_timepoints
+func_quality	= mean_quality_timepoints(func_file, automask=True)
+</code></pre>
+
+<h3 id="fd">FD</h3>
+
+<p>Here we describe computing <code>mean_fd</code>, <code>num_fd</code>, and <code>perc_fd</code>. This requires that you have the input coordinate transforms that is output by AFNI’s <code>3dvolreg</code> during motion correction. The option <code>threshold</code> sets the threshold for determining the number and percent of volumes with FD greater than said threshold.</p>
+
+<pre><code>from qap import mean_fd_wrapper
+mean_fd, num_fd, perc_fd = summarize_fd(motion_matrix_file, threshold=0.2)
+</code></pre>
+
+<h2 id="determining-outliers">Determining Outliers</h2>
+
+<p>If you run the above procedure on an array of subjects, then you can take 1.5x or 3x the inter-quartile range to determine subjects that are outliers.</p>
+
+<h2 id="references">References</h2>
+
+<div class="footnotes">
+  <ol>
+    <li id="fn:1">
+      <p>Magnotta, V. A., &amp; Friedman, L. (2006). Measurement of signal-to-noise and contrast-to-noise in the fBIRN multicenter imaging study. Journal of Digital Imaging, 19(2), 140-147. <a href="#fnref:1" class="reversefootnote">&#8617;</a> <a href="#fnref:1:1" class="reversefootnote">&#8617;<sup>2</sup></a></p>
+    </li>
+    <li id="fn:2">
+      <p>Atkinson D, Hill DL, Stoyle PN, Summers PE, Keevil SF (1997). Automatic correction of motion artifacts in magnetic resonance images using an entropy focus criterion. IEEE Trans Med Imaging. 16(6):903-10. <a href="#fnref:2" class="reversefootnote">&#8617;</a> <a href="#fnref:2:1" class="reversefootnote">&#8617;<sup>2</sup></a></p>
+    </li>
+    <li id="fn:3">
+      <p>Friedman, L., Stern, H., Brown, G. G., Mathalon, D. H., Turner, J., Glover, G. H., … &amp; Potkin, S. G. (2008). Test–retest and between‐site reliability in a multicenter fMRI study. Human brain mapping, 29(8), 958-972. <a href="#fnref:3" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:4">
+      <p>Mortamet, B., Bernstein, M. A., Jack, C. R., Gunter, J. L., Ward, C., Britson, P. J., … &amp; Krueger, G. (2009). Automatic quality assessment in structural brain magnetic resonance imaging. Magnetic Resonance in Medicine, 62(2), 365-372. <a href="#fnref:4" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:5">
+      <p>Power, J. D., Barnes, K. A., Snyder, A. Z., Schlaggar, B. L. &amp; Petersen, S. E. (2012) Spurious but systematic correlations in functional connectivity MRI networks arise from subject motion. Neuroimage 59, 2142-2154. <a href="#fnref:5" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:6">
+      <p>Nichols, T. (2012, Oct 28). Standardizing DVARS. Retrieved from http://blogs.warwick.ac.uk/nichols/entry/standardizing_dvars. <a href="#fnref:6" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:7">
+      <p>Cox, R.W. (1996) AFNI: Software for analysis and visualization of functional magnetic resonance neuroimages. Computers and Biomedical Research, 29:162-173. <a href="#fnref:7" class="reversefootnote">&#8617;</a> <a href="#fnref:7:1" class="reversefootnote">&#8617;<sup>2</sup></a></p>
+    </li>
+    <li id="fn:8">
+      <p>Jenkinson, M., Bannister, P., Brady, M., &amp; Smith, S. (2002). Improved optimization for the robust and accurate linear registration and motion correction of brain images. Neuroimage, 17(2), 825-841. <a href="#fnref:8" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:10">
+      <p>Yan CG, Cheung B, Kelly C, Colcombe S, Craddock RC, Di Martino A, Li Q, Zuo XN, Castellanos FX, Milham MP (2013). A comprehensive assessment of regional variation in the impact of head micromovements on functional connectomics. Neuroimage. 76:183-201. <a href="#fnref:10" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+                    </section>
+                </div>
+                    
+            <!-- FOOTER  -->
+            <footer class="inner">
+                <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+            </footer>
+    
+        </div>  
+    </body>
+</html>
