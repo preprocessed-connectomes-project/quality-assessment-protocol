@@ -47,7 +47,7 @@ def fd_jenkinson(in_file):
     pm[:,12:]=[0.0, 0.0, 0.0, 1.0]
 
     # The default radius (as in FSL) of a sphere represents the brain
-    rmax = 50.0
+    rmax = 80.0
     
     FDs = []
     T_rb_prev = np.matrix(pm[0].reshape(4,4))
