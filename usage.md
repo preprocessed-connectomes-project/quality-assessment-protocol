@@ -118,7 +118,7 @@ The spatial functional measures will make use of the mean functional image and i
 You should know the phase encoding direction to decide if you want to use `func_ghost_x` (RL/LR) or `func_ghost_y` (AP/PA).
 	
 	from qap import ghost_all
-	func_ghost_x,func_ghost_y = ghost_all(mean_func_data, func_mask_data)
+	func_ghost_x, func_ghost_y, _ = ghost_all(mean_func_data, func_mask_data)
 
 
 ## Temporal Functional
@@ -129,6 +129,7 @@ You should know the phase encoding direction to decide if you want to use `func_
 * **Mean Fractional Displacement - Jenkinson [func_mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 50mm radius sphere [^5][^8]. _Uses functional time-series._
 * **Number of volumes with FD greater than 0.2mm [func_num_fd]:** _Uses functional time-series._
 * **Percent of volumes with FD greater than 0.2mm [func_perc_fd]:** _Uses functional time-series._
+* **Median temporal Signal to Noise ratio [tsnr]:** _Uses functional time-series and a mask._
 
 
 ### Standardized DVARS
@@ -147,17 +148,24 @@ The `out_fraction` option if `True` will return the mean _fraction_ of time-poin
 
 ### Median Distance Index
 
-The `auto_mask` option if `True` will automatically compute the brain mask from the data otherwise the whole dataset will be used.
+The `mask` allows you to specify a mask file. If set to "auto" mask will be calculated from data. If not set the whole dataset will be used.
 
 	from qap import mean_quality_timepoints
-	func_quality	= mean_quality_timepoints(func_file, automask=True)
+	func_quality	= mean_quality_timepoints(func_file, mask="auto")
 
 ### FD
 
 Here we describe computing `mean_fd`, `num_fd`, and `perc_fd`. This requires that you have the input coordinate transforms that is output by AFNI's `3dvolreg` during motion correction. The option `threshold` sets the threshold for determining the number and percent of volumes with FD greater than said threshold.
 
-	from qap import mean_fd_wrapper
+	from qap import summarize_fd
 	mean_fd, num_fd, perc_fd = summarize_fd(motion_matrix_file, threshold=0.2)
+	
+### tSNR
+
+tSNR is a ratio of signal (mean across time) and noise (standard deviation around the mean across time) averaged over all voxels withing the specified mask
+
+    from qap import median_tsnr
+	tsnr = median_tsnr(func_data, func_mask_data)
 
 
 ## Determining Outliers
