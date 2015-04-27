@@ -2,6 +2,25 @@ import nibabel as nib
 import numpy as np
 from scipy import stats
 
+
+def remove_zero_variance_voxels(func_timeseries, mask):
+
+    for i in range(0, len(func_timeseries)):
+
+        for j in range(0, len(func_timeseries[0])):
+
+            for k in range(0, len(func_timeseries[0][0])):
+
+                var = func_timeseries[i][j][k].var()
+
+                if int(var) == 0:
+
+                    mask[i][j][k] = mask[i][j][k] * 0
+
+    return mask
+
+
+
 def load(func_file, mask_file, check4d=True):
     func_img    = nib.load(func_file)
     mask_img    = nib.load(mask_file)
@@ -10,12 +29,14 @@ def load(func_file, mask_file, check4d=True):
     func        = func_img.get_data().astype(np.float)
     if check4d and len(func.shape) != 4:
         raise Exception("Input functional %s should be 4-dimensional" % func_file)
-    func        = func[mask.nonzero()].T # will have ntpts x nvoxs
-    
-    #import code
-    #code.interact(local=locals())
+
+    mask_var_filtered = remove_zero_variance_voxels(func, mask)
+
+    func        = func[mask_var_filtered.nonzero()].T # will have ntpts x nvoxs
     
     return(func)
+
+
 
 def robust_stdev(func, interp="fraction"):
     """
