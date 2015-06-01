@@ -130,8 +130,7 @@ def slice_head_mask(infile, transform, standard):
 
     try:
 
-        c3d_cmd = "/tdata/qap_project/c3d_20150427/bin/c3d_affine_tool " \
-                  "-itk %s -ref %s -src %s -ras2fsl -o " \
+        c3d_cmd = "c3d_affine_tool -itk %s -ref %s -src %s -ras2fsl -o " \
                   "qc_fsl_affine_xfm.mat" % (transform, standard, infile)
 
         #print "\nExecuting:\n%s\n" % c3d_cmd

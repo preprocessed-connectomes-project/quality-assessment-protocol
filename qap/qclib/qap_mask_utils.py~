@@ -177,13 +177,13 @@ def slice_head_mask(infile, transform, standard):
     # get the converted coordinates into a list format, and also check to make
     # sure they are not "out of bounds"
     new_coords = []
-    print "coords: ", coords
+
     for coord in coords:
 
         co_nums = coord.split(" ")
 
         co_nums_newlist = []
-        print "co nums: ", co_nums
+
         for num in co_nums:
 
             if num != "":
