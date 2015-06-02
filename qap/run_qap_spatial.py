@@ -190,6 +190,7 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
     run_name = pipeline_config_yaml.split("/")[-1].split(".")[0]
         
     if not cloudify:
+
         procss = [Process(target=build_spatial_qap_workflow, \
                      args=(subject_list[sub], config, sub, run_name)) \
                      for sub in subject_list.keys()]
@@ -266,9 +267,14 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
                     time.sleep(2)
         
         pid.close()
+
+
     else:
+
+        # run on cloud
         sub = subject_list.keys()[0]
         build_spatial_qap_workflow(subject_list[sub], config, sub, run_name)
+
 
 
 # Main routine
@@ -278,30 +284,78 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-    # Subject index
-    parser.add_argument('subj_idx', type=int, help='Subject index to run')
+    group = parser.add_argument_group("Regular Use Inputs (non-cloud runs)")
 
-    #parser.add_argument("sublist", type=str, \
-    #                        help="filepath to subject list YAML")
+    cloudgroup = parser.add_argument_group("AWS Cloud Inputs (only required "\
+                                           "for AWS Cloud runs)")
 
-    parser.add_argument("config", type=str, \
+    req = parser.add_argument_group("Required Inputs")
+
+
+    cloudgroup.add_argument('--subj_idx', type=int, \
+                                help='Subject index to run')
+
+    cloudgroup.add_argument('--creds_path', type=str, \
+                                help='Path to AWS creds')
+
+
+    # Subject list (YAML file)
+    group.add_argument("--sublist", type=str, \
+                            help="filepath to subject list YAML")
+
+    req.add_argument("config", type=str, \
                             help="filepath to pipeline configuration YAML")
-    parser.add_argument('creds_path', type=str, help='Path to AWS creds')
+
 
     args = parser.parse_args()
 
-    # ---- Cloud-ify! ----
-    # Import packages
-    from qclib.cloud_utils import dl_subj_from_s3, upl_qap_output
 
-    # Download and build subject dictionary from S3
-    sub_dict = dl_subj_from_s3(args.subj_idx, 'anat', args.creds_path)
+    # checks
+    if args.subj_idx and not args.creds_path and not args.sublist:
+        print "\n[!] You provided --subj_idx, but not --creds_path. When " \
+              "executing cloud-based runs, please provide both inputs.\n"
 
-    # Run it
-    run(sub_dict, args.config, cloudify=True)
+    elif args.creds_path and not args.subj_idx and not args.sublist:
+        print "\n[!] You provided --creds_path, but not --subj_idx. When " \
+              "executing cloud-based runs, please provide both inputs.\n"
 
-    # Upload results
-    upl_qap_output(args.config)
+    elif not args.sublist and not args.subj_idx and not args.creds_path:
+        print "\n[!] Either --sublist is required for regular runs, or both "\
+              "--subj_idx and --creds_path for cloud-based runs.\n"
+
+    elif args.sublist and args.subj_idx and args.creds_path:
+        print "\n[!] Either --sublist is required for regular runs, or both "\
+              "--subj_idx and --creds_path for cloud-based runs, but not " \
+              "all three. (I'm not sure which you are trying to do!)\n"
+
+    elif args.sublist and (args.subj_idx or args.creds_path):
+        print "\n[!] Either --sublist is required for regular runs, or both "\
+              "--subj_idx and --creds_path for cloud-based runs. (I'm not " \
+              "sure which you are trying to do!)\n"
+
+    else:
+
+        if args.subj_idx and args.creds_path:
+
+            # ---- Cloud-ify! ----
+            # Import packages
+            from qclib.cloud_utils import dl_subj_from_s3, upl_qap_output
+
+            # Download and build subject dictionary from S3
+            sub_dict = dl_subj_from_s3(args.subj_idx, 'anat', args.creds_path)
+
+            # Run it
+            run(sub_dict, args.config, cloudify=True)
+
+            # Upload results
+            upl_qap_output(args.config)
+
+
+        elif args.sublist:
+
+            # Run it
+            run(args.sublist, args.config, cloudify=False)
+
 
 
 # Make executable

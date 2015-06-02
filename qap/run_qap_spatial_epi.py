@@ -148,15 +148,16 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_id, \
 
 
 
-def run(sublist_yaml, pipeline_config_yaml, scan_id):
+def run(subject_list, pipeline_config_yaml, scan_id, cloudify=False):
 
     import os
     import yaml
     from multiprocessing import Process
     
     
-    with open(sublist_yaml,"r") as f:
-        subject_list = yaml.load(f)
+    if not cloudify:
+        with open(subject_list, "r") as f:
+            subject_list = yaml.load(f)
         
     with open(pipeline_config_yaml,"r") as f:
         config = yaml.load(f)
@@ -187,84 +188,93 @@ def run(sublist_yaml, pipeline_config_yaml, scan_id):
     
     # get the pipeline config file name, use it as the run name
     run_name = pipeline_config_yaml.split("/")[-1].split(".")[0]
-        
-        
-    procss = [Process(target=build_spatial_epi_qap_workflow, \
-                 args=(subject_list[sub], config, sub, run_name, scan_id)) \
-                 for sub in subject_list.keys()]
-                          
-                          
-    pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
-    
-    # Init job queue
-    job_queue = []
 
-    # If we're allocating more processes than are subjects, run them all
-    if len(subject_list) <= config["num_subjects_at_once"]:
+    if not cloudify:
+        
+        procss = [Process(target=build_spatial_epi_qap_workflow, \
+                     args=(subject_list[sub], config, sub, run_name, \
+                     scan_id)) for sub in subject_list.keys()]
+                          
+                          
+        pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
     
-        """
-        Stream all the subjects as sublist is
-        less than or equal to the number of 
-        subjects that need to run
-        """
+        # Init job queue
+        job_queue = []
+
+        # If we're allocating more processes than are subjects, run them all
+        if len(subject_list) <= config["num_subjects_at_once"]:
     
-        for p in procss:
-            p.start()
-            print >>pid,p.pid
+            """
+            Stream all the subjects as sublist is
+            less than or equal to the number of 
+            subjects that need to run
+            """
     
-    # Otherwise manage resources to run processes incrementally
-    else:
+            for p in procss:
+                p.start()
+                print >>pid,p.pid
     
-        """
-        Stream the subject workflows for preprocessing.
-        At Any time in the pipeline c.numSubjectsAtOnce
-        will run, unless the number remaining is less than
-        the value of the parameter stated above
-        """
+        # Otherwise manage resources to run processes incrementally
+        else:
     
-        idx = 0
+            """
+            Stream the subject workflows for preprocessing.
+            At Any time in the pipeline c.numSubjectsAtOnce
+            will run, unless the number remaining is less than
+            the value of the parameter stated above
+            """
     
-        while(idx < len(subject_list)):
+            idx = 0
     
-            # If the job queue is empty and we haven't started indexing
-            if len(job_queue) == 0 and idx == 0:
+            while(idx < len(subject_list)):
     
-                # Init subject process index
-                idc = idx
+                # If the job queue is empty and we haven't started indexing
+                if len(job_queue) == 0 and idx == 0:
     
-                # Launch processes (one for each subject)
-                for p in procss[idc: idc + config["num_subjects_at_once"]]:
+                    # Init subject process index
+                    idc = idx
     
-                    p.start()
-                    print >>pid,p.pid
-                    job_queue.append(p)
-                    idx += 1
+                    # Launch processes (one for each subject)
+                    for p in procss[idc: idc+config["num_subjects_at_once"]]:
     
-            # Otherwise, jobs are running - check them
-            else:
-    
-                # Check every job in the queue's status
-                for job in job_queue:
-    
-                    # If the job is not alive
-                    if not job.is_alive():
-    
-                        # Find job and delete it from queue
-                        print 'found dead job ', job
-                        loc = job_queue.index(job)
-                        del job_queue[loc]
-    
-                        # ...and start the next available process (subject)
-                        procss[idx].start()
-    
-                        # Append this to job queue and increment index
-                        job_queue.append(procss[idx])
+                        p.start()
+                        print >>pid,p.pid
+                        job_queue.append(p)
                         idx += 1
-
-                # Add sleep so while loop isn't consuming 100% of CPU
-                time.sleep(2)
     
-    pid.close()
+                # Otherwise, jobs are running - check them
+                else:
+    
+                    # Check every job in the queue's status
+                    for job in job_queue:
+    
+                        # If the job is not alive
+                        if not job.is_alive():
+    
+                            # Find job and delete it from queue
+                            print 'found dead job ', job
+                            loc = job_queue.index(job)
+                            del job_queue[loc]
+    
+                            # ..and start the next available process (subject)
+                            procss[idx].start()
+    
+                            # Append this to job queue and increment index
+                            job_queue.append(procss[idx])
+                            idx += 1
+
+                    # Add sleep so while loop isn't consuming 100% of CPU
+                    time.sleep(2)
+    
+        pid.close()
+
+
+    else:
+
+        # run on cloud
+        sub = subject_list.keys()[0]
+        build_spatial_epi_qap_workflow(subject_list[sub], config, sub, \
+                                       run_name, scan_id)
 
 
 
@@ -274,20 +284,81 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("sublist", type=str, \
+    group = parser.add_argument_group("Regular Use Inputs (non-cloud runs)")
+
+    cloudgroup = parser.add_argument_group("AWS Cloud Inputs (only required "\
+                                           "for AWS Cloud runs)")
+
+    req = parser.add_argument_group("Required Inputs")
+
+
+    cloudgroup.add_argument('--subj_idx', type=int, \
+                                help='Subject index to run')
+
+    cloudgroup.add_argument('--creds_path', type=str, \
+                                help='Path to AWS creds')
+
+
+    # Subject list (YAML file)
+    group.add_argument("--sublist", type=str, \
                             help="filepath to subject list YAML")
 
-    parser.add_argument("config", type=str, \
+    req.add_argument("config", type=str, \
                             help="filepath to pipeline configuration YAML")
 
-    parser.add_argument("scan_name", type=str, \
+    req.add_argument("scan_name", type=str, \
                             help="name of the scan to run for the QAP " \
                                  "measures")
 
+
     args = parser.parse_args()
 
-    # run it!
-    run(args.sublist, args.config, args.scan_name)
+
+    # checks
+    if args.subj_idx and not args.creds_path and not args.sublist:
+        print "\n[!] You provided --subj_idx, but not --creds_path. When " \
+              "executing cloud-based runs, please provide both inputs.\n"
+
+    elif args.creds_path and not args.subj_idx and not args.sublist:
+        print "\n[!] You provided --creds_path, but not --subj_idx. When " \
+              "executing cloud-based runs, please provide both inputs.\n"
+
+    elif not args.sublist and not args.subj_idx and not args.creds_path:
+        print "\n[!] Either --sublist is required for regular runs, or both "\
+              "--subj_idx and --creds_path for cloud-based runs.\n"
+
+    elif args.sublist and args.subj_idx and args.creds_path:
+        print "\n[!] Either --sublist is required for regular runs, or both "\
+              "--subj_idx and --creds_path for cloud-based runs, but not " \
+              "all three. (I'm not sure which you are trying to do!)\n"
+
+    elif args.sublist and (args.subj_idx or args.creds_path):
+        print "\n[!] Either --sublist is required for regular runs, or both "\
+              "--subj_idx and --creds_path for cloud-based runs. (I'm not " \
+              "sure which you are trying to do!)\n"
+
+    else:
+
+        if args.subj_idx and args.creds_path:
+
+            # ---- Cloud-ify! ----
+            # Import packages
+            from qclib.cloud_utils import dl_subj_from_s3, upl_qap_output
+
+            # Download and build subject dictionary from S3
+            sub_dict = dl_subj_from_s3(args.subj_idx, 'anat', args.creds_path)
+
+            # Run it
+            run(sub_dict, args.config, args.scan_name, cloudify=True)
+
+            # Upload results
+            upl_qap_output(args.config)
+
+
+        elif args.sublist:
+
+            # Run it
+            run(args.sublist, args.config, args.scan_name, cloudify=False)
 
 
 
