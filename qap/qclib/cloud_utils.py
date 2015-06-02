@@ -12,8 +12,6 @@ def dl_subj_from_s3(subj_idx, img_type, creds_path):
 
     # Import packages
     from CPAC.AWS import fetch_creds, aws_utils
-    import os
-    import yaml
 
     # Init variables
     bucket_prefix = 'data/Projects/ABIDE_Initiative/RawData'
