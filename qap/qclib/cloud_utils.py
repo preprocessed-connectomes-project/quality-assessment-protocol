@@ -71,17 +71,20 @@ def dl_subj_from_s3(subj_idx, img_type, creds_path):
     return sub_dict
 
 
-def upl_qap_output(cfg_file):
+def upl_qap_output(cfg_file, creds_path):
     '''
     '''
 
     # Import packages
-    from CPAC.AWS import aws_utils
+    from CPAC.AWS import aws_utils, fetch_creds
     import os
     import yaml
 
+    # Init variables
+    bucket = fetch_creds.return_bucket('fcp-indi', creds_path)
+
     # Load config file
-    cfg_dict = yaml.load(open(args.config, 'r'))
+    cfg_dict = yaml.load(open(cfg_file, 'r'))
     output_dir = cfg_dict['output_directory']
 
     # And upload data
