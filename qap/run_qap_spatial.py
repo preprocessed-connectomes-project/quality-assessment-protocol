@@ -301,7 +301,7 @@ def main():
     run(sub_dict, args.config, cloudify=True)
 
     # Upload results
-    upl_qap_output(args.config)
+    upl_qap_output(args.config, args.creds_path)
 
 
 # Make executable
