@@ -127,21 +127,10 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
 
         workflow.connect(func_drop_trs, 'out_file',
                         func_slice_timing_correction,'in_file')
-
-        workflow.connect(scan_params, 'tr',
-                        func_slice_timing_correction, 'tr')
-
-        workflow.connect(scan_params, 'acquisition',
-                        func_slice_timing_correction, 'tpattern')
-
-        workflow.connect(scan_params, 'ref_slice',
-                        func_slice_timing_correction, 'tslice')
-        
+       
         workflow.connect(func_slice_timing_correction, 'out_file',
                         func_deoblique, 'in_file')
         
-        #workflow.connect(func_slice_timing_correction, 'out_file',
-        #                outputNode, 'slice_time_corrected')
 
     else:
 
