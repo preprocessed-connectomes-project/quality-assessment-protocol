@@ -149,15 +149,15 @@ def build_spatial_qap_workflow(resource_pool, config, subject_id, run_name):
 
 
 
-def run(sublist_yaml, pipeline_config_yaml):
+def run(subject_list, pipeline_config_yaml, cloudify=False):
 
     import os
     import yaml
     from multiprocessing import Process
     
-    
-    with open(sublist_yaml,"r") as f:
-        subject_list = yaml.load(f)
+    if not cloudify:
+        with open(subject_list, "r") as f:
+            subject_list = yaml.load(f)
         
     with open(pipeline_config_yaml,"r") as f:
         config = yaml.load(f)
@@ -189,105 +189,122 @@ def run(sublist_yaml, pipeline_config_yaml):
     # get the pipeline config file name, use it as the run name
     run_name = pipeline_config_yaml.split("/")[-1].split(".")[0]
         
+    if not cloudify:
+        procss = [Process(target=build_spatial_qap_workflow, \
+                     args=(subject_list[sub], config, sub, run_name)) \
+                     for sub in subject_list.keys()]
+                              
+                              
+        pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
         
-    procss = [Process(target=build_spatial_qap_workflow, \
-                 args=(subject_list[sub], config, sub, run_name)) \
-                 for sub in subject_list.keys()]
-                          
-                          
-    pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
+        # Init job queue
+        job_queue = []
     
-    # Init job queue
-    job_queue = []
-
-    # If we're allocating more processes than are subjects, run them all
-    if len(subject_list) <= config["num_subjects_at_once"]:
-    
-        """
-        Stream all the subjects as sublist is
-        less than or equal to the number of 
-        subjects that need to run
-        """
-    
-        for p in procss:
-            p.start()
-            print >>pid,p.pid
-    
-    # Otherwise manage resources to run processes incrementally
-    else:
-    
-        """
-        Stream the subject workflows for preprocessing.
-        At Any time in the pipeline c.numSubjectsAtOnce
-        will run, unless the number remaining is less than
-        the value of the parameter stated above
-        """
-    
-        idx = 0
-    
-        while(idx < len(subject_list)):
-    
-            # If the job queue is empty and we haven't started indexing
-            if len(job_queue) == 0 and idx == 0:
-    
-                # Init subject process index
-                idc = idx
-    
-                # Launch processes (one for each subject)
-                for p in procss[idc: idc + config["num_subjects_at_once"]]:
-    
-                    p.start()
-                    print >>pid,p.pid
-                    job_queue.append(p)
-                    idx += 1
-    
-            # Otherwise, jobs are running - check them
-            else:
-    
-                # Check every job in the queue's status
-                for job in job_queue:
-    
-                    # If the job is not alive
-                    if not job.is_alive():
-    
-                        # Find job and delete it from queue
-                        print 'found dead job ', job
-                        loc = job_queue.index(job)
-                        del job_queue[loc]
-    
-                        # ...and start the next available process (subject)
-                        procss[idx].start()
-    
-                        # Append this to job queue and increment index
-                        job_queue.append(procss[idx])
+        # If we're allocating more processes than are subjects, run them all
+        if len(subject_list) <= config["num_subjects_at_once"]:
+        
+            """
+            Stream all the subjects as sublist is
+            less than or equal to the number of 
+            subjects that need to run
+            """
+        
+            for p in procss:
+                p.start()
+                print >>pid,p.pid
+        
+        # Otherwise manage resources to run processes incrementally
+        else:
+        
+            """
+            Stream the subject workflows for preprocessing.
+            At Any time in the pipeline c.numSubjectsAtOnce
+            will run, unless the number remaining is less than
+            the value of the parameter stated above
+            """
+        
+            idx = 0
+        
+            while(idx < len(subject_list)):
+        
+                # If the job queue is empty and we haven't started indexing
+                if len(job_queue) == 0 and idx == 0:
+        
+                    # Init subject process index
+                    idc = idx
+        
+                    # Launch processes (one for each subject)
+                    for p in procss[idc: idc + config["num_subjects_at_once"]]:
+        
+                        p.start()
+                        print >>pid,p.pid
+                        job_queue.append(p)
                         idx += 1
-
-                # Add sleep so while loop isn't consuming 100% of CPU
-                time.sleep(2)
+        
+                # Otherwise, jobs are running - check them
+                else:
+        
+                    # Check every job in the queue's status
+                    for job in job_queue:
+        
+                        # If the job is not alive
+                        if not job.is_alive():
+        
+                            # Find job and delete it from queue
+                            print 'found dead job ', job
+                            loc = job_queue.index(job)
+                            del job_queue[loc]
+        
+                            # ...and start the next available process (subject)
+                            procss[idx].start()
+        
+                            # Append this to job queue and increment index
+                            job_queue.append(procss[idx])
+                            idx += 1
     
-    pid.close()
+                    # Add sleep so while loop isn't consuming 100% of CPU
+                    time.sleep(2)
+        
+        pid.close()
+    else:
+        sub = subject_list.keys()[0]
+        build_spatial_qap_workflow(subject_list[sub], config, sub, run_name)
 
 
-
+# Main routine
 def main():
 
     import argparse
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("sublist", type=str, \
-                            help="filepath to subject list YAML")
+    # Subject index
+    parser.add_argument('subj_idx', type=int, help='Subject index to run')
+
+    #parser.add_argument("sublist", type=str, \
+    #                        help="filepath to subject list YAML")
 
     parser.add_argument("config", type=str, \
                             help="filepath to pipeline configuration YAML")
+    parser.add_argument('creds_path', type=str, help='Path to AWS creds')
 
     args = parser.parse_args()
 
-    # run it!
-    run(args.sublist, args.config)
-    
+    # ---- Cloud-ify! ----
+    # Import packages
+    from qclib.cloud_utils import dl_subj_from_s3, upl_qap_output
+
+    # Download and build subject dictionary from S3
+    sub_dict = dl_subj_from_s3(args.subj_idx, 'anat', args.creds_path)
+
+    # Run it
+    run(sub_dict, args.config, cloudify=True)
+
+    # Upload results
+    upl_qap_output(args.config)
 
 
+# Make executable
 if __name__ == "__main__":
     main()
 

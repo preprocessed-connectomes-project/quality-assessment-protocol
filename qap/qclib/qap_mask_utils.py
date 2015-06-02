@@ -62,7 +62,7 @@ def select_thresh(input_skull):
     avg_out = commands.getoutput(avg_in)
 
 
-    avg = int(float(avg_out.split("\n")[3].split(" ")[0]))
+    avg = int(float(avg_out.split("\n")[-1].split(" ")[0]))
     max_limit = int(avg * 3)
 
 
