@@ -37,7 +37,7 @@ def dl_subj_from_s3(subj_idx, img_type, creds_path):
 
         if img_type in scan_id:
              
-            if not s3_dict.has_key(key):
+            if not s3_dict.has_key((sub_id, session_id, scan_id)):
                 s3_dict[(sub_id, session_id, scan_id)] = {}
                 s3_dict[(sub_id, session_id, scan_id)] = sfile
             else:
@@ -59,7 +59,7 @@ def dl_subj_from_s3(subj_idx, img_type, creds_path):
     # Grab subject dictionary of interest
     subj_key = sd_keys[subj_idx-1]
     sub_dict = s3_dict[subj_key]
-
+    print "sub_dict: ", sub_dict
     # Download subject data to local prefix
     s3_dl = []
     for s3_key, s3_path in sub_dict.items():
