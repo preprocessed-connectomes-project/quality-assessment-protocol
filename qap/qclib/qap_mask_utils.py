@@ -120,10 +120,16 @@ def slice_head_mask(infile, transform, standard):
 
     # these each contain a set of coordinates for drawing the plane across
     # the image (to "slice" it)
+    inpoint_files = [os.path.join("/tdata/qap_project/QAP/qclib", "inpoint_a.txt"),
+                     os.path.join("/tdata/qap_project/QAP/qclib", "inpoint_b.txt"),
+                     os.path.join("/tdata/qap_project/QAP/qclib", "inpoint_c.txt")]
+
+
+    '''
     inpoint_files = [os.path.join("/home/ubuntu/pcp-qap/qap/qclib", "inpoint_a.txt"),
                      os.path.join("/home/ubuntu/pcp-qap/qap/qclib", "inpoint_b.txt"),
                      os.path.join("/home/ubuntu/pcp-qap/qap/qclib", "inpoint_c.txt")]
-
+    '''
 
     # convert the ANTS anat->standard affine to FSL format, so we can use
     # std2imgcoord below

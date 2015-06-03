@@ -1,6 +1,6 @@
 
 
-def build_spatial_qap_workflow(resource_pool, config, subject_id, run_name):
+def build_spatial_qap_workflow(resource_pool, config, subject_info, run_name):
     
     # build pipeline for each subject, individually
 
@@ -26,9 +26,22 @@ def build_spatial_qap_workflow(resource_pool, config, subject_id, run_name):
     logger = logging.getLogger('workflow')
 
 
+    sub_id = subject_info[0]
+
+    if subject_info[1]:
+        session_id = subject_info[1]
+    else:
+        session_id = "session_0"
+
+    if subject_info[2]:
+        scan_id = subject_info[2]
+    else:
+        scan_id = "scan_0"
+
+
     # define and create the output directory
     output_dir = os.path.join(config["output_directory"], run_name, \
-                              subject_id)
+                              sub_id, session_id, scan_id)
 
     try:
         os.makedirs(output_dir)
@@ -52,6 +65,10 @@ def build_spatial_qap_workflow(resource_pool, config, subject_id, run_name):
 
     logger.info("Pipeline start time: %s" % pipeline_start_stamp)
 
+    logger.info("Contents of resource pool:\n" + str(resource_pool))
+
+    logger.info("Configuration settings:\n" + str(config))
+
 
 
     # get the directory this script is in (not the current working one)
@@ -68,7 +85,11 @@ def build_spatial_qap_workflow(resource_pool, config, subject_id, run_name):
 
   
     # for QAP spreadsheet generation only
-    config["subject_id"] = subject_id
+    config["subject_id"] = sub_id
+
+    config["session_id"] = session_id
+
+    config["scan_id"] = scan_id
 
 
     os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS'] = \
@@ -76,17 +97,18 @@ def build_spatial_qap_workflow(resource_pool, config, subject_id, run_name):
     
     
 
-    workflow = pe.Workflow(name=subject_id)
+    workflow = pe.Workflow(name=scan_id)
 
-    current_dir = os.getcwd()
-    workflow.base_dir = config["working_directory"]
+    workflow.base_dir = os.path.join(config["working_directory"], sub_id, \
+                            session_id)
     
     
     # update that resource pool with what's already in the output directory
     for resource in os.listdir(output_dir):
     
-        if os.path.isdir(os.path.join(output_dir,resource)) and resource not in resource_pool.keys():
-            print os.path.join(output_dir,resource,"*")  
+        if os.path.isdir(os.path.join(output_dir,resource)) and \
+            resource not in resource_pool.keys():
+
             resource_pool[resource] = glob.glob(os.path.join(output_dir, \
                                           resource, "*"))[0]
                  
@@ -178,15 +200,56 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
 
     import os
     import yaml
+    import time
+
     from multiprocessing import Process
     
     if not cloudify:
         with open(subject_list, "r") as f:
-            subject_list = yaml.load(f)
+            subdict = yaml.load(f)
         
     with open(pipeline_config_yaml,"r") as f:
         config = yaml.load(f)
         
+
+    flat_sub_dict = {}
+
+    for subid in subdict.keys():
+
+        # sessions
+        for session in subdict[subid].keys():
+
+            # resource files
+            for resource in subdict[subid][session]:
+
+                if type(subdict[subid][session][resource]) is dict:
+                    # then this has sub-scans defined
+
+                    for scan in subdict[subid][session][resource].keys():
+
+                        filepath = subdict[subid][session][resource][scan]
+
+                        resource_dict = {}
+                        resource_dict[resource] = filepath
+
+                        sub_info_tuple = (subid, session, scan)
+                        flat_sub_dict[sub_info_tuple] = {}
+
+                        flat_sub_dict[sub_info_tuple].update(resource_dict)
+
+                else:
+
+                        filepath = subdict[subid][session][resource]
+
+                        resource_dict = {}
+                        resource_dict[resource] = filepath
+
+                        sub_info_tuple = (subid, session, None)
+                        flat_sub_dict[sub_info_tuple] = {}
+
+                        flat_sub_dict[sub_info_tuple].update(resource_dict)                    
+
+                        
 
     try:
         os.makedirs(config["output_directory"])
@@ -217,8 +280,9 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
     if not cloudify:
 
         procss = [Process(target=build_spatial_qap_workflow, \
-                     args=(subject_list[sub], config, sub, run_name)) \
-                     for sub in subject_list.keys()]
+                          args=(flat_sub_dict[sub_info], config, sub_info, \
+                                run_name)) \
+                          for sub_info in flat_sub_dict.keys()]
                               
                               
         pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')

@@ -1,6 +1,0 @@
-
-def run():
-
-    import os
-
-    print os.getcwd()

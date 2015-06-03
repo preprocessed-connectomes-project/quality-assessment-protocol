@@ -1,7 +1,7 @@
 
 
-def build_spatial_epi_qap_workflow(resource_pool, config, subject_id, \
-                                   run_name, scan_id):
+def build_spatial_epi_qap_workflow(resource_pool, config, subject_info, \
+                                   run_name):
     
     # build pipeline for each subject, individually
 
@@ -21,14 +21,29 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_id, \
     import yaml
 
     from time import strftime
-    from nipype import config
+    from nipype import config as nyconfig
     from nipype import logging
 
 
     logger = logging.getLogger('workflow')
 
+
+    sub_id = subject_info[0]
+
+    if subject_info[1]:
+        session_id = subject_info[1]
+    else:
+        session_id = "session_0"
+
+    if subject_info[2]:
+        scan_id = subject_info[2]
+    else:
+        scan_id = "scan_0"
+
+
+    # define and create the output directory
     output_dir = os.path.join(config["output_directory"], run_name, \
-                              subject_id)
+                              sub_id, session_id, scan_id)
 
     try:
         os.makedirs(output_dir)
@@ -41,8 +56,8 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_id, \
             pass
     log_dir = output_dir
 
-    config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
-    logging.update_logging(config)
+    nyconfig.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
+    logging.update_logging(nyconfig)
 
     # take date+time stamp for run identification purposes
     unique_pipeline_id = strftime("%Y%m%d%H%M%S")
@@ -50,6 +65,9 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_id, \
 
     logger.info("Pipeline start time: %s" % pipeline_start_stamp)
 
+    logger.info("Contents of resource pool:\n" + str(resource_pool))
+
+    logger.info("Configuration settings:\n" + str(config))
 
 
     # get the directory this script is in (not the current working one)
@@ -66,15 +84,18 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_id, \
 
         
     # for QAP spreadsheet generation only
-    config["subject_id"] = subject_id
+    config["subject_id"] = sub_id
+
+    config["session_id"] = session_id
+
     config["scan_id"] = scan_id
     
 
 
-    workflow = pe.Workflow(name=subject_id)
+    workflow = pe.Workflow(name=scan_id)
 
-    current_dir = os.getcwd()
-    workflow.base_dir = os.path.join(config["working_directory"], scan_id)
+    workflow.base_dir = os.path.join(config["working_directory"], sub_id, \
+                            session_id)
     
     
     # update that resource pool with what's already in the output directory
@@ -170,20 +191,60 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_id, \
 
 
 
-def run(subject_list, pipeline_config_yaml, scan_id, cloudify=False):
+def run(subject_list, pipeline_config_yaml, cloudify=False):
 
     import os
     import yaml
     from multiprocessing import Process
+
+    import time
     
     
     if not cloudify:
         with open(subject_list, "r") as f:
-            subject_list = yaml.load(f)
+            subdict = yaml.load(f)
         
     with open(pipeline_config_yaml,"r") as f:
         config = yaml.load(f)
-        
+
+
+    flat_sub_dict = {}
+
+    for subid in subdict.keys():
+
+        # sessions
+        for session in subdict[subid].keys():
+
+            # resource files
+            for resource in subdict[subid][session]:
+
+                if type(subdict[subid][session][resource]) is dict:
+                    # then this has sub-scans defined
+
+                    for scan in subdict[subid][session][resource].keys():
+
+                        filepath = subdict[subid][session][resource][scan]
+
+                        resource_dict = {}
+                        resource_dict[resource] = filepath
+
+                        sub_info_tuple = (subid, session, scan)
+                        flat_sub_dict[sub_info_tuple] = {}
+
+                        flat_sub_dict[sub_info_tuple].update(resource_dict)
+
+                else:
+
+                        filepath = subdict[subid][session][resource]
+
+                        resource_dict = {}
+                        resource_dict[resource] = filepath
+
+                        sub_info_tuple = (subid, session, None)
+                        flat_sub_dict[sub_info_tuple] = {}
+
+                        flat_sub_dict[sub_info_tuple].update(resource_dict) 
+
 
     try:
         os.makedirs(config["output_directory"])
@@ -214,8 +275,9 @@ def run(subject_list, pipeline_config_yaml, scan_id, cloudify=False):
     if not cloudify:
         
         procss = [Process(target=build_spatial_epi_qap_workflow, \
-                     args=(subject_list[sub], config, sub, run_name, \
-                     scan_id)) for sub in subject_list.keys()]
+                          args=(flat_sub_dict[sub_info], config, sub_info, \
+                                run_name)) \
+                          for sub_info in flat_sub_dict.keys()]
                           
                           
         pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
@@ -328,10 +390,6 @@ def main():
     req.add_argument("config", type=str, \
                             help="filepath to pipeline configuration YAML")
 
-    req.add_argument("scan_name", type=str, \
-                            help="name of the scan to run for the QAP " \
-                                 "measures")
-
 
     args = parser.parse_args()
 
@@ -371,7 +429,7 @@ def main():
             sub_dict = dl_subj_from_s3(args.subj_idx, 'rest', args.creds_path)
 
             # Run it
-            run(sub_dict, args.config, args.scan_name, cloudify=True)
+            run(sub_dict, args.config, cloudify=True)
 
             # Upload results
             upl_qap_output(args.config)
@@ -380,7 +438,7 @@ def main():
         elif args.sublist:
 
             # Run it
-            run(args.sublist, args.config, args.scan_name, cloudify=False)
+            run(args.sublist, args.config, cloudify=False)
 
 
 
