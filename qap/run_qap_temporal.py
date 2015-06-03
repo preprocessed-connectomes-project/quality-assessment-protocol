@@ -370,7 +370,7 @@ def main():
             from qclib.cloud_utils import dl_subj_from_s3, upl_qap_output
 
             # Download and build subject dictionary from S3
-            sub_dict = dl_subj_from_s3(args.subj_idx, 'func', args.creds_path)
+            sub_dict = dl_subj_from_s3(args.subj_idx, 'rest', args.creds_path)
 
             # Run it
             run(sub_dict, args.config, args.scan_name, cloudify=True)

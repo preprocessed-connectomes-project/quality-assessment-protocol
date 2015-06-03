@@ -30,9 +30,6 @@ def dl_subj_from_s3(subj_idx, img_type, creds_path):
     for bk in bucket.list(prefix=bucket_prefix):
         s3_list.append(str(bk.name))
 
-    print 's3 list:'
-    print s3_list
-
     # Build dictionary of filepaths
     for sfile in s3_list:
         ssplit = sfile.split('/')
@@ -41,6 +38,7 @@ def dl_subj_from_s3(subj_idx, img_type, creds_path):
         if img_type in sub_key:
             sub_key = subkey_type
         else:
+            print 'move on'
             continue
         #elif 'rest' in sub_key:
         #    sub_key = 'functional_scan'

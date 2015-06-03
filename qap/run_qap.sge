@@ -8,14 +8,14 @@
 #$ -e /home/ubuntu/qap_run.err
 #$ -o /home/ubuntu/qap_run.out
 source /etc/profile.d/cpac_env.sh
-SP_CONFIG_FILE=/home/ubuntu/pcp-qap/config/qap_config_abide_spatial.yml
-TP_CONFIG_FILE=/home/ubuntu/pcp-qap/config/qap_config_abide_temporal.yml
+SP_CONFIG_FILE=/home/ubuntu/pcp-qap/configs/qap_config_abide_spatial.yml
+TP_CONFIG_FILE=/home/ubuntu/pcp-qap/configs/qap_config_abide_temporal.yml
 CREDS_PATH=/home/ubuntu/secure-creds/aws-keys/fcp-indi-keys2.csv
 echo "Start - TASKID " $SGE_TASK_ID " : " $(date)
 # Run spatial qap
 python /home/ubuntu/pcp-qap/qap/run_qap_spatial.py --subj_idx $SGE_TASK_ID --creds_path $CREDS_PATH $SP_CONFIG_FILE
 # Run temporal qap
-python /home/ubuntu/pcp-qap/qap/run_qap_temporal.py --subj_idx $SGE_TASK_ID --creds_path $CREDS_PATH $TP_CONFIG_FILE rest_1
+#python /home/ubuntu/pcp-qap/qap/run_qap_temporal.py --subj_idx $SGE_TASK_ID --creds_path $CREDS_PATH $TP_CONFIG_FILE rest_1
 # Run spatial epi
-python /home/ubuntu/pcp-qap/qap/run_qap_spatial_epi.py --subj_idx $SGE_TASK_ID --creds_path $CREDS_PATH $TP_CONFIG_FILE rest_1
+#python /home/ubuntu/pcp-qap/qap/run_qap_spatial_epi.py --subj_idx $SGE_TASK_ID --creds_path $CREDS_PATH $TP_CONFIG_FILE rest_1
 echo "End - TASKID " $SGE_TASK_ID " : " $(date)
