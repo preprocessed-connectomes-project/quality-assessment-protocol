@@ -20,6 +20,37 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_id, \
     import glob
     import yaml
 
+    from time import strftime
+    from nipype import config
+    from nipype import logging
+
+
+    logger = logging.getLogger('workflow')
+
+    output_dir = os.path.join(config["output_directory"], run_name, \
+                              subject_id)
+
+    try:
+        os.makedirs(output_dir)
+    except:
+        if not os.path.isdir(output_dir):
+            err = "[!] Output directory unable to be created.\n" \
+                  "Path: %s\n\n" % output_dir
+            raise Exception(err)
+        else:
+            pass
+    log_dir = output_dir
+
+    config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
+    logging.update_logging(config)
+
+    # take date+time stamp for run identification purposes
+    unique_pipeline_id = strftime("%Y%m%d%H%M%S")
+    pipeline_start_stamp = strftime("%Y-%m-%d_%H:%M:%S")
+
+    logger.info("Pipeline start time: %s" % pipeline_start_stamp)
+
+
 
     # get the directory this script is in (not the current working one)
 
@@ -38,20 +69,6 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_id, \
     config["subject_id"] = subject_id
     config["scan_id"] = scan_id
     
-    
-    output_dir = os.path.join(config["output_directory"], \
-                              run_name + "_" + scan_id, subject_id)
-
-
-    try:
-        os.makedirs(output_dir)
-    except:
-        if not os.path.isdir(output_dir):
-            err = "[!] Output directory unable to be created.\n" \
-                  "Path: %s\n\n" % output_dir
-            raise Exception(err)
-        else:
-            pass
 
 
     workflow = pe.Workflow(name=subject_id)
@@ -63,7 +80,7 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_id, \
     # update that resource pool with what's already in the output directory
     for resource in os.listdir(output_dir):
     
-        if resource not in resource_pool.keys():
+        if os.path.isdir(os.path.join(output_dir,resource)) and resource not in resource_pool.keys():
         
             resource_pool[resource] = glob.glob(os.path.join(output_dir, \
                                           resource, "*"))[0]
@@ -141,6 +158,11 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_id, \
     else:
 
         print "\nEverything is already done for subject %s." % subject_id
+
+
+    pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
+
+    logger.info("Pipeline end time: %s" % pipeline_end_stamp)
 
 
 

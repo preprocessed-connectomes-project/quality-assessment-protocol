@@ -4,12 +4,12 @@
 #$ -V
 #$ -t 1-1102
 #$ -q all.q
-#$ -pe mpi_smp 8
+#$ -pe mpi_smp 4
 #$ -e /home/ubuntu/qap_run.err
 #$ -o /home/ubuntu/qap_run.out
 source /etc/profile.d/cpac_env.sh
-SP_CONFIG_FILE=/home/ubuntu/qap_config_spatial.yml
-TP_CONFIG_FILE=/home/ubuntu/qap_config_temporal.yml
+SP_CONFIG_FILE=/home/ubuntu/pcp-qap/config/qap_config_abide_spatial.yml
+TP_CONFIG_FILE=/home/ubuntu/pcp-qap/config/qap_config_abide_temporal.yml
 CREDS_PATH=/home/ubuntu/secure-creds/aws-keys/fcp-indi-keys2.csv
 echo "Start - TASKID " $SGE_TASK_ID " : " $(date)
 # Run spatial qap

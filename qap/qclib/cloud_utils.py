@@ -16,7 +16,7 @@ def dl_subj_from_s3(subj_idx, img_type, creds_path):
     # Init variables
     bucket_prefix = 'data/Projects/ABIDE_Initiative/RawData'
     local_prefix ='/mnt/inputs'
-    bucket = fetch_creds.return_bucket('fcp-indi', creds_path)
+    bucket = fetch_creds.return_bucket(creds_path, 'fcp-indi')
     s3_list = []
     s3_dict = {}
 
@@ -29,6 +29,9 @@ def dl_subj_from_s3(subj_idx, img_type, creds_path):
     # Build S3-subjects to download
     for bk in bucket.list(prefix=bucket_prefix):
         s3_list.append(str(bk.name))
+
+    print 's3 list:'
+    print s3_list
 
     # Build dictionary of filepaths
     for sfile in s3_list:
@@ -46,6 +49,10 @@ def dl_subj_from_s3(subj_idx, img_type, creds_path):
             s3_dict[key][sub_key] = sfile
         else:
             s3_dict[key][sub_key] = sfile
+
+    if len(s3_dict) == 0:
+        err = "\n[!] Filepaths have not been successfully gathered from the S3 bucket!\n"
+        raise Exception(err)
 
     # Get list of subject keys for indexing
     sd_keys = s3_dict.keys()
@@ -79,7 +86,7 @@ def upl_qap_output(cfg_file, creds_path):
     import yaml
 
     # Init variables
-    bucket = fetch_creds.return_bucket('fcp-indi', creds_path)
+    bucket = fetch_creds.return_bucket(creds_path, 'fcp-indi')
 
     # Load config file
     cfg_dict = yaml.load(open(cfg_file, 'r'))
