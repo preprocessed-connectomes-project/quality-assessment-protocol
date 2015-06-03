@@ -20,6 +20,12 @@ def dl_subj_from_s3(subj_idx, img_type, creds_path):
     s3_list = []
     s3_dict = {}
 
+    # Filter for anat/rest
+    if img_type == 'anat':
+        subkey_type = 'anatomical_scan'
+    elif img_type == 'rest':
+        subkey_type = 'functional_scan'
+
     # Build S3-subjects to download
     for bk in bucket.list(prefix=bucket_prefix):
         s3_list.append(str(bk.name))
@@ -37,11 +43,18 @@ def dl_subj_from_s3(subj_idx, img_type, creds_path):
 
         if img_type in scan_id:
              
+            # this ONLY handles raw data inputs, not CPAC-generated outputs!
             if not s3_dict.has_key((sub_id, session_id, scan_id)):
+
+                resource_dict = {}
+                resource_dict[subkey_type] = sfile
+
                 s3_dict[(sub_id, session_id, scan_id)] = {}
-                s3_dict[(sub_id, session_id, scan_id)] = sfile
+                s3_dict[(sub_id, session_id, scan_id)].update(resource_dict)
+
             else:
-                s3_dict[(sub_id, session_id, scan_id)] = sfile             
+
+                s3_dict[(sub_id, session_id, scan_id)].update(resource_dict)         
 
         else:
 
