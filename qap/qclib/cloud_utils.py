@@ -20,32 +20,33 @@ def dl_subj_from_s3(subj_idx, img_type, creds_path):
     s3_list = []
     s3_dict = {}
 
-    # Filter for anat/rest
-    if img_type == 'anat':
-        subkey_type = 'anatomical_scan'
-    elif img_type == 'rest':
-        subkey_type = 'functional_scan'
-
     # Build S3-subjects to download
     for bk in bucket.list(prefix=bucket_prefix):
         s3_list.append(str(bk.name))
 
     # Build dictionary of filepaths
     for sfile in s3_list:
+
         ssplit = sfile.split('/')
-        key = '_'.join(ssplit[5:7])
-        sub_key = ssplit[-2]
-        if img_type in sub_key:
-            sub_key = subkey_type
+
+        sub_id = ssplit[-4]
+
+        session_id = ssplit[-3]
+
+        scan_id = ssplit[-2]
+
+        if img_type in scan_id:
+             
+            if not s3_dict.has_key(key):
+                s3_dict[(sub_id, session_id, scan_id)] = {}
+                s3_dict[(sub_id, session_id, scan_id)] = sfile
+            else:
+                s3_dict[(sub_id, session_id, scan_id)] = sfile             
+
         else:
+
             continue
-        #elif 'rest' in sub_key:
-        #    sub_key = 'functional_scan'
-        if not s3_dict.has_key(key):
-            s3_dict[key] = {}
-            s3_dict[key][sub_key] = sfile
-        else:
-            s3_dict[key][sub_key] = sfile
+
 
     if len(s3_dict) == 0:
         err = "\n[!] Filepaths have not been successfully gathered from the S3 bucket!\n"

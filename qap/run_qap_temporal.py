@@ -29,15 +29,15 @@ def build_temporal_qap_workflow(resource_pool, config, subject_info, \
     logger = logging.getLogger('workflow')
 
 
-    sub_id = subject_info[0]
+    sub_id = str(subject_info[0])
 
     if subject_info[1]:
-        session_id = subject_info[1]
+        session_id = str(subject_info[1])
     else:
         session_id = "session_0"
 
     if subject_info[2]:
-        scan_id = subject_info[2]
+        scan_id = str(subject_info[2])
     else:
         scan_id = "scan_0"
 
@@ -203,49 +203,50 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
     
     
     if not cloudify:
+
         with open(subject_list, "r") as f:
             subdict = yaml.load(f)
+
+        flat_sub_dict = {}
+
+        for subid in subdict.keys():
+
+            # sessions
+            for session in subdict[subid].keys():
+
+                # resource files
+                for resource in subdict[subid][session]:
+
+                    if type(subdict[subid][session][resource]) is dict:
+                        # then this has sub-scans defined
+
+                        for scan in subdict[subid][session][resource].keys():
+
+                            filepath = subdict[subid][session][resource][scan]
+
+                            resource_dict = {}
+                            resource_dict[resource] = filepath
+
+                            sub_info_tuple = (subid, session, scan)
+                            flat_sub_dict[sub_info_tuple] = {}
+
+                            flat_sub_dict[sub_info_tuple].update(resource_dict)
+
+                    else:
+
+                            filepath = subdict[subid][session][resource]
+
+                            resource_dict = {}
+                            resource_dict[resource] = filepath
+
+                            sub_info_tuple = (subid, session, None)
+                            flat_sub_dict[sub_info_tuple] = {}
+
+                            flat_sub_dict[sub_info_tuple].update(resource_dict)                    
+
         
     with open(pipeline_config_yaml,"r") as f:
         config = yaml.load(f)
-
-
-    flat_sub_dict = {}
-
-    for subid in subdict.keys():
-
-        # sessions
-        for session in subdict[subid].keys():
-
-            # resource files
-            for resource in subdict[subid][session]:
-
-                if type(subdict[subid][session][resource]) is dict:
-                    # then this has sub-scans defined
-
-                    for scan in subdict[subid][session][resource].keys():
-
-                        filepath = subdict[subid][session][resource][scan]
-
-                        resource_dict = {}
-                        resource_dict[resource] = filepath
-
-                        sub_info_tuple = (subid, session, scan)
-                        flat_sub_dict[sub_info_tuple] = {}
-
-                        flat_sub_dict[sub_info_tuple].update(resource_dict)
-
-                else:
-
-                        filepath = subdict[subid][session][resource]
-
-                        resource_dict = {}
-                        resource_dict[resource] = filepath
-
-                        sub_info_tuple = (subid, session, None)
-                        flat_sub_dict[sub_info_tuple] = {}
-
-                        flat_sub_dict[sub_info_tuple].update(resource_dict) 
 
 
     try:

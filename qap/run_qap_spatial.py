@@ -205,50 +205,50 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
     from multiprocessing import Process
     
     if not cloudify:
+
         with open(subject_list, "r") as f:
             subdict = yaml.load(f)
+
+        flat_sub_dict = {}
+
+        for subid in subdict.keys():
+
+            # sessions
+            for session in subdict[subid].keys():
+
+                # resource files
+                for resource in subdict[subid][session]:
+
+                    if type(subdict[subid][session][resource]) is dict:
+                        # then this has sub-scans defined
+
+                        for scan in subdict[subid][session][resource].keys():
+
+                            filepath = subdict[subid][session][resource][scan]
+
+                            resource_dict = {}
+                            resource_dict[resource] = filepath
+
+                            sub_info_tuple = (subid, session, scan)
+                            flat_sub_dict[sub_info_tuple] = {}
+
+                            flat_sub_dict[sub_info_tuple].update(resource_dict)
+
+                    else:
+
+                            filepath = subdict[subid][session][resource]
+
+                            resource_dict = {}
+                            resource_dict[resource] = filepath
+
+                            sub_info_tuple = (subid, session, None)
+                            flat_sub_dict[sub_info_tuple] = {}
+
+                            flat_sub_dict[sub_info_tuple].update(resource_dict)                    
+
         
     with open(pipeline_config_yaml,"r") as f:
         config = yaml.load(f)
-        
-
-    flat_sub_dict = {}
-
-    for subid in subdict.keys():
-
-        # sessions
-        for session in subdict[subid].keys():
-
-            # resource files
-            for resource in subdict[subid][session]:
-
-                if type(subdict[subid][session][resource]) is dict:
-                    # then this has sub-scans defined
-
-                    for scan in subdict[subid][session][resource].keys():
-
-                        filepath = subdict[subid][session][resource][scan]
-
-                        resource_dict = {}
-                        resource_dict[resource] = filepath
-
-                        sub_info_tuple = (subid, session, scan)
-                        flat_sub_dict[sub_info_tuple] = {}
-
-                        flat_sub_dict[sub_info_tuple].update(resource_dict)
-
-                else:
-
-                        filepath = subdict[subid][session][resource]
-
-                        resource_dict = {}
-                        resource_dict[resource] = filepath
-
-                        sub_info_tuple = (subid, session, None)
-                        flat_sub_dict[sub_info_tuple] = {}
-
-                        flat_sub_dict[sub_info_tuple].update(resource_dict)                    
-
                         
 
     try:

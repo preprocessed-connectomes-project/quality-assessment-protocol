@@ -160,7 +160,7 @@ def qap_temporal(func_motion_correct, func_brain_mask, coord_xfm_matrix, subject
     # Compile
     qc = {
         "subject":  subject_id,
-        "session":  session,
+        "session":  session_id,
         "scan":     scan_id, 
         "dvars":    mean_dvars, 
         "mean_fd":  mean_fd, 
