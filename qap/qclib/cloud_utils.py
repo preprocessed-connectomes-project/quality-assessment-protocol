@@ -38,7 +38,6 @@ def dl_subj_from_s3(subj_idx, img_type, creds_path):
         if img_type in sub_key:
             sub_key = subkey_type
         else:
-            print 'move on'
             continue
         #elif 'rest' in sub_key:
         #    sub_key = 'functional_scan'
