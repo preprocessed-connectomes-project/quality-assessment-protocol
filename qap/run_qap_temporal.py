@@ -361,7 +361,7 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
         # run on cloud
         sub = subject_list.keys()[0]
         build_temporal_qap_workflow(subject_list[sub], config, sub, \
-                                    run_name, scan_id)
+                                    run_name)
 
 
 
