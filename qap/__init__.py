@@ -1,6 +1,7 @@
 
-# QAP package
+# pcp_qap package
 
-import qclib
+import qclib, \
+       workflows
 
-__all__ = ['qclib']
+__all__ = ['qclib', 'workflows']
