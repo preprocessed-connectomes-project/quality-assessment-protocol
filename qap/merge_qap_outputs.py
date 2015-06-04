@@ -43,12 +43,12 @@ def merge_qap_outputs(output_directory):
 
     import glob
 
-    spatial_outputs = glob.glob("%s/*/qap_spatial/*" % output_directory)
+    spatial_outputs = glob.glob("%s/*/*/*/qap_spatial/*" % output_directory)
 
-    spatial_epi_outputs = glob.glob("%s/*/qap_spatial_epi/*" % \
+    spatial_epi_outputs = glob.glob("%s/*/*/*/qap_spatial_epi/*" % \
                           output_directory)
 
-    temporal_outputs = glob.glob("%s/*/qap_temporal/*" % output_directory)
+    temporal_outputs = glob.glob("%s/*/*/*/qap_temporal/*" % output_directory)
 
 
     if spatial_outputs:
