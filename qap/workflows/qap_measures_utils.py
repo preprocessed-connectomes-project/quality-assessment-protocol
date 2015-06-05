@@ -17,8 +17,9 @@ def qap_spatial(anatomical_reorient, head_mask_path, anatomical_gm_mask, anatomi
 
     #sys.path.insert(0,"/home/ubuntu/pcp-qap/qap/qclib")
 
-    from spatial_qc import summary_mask, snr, cnr, fber, efc, artifacts, fwhm
-    from qap_utils import load_image, load_mask
+    from qclib.spatial_qc import summary_mask, snr, cnr, fber, efc, \
+                                 artifacts, fwhm
+    from qclib.qap_utils import load_image, load_mask
 
     # Load the data
     anat_data = load_image(anatomical_reorient)
@@ -87,8 +88,8 @@ def qap_spatial_epi(mean_epi, func_brain_mask, subject_id, session_id, scan_id, 
 
     #sys.path.insert(0,"/home/ubuntu/pcp-qap/qap/qclib")
 
-    from spatial_qc import summary_mask, snr, fber, efc, fwhm, ghost_all
-    from qap_utils import load_image, load_mask
+    from qclib.spatial_qc import summary_mask, snr, fber, efc, fwhm, ghost_all
+    from qclib.qap_utils import load_image, load_mask
 
     # Load the data
     anat_data = load_image(mean_epi)
@@ -143,7 +144,9 @@ def qap_temporal(func_motion_correct, func_brain_mask, coord_xfm_matrix, subject
 
     #sys.path.insert(0,"/home/ubuntu/pcp-qap/qap/qclib")
 
-    from temporal_qc import mean_dvars_wrapper, summarize_fd, mean_outlier_timepoints, mean_quality_timepoints
+    from qclib.temporal_qc import mean_dvars_wrapper, summarize_fd, \
+                                  mean_outlier_timepoints, \
+                                  mean_quality_timepoints
 
     # DVARS
     mean_dvars  = mean_dvars_wrapper(func_motion_correct, func_brain_mask)

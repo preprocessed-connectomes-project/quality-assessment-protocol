@@ -18,7 +18,7 @@ def anatomical_reorient_workflow(workflow, resource_pool, config):
 
     from nipype.interfaces.afni import preprocess
 
-    from workflow_utils import check_input_resources
+    from workflows.workflow_utils import check_input_resources
     
     
     check_input_resources(resource_pool, "anatomical_scan")
@@ -150,7 +150,7 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config):
 
     if "anatomical_reorient" not in resource_pool.keys():
         
-        from anatomical_preproc import anatomical_reorient_workflow
+        from workflows.anatomical_preproc import anatomical_reorient_workflow
 
         workflow, resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config)
@@ -301,11 +301,11 @@ def ants_anatomical_linear_registration(workflow, resource_pool, config):
 
     import nipype.interfaces.utility as util
 
-    from anatomical_preproc_utils import ants_lin_reg, \
-                                         separate_warps_list
+    from workflows.anatomical_preproc_utils import ants_lin_reg, \
+                                                   separate_warps_list
 
-    from workflow_utils import check_input_resources
-    from workflow_utils import check_config_settings
+    from workflows.workflow_utils import check_input_resources, \
+                                         check_config_settings
 
 
     check_config_settings(config, "template_brain_for_anat")
@@ -313,7 +313,8 @@ def ants_anatomical_linear_registration(workflow, resource_pool, config):
 
     if "anatomical_brain" not in resource_pool.keys():
 
-        from anatomical_preproc import anatomical_skullstrip_workflow
+        from workflows.anatomical_preproc import \
+                                              anatomical_skullstrip_workflow
 
         workflow, resource_pool = \
             anatomical_skullstrip_workflow(workflow, resource_pool, config)
@@ -422,17 +423,18 @@ def segmentation_workflow(workflow, resource_pool, config):
     import nipype.interfaces.ants as ants
     import nipype.interfaces.utility as util
 
-    from anatomical_preproc_utils import pick_seg_type
+    from workflows.anatomical_preproc_utils import pick_seg_type
 
-    from workflow_utils import check_input_resources
-    from workflow_utils import check_config_settings
+    from workflows.workflow_utils import check_input_resources, \
+                                         check_config_settings
 
 
     if ("ants_affine_xfm" not in resource_pool.keys()) or \
            ("ants_rigid_xfm" not in resource_pool.keys()) or \
                ("ants_initial_xfm" not in resource_pool.keys()):
 
-        from anatomical_preproc import ants_anatomical_linear_registration
+        from workflows.anatomical_preproc import \
+                                          ants_anatomical_linear_registration
 
         workflow, resource_pool = \
             ants_anatomical_linear_registration(workflow, resource_pool,
@@ -441,7 +443,8 @@ def segmentation_workflow(workflow, resource_pool, config):
 
     if "anatomical_brain" not in resource_pool.keys():
 
-        from anatomical_preproc import anatomical_skullstrip_workflow
+        from workflows.anatomical_preproc import \
+                                              anatomical_skullstrip_workflow
 
         workflow, resource_pool = \
             anatomical_skullstrip_workflow(workflow, resource_pool, config)

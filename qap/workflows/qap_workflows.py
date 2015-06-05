@@ -10,11 +10,11 @@ def qap_mask_workflow(workflow, resource_pool, config):
     import nipype.interfaces.utility as util
     import nipype.interfaces.fsl.maths as fsl
 
-    from qap_mask_utils import select_thresh, \
-                               slice_head_mask
+    from workflows.qap_mask_utils import select_thresh, \
+                                         slice_head_mask
 
-    from workflow_utils import check_input_resources
-    from workflow_utils import check_config_settings
+    from workflows.workflow_utils import check_input_resources, \
+                                         check_config_settings
 
   
     #check_input_resources(resource_pool, "anatomical_reorient")
@@ -24,7 +24,8 @@ def qap_mask_workflow(workflow, resource_pool, config):
 
     if "ants_affine_xfm" not in resource_pool.keys():
         
-        from anatomical_preproc import ants_anatomical_linear_registration
+        from workflows.anatomical_preproc import \
+                                          ants_anatomical_linear_registration
 
         workflow, resource_pool = \
             ants_anatomical_linear_registration(workflow, resource_pool, 
@@ -33,7 +34,7 @@ def qap_mask_workflow(workflow, resource_pool, config):
 
     if "anatomical_reorient" not in resource_pool.keys():
 
-        from anatomical_preproc import anatomical_reorient_workflow
+        from workflows.anatomical_preproc import anatomical_reorient_workflow
 
         workflow, resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config)
@@ -140,13 +141,13 @@ def qap_spatial_workflow(workflow, resource_pool, config):
 
     import nipype.interfaces.utility as util
     
-    from qap_measures_utils import qap_spatial, \
-                                   append_to_csv
+    from workflows.qap_measures_utils import qap_spatial, \
+                                             append_to_csv
 
 
     if "qap_head_mask" not in resource_pool.keys():
     
-        from qap_workflows import qap_mask_workflow
+        from workflows.qap_workflows import qap_mask_workflow
 
         workflow, resource_pool = \
             qap_mask_workflow(workflow, resource_pool, config)
@@ -156,7 +157,7 @@ def qap_spatial_workflow(workflow, resource_pool, config):
            ("anatomical_wm_mask" not in resource_pool.keys()) or \
                ("anatomical_csf_mask" not in resource_pool.keys()):
 
-        from anatomical_preproc import segmentation_workflow
+        from workflows.anatomical_preproc import segmentation_workflow
 
         workflow, resource_pool = \
             segmentation_workflow(workflow, resource_pool, config)
@@ -164,7 +165,7 @@ def qap_spatial_workflow(workflow, resource_pool, config):
     
     if "anatomical_reorient" not in resource_pool.keys():
 
-        from anatomical_preproc import anatomical_reorient_workflow
+        from workflows.anatomical_preproc import anatomical_reorient_workflow
 
         workflow, resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config)
@@ -283,15 +284,15 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
 
     import nipype.interfaces.utility as util
     
-    from qap_measures_utils import qap_spatial_epi, \
-                                   append_to_csv
+    from workflows.qap_measures_utils import qap_spatial_epi, \
+                                             append_to_csv
 
-    from workflow_utils import check_input_resources
+    from workflows.workflow_utils import check_input_resources
   
 
     if "mean_functional" not in resource_pool.keys():
 
-        from functional_preproc import mean_functional_workflow
+        from workflows.functional_preproc import mean_functional_workflow
 
         workflow, resource_pool = \
             mean_functional_workflow(workflow, resource_pool, config)
@@ -299,7 +300,8 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
 
     if "functional_brain_mask" not in resource_pool.keys():
 
-        from functional_preproc import functional_brain_mask_workflow
+        from workflows.functional_preproc import \
+                                              functional_brain_mask_workflow
 
         workflow, resource_pool = \
             functional_brain_workflow(workflow, resource_pool, config)
@@ -395,13 +397,13 @@ def qap_temporal_workflow(workflow, resource_pool, config):
 
     import nipype.interfaces.utility as util
     
-    from qap_measures_utils import qap_temporal, \
-                                   append_to_csv
+    from workflows.qap_measures_utils import qap_temporal, \
+                                             append_to_csv
    
     
     if "mean_functional" not in resource_pool.keys():
 
-        from functional_preproc import mean_functional_workflow
+        from workflows.functional_preproc import mean_functional_workflow
 
         workflow, resource_pool = \
             mean_functional_workflow(workflow, resource_pool, config)
@@ -410,7 +412,7 @@ def qap_temporal_workflow(workflow, resource_pool, config):
     if ("func_motion_correct" not in resource_pool.keys()) or \
            ("coordinate_transformation" not in resource_pool.keys()):
 
-        from functional_preproc import func_motion_correct_workflow
+        from workflows.functional_preproc import func_motion_correct_workflow
 
         workflow, resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config)

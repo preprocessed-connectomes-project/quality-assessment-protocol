@@ -74,8 +74,8 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_info, \
 
     # doing this so that we can properly call the QAP functions from
     # "spatial_qc.py" in qclib; they are called from within Nipype util
-    # Function nodes, and cannot properly import files from the directory they
-    # are stored in
+    # Function nodes, and cannot properly import files from the directory
+    # they are stored in
     script_dir = os.path.dirname(os.path.realpath('__file__'))
 
     qclib_dir = os.path.join(script_dir, "qclib")
@@ -136,7 +136,7 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_info, \
        
     if "qap_spatial_epi" not in resource_pool.keys():
 
-        from qclib.qap_workflows import qap_spatial_epi_workflow
+        from workflows.qap_workflows import qap_spatial_epi_workflow
 
         workflow, resource_pool = \
             qap_spatial_epi_workflow(workflow, resource_pool, config)
@@ -380,8 +380,9 @@ def main():
     cloudgroup.add_argument('--subj_idx', type=int, \
                                 help='Subject index to run')
 
-    cloudgroup.add_argument('--creds_path', type=str, \
-                                help='Path to AWS creds')
+    cloudgroup.add_argument('--s3_dict_yml', type=str, \
+                                help='Path to YAML file containing S3 input '\
+                                     'filepaths dictionary')
 
 
     # Subject list (YAML file)
@@ -396,38 +397,44 @@ def main():
 
 
     # checks
-    if args.subj_idx and not args.creds_path and not args.sublist:
-        print "\n[!] You provided --subj_idx, but not --creds_path. When " \
+    if args.subj_idx and not args.s3_dict_yml and not args.sublist:
+        print "\n[!] You provided --subj_idx, but not --s3_dict_yml. When " \
               "executing cloud-based runs, please provide both inputs.\n"
 
-    elif args.creds_path and not args.subj_idx and not args.sublist:
-        print "\n[!] You provided --creds_path, but not --subj_idx. When " \
+    elif args.s3_dict_yml and not args.subj_idx and not args.sublist:
+        print "\n[!] You provided --s3_dict_yml, but not --subj_idx. When " \
               "executing cloud-based runs, please provide both inputs.\n"
 
-    elif not args.sublist and not args.subj_idx and not args.creds_path:
+    elif not args.sublist and not args.subj_idx and not args.s3_dict_yml:
         print "\n[!] Either --sublist is required for regular runs, or both "\
-              "--subj_idx and --creds_path for cloud-based runs.\n"
+              "--subj_idx and --s3_dict_yml for cloud-based runs.\n"
 
-    elif args.sublist and args.subj_idx and args.creds_path:
+    elif args.sublist and args.subj_idx and args.s3_dict_yml:
         print "\n[!] Either --sublist is required for regular runs, or both "\
-              "--subj_idx and --creds_path for cloud-based runs, but not " \
+              "--subj_idx and --s3_dict_yml for cloud-based runs, but not " \
               "all three. (I'm not sure which you are trying to do!)\n"
 
-    elif args.sublist and (args.subj_idx or args.creds_path):
+    elif args.sublist and (args.subj_idx or args.s3_dict_yml):
         print "\n[!] Either --sublist is required for regular runs, or both "\
-              "--subj_idx and --creds_path for cloud-based runs. (I'm not " \
+              "--subj_idx and --s3_dict_yml for cloud-based runs. (I'm not " \
               "sure which you are trying to do!)\n"
 
     else:
 
-        if args.subj_idx and args.creds_path:
+        if args.subj_idx and args.s3_dict_yml:
 
             # ---- Cloud-ify! ----
             # Import packages
             from qclib.cloud_utils import dl_subj_from_s3, upl_qap_output
 
-            # Download and build subject dictionary from S3
-            sub_dict = dl_subj_from_s3(args.subj_idx, 'rest', args.creds_path)
+            # Download and build a one-subject dictionary from S3
+            sub_dict = dl_subj_from_s3(args.subj_idx, args.config, \
+                                           args.s3_dict_yml)
+
+            if not sub_dict:
+                err = "\n[!] Subject dictionary was not successfully " \
+                      "downloaded from the S3 bucket!\n"
+                raise Exception(err)
 
             # Run it
             run(sub_dict, args.config, cloudify=True)

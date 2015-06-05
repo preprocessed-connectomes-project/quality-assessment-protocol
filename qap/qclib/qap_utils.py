@@ -58,17 +58,20 @@ def load_mask(mask_file, ref_file):
     # Check that the specified mask is binary.
     mask_vals   = np.unique(mask_dat)
     if (mask_vals.size != 2) or not (mask_vals == [0, 1]).all():
-        print("Error: Mask is not binary, has %i unique val(s) of %s (see file %s)" % (mask_vals.size, mask_vals, mask_file))
-        raise Exception("")
+        err = "Error: Mask is not binary, has %i unique val(s) of %s " \
+              "(see file %s)" % (mask_vals.size, mask_vals, mask_file)
+        raise Exception(err)
     
     # Verify that the mask and anatomical images have the same dimensions.
     if ref_img.shape != mask_img.shape:
-        print("Error: Mask and anatomical image are different dimensions for %s" % mask_file)
-        raise Exception("")
+        err = "Error: Mask and anatomical image are different dimensions " \
+              "for %s" % mask_file
+        raise Exception(err)
 
     # Verify that the mask and anatomical images are in the same space (have the samme affine matrix)
     if (mask_img.get_affine() == ref_img.get_affine()).all == False:
-        print("Error: Mask and anatomical image are not in the same space for %s vs %s" % (mask_file, ref_file))
-        raise Exception("")
+        err = "Error: Mask and anatomical image are not in the same space " \
+              "for %s vs %s" % (mask_file, ref_file)
+        raise Exception(err)
     
     return mask_dat

@@ -11,47 +11,6 @@ test_sub_dir = os.path.join(base_test_dir, "pipeline_folder", "2014113")
 
 
 
-def get_sub_ids(input_skull_entry, pipeline_output_folder):
-
-    # this function simply makes things easier by renaming the head mask file
-    # with the subject's subject ID
-
-    dirlist = input_skull_entry.split(pipeline_output_folder)[1].split("/")
-
-    # in case the user adds the last backslash at the end of the pipeline
-    # folder in the command line argument
-    if dirlist[0] == "":
-        input_skull_subid = dirlist[1]
-    else:
-        input_skull_subid = dirlist[0]
-
-    input_skull_subid = input_skull_subid + ".nii.gz"
-
-    return input_skull_subid
-
-
-
-def rename_final_output(dil_ero_out):
-
-    import os
-
-    filename = dil_ero_out.split("/")[-1]
-
-    out_filename = filename.replace("_maths","")
-
-    if ".nii.gz" in out_filename:
-        out_filename = out_filename.replace(".nii.gz","_qc_head_mask.nii.gz")
-    elif ".nii" in out_filename:
-        out_filename = out_filename.replace(".nii","_qc_head_mask.nii")
-
-    out_filepath = dil_ero_out.replace(filename, out_filename)
-
-    os.system("mv %s %s" % (dil_ero_out, out_filepath))
-
-    return out_filepath
-
-
-
 def select_thresh(input_skull):
 
     import os
@@ -101,6 +60,8 @@ def slice_head_mask(infile, transform, standard):
     import nibabel as nb
     import numpy as np
     import commands
+    
+    import pkg_resources as p
 
     # get the directory this script is in (not the current working one)
     script_dir = os.path.dirname(os.path.realpath('__file__'))
@@ -120,16 +81,10 @@ def slice_head_mask(infile, transform, standard):
 
     # these each contain a set of coordinates for drawing the plane across
     # the image (to "slice" it)
-    inpoint_files = [os.path.join("/tdata/qap_project/QAP/qclib", "inpoint_a.txt"),
-                     os.path.join("/tdata/qap_project/QAP/qclib", "inpoint_b.txt"),
-                     os.path.join("/tdata/qap_project/QAP/qclib", "inpoint_c.txt")]
+    inpoint_files = [p.resource_filename("pcp_qap", "qclib/inpoint_a.txt"),
+                     p.resource_filename("pcp_qap", "qclib/inpoint_b.txt"),
+                     p.resource_filename("pcp_qap", "qclib/inpoint_c.txt")]
 
-
-    '''
-    inpoint_files = [os.path.join("/home/ubuntu/pcp-qap/qap/qclib", "inpoint_a.txt"),
-                     os.path.join("/home/ubuntu/pcp-qap/qap/qclib", "inpoint_b.txt"),
-                     os.path.join("/home/ubuntu/pcp-qap/qap/qclib", "inpoint_c.txt")]
-    '''
 
     # convert the ANTS anat->standard affine to FSL format, so we can use
     # std2imgcoord below
@@ -282,77 +237,6 @@ def slice_head_mask(infile, transform, standard):
     
     
 
-def test_gather_inputs():
-
-    ''' this test needs to be more stringent!!! '''
-
-    skull_list, xfm_list = gather_inputs(os.path.join(base_test_dir,
-                     "pipeline_folder"), os.path.join(base_test_dir,
-                     "pipeline_sublist.txt"))
-
-    flag = 0
-
-    if skull_list == [os.path.join(test_sub_dir, "anatomical_reorient/" \
-                             "mprage_resample.nii.gz")]:
-
-        flag += 1
-
-
-    if xfm_list == [os.path.join(test_sub_dir, "ants_affine_xfm",
-                                 "transform2Affine.mat")]:
-
-        flag += 1
-
-
-    assert flag == 2
-
-
-
-def test_get_sub_ids():
-
-    head_path = os.path.join(test_sub_dir, "anatomical_reorient",
-                             "mprage_resample.nii.gz")
-
-    pipeline_output_folder = os.path.join(base_test_dir, "pipeline_folder")
-
-    new_filename = get_sub_ids(head_path, pipeline_output_folder)
-
-    assert new_filename == "2014113.nii.gz"
-
-
-
-def test_rename_final_output():
-
-    flag = 0
-
-    test_out_gz = os.path.join(base_test_dir, "2014113_maths_maths_" \
-                               "maths.nii.gz")
-
-    test_out_nii = os.path.join(base_test_dir, "1019436_maths_maths_" \
-                                "maths.nii")
-
-    rename_final_output(test_out_gz)
-    rename_final_output(test_out_nii)
-
-    file_list = os.listdir(os.path.join(base_test_dir))
-
-    if ("2014113_qc_head_mask.nii.gz" in file_list) and \
-        ("1019436_qc_head_mask.nii" in file_list):
-
-        flag = 1
-
-    # return to original state so test will always work
-    os.system("mv %s %s" % (os.path.join(base_test_dir,
-                  "2014113_qc_head_mask.nii.gz"), test_out_gz))
-
-    os.system("mv %s %s" % (os.path.join(base_test_dir,
-                  "1019436_qc_head_mask.nii"), test_out_nii))
-
-
-    assert flag == 1
-
-
-
 def test_select_thresh():
 
     input_skull = os.path.join(test_sub_dir, "anatomical_reorient",
@@ -402,9 +286,6 @@ def test_slice_head_mask():
 
 def run_all_tests():
 
-    test_gather_inputs()
-    test_get_sub_ids()
-    test_rename_final_output()
     test_select_thresh()
     test_slice_head_mask()
 

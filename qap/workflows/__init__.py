@@ -12,12 +12,22 @@ from functional_preproc import get_idx, \
                                func_motion_correct_workflow, \
                                functional_brain_mask_workflow, \
                                mean_functional_workflow
-                               
+
+from qap_mask_utils import select_thresh, \
+                           slice_head_mask
+                           
+from qap_measures_utils import qap_spatial, \
+                               qap_spatial_epi, \
+                               qap_temporal, \
+                               append_to_csv
 
 from qap_workflows import qap_mask_workflow, \
                           qap_spatial_workflow, \
                           qap_spatial_epi_workflow, \
                           qap_temporal_workflow
+                          
+from workflow_utils import check_input_resources, \
+                           check_config_settings
 
 
 __all__ = ['anatomical_reorient_workflow', \
@@ -31,7 +41,17 @@ __all__ = ['anatomical_reorient_workflow', \
            'func_motion_correct_workflow', \
            'functional_brain_mask_workflow', \
            'mean_functional_workflow', \
+           'select_thresh', \
+           'slice_head_mask', \
+           'qap_spatial', \
+           'qap_spatial_epi', \
+           'qap_temporal', \
+           'append_to_csv', \
            'qap_mask_workflow', \
            'qap_spatial_workflow', \
            'qap_spatial_epi_workflow', \
-           'qap_temporal_workflow']
+           'qap_temporal_workflow', \
+           'check_input_resources', \
+           'check_config_settings']
+           
+           

@@ -150,7 +150,7 @@ def test():
 
 
 def specific_tests():
-    from numpy.testing import *
+    import numpy.testing
     
     ffile   = "sample_func.nii.gz"
     mfile   = "sample_func_mask.nii.gz"

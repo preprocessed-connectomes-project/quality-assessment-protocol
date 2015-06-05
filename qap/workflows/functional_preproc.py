@@ -70,8 +70,8 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
 
     from nipype.interfaces.afni import preprocess
 
-    from workflow_utils import check_input_resources
-    from workflow_utils import check_config_settings
+    from workflows.workflow_utils import check_input_resources, \
+                                         check_config_settings
 
 
     check_input_resources(resource_pool, "functional_scan")
@@ -281,7 +281,7 @@ def functional_brain_mask_workflow(workflow, resource_pool, config):
 
     if "func_motion_correct" not in resource_pool.keys():
 
-        from functional_preproc import func_motion_correct_workflow
+        from workflows.functional_preproc import func_motion_correct_workflow
 
         workflow, resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config)
@@ -375,7 +375,7 @@ def mean_functional_workflow(workflow, resource_pool, config):
     
     from nipype.interfaces.afni import preprocess
 
-    from workflow_utils import check_input_resources
+    from workflows.workflow_utils import check_input_resources
         
 
     #check_input_resources(resource_pool, "func_motion_correct")
@@ -384,7 +384,8 @@ def mean_functional_workflow(workflow, resource_pool, config):
 
     if "functional_brain_mask" not in resource_pool.keys():
 
-        from functional_preproc import functional_brain_mask_workflow
+        from workflows.functional_preproc import \
+                                              functional_brain_mask_workflow
 
         workflow, resource_pool = \
             functional_brain_mask_workflow(workflow, resource_pool, config)
@@ -392,7 +393,7 @@ def mean_functional_workflow(workflow, resource_pool, config):
 
     if "func_motion_correct" not in resource_pool.keys():
 
-        from functional_preproc import func_motion_correct_workflow
+        from workflows.functional_preproc import func_motion_correct_workflow
 
         workflow, resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config)
