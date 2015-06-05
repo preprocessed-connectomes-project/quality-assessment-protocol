@@ -8,14 +8,16 @@
 #$ -e /home/ubuntu/qap_run.err
 #$ -o /home/ubuntu/qap_run.out
 source /etc/profile.d/cpac_env.sh
-SP_CONFIG_FILE=/home/ubuntu/pcp-qap/configs/qap_config_abide_spatial.yml
-TP_CONFIG_FILE=/home/ubuntu/pcp-qap/configs/qap_config_abide_temporal.yml
-CREDS_PATH=/home/ubuntu/secure-creds/aws-keys/fcp-indi-keys2.csv
+ANAT_S3_DICT=/home/ubuntu/pcp-qap/qap/anat_s3_dict.yml
+FUNC_S3_DICT=/home/ubuntu/pcp-qap/qap/func_s3_dict.yml
+ANAT_SP_CONFIG_FILE=/home/ubuntu/pcp-qap/configs/qap_config_abide_anat_spatial.yml
+FUNC_SP_CONFIG_FILE=/home/ubuntu/pcp-qap/configs/qap_config_abide_func_spatial.yml
+FUNC_TP_CONFIG_FILE=/home/ubuntu/pcp-qap/configs/qap_config_abide_func_temporal.yml
 echo "Start - TASKID " $SGE_TASK_ID " : " $(date)
 # Run spatial qap
-python /home/ubuntu/pcp-qap/qap/run_qap_spatial.py --subj_idx $SGE_TASK_ID --creds_path $CREDS_PATH $SP_CONFIG_FILE
+python /home/ubuntu/pcp-qap/qap/run_qap_spatial.py --subj_idx $SGE_TASK_ID --s3_dict_yml $ANAT_S3_DICT $ANAT_SP_CONFIG_FILE
 # Run temporal qap
-#python /home/ubuntu/pcp-qap/qap/run_qap_temporal.py --subj_idx $SGE_TASK_ID --creds_path $CREDS_PATH $TP_CONFIG_FILE rest_1
+python /home/ubuntu/pcp-qap/qap/run_qap_temporal.py --subj_idx $SGE_TASK_ID --s3_dict_yml $FUNC_S3_DICT $FUNC_TP_CONFIG_FILE
 # Run spatial epi
-#python /home/ubuntu/pcp-qap/qap/run_qap_spatial_epi.py --subj_idx $SGE_TASK_ID --creds_path $CREDS_PATH $TP_CONFIG_FILE rest_1
+python /home/ubuntu/pcp-qap/qap/run_qap_spatial_epi.py --subj_idx $SGE_TASK_ID --s3_dict_yml $FUNC_S3_DICT $FUNC_SP_CONFIG_FILE
 echo "End - TASKID " $SGE_TASK_ID " : " $(date)
