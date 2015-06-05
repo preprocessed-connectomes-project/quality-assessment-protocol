@@ -5,7 +5,6 @@
 '''
 '''
 
-
 def pull_S3_sublist(yaml_outpath, img_type, cfg_file):
 
     # function example use:
