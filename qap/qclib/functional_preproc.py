@@ -382,53 +382,55 @@ def mean_functional_workflow(workflow, resource_pool, config):
     #check_input_resources(resource_pool, "functional_brain_mask")
 
 
-    if "functional_brain_mask" not in resource_pool.keys():
+    #if "functional_brain_mask" not in resource_pool.keys():
 
-        from functional_preproc import functional_brain_mask_workflow
+    #    from workflows.functional_preproc import \
+    #                                          functional_brain_mask_workflow
 
-        workflow, resource_pool = \
-            functional_brain_mask_workflow(workflow, resource_pool, config)
+    #    workflow, resource_pool = \
+    #        functional_brain_mask_workflow(workflow, resource_pool, config)
 
 
     if "func_motion_correct" not in resource_pool.keys():
 
-        from functional_preproc import func_motion_correct_workflow
+        from workflows.functional_preproc import func_motion_correct_workflow
 
         workflow, resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config)
             
    
-    func_edge_detect = pe.Node(interface=preprocess.Calc(),
-                            name='func_edge_detect')
+    #func_edge_detect = pe.Node(interface=preprocess.Calc(),
+    #                        name='func_edge_detect')
 
-    func_edge_detect.inputs.expr = 'a*b'
-    func_edge_detect.inputs.outputtype = 'NIFTI_GZ'
+    #func_edge_detect.inputs.expr = 'a*b'
+    #func_edge_detect.inputs.outputtype = 'NIFTI_GZ'
 
-
-    if len(resource_pool["func_motion_correct"]) == 2:
-        node, out_file = resource_pool["func_motion_correct"]
-        workflow.connect(node, out_file, func_edge_detect, 'in_file_a')
-    else:
-        func_edge_detect.inputs.in_file_a = \
-            resource_pool["func_motion_correct"]
-
-
-    if len(resource_pool["functional_brain_mask"]) == 2:
-        node, out_file = resource_pool["functional_brain_mask"]
-        workflow.connect(node, out_file, func_edge_detect, 'in_file_b')
-    else:
-        func_edge_detect.inputs.in_file_b = \
-            resource_pool["functional_brain_mask"]
-
-    
     func_mean_skullstrip = pe.Node(interface=preprocess.TStat(),
                            name='func_mean_skullstrip')
 
     func_mean_skullstrip.inputs.options = '-mean'
     func_mean_skullstrip.inputs.outputtype = 'NIFTI_GZ'
 
-    workflow.connect(func_edge_detect, 'out_file',
-                     func_mean_skullstrip, 'in_file')
+
+    if len(resource_pool["func_motion_correct"]) == 2:
+        node, out_file = resource_pool["func_motion_correct"]
+        workflow.connect(node, out_file, func_mean_skullstrip, 'in_file')#func_edge_detect, 'in_file_a')
+    else:
+        #func_edge_detect.inputs.in_file_a = \
+        func_mean_skullstrip.inputs.in_file = \
+            resource_pool["func_motion_correct"]
+
+
+    #if len(resource_pool["functional_brain_mask"]) == 2:
+    #    node, out_file = resource_pool["functional_brain_mask"]
+    #    workflow.connect(node, out_file, func_edge_detect, 'in_file_b')
+    #else:
+    #    func_edge_detect.inputs.in_file_b = \
+    #        resource_pool["functional_brain_mask"]
+
+
+    #workflow.connect(func_edge_detect, 'out_file',
+    #                 func_mean_skullstrip, 'in_file')
     
 
     resource_pool["mean_functional"] = (func_mean_skullstrip, 'out_file')
