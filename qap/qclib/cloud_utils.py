@@ -182,6 +182,10 @@ def upl_qap_output(cfg_file):
         if files:
             upl_files.extend([os.path.join(root, fil) for fil in files])
 
+    if len(upl_files) == 0:
+        err = "\n[!] No output filepaths found to upload!\n"
+        raise Exception(err)
+
     # Using CPAC AWS utils
     s3_upl_files = [ufile.replace(output_dir, bucket_out_prefix) \
                    for ufile in upl_files]

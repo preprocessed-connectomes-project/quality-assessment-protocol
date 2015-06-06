@@ -393,7 +393,7 @@ def mean_functional_workflow(workflow, resource_pool, config):
 
     if "func_motion_correct" not in resource_pool.keys():
 
-        from workflows.functional_preproc import func_motion_correct_workflow
+        from functional_preproc import func_motion_correct_workflow
 
         workflow, resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config)

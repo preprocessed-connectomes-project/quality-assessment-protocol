@@ -302,7 +302,7 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
         from functional_preproc import functional_brain_mask_workflow
 
         workflow, resource_pool = \
-            functional_brain_workflow(workflow, resource_pool, config)
+            functional_brain_mask_workflow(workflow, resource_pool, config)
 
 
     spatial_epi = pe.Node(util.Function(input_names=['mean_epi',
@@ -405,6 +405,14 @@ def qap_temporal_workflow(workflow, resource_pool, config):
 
         workflow, resource_pool = \
             mean_functional_workflow(workflow, resource_pool, config)
+
+
+    if "functional_brain_mask" not in resource_pool.keys():
+
+        from functional_preproc import functional_brain_mask_workflow
+
+        workflow, resource_pool = \
+            functional_brain_mask_workflow(workflow, resource_pool, config)
 
 
     if ("func_motion_correct" not in resource_pool.keys()) or \
