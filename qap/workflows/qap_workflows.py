@@ -304,7 +304,7 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
                                               functional_brain_mask_workflow
 
         workflow, resource_pool = \
-            functional_brain_workflow(workflow, resource_pool, config)
+            functional_brain_mask_workflow(workflow, resource_pool, config)
 
 
     spatial_epi = pe.Node(util.Function(input_names=['mean_epi',
