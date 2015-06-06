@@ -28,7 +28,7 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_info, \
     logger = logging.getLogger('workflow')
 
 
-    sub_id = subject_info[0]
+    sub_id = str(subject_info[0])
 
     if subject_info[1]:
         session_id = subject_info[1]
@@ -178,7 +178,7 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_info, \
 
     else:
 
-        print "\nEverything is already done for subject %s." % subject_id
+        print "\nEverything is already done for subject %s." % sub_id
 
 
     pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")

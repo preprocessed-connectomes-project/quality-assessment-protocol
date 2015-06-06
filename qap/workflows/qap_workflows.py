@@ -407,6 +407,15 @@ def qap_temporal_workflow(workflow, resource_pool, config):
 
         workflow, resource_pool = \
             mean_functional_workflow(workflow, resource_pool, config)
+            
+            
+    if "functional_brain_mask" not in resource_pool.keys():
+
+        from workflows.functional_preproc import \
+            functional_brain_mask_workflow
+
+        workflow, resource_pool = \
+            functional_brain_mask_workflow(workflow, resource_pool, config)
 
 
     if ("func_motion_correct" not in resource_pool.keys()) or \

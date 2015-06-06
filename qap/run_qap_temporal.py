@@ -180,7 +180,7 @@ def build_temporal_qap_workflow(resource_pool, config, subject_info, \
 
     else:
 
-        print "\nEverything is already done for subject %s." % subject_id
+        print "\nEverything is already done for subject %s." % sub_id
 
 
     pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
