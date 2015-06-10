@@ -1,4 +1,3 @@
-
 from cloud_utils import dl_subj_from_s3, \
                         upl_qap_output
                         

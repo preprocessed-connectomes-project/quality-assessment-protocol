@@ -25,7 +25,11 @@ def csv_merge(csv_list, outfile):
             if not fields:
                 fields = csv_reader.fieldnames
 
-            sub_nums_list.append(csv_reader.next())
+            try:
+                sub_nums_list.append(csv_reader.next())
+            except:
+                print "didn't work: %s" % sub
+                pass
 
 
     with open(outfile, "wt") as out_f:               

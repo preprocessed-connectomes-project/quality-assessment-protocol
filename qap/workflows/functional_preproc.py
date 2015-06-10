@@ -70,7 +70,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
 
     from nipype.interfaces.afni import preprocess
 
-    from workflows.workflow_utils import check_input_resources, \
+    from workflow_utils import check_input_resources, \
                                          check_config_settings
 
 
@@ -281,7 +281,7 @@ def functional_brain_mask_workflow(workflow, resource_pool, config):
 
     if "func_motion_correct" not in resource_pool.keys():
 
-        from workflows.functional_preproc import func_motion_correct_workflow
+        from functional_preproc import func_motion_correct_workflow
 
         workflow, resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config)
@@ -384,7 +384,7 @@ def mean_functional_workflow(workflow, resource_pool, config):
 
     #if "functional_brain_mask" not in resource_pool.keys():
 
-    #    from workflows.functional_preproc import \
+    #    from functional_preproc import \
     #                                          functional_brain_mask_workflow
 
     #    workflow, resource_pool = \
@@ -393,7 +393,7 @@ def mean_functional_workflow(workflow, resource_pool, config):
 
     if "func_motion_correct" not in resource_pool.keys():
 
-        from workflows.functional_preproc import func_motion_correct_workflow
+        from functional_preproc import func_motion_correct_workflow
 
         workflow, resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config)
