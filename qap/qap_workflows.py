@@ -260,7 +260,8 @@ def qap_spatial_workflow(workflow, resource_pool, config):
     workflow.connect(spatial, 'qc', spatial_to_main_csv, 'sub_qap_dict')
 
     spatial_to_main_csv.inputs.outfile = \
-            os.path.join(config["output_directory"], "qap_spatial.csv")
+            os.path.join(config["output_directory"], \
+            "qap_anatomical_spatial.csv")
 
     spatial_to_main_csv.inputs.append = True
     
@@ -371,7 +372,7 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
 
     spatial_epi_to_main_csv.inputs.outfile = \
             os.path.join(config["output_directory"], \
-                "qap_spatial_epi_%s.csv" % config["scan_id"])
+                             "qap_functional_spatial.csv")
 
     spatial_epi_to_main_csv.inputs.append = True
     
@@ -497,7 +498,7 @@ def qap_temporal_workflow(workflow, resource_pool, config):
 
     temporal_to_main_csv.inputs.outfile = \
             os.path.join(config["output_directory"], \
-                "qap_temporal_%s.csv" % config["scan_id"])
+                             "qap_functional_temporal.csv")
     
     temporal_to_main_csv.inputs.append = True
     

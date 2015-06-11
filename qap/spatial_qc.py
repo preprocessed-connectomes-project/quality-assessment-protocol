@@ -13,6 +13,7 @@ import scipy.stats as stats
 
 
 def summary_mask(anat_data, mask_data):
+
     """
     Will calculate the three values (mean, stdev, and size).
     Output as a tuple.
@@ -31,6 +32,8 @@ def summary_mask(anat_data, mask_data):
     size: int
         size of the mask (i.e., number of non-zero voxels)
     """
+    
+    import numpy as np
     
     anat_masked = anat_data[mask_data == 1].astype(np.float)
     mean        = anat_masked.mean()
@@ -75,6 +78,8 @@ def get_background(anat_data, fg_mask_data):
 
 
 def check_datatype(background):
+
+    import numpy as np
 
     # If this is float then downgrade the data to an integer with some checks
     if np.issubdtype(background.dtype, float):
@@ -162,6 +167,8 @@ def cnr(mean_gm, mean_wm, std_bg):
     CNR = |(mean GM intensity) - (mean WM intensity)| / (std of background intensities)    
     """
 
+    import numpy as np
+
     cnr     = np.abs(mean_gm - mean_wm)/std_bg
 
     return cnr
@@ -187,6 +194,8 @@ def fber(anat_data, mask_data):
     
     FBER = (mean foreground energy) / (mean background energy)
     """
+
+    import numpy as np
 
     mean_fg = (np.abs(anat_data[mask_data == 1]) ** 2).sum() / (mask_data.sum())
     mean_bg = (np.abs(anat_data[mask_data == 0]) ** 2).sum() / (mask_data.size - mask_data.sum())
@@ -217,12 +226,15 @@ def test_fber():
 
 
 def efc(anat_data):
+
     """
     Calculate the Entropy Focus Criterion (Atkinson 1997, IEEE TMI)
     
     We normalize the original equation by the maximum entropy so our EFC can be 
     easily compared across images with different dimensions.
     """
+
+    import numpy as np
         
     # Calculate the maximum value of the EFC (which occurs any time all voxels have the same value)
     efc_max = 1.0 * np.prod(anat_data.shape) * (1.0 / np.sqrt(np.prod(anat_data.shape))) * \
@@ -261,11 +273,14 @@ def test_efc():
 
 
 def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
+
     # Detect artifacts in the anatomical image using the method described in Mortamet et al. 2009 (MRM)
     # Calculates QI1, the fraction of total voxels that within artifacts.
     
     # Optionally, also calculates QI2, the distance between the distribution of noise voxel
     # (non-artifact background voxels) intensities, and a Ricean distribution.
+
+    import numpy as np
 
     background, bg_mask = get_background(anat_data, fg_mask_data)
     
@@ -465,6 +480,8 @@ def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
     gsr: float
         ghost to signal ratio
     """
+    
+    import numpy as np
     
     # first we need to make a nyquist ghost mask, we do this by circle shifting the original mask by N/2
     # and then removing the intersection with the original mask

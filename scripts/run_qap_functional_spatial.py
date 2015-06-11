@@ -1,10 +1,12 @@
 
 
-def build_spatial_qap_workflow(resource_pool, config, subject_info, run_name):
+def build_spatial_epi_qap_workflow(resource_pool, config, subject_info, \
+                                   run_name):
     
     # build pipeline for each subject, individually
 
-    # ~ 29 minutes per subject with 1 core to ANTS
+    # ~ 5 min 20 sec per subject
+    # (roughly 320 seconds)
 
     import os
     import sys
@@ -52,10 +54,10 @@ def build_spatial_qap_workflow(resource_pool, config, subject_info, run_name):
             raise Exception(err)
         else:
             pass
-
-
+            
     log_dir = output_dir
-
+    
+    # set up logging
     nyconfig.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
     logging.update_logging(nyconfig)
 
@@ -70,45 +72,43 @@ def build_spatial_qap_workflow(resource_pool, config, subject_info, run_name):
     logger.info("Configuration settings:\n" + str(config))
 
 
-
     # get the directory this script is in (not the current working one)
 
     # doing this so that we can properly call the QAP functions from
     # "spatial_qc.py" in qclib; they are called from within Nipype util
-    # Function nodes, and cannot properly import files from the directory they
-    # are stored in
-    script_dir = os.path.dirname(os.path.realpath('__file__'))
+    # Function nodes, and cannot properly import files from the directory
+    # they are stored in
+    #script_dir = os.path.dirname(os.path.realpath('__file__'))
 
-    qclib_dir = os.path.join(script_dir, "qclib")
+    #qclib_dir = os.path.join(script_dir, "qclib")
 
-    sys.path.insert(0, qclib_dir)
+    #sys.path.insert(0, qclib_dir)
 
-  
+        
     # for QAP spreadsheet generation only
     config["subject_id"] = sub_id
 
     config["session_id"] = session_id
 
     config["scan_id"] = scan_id
-
-
-    os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS'] = \
-        str(config["num_ants_threads"])
     
-    
+
 
     workflow = pe.Workflow(name=scan_id)
 
     workflow.base_dir = os.path.join(config["working_directory"], sub_id, \
                             session_id)
+                            
+    # set up crash directory
+    workflow.config['execution'] = \
+        {'crashdump_dir': config["output_directory"]}
     
     
     # update that resource pool with what's already in the output directory
     for resource in os.listdir(output_dir):
     
-        if os.path.isdir(os.path.join(output_dir,resource)) and \
-            resource not in resource_pool.keys():
-
+        if os.path.isdir(os.path.join(output_dir,resource)) and resource not in resource_pool.keys():
+        
             resource_pool[resource] = glob.glob(os.path.join(output_dir, \
                                           resource, "*"))[0]
                  
@@ -140,12 +140,12 @@ def build_spatial_qap_workflow(resource_pool, config, subject_info, run_name):
     
     # start connecting the pipeline
        
-    if "qap_spatial" not in resource_pool.keys():
+    if "qap_spatial_epi" not in resource_pool.keys():
 
-        from qap.qap_workflows import qap_spatial_workflow
+        from qap.qap_workflows import qap_spatial_epi_workflow
 
         workflow, resource_pool = \
-            qap_spatial_workflow(workflow, resource_pool, config)
+            qap_spatial_epi_workflow(workflow, resource_pool, config)
 
     
 
@@ -192,6 +192,7 @@ def build_spatial_qap_workflow(resource_pool, config, subject_info, run_name):
     logger.info("Pipeline end time: %s" % pipeline_end_stamp)
 
 
+
     return workflow
 
 
@@ -200,9 +201,10 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
 
     import os
     import yaml
-    import time
-
     from multiprocessing import Process
+
+    import time
+    
     
     if not cloudify:
 
@@ -246,11 +248,10 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
 
                             flat_sub_dict[sub_info_tuple].update(resource_dict)                    
 
-
         
     with open(pipeline_config_yaml,"r") as f:
         config = yaml.load(f)
-                        
+
 
     try:
         os.makedirs(config["output_directory"])
@@ -277,85 +278,85 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
     
     # get the pipeline config file name, use it as the run name
     run_name = pipeline_config_yaml.split("/")[-1].split(".")[0]
-        
-    if not cloudify:
 
-        procss = [Process(target=build_spatial_qap_workflow, \
+    if not cloudify:
+        
+        procss = [Process(target=build_spatial_epi_qap_workflow, \
                           args=(flat_sub_dict[sub_info], config, sub_info, \
                                 run_name)) \
                           for sub_info in flat_sub_dict.keys()]
-                              
-                              
+                          
+                          
         pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
-        
+    
         # Init job queue
         job_queue = []
-    
+
         # If we're allocating more processes than are subjects, run them all
         if len(subject_list) <= config["num_subjects_at_once"]:
-        
+    
             """
             Stream all the subjects as sublist is
             less than or equal to the number of 
             subjects that need to run
             """
-        
+    
             for p in procss:
                 p.start()
                 print >>pid,p.pid
-        
+    
         # Otherwise manage resources to run processes incrementally
         else:
-        
+    
             """
             Stream the subject workflows for preprocessing.
             At Any time in the pipeline c.numSubjectsAtOnce
             will run, unless the number remaining is less than
             the value of the parameter stated above
             """
-        
+    
             idx = 0
-        
+    
             while(idx < len(subject_list)):
-        
+    
                 # If the job queue is empty and we haven't started indexing
                 if len(job_queue) == 0 and idx == 0:
-        
+    
                     # Init subject process index
                     idc = idx
-        
+    
                     # Launch processes (one for each subject)
-                    for p in procss[idc: idc + config["num_subjects_at_once"]]:
-        
+                    for p in procss[idc: idc+config["num_subjects_at_once"]]:
+    
                         p.start()
                         print >>pid,p.pid
                         job_queue.append(p)
                         idx += 1
-        
+    
                 # Otherwise, jobs are running - check them
                 else:
-        
+    
                     # Check every job in the queue's status
                     for job in job_queue:
-        
+    
                         # If the job is not alive
                         if not job.is_alive():
-        
+    
                             # Find job and delete it from queue
                             print 'found dead job ', job
                             loc = job_queue.index(job)
                             del job_queue[loc]
-        
-                            # ...and start the next available process (subject)
+    
+                            # ..and start the next available process (subject)
                             procss[idx].start()
-        
+    
                             # Append this to job queue and increment index
                             job_queue.append(procss[idx])
                             idx += 1
-    
+
                     # Add sleep so while loop isn't consuming 100% of CPU
                     time.sleep(2)
-        
+    
         pid.close()
 
 
@@ -363,11 +364,11 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
 
         # run on cloud
         sub = subject_list.keys()[0]
-        build_spatial_qap_workflow(subject_list[sub], config, sub, run_name)
+        build_spatial_epi_qap_workflow(subject_list[sub], config, sub, \
+                                       run_name)
 
 
 
-# Main routine
 def main():
 
     import argparse
@@ -455,7 +456,6 @@ def main():
 
 
 
-# Make executable
 if __name__ == "__main__":
     main()
 
