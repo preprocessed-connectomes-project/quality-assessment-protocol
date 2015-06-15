@@ -5,8 +5,6 @@
 #       workflows
 
 #__all__ = ['qclib', 'workflows']
-
-import run_qap_spatial, run_qap_spatial_epi, run_qap_temporal
                                             
 from anatomical_preproc import run_anatomical_reorient, \
                                run_anatomical_skullstrip, \

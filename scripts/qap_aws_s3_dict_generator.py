@@ -74,6 +74,7 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, creds_pa
         raise Exception(err)
 
 
+
 def main():
 
     import argparse
@@ -82,7 +83,7 @@ def main():
                        
     parser.add_argument("scan_type", type=str, \
                             help="'anat' or 'func', depending on which QAP " \
-                                 "measures you will be using the S3 subject " \
+                                 "measures you will be using the S3 subject "\
                                  "dictionary for")
  
     parser.add_argument("bucket_name", type=str, \
@@ -102,11 +103,14 @@ def main():
  
     args = parser.parse_args()
 
+
     # run it!
-    pull_s3_sublist(args.outfile_path, args.scan_type, args.bucket_name, \
+    pull_S3_sublist(args.outfile_path, args.scan_type, args.bucket_name, \
                         args.bucket_prefix, args.creds_path)
 
 
 
 if __name__ == "__main__":
     main()
+    
+    
