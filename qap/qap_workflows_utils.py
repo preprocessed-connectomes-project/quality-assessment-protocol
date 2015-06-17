@@ -71,8 +71,8 @@ def c3d_affine_convert(infile, transform, standard):
     if os.path.isfile(converted_xfm):        
         return converted_xfm
     else:
-        err = "\n[!] The C3D Affine Tool failed to convert the ANTS " \
-              "affine transform file to FSL format.\n\nCommand: %s" \
+        err = "\n[!] The C3D Affine Tool did not successfully produce its " \
+              "converted ANTS-to-FSL format transform.\n\nCommand: %s" \
               % c3d_cmd
         raise Exception(err)
         
