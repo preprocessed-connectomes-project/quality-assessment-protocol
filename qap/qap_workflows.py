@@ -158,7 +158,7 @@ def qap_spatial_workflow(workflow, resource_pool, config):
 
     import nipype.interfaces.utility as util
     
-    from qap_workflows_utils import qap_spatial, \
+    from qap_workflows_utils import qap_anatomical_spatial, \
                                     append_to_csv
 
 
@@ -197,7 +197,7 @@ def qap_spatial_workflow(workflow, resource_pool, config):
                                                  'session_id',
                                                  'scan_id'],
                                     output_names=['qc'],
-                                    function=qap_spatial),
+                                    function=qap_anatomical_spatial),
                                     name='qap_spatial')
                                       
                                         
@@ -302,7 +302,7 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
 
     import nipype.interfaces.utility as util
     
-    from qap_workflows_utils import qap_spatial_epi, \
+    from qap_workflows_utils import qap_functional_spatial, \
                                     append_to_csv
 
     from workflow_utils import check_input_resources
@@ -330,7 +330,7 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
                                                      'session_id',
                                                      'scan_id'],
                                         output_names=['qc'],
-                                        function=qap_spatial_epi),
+                                        function=qap_functional_spatial),
                                         name='qap_spatial_epi')
                                          
                                            
@@ -415,7 +415,7 @@ def qap_temporal_workflow(workflow, resource_pool, config):
 
     import nipype.interfaces.utility as util
     
-    from qap_workflows_utils import qap_temporal, \
+    from qap_workflows_utils import qap_functional_temporal, \
                                     append_to_csv
    
     
@@ -451,7 +451,7 @@ def qap_temporal_workflow(workflow, resource_pool, config):
                                                   'session_id',
                                                   'scan_id'],
                                      output_names=['qc'],
-                                     function=qap_temporal),
+                                     function=qap_functional_temporal),
                                      name='qap_temporal')
 
 

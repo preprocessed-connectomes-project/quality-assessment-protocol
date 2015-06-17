@@ -44,26 +44,6 @@ def summary_mask(anat_data, mask_data):
 
 
 
-def test_summary_mask():
-
-    import pickle
-
-    pickfile = open("/tdata/QAP/script_revamp/QAP/qc_test/anat_and_mask_" \
-                    "data.p","rb")
-
-    datadict = pickle.load(pickfile)
-
-    pickfile.close()
-
-    anat_data = datadict["anat_data"]
-    mask_data = datadict["mask_data"]
-
-    summary_tuple = summary_mask(anat_data, mask_data)
-
-    assert summary_tuple == (419.6682196897284, 313.74669703973018, 3349975)
-
-
-
 def get_background(anat_data, fg_mask_data):
 
     # Define the image background by taking the inverse of the foreground mask.
@@ -99,37 +79,6 @@ def check_datatype(background):
 
 
 
-def test_check_datatype():
-
-    import numpy as np
-
-    sample_array = [[[0,1,2],[3,4,5]],[[6,7,8],[9,10,11]]]
-
-    # put it into NumPy format
-    sample_array = np.asarray(sample_array)
-
-    sample_array_int32 = sample_array.astype('int32')
-    sample_array_float32 = sample_array.astype('float32')
-
-    output_int_in = check_datatype(sample_array_int32)
-    output_float_in = check_datatype(sample_array_float32)
-
-    assert_list = []
-
-    if output_int_in.dtype == "int32":
-        assert_list.append(1)
-    else:
-        assert_list.append(0)
-
-    if output_float_in.dtype == "int32":
-        assert_list.append(1)
-    else:
-        assert_list.append(0)
-
-    assert assert_list == [1,1]
-
-
-
 def snr(mean_fg, std_bg):
 
     """
@@ -148,17 +97,6 @@ def snr(mean_fg, std_bg):
 
 
 
-def test_snr():
-
-    fg_mean = 419.6682196897284
-    bg_std = 7.8977607536544143
-
-    snr_out = snr(fg_mean, bg_std)
-
-    assert snr_out == 53.137621254928689
-
-
-
 def cnr(mean_gm, mean_wm, std_bg):
 
     """
@@ -172,18 +110,6 @@ def cnr(mean_gm, mean_wm, std_bg):
     cnr     = np.abs(mean_gm - mean_wm)/std_bg
 
     return cnr
-
-
-
-def test_cnr():
-
-    mean_gm = 382.08429670720869
-    mean_wm = 641.94028605569667
-    std_bg = 7.8977607536544143
-
-    cnr_out = cnr(mean_gm, mean_wm, std_bg)
-
-    assert cnr_out == 32.902489383240514
 
     
     
@@ -202,26 +128,6 @@ def fber(anat_data, mask_data):
     fber    = mean_fg / mean_bg
 
     return fber
-
-
-
-def test_fber():
-
-    import pickle
-
-    pickfile = open("/tdata/QAP/script_revamp/QAP/qc_test/anat_and_mask_" \
-                    "data.p","rb")
-
-    datadict = pickle.load(pickfile)
-
-    pickfile.close()
-
-    anat_data = datadict["anat_data"]
-    mask_data = datadict["mask_data"]    
-
-    fber_out = fber(anat_data, mask_data)
-
-    assert fber_out == 3976.6208162074618
 
 
 
@@ -250,25 +156,6 @@ def efc(anat_data):
         print "NaN found for efc"
     
     return efc
-
-
-
-def test_efc():
-
-    import pickle
-
-    pickfile = open("/tdata/QAP/script_revamp/QAP/qc_test/anat_and_mask_" \
-                    "data.p","rb")
-
-    datadict = pickle.load(pickfile)
-
-    pickfile.close()
-
-    anat_data = datadict["anat_data"]
-
-    efc_out = efc(anat_data)
-
-    assert efc_out == 0.37500485122381333
 
 
 
@@ -340,46 +227,6 @@ def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
 
 
 
-def test_artifacts_no_qi2():
-
-    import pickle
-
-    pickfile = open("/tdata/QAP/script_revamp/QAP/qc_test/anat_and_mask_" \
-                    "data.p","rb")
-
-    datadict = pickle.load(pickfile)
-
-    pickfile.close()
-
-    anat_data = datadict["anat_data"]
-    mask_data = datadict["mask_data"]
-
-    art_out = artifacts(anat_data, mask_data, calculate_qi2=False)
-
-    assert art_out == (0.081618390474750765, None)
-
-
-
-def test_artifacts():
-
-    import pickle
-
-    pickfile = open("/tdata/QAP/script_revamp/QAP/qc_test/anat_and_mask_" \
-                    "data.p","rb")
-
-    datadict = pickle.load(pickfile)
-
-    pickfile.close()
-
-    anat_data = datadict["anat_data"]
-    mask_data = datadict["mask_data"]
-
-    art_out = artifacts(anat_data, mask_data, calculate_qi2=True)
-
-    assert art_out == 0
-
-
-
 def fwhm(anat_file, mask_file, out_vox=False):
 
     """
@@ -424,36 +271,6 @@ def fwhm(anat_file, mask_file, out_vox=False):
         vals    = vals / pixdim
     
     return tuple(vals)
-
-
-
-def test_fwhm_out_vox():
-
-    anat_file = "/tdata/QAP/script_revamp/QAP/qc_test/pipeline_folder/" \
-                "2014113/anatomical_reorient/mprage_resample.nii.gz"
-
-    mask_file = "/tdata/QAP/script_revamp/QAP/qc_test/" \
-                "2014113_qc_head_mask.nii.gz"
-
-    fwhm_out = fwhm(anat_file, mask_file, out_vox=True)
-
-    assert fwhm_out == (2.6506290520611815, 2.9979514295346399, \
-                        3.4631241509393251, 3.0191171981363252)
-
-
-
-def test_fwhm_no_out_vox():
-
-    anat_file = "/tdata/QAP/script_revamp/QAP/qc_test/pipeline_folder/" \
-                "2014113/anatomical_reorient/mprage_resample.nii.gz"
-
-    mask_file = "/tdata/QAP/script_revamp/QAP/qc_test/" \
-                "2014113_qc_head_mask.nii.gz"
-
-    fwhm_out = fwhm(anat_file, mask_file, out_vox=False)
-
-    assert fwhm_out == (2.65063, 2.9979499999999999, 3.4630999999999998, \
-                        3.01911)
 
 
 
@@ -521,46 +338,6 @@ def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
 
     
     return gsr
-
-
-
-def test_ghost_direction_x():
-
-    import pickle
-
-    pickfile = open("/tdata/QAP/script_revamp/QAP/qc_test/" \
-                    "epi_and_mask_data.p","rb")
-
-    datadict = pickle.load(pickfile)
-
-    pickfile.close()
-
-    func_data = datadict["func_data"]
-    funcmask_data = datadict["funcmask_data"]
-
-    gsr_out = ghost_direction(func_data, funcmask_data, "x")
-
-    assert gsr_out == -0.016198311
-
-
-
-def test_ghost_direction_y():
-
-    import pickle
-
-    pickfile = open("/tdata/QAP/script_revamp/QAP/qc_test/" \
-                    "epi_and_mask_data.p","rb")
-
-    datadict = pickle.load(pickfile)
-
-    pickfile.close()
-
-    func_data = datadict["func_data"]
-    funcmask_data = datadict["funcmask_data"]
-
-    gsr_out = ghost_direction(func_data, funcmask_data, "y")
-
-    assert gsr_out == 0.016582608
 
 
 
