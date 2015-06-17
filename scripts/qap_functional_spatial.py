@@ -92,6 +92,8 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_info, \
 
     config["scan_id"] = scan_id
     
+    config["run_name"] = run_name
+    
 
 
     workflow = pe.Workflow(name=scan_id)

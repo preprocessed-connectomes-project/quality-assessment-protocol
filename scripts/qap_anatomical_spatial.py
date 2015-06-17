@@ -91,6 +91,8 @@ def build_spatial_qap_workflow(resource_pool, config, subject_info, run_name):
     config["session_id"] = session_id
 
     config["scan_id"] = scan_id
+    
+    config["run_name"] = run_name
 
 
     os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS'] = \

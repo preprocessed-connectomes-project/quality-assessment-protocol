@@ -10,8 +10,9 @@ def qap_mask_workflow(workflow, resource_pool, config):
     import nipype.interfaces.utility as util
     import nipype.interfaces.fsl.maths as fsl
 
-    from qap_mask_utils import select_thresh, \
-                               slice_head_mask
+    from qap_workflows_utils import select_thresh, \
+                                    slice_head_mask, \
+                                    c3d_affine_convert
 
     from workflow_utils import check_input_resources, \
                                check_config_settings
@@ -65,10 +66,20 @@ def qap_mask_workflow(workflow, resource_pool, config):
     erode_node.inputs.args = "-eroF -eroF -eroF -eroF -eroF -eroF"
 
 
-    slice_head_mask = pe.Node(util.Function(input_names=['infile', 'transform', 'standard'],
+    convert_fsl_xfm = pe.Node(util.Function(input_names=['infile', \
+                                                         'transform', \
+                                                         'standard'],
+                                            output_names=['converted_xfm'],
+                                            function=c3d_affine_convert),
+                              name="qap_headmask_c3d_xfm")
+
+
+    slice_head_mask = pe.Node(util.Function(input_names=['infile', \
+                                                         'transform', \
+                                                         'standard'],
                                             output_names=['outfile_path'],
                                             function=slice_head_mask),
-                                          name="qap_headmask_slice_head_mask")
+                              name="qap_headmask_slice_head_mask")
 
 
     combine_masks = pe.Node(interface=fsl.BinaryMaths(),
@@ -83,11 +94,14 @@ def qap_mask_workflow(workflow, resource_pool, config):
         node, out_file = resource_pool["anatomical_reorient"]
         workflow.connect(node, out_file, select_thresh, 'input_skull')
         workflow.connect(node, out_file, mask_skull, 'in_file')
+        workflow.connect(node, out_file, convert_fsl_xfm, 'infile')
         workflow.connect(node, out_file, slice_head_mask, 'infile')
     else:
         select_thresh.inputs.input_skull = \
             resource_pool["anatomical_reorient"]
         mask_skull.inputs.in_file = \
+            resource_pool["anatomical_reorient"]
+        convert_fsl_xfm.inputs.infile = \
             resource_pool["anatomical_reorient"]
         slice_head_mask.inputs.infile = \
             resource_pool["anatomical_reorient"]
@@ -95,16 +109,20 @@ def qap_mask_workflow(workflow, resource_pool, config):
      
     if len(resource_pool["ants_affine_xfm"]) == 2:
         node, out_file = resource_pool["ants_affine_xfm"]
-        workflow.connect(node, out_file, slice_head_mask, 'transform')
+        workflow.connect(node, out_file, convert_fsl_xfm, 'transform')
     else:
-        slice_head_mask.inputs.transform = resource_pool["ants_affine_xfm"]
+        convert_fsl_xfm.inputs.transform = resource_pool["ants_affine_xfm"]
                 
-    
+
+    convert_fsl_xfm.inputs.standard = config["template_skull_for_anat"]    
     slice_head_mask.inputs.standard = config["template_skull_for_anat"]
 
 
 
     workflow.connect(select_thresh, 'thresh_out', mask_skull, 'thresh')
+
+    workflow.connect(convert_fsl_xfm, 'converted_xfm', \
+                         slice_head_mask, 'transform')
 
     workflow.connect(mask_skull, 'out_file', dilate_node, 'in_file')
 
@@ -140,8 +158,8 @@ def qap_spatial_workflow(workflow, resource_pool, config):
 
     import nipype.interfaces.utility as util
     
-    from qap_measures_utils import qap_spatial, \
-                                   append_to_csv
+    from qap_workflows_utils import qap_spatial, \
+                                    append_to_csv
 
 
     if "qap_head_mask" not in resource_pool.keys():
@@ -261,7 +279,7 @@ def qap_spatial_workflow(workflow, resource_pool, config):
 
     spatial_to_main_csv.inputs.outfile = \
             os.path.join(config["output_directory"], \
-            "qap_anatomical_spatial.csv")
+            "qap_anatomical_spatial_%s.csv" % config["run_name"])
 
     spatial_to_main_csv.inputs.append = True
     
@@ -284,8 +302,8 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
 
     import nipype.interfaces.utility as util
     
-    from qap_measures_utils import qap_spatial_epi, \
-                                   append_to_csv
+    from qap_workflows_utils import qap_spatial_epi, \
+                                    append_to_csv
 
     from workflow_utils import check_input_resources
   
@@ -372,7 +390,8 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
 
     spatial_epi_to_main_csv.inputs.outfile = \
             os.path.join(config["output_directory"], \
-                             "qap_functional_spatial.csv")
+                             "qap_functional_spatial_%s.csv" \
+                             % config["run_name"])
 
     spatial_epi_to_main_csv.inputs.append = True
     
@@ -396,8 +415,8 @@ def qap_temporal_workflow(workflow, resource_pool, config):
 
     import nipype.interfaces.utility as util
     
-    from qap_measures_utils import qap_temporal, \
-                                   append_to_csv
+    from qap_workflows_utils import qap_temporal, \
+                                    append_to_csv
    
     
     if "mean_functional" not in resource_pool.keys():
@@ -498,7 +517,8 @@ def qap_temporal_workflow(workflow, resource_pool, config):
 
     temporal_to_main_csv.inputs.outfile = \
             os.path.join(config["output_directory"], \
-                             "qap_functional_temporal.csv")
+                             "qap_functional_temporal_%s.csv" \
+                             % config["run_name"])
     
     temporal_to_main_csv.inputs.append = True
     

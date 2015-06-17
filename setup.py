@@ -15,7 +15,9 @@ def main():
           author_email='cameron.craddock@childmind.org',
           license='',
           packages=['qap'],
-          package_data={'qap': ['inpoint*.txt']},
+          package_data={'qap': ['inpoint*.txt',
+                                'test_data/*.nii.gz',
+                                'test_data/*/*/*/*/*']},
           scripts=glob("scripts/*"),
           zip_safe=False)
           
