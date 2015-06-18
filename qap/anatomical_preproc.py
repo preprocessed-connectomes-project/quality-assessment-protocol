@@ -99,39 +99,6 @@ def run_anatomical_reorient(anatomical_scan):
 
 
 
-def test_run_anatomical_reorient():
-
-    import os
-    import commands
-
-
-    if "anatomical_reorient" in os.listdir(os.getcwd()):
-
-        err = "\n[!] The output folder for this workflow already exists.\n"
-
-        raise Exception(err)
-
-
-    anat_scan = os.path.join(base_test_dir, \
-                    "raw_data/0050002/session_1/anat_1/mprage.nii.gz")
-
-    ref_out = os.path.join(base_test_dir, \
-                  "ABIDE/0050002_session_1/anatomical_reorient/" \
-                  "mprage_RPI.nii.gz")
-
-    output = run_anatomical_reorient(anat_scan)
-
-    cmd = "3ddot -demean %s %s" % (output, ref_out)
-
-    correlation = commands.getoutput(cmd)
-
-    os.system("rm -R anatomical_reorient")
-
-
-    assert correlation > 0.98
-
-
-
 def anatomical_skullstrip_workflow(workflow, resource_pool, config):
 
     # resource pool should have:
@@ -248,40 +215,6 @@ def run_anatomical_skullstrip(anatomical_reorient):
 
 
     return outpath
-
-
-
-def test_run_anatomical_skullstrip():
-
-    import os
-    import commands
-
-
-    if "anatomical_skullstrip" in os.listdir(os.getcwd()):
-
-        err = "\n[!] The output folder for this workflow already exists.\n"
-
-        raise Exception(err)
-
-
-    anat_reorient = os.path.join(base_test_dir, \
-                        "ABIDE/0050002_session_1/anatomical_reorient/" \
-                        "mprage_RPI.nii.gz")
-
-    ref_out = os.path.join(base_test_dir, \
-                  "ABIDE/0050002_session_1/anatomical_brain/" \
-                  "mprage_RPI_calc.nii.gz")
-
-    output = run_anatomical_skullstrip(anat_reorient)
-
-    cmd = "3ddot -demean %s %s" % (output, ref_out)
-
-    correlation = commands.getoutput(cmd)
-
-    os.system("rm -R anatomical_brain")
-
-
-    assert correlation > 0.98
 
 
 

@@ -352,8 +352,8 @@ def qap_functional_spatial(mean_epi, func_brain_mask, subject_id, \
 
     
     # Summary Measures
-    qc['fg_mean'], qc['fg_std'], qc['fg_size']      = summary_mask(anat_data, fg_mask)
-    qc['bg_mean'], qc['bg_std'], qc['bg_size']      = summary_mask(anat_data, bg_mask)
+    qc['fg_mean'], qc['fg_std'], qc['fg_size'] = summary_mask(anat_data, fg_mask)
+    qc['bg_mean'], qc['bg_std'], qc['bg_size'] = summary_mask(anat_data, bg_mask)
     
 
     qc['snr']   = None

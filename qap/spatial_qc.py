@@ -195,6 +195,8 @@ def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
     # Count the number of voxels that remain after the opening operation. These are artifacts.
     QI1             = background.sum() / float(bg_mask.sum())
     
+    ''' "bg" in code below not defined- need to ascertain what that should '''
+    '''      be, and correct it- unit test for this part disabled for now  '''
     if calculate_qi2:
         # Now lets focus on the noise, which is everything in the background that was not identified as artifact
         bgNoise     = anat_data[(fg_mask_data-bg)==1]

@@ -75,18 +75,6 @@ def build_temporal_qap_workflow(resource_pool, config, subject_info, \
     logger.info("Configuration settings:\n" + str(config))
 
 
-    # get the directory this script is in (not the current working one)
-
-    # doing this so that we can properly call the QAP functions from
-    # "spatial_qc.py" in qclib; they are called from within Nipype util
-    # Function nodes, and cannot properly import files from the directory
-    # they are stored in
-    #script_dir = os.path.dirname(os.path.realpath('__file__'))
-
-    #qclib_dir = os.path.join(script_dir, "qclib")
-
-    #sys.path.insert(0, qclib_dir)
-
         
     # for QAP spreadsheet generation only
     config["subject_id"] = sub_id
@@ -96,6 +84,7 @@ def build_temporal_qap_workflow(resource_pool, config, subject_info, \
     config["scan_id"] = scan_id
     
     config["run_name"] = run_name
+    
     
 
     workflow = pe.Workflow(name=scan_id)
