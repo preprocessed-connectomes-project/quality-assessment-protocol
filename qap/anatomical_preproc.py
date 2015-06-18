@@ -305,12 +305,6 @@ def ants_anatomical_linear_registration(workflow, resource_pool, config):
     workflow.connect(calc_ants_warp, 'warp_list',
                          select_forward_affine, 'warp_list')
 
-    #workflow.connect(calc_ants_warp, 'warp_list',
-    #                     select_forward_warp, 'warp_list')
-
-    #workflow.connect(calc_ants_warp, 'warp_list',
-    #                     select_inverse_warp, 'warp_list')
-
 
     resource_pool["ants_initial_xfm"] = \
         (select_forward_initial, 'selected_warp')
@@ -325,6 +319,65 @@ def ants_anatomical_linear_registration(workflow, resource_pool, config):
 
 
     return workflow, resource_pool
+    
+    
+    
+def run_ants_anatomical_linear_registration(anatomical_brain, \
+                                                template_brain, num_cores=1):
+
+    # stand-alone runner for anatomical skullstrip workflow
+
+    import os
+    import sys
+
+    import glob
+
+    import nipype.interfaces.io as nio
+    import nipype.pipeline.engine as pe
+
+    workflow = pe.Workflow(name='ants_anatomical_linear_registration_' \
+                                'workflow')
+
+    current_dir = os.getcwd()
+
+    workflow_dir = os.path.join(current_dir, "ants_anatomical_linear_" \
+                                    "registration")
+    workflow.base_dir = workflow_dir
+
+
+    resource_pool = {}
+    config = {}
+    num_cores_per_subject = 1
+    
+    
+    os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS'] = str(num_cores)
+
+
+    resource_pool["anatomical_brain"] = anatomical_brain
+    config["template_brain_for_anat"] = template_brain
+    
+    workflow, resource_pool = \
+          ants_anatomical_linear_registration(workflow, resource_pool, config)
+
+
+    ds = pe.Node(nio.DataSink(), name='datasink_ants_anatomical_linear_' \
+                                      'registration')
+    ds.inputs.base_directory = workflow_dir
+    
+    node, out_file = resource_pool["ants_linear_warped_image"]
+
+    workflow.connect(node, out_file, ds, 'ants_linear_warped_image')
+
+
+    workflow.run(plugin='MultiProc', plugin_args= \
+                     {'n_procs': num_cores_per_subject})
+
+
+    outpath = glob.glob(os.path.join(workflow_dir, "ants_linear_warped_" \
+                                     "image", "*"))[0]
+
+
+    return outpath
 
 
 
