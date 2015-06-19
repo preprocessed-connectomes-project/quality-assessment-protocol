@@ -134,6 +134,7 @@ def run_all_tests_anatomical_preproc():
 
     test_run_anatomical_reorient()
     test_run_anatomical_skullstrip()
+    test_run_ants_anatomical_linear_registration()
     
     
 
