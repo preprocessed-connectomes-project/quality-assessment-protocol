@@ -99,8 +99,10 @@ def test_run_func_motion_correct_no_slice_time():
     
     os.system("rm -R func_motion_correct")
 
+    # create a vector of True and False values
+    bool_vector = ref_out_data == output_data
 
-    assert ref_out_data.all() == output_data.all()
+    assert bool_vector.all()
 
 
 
@@ -142,7 +144,10 @@ def test_run_func_motion_correct_slice_time():
     os.system("rm -R func_motion_correct")
 
 
-    assert ref_out_data.all() == output_data.all()
+    # create a vector of True and False values
+    bool_vector = ref_out_data == output_data
+
+    assert bool_vector.all()
     
     
 
@@ -185,7 +190,10 @@ def test_run_functional_brain_mask_3dautomask():
     os.system("rm -R functional_brain_mask")
 
 
-    assert ref_out_data.all() == output_data.all()
+    # create a vector of True and False values
+    bool_vector = ref_out_data == output_data
+
+    assert bool_vector.all()
     
     
     
@@ -228,7 +236,10 @@ def test_run_functional_brain_mask_BET():
     os.system("rm -R functional_brain_mask")
 
 
-    assert ref_out_data.all() == output_data.all()
+    # create a vector of True and False values
+    bool_vector = ref_out_data == output_data
+
+    assert bool_vector.all()
     
     
     
@@ -271,7 +282,10 @@ def test_run_mean_functional():
     os.system("rm -R mean_functional")
 
 
-    assert ref_out_data.all() == output_data.all()
+    # create a vector of True and False values
+    bool_vector = ref_out_data == output_data
+
+    assert bool_vector.all()
 
 
 

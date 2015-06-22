@@ -5,7 +5,7 @@ def main():
     from setuptools import setup
 
     setup(name='qap',
-          version='0.0.1',
+          version='0.1.0',
           description='A collection of three quality assessment pipelines ' \
                       'for anatomical MRI and functional MRI scans.',
           url='https://github.com/preprocessed-connectomes-project/' \
