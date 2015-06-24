@@ -1,10 +1,18 @@
 
-def gather_raw_data(site_folder, yaml_outpath, scan_type):
+def gather_raw_data(site_folder, yaml_outpath, scan_type, subject_inclusion):
 
     import os
     import yaml
     
     sub_dict = {}
+    
+    # create subject inclusion list
+    with open(subject_inclusion, "r") as f:
+        inclusion_list = f.readlines()
+        
+    # remove any /n's
+    inclusion_list = map(lambda s: s.strip(), inclusion_list)   
+    
     
     for root, folders, files in os.walk(site_folder):
     
@@ -45,7 +53,9 @@ def gather_raw_data(site_folder, yaml_outpath, scan_type):
                     resource = "functional_scan"
 
                 
-                if (scan_type == "anat") and (resource == "anatomical_scan"):
+                if (scan_type == "anat") and \
+                    (resource == "anatomical_scan") and \
+                        (subject_id is in inclusion_list):
 
                     if subject_id not in sub_dict.keys():
                         sub_dict[subject_id] = {}
@@ -60,7 +70,9 @@ def gather_raw_data(site_folder, yaml_outpath, scan_type):
                         sub_dict[subject_id][session_id][resource][scan_id] = fullpath
                     
                         
-                if (scan_type == "func") and (resource == "functional_scan"):
+                if (scan_type == "func") and \
+                     (resource == "functional_scan") and \
+                         (subject_id is in inclusion_list):
                 
                     if subject_id not in sub_dict.keys():
                         sub_dict[subject_id] = {}
@@ -99,11 +111,17 @@ def main():
                             help="'anat' or 'func', depending on which QAP " \
                                  "measures you will be using the subject " \
                                  "list for")
+                                 
+    parser.add_argument("--include", type=str, \
+                            help="text file containing subject IDs of the " \
+                                 "subjects you want to include - leave " \
+                                 "this out if you want to run all of them")
 
     args = parser.parse_args()
 
     # run it!
-    gather_raw_data(args.site_folder, args.outfile_path, args.scan_type)
+    gather_raw_data(args.site_folder, args.outfile_path, args.scan_type, \
+                        args.include)
 
 
 

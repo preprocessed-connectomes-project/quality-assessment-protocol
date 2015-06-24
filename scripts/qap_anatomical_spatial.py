@@ -211,7 +211,7 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
             for session in subdict[subid].keys():
 
                 # resource files
-                for resource in subdict[subid][session]:
+                for resource in subdict[subid][session].keys():
 
                     if type(subdict[subid][session][resource]) is dict:
                         # then this has sub-scans defined
@@ -224,21 +224,25 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
                             resource_dict[resource] = filepath
 
                             sub_info_tuple = (subid, session, scan)
-                            flat_sub_dict[sub_info_tuple] = {}
+                            
+                            if sub_info_tuple not in flat_sub_dict.keys():
+                                flat_sub_dict[sub_info_tuple] = {}
 
                             flat_sub_dict[sub_info_tuple].update(resource_dict)
 
                     else:
 
-                            filepath = subdict[subid][session][resource]
+                        filepath = subdict[subid][session][resource]
 
-                            resource_dict = {}
-                            resource_dict[resource] = filepath
+                        resource_dict = {}
+                        resource_dict[resource] = filepath
 
-                            sub_info_tuple = (subid, session, None)
+                        sub_info_tuple = (subid, session, None)
+                        
+                        if sub_info_tuple not in flat_sub_dict.keys():
                             flat_sub_dict[sub_info_tuple] = {}
 
-                            flat_sub_dict[sub_info_tuple].update(resource_dict)                    
+                        flat_sub_dict[sub_info_tuple].update(resource_dict)                   
 
 
         

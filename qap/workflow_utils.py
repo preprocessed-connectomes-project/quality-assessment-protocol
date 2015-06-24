@@ -5,10 +5,10 @@ def check_input_resources(resource_pool, resource_name):
 
     if resource_name not in resource_pool.keys():
     
-        err = "\n\n[!] The resource '%s' is missing from the resource " \
-              "pool, and it is needed in one of the steps of the pipeline. " \
-              "Please make sure it is specified properly.\n\n" % \
-              resource_name
+        err = "\n\nResource pool: %s\n\n[!] The resource '%s' is missing " \
+              "from the resource pool, and it is needed in one of the steps "\
+              "of the pipeline. Please make sure it is specified " \
+              "properly.\n\n" % (resource_pool, resource_name)
               
         raise Exception(err)
 

@@ -71,7 +71,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
     from nipype.interfaces.afni import preprocess
 
     from workflow_utils import check_input_resources, \
-                                         check_config_settings
+                               check_config_settings
 
 
     check_input_resources(resource_pool, "functional_scan")
