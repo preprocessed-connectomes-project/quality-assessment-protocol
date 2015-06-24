@@ -1,17 +1,18 @@
 
-def gather_raw_data(site_folder, yaml_outpath, scan_type, subject_inclusion):
+def gather_raw_data(site_folder, yaml_outpath, scan_type, subject_inclusion=None):
 
     import os
     import yaml
     
     sub_dict = {}
+    inclusion_list = []
     
     # create subject inclusion list
-    with open(subject_inclusion, "r") as f:
-        inclusion_list = f.readlines()
-        
-    # remove any /n's
-    inclusion_list = map(lambda s: s.strip(), inclusion_list)   
+    if subject_inclusion != None:
+        with open(subject_inclusion, "r") as f:
+            inclusion_list = f.readlines()
+        # remove any /n's
+        inclusion_list = map(lambda s: s.strip(), inclusion_list)   
     
     
     for root, folders, files in os.walk(site_folder):
@@ -39,6 +40,14 @@ def gather_raw_data(site_folder, yaml_outpath, scan_type, subject_inclusion):
                 
                 scan_id = second_half_list[2]
                 
+                if subject_inclusion == None:
+                    inclusion_list.append(subject_id)
+                
+                if ".nii" in scan_id:
+                    if scan_type == "anat":
+                        scan_id = "anat_1"
+                    elif scan_type == "func":
+                        scan_id = "rest_1"
                 
                 #sub_info = (subject_id, session_id, scan_id)
                 
