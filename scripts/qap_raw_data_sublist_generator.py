@@ -55,7 +55,7 @@ def gather_raw_data(site_folder, yaml_outpath, scan_type, subject_inclusion):
                 
                 if (scan_type == "anat") and \
                     (resource == "anatomical_scan") and \
-                        (subject_id is in inclusion_list):
+                        (subject_id in inclusion_list):
 
                     if subject_id not in sub_dict.keys():
                         sub_dict[subject_id] = {}
@@ -72,7 +72,7 @@ def gather_raw_data(site_folder, yaml_outpath, scan_type, subject_inclusion):
                         
                 if (scan_type == "func") and \
                      (resource == "functional_scan") and \
-                         (subject_id is in inclusion_list):
+                         (subject_id in inclusion_list):
                 
                     if subject_id not in sub_dict.keys():
                         sub_dict[subject_id] = {}
