@@ -71,7 +71,7 @@ Note that we will be using the above anatomical and functional outputs for our m
 We calculate the measures below with the associated variable in square brackets followed by a brief description and possible link to a reference.
 
 * **Contrast to Noise Ratio (CNR) [anat_cnr]:** Calculated as the mean of the gray matter values minus the mean of the white matter values, divided by the standard deviation of the air values, higher values are better [^1].
-* **Entopy Focus Criterion (EFC) [anat_efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion, lower is better [^2].
+* **Entropy Focus Criterion (EFC) [anat_efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion, lower is better [^2].
 * **Foreground to Background Energy Ratio (FBER) [anat_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head, higher values are better.
 * **Smoothness of Voxels (FWHM) [anat_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels, lower values are better [^3].
 * **Artifact Detection (Qi1) [anat_qi1]:** The proportion of voxels with intensity corrupted by artifacts normalized by the number of voxels in the background, lower values are better [^4].
@@ -144,7 +144,7 @@ We first compute the mean image values within gray matter (mean_gm) and the stan
 
 The spatial functional measures will make use of the mean functional image and include EFC, FBER, and FWHM (code which has been described above) along with GSR (code which has been described below).
 
-* **Entopy Focus Criterion [func_efc]:** SUses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion, lower is better [^2]. _Uses mean functional._
+* **Entropy Focus Criterion [func_efc]:** SUses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion, lower is better [^2]. _Uses mean functional._
 * **Foreground to Background Energy Ratio [func_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head, higher values are better. _Uses mean functional._
 * **Smoothness of Voxels [func_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels, lower values are better. _Uses mean functional._
 * **Ghost to Signal Ratio (GSR) [func_gsr]:** A measure of the mean signal in the ‘ghost’ image (signal present outside the brain due to acquisition in the phase encoding direction) relative to mean signal within the brain, lower values are better. _Uses mean functional._
