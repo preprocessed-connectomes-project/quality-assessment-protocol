@@ -33,11 +33,11 @@ def gather_raw_data(site_folder, yaml_outpath, scan_type, subject_inclusion):
                 except:
                     pass
 
-                subject_id = second_half_list[0]
+                subject_id = second_half_list[-3]
                 
-                session_id = second_half_list[1]
+                session_id = second_half_list[-2]
                 
-                scan_id = second_half_list[2]
+                scan_id = second_half_list[-1]
                 
                 
                 #sub_info = (subject_id, session_id, scan_id)
