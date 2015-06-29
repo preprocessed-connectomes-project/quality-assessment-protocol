@@ -7,13 +7,55 @@ title: PCP Quality Assessment Protocol
 
 **Table of Contents**
 
+* [System Requirements](#system-requirements)
+* [Installing the QAP Package](#installing-the-qap-package)
 * [A Description of QA Measures](#a-description-of-qa-measures)
 * [Pipeline Configuration YAML Files](#pipeline-configuration-yaml-files)
 * [Subject List YAML Files](#subject-list-yaml-files)
-* [Installing the QAP Package](#installing-the-qap-package)
 * [Running the QAP Pipelines](#running-the-qap-pipelines)
 * [Running the QAP Pipelines on AWS Cloud Instances](#running-the-qap-pipelines-on-aws-amazon-cloud-instances)
 * [References](#references)
+
+## System Requirements
+
+* Any *nix-based operating system capable of running QAP's dependencies will work.  
+
+## Installing the QAP Package
+
+Before you can install QAP, you must first install a number of key dependencies.
+
+### Application Dependencies
+
+QAP requires AFNI, C3D, and FSL to run. Links to installation instructions for AFNI and FSL are listed below:
+
+* [AFNI Installation](#http://afni.nimh.nih.gov/pub/dist/HOWTO/howto/ht00_inst/html)
+* [FSL Installation](#http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation)
+
+If you are using a Debian-based Linux distribution, you can use `apt-get` by first adding Neurodebian to the apt repository list and then installing the Neurodebian FSL and AFNI packages:
+
+    wget -O- http://neuro.debian.net/lists/$(lsb_release -cs).us-nh.full | tee /etc/apt/sources.list.d/neurodebian.sources.list
+    apt-key adv --recv-keys --keyserver pgp.mit.edu 2649A5A9
+    apt-get update
+    apt-get install -y fsl-5.0-complete afni
+
+To install C3D, download the appropriate version for your platform from [Sourceforge](#http://sourceforge.net/projects/c3d/).  Unzip or mount the archive containing C3D and copy it to a memorable location.  Finish by adding the following line to your `.bashrc` file:
+
+    export PATH=/path_to/C3D/bin:$PATH
+
+### Python Dependencies
+
+QAP requires Numpy, Scipy, Nipype, Nibabel and Nitime.  If you have `pip`, you may install these by typing in the command below:
+
+    pip install numpy scipy nipype nibabel nitime
+
+### QAP
+
+Once the pre-requisites have been satisfied, you can install the QAP package itself:
+
+    cd /tmp
+    git clone https://github.com/preprocessed-connectomes-project/quality-assessment-protocol.git qap
+    cd /qap
+    python setup.py install
 
 ## A Description of QA Measures
 
@@ -25,8 +67,6 @@ There are three collections of measures that can be run using the QAP software p
 
 ### Spatial Anatomical
 
-We calculate the measures below with the associated variable in square brackets followed by a brief description and possible link to a reference.
-
 * **Contrast to Noise Ratio (CNR) [anat_cnr]:** Calculated as the mean of the gray matter values minus the mean of the white matter values, divided by the standard deviation of the air values, higher values are better [^1].
 * **Entropy Focus Criterion (EFC) [anat_efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion, lower is better [^2].
 * **Foreground to Background Energy Ratio (FBER) [anat_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head, higher values are better.
@@ -36,8 +76,6 @@ We calculate the measures below with the associated variable in square brackets 
 
 ### Spatial Functional
 
-The spatial functional measures will make use of the mean functional image and include EFC, FBER, and FWHM (code which has been described above) along with GSR (code which has been described below).
-
 * **Entropy Focus Criterion [func_efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion, lower is better [^2]. _Uses mean functional._
 * **Foreground to Background Energy Ratio [func_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head, higher values are better. _Uses mean functional._
 * **Smoothness of Voxels [func_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels, lower values are better. _Uses mean functional._
@@ -46,7 +84,7 @@ The spatial functional measures will make use of the mean functional image and i
 ### Temporal Functional
 
 * **Standardized DVARS [func_dvars]:** The spatial standard deviation of the temporal derivative of the data, normalized by the temporal standard deviation and temporal autocorrelation, lower values are better [^5][^6]. _Uses functional time-series._
-* **Outlier Detection [func_outlier]:** The mean fraction of outliers found in each volume using 3dTout command in AFNI (http://afni.nimh.nih.gov/afni), lower values are better [^7]. _Uses functional time-series._
+* **Outlier Detection [func_outlier]:** The mean fraction of outliers found in each volume using the [3dTout](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni), lower values are better [^7]. _Uses functional time-series._
 * **Median Distance Index [func_quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s 3dTqual command (http://afni.nimh.nih.gov/afni), lower values are better [^7]. _Uses functional time-series._
 * **Mean Fractional Displacement - Jenkinson [func_mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere, lower values are better [^8][^10]. _Uses functional time-series._
 * **Number of volumes with FD greater than 0.2mm [func_num_fd]:** Lower values are better _Uses functional time-series._
@@ -145,23 +183,6 @@ in the QAP head mask workflow, we also mask the background immediately in front 
 
 Note that these are complete lists- obviously, not all intermediary files are required if you choose to provide them. For example, if you provide the skull-stripped *anatomical_brain*, then *anatomical_reorient* would not be necessary, and the pipeline will skip all steps before skull-stripping. Alternatively, if you do not have the *functional_brain_mask* for either of the functional pipelines, providing the *func_motion_correct* file will allow the pipeline to create it for you. Having none of these will simply cause the pipeline to take in the original *functional_scan* and produce all of these files on its own.
 
-## Installing the QAP Package
-
-*** IN PROGRESS ***
-*** this may change with either a script that does this for the user, or having the distutils part of the package find some of the packages for you ***
-
-[prerequisites- Nipype, certain version of C3D, FSL, AFNI, Python-nitime]
-
-C3D
-
-Python-nitime
-
-> apt-get install python-nitime
-
-Once the pre-requisites have been satisfied, you can go ahead and install the QAP package itself. Enter the QAP project directory and run:
-
-> python setup.py install
-
 ## Running the QAP Pipelines
 
 There is a launch script for each of these measures, with each one featuring a similar interface. The Python-friendly YAML file format is used for the input subject list and pipeline configuration files. You can use these scripts from the command line, from within iPython, or with AWS Cloud instances. After installing the QAP software package, these scripts can be run from any directory:
@@ -172,7 +193,7 @@ There is a launch script for each of these measures, with each one featuring a s
 
 For command-line runs:
 
-> qap_anatomical_spatial.py --sublist {path to subject list YAML file} {path to pipeline configuration YAML file}
+    qap_anatomical_spatial.py --sublist {path to subject list YAML file} {path to pipeline configuration YAML file}
 
 Executing either of the scripts with only the *-h* flag will produce a short help manual listing the command line arguments.
 
