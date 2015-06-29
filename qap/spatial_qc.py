@@ -74,6 +74,14 @@ def check_datatype(background):
     if not np.issubdtype(background.dtype, int):
         print "QI1 can not be calculated for data that is not integer or floating point: %s" % background.dtype
         raise TypeError
+        
+    # convert any negative voxel values to zero, provide warning
+    for vox in background.flatten():
+        if vox < 0:
+            print "\nWARNING: Negative voxel values in anatomical scan " \
+                  "converted to zero for artifacts calculation.\n"
+            background = background.clip(0)
+            break
 
     return background
 

@@ -520,6 +520,3 @@ def run_segmentation_workflow(anatomical_brain, csf_threshold, gm_threshold, \
 
 
 
-
-
-
