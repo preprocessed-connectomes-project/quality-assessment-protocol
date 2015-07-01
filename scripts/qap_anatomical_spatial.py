@@ -18,6 +18,7 @@ def build_spatial_qap_workflow(resource_pool, config, subject_info, run_name):
     import glob
     import yaml
 
+    import time
     from time import strftime
     from nipype import config as nyconfig
     from nipype import logging
@@ -63,6 +64,8 @@ def build_spatial_qap_workflow(resource_pool, config, subject_info, run_name):
     # take date+time stamp for run identification purposes
     unique_pipeline_id = strftime("%Y%m%d%H%M%S")
     pipeline_start_stamp = strftime("%Y-%m-%d_%H:%M:%S")
+    
+    pipeline_start_time = time.time()
 
     logger.info("Pipeline start time: %s" % pipeline_start_stamp)
 
@@ -182,6 +185,11 @@ def build_spatial_qap_workflow(resource_pool, config, subject_info, run_name):
 
 
     pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
+    
+    pipeline_end_time = time.time()
+
+    logger.info("Elapsed time (minutes) since last start: %s" \
+                % ((pipeline_end_time - pipeline_start_time)/60)
 
     logger.info("Pipeline end time: %s" % pipeline_end_stamp)
 
