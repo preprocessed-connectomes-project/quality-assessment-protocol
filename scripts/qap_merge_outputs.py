@@ -6,7 +6,7 @@
 # for when you need to do it manually
 
 # script usage:
-#     > python merge_qap_outputs.py <qap pipeline output directory>
+#     > qap_merge_outputs.py <qap pipeline output directory>
 
 def csv_merge(csv_list, outfile):
 
@@ -26,11 +26,20 @@ def csv_merge(csv_list, outfile):
                 fields = csv_reader.fieldnames
 
             try:
-                sub_nums_list.append(csv_reader.next())
+            
+                sub_info_dict = csv_reader.next()
+                
+                if sub_info_dict["subject"] not in sub:
+                    print "WARNING: data says sub id: %s" \
+                          % sub_info_dict["subject"]
+                    print "filepath says: %s" % sub
+                    print "\n"
+            
+            
+                sub_nums_list.append(sub_info_dict)
             except:
                 print "didn't work: %s" % sub
                 pass
-
 
     with open(outfile, "wt") as out_f:               
 
