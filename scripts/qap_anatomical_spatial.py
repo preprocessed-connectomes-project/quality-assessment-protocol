@@ -189,7 +189,7 @@ def build_spatial_qap_workflow(resource_pool, config, subject_info, run_name):
     pipeline_end_time = time.time()
 
     logger.info("Elapsed time (minutes) since last start: %s" \
-                % ((pipeline_end_time - pipeline_start_time)/60)
+                % ((pipeline_end_time - pipeline_start_time)/60))
 
     logger.info("Pipeline end time: %s" % pipeline_end_stamp)
 
