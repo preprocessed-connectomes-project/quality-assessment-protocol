@@ -3,26 +3,30 @@ layout: page
 title: PCP Quality Assessment Protocol
 ---
 
-{ introduction here with more background info }
+Various objective measures for MRI data quality have been proposed over the years.  However, until now no software has allowed researchers to obtain these measures with relative ease.  The QAP package allows you to obtain spatial and anatomical data quality measures for your own data.  Since no standard thresholds demarcating acceptable from unacceptable data are currently existent, you can then compare your data to normative distributions of measures obtained from the [ABIDE](http://fcon_1000.projects.nitrc.org/indi/abide/) and [CoRR](http://fcon_1000.projects.nitrc.org/indi/CoRR/html/index.html) datasets.
+
+For more information, please see our recent [resting-state poster and associated code]( http://github.com/czarrar/qap_poster).
 
 **Table of Contents**
 
-* [System Requirements](#system-requirements)
 * [Installing the QAP Package](#installing-the-qap-package)
-* [A Description of QA Measures](#a-description-of-qa-measures)
+* [Taxonomy of QA Measures](#taxonomy-of-qa-measures)
+  * [Spatial QA metrics of anatomical data](#spatial-anatomical)
+  * [Spatial QA metrics of functional data](#spatial-functional)
+  * [Temporal QA metrics of functional data](#temporal-functional)
+* [Normative Metrics (ABIDE and CoRR)](#normative-metrics)
 * [Pipeline Configuration YAML Files](#pipeline-configuration-yaml-files)
 * [Subject List YAML Files](#subject-list-yaml-files)
 * [Running the QAP Pipelines](#running-the-qap-pipelines)
 * [Running the QAP Pipelines on AWS Cloud Instances](#running-the-qap-pipelines-on-aws-amazon-cloud-instances)
 * [References](#references)
 
-## System Requirements
-
-* Any *nix-based operating system capable of running QAP's dependencies will work.  
-
 ## Installing the QAP Package
 
-Before you can install QAP, you must first install a number of key dependencies.
+### System Requirements
+
+* Any *nix-based operating system capable of running QAP will work, so long as it can run AFNI, FSL, and C3D.
+* The total amount of free hard disk space required is 5.7 GB.
 
 ### Application Dependencies
 
@@ -57,13 +61,17 @@ Once the pre-requisites have been satisfied, you can install the QAP package its
     cd /qap
     python setup.py install
 
-## A Description of QA Measures
+## Taxonomy of QA Measures
 
-There are three collections of measures that can be run using the QAP software package:
+There are three sets of measures that can be run using the QAP software package:
 
 * Anatomical spatial measures
 * Functional (4D timeseries) spatial measures
 * Functional (4D timeseries) temporal measures
+
+The following sections will describe the measures belonging to these sets in detail.  The label used in the CSV files output by QAP is designated by brackets after the long form measure name.
+
+To determine subjects that are outliers for any of these measures, run QAP on an array of subjects and take 1.5x or 3x the inter-quartile range.
 
 ### Spatial Anatomical
 
@@ -85,18 +93,28 @@ There are three collections of measures that can be run using the QAP software p
 
 * **Standardized DVARS [func_dvars]:** The spatial standard deviation of the temporal derivative of the data, normalized by the temporal standard deviation and temporal autocorrelation, lower values are better [^5][^6]. _Uses functional time-series._
 * **Outlier Detection [func_outlier]:** The mean fraction of outliers found in each volume using the [3dTout](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni), lower values are better [^7]. _Uses functional time-series._
-* **Median Distance Index [func_quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s 3dTqual command (http://afni.nimh.nih.gov/afni), lower values are better [^7]. _Uses functional time-series._
+* **Median Distance Index [func_quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s [3dTqual command](http://afni.nimh.nih.gov/afni), lower values are better [^7]. _Uses functional time-series._
 * **Mean Fractional Displacement - Jenkinson [func_mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere, lower values are better [^8][^10]. _Uses functional time-series._
 * **Number of volumes with FD greater than 0.2mm [func_num_fd]:** Lower values are better _Uses functional time-series._
 * **Percent of volumes with FD greater than 0.2mm [func_perc_fd]:** Lower values are better _Uses functional time-series._
 
+## Normative Metrics
+
+We have gathered QA metrics for two multi-site resting-state datasets: [ABIDE](http://fcon_1000.projects.nitrc.org/indi/abide/) (1,110+ subject across 20+ sites) and [CoRR](http://fcon_1000.projects.nitrc.org/indi/CoRR/html/index.html) (1,400+ subjects across 30+ sites). The QA metrics for these datasets have been made publicly available. They can be used for a variety of applications, for instance, as a comparison to the QA results from your own data. For each link below, please right click and select save as:
+
+* [ABIDE - Anatomical Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/abide_anat.csv)
+* [ABIDE - Functional Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/abide_func.csv)
+* [CoRR - Anatomical Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/corr_anat.csv)
+* [CoRR - Functional Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/corr_func.csv)
+
+
 ## Pipeline Configuration YAML Files
 
-Certain pre-processed files derived from the raw data are required to calculate these measures. By default, the QAP software package will generate these pre-requisite files given the raw data you have (anatomical/structural scans for the anatomical measures, 4D anatomical+timeseries scans for the functional). A preprocessing pipeline will be constructed to create these files, and this pipeline can be customized with the pipeline configuration file you provide.
+Certain pre-processed files derived from the raw data are required to calculate the measures described above. By default, the QAP software package will generate these pre-requisite files given the raw data you have (anatomical/structural scans for the anatomical measures, 4D anatomical+timeseries scans for the functional). A preprocessing pipeline will be constructed to create these files, and this pipeline can be customized with a pipeline configuration YAML file you provide.
 
 Some examples of customizable features include segmentation thresholds for anatomical preprocessing, and the option to run slice timing correction for functional preprocessing. Computer resource allocation can also be customized using the configuration files, such as dedicating multiple cores/threads to processing, etc.
 
-Templates for these files are provided in the /configs folder in the QAP main repository directory. Below is a list of options which can be configured for each of the pipelines.
+Templates for these files are provided in the `/configs` folder in the QAP main repository directory. Below is a list of options which can be configured for each of the pipelines.
 
 ### General (both types)
 
@@ -119,7 +137,7 @@ Templates for these files are provided in the /configs folder in the QAP main re
 * **stop_idx**: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the last timepoint you wish to include in the analysis. Enter *End* to include the final volume. Enter *0* in start_idx and *End* in stop_idx to include the entire timeseries. 
 * **slice_timing_correction**: Whether or not to run slice timing correction - *True* or *False*. Interpolates voxel timeseries so that sampling occurs at the same time.
 
-Multiply *num_cores_per_subject*, *num_subjects_at_once*, and *num_ants_threads* for the maximum amount of cores that could potentially be used during the pipeline run. (Or just *num_cores_per_subject* and *num_subjects_at_once* for functional pipeline runs).
+Make sure that you multiply *num_cores_per_subject*, *num_subjects_at_once*, and *num_ants_threads* for the maximum amount of cores that could potentially be used during the anatomical pipeline run. For the functional pipeline run, multiply *num_cores_per_subject* and *num_subjects_at_once* to make sure that you have enough cores.
 
 ## Subject List YAML Files
 
@@ -148,7 +166,7 @@ Note that *anatomical_scan* is the label for the type of resource (in this case,
 
 ### Providing Already Pre-Processed Data
 
-Alternatively, if you have already preprocessed some or all of your raw data, you can provide these already-existing files as inputs directly to the QAP pipelines via your subject list manually. If these files were processed using the CPAC software package, there is a script named *qap_cpac_output_sublist_generator.py* which will create a subject list YAML file pointing to these already generated files. The QAP pipelines will then use these files and skip any pre-processing steps involved in creating them, saving time and allowing you to use your own method of processing your data.
+Alternatively, if you have already preprocessed some or all of your raw data, you can provide these already-existing files as inputs directly to the QAP pipelines via your subject list manually. If these files were processed using the C-PAC software package, there is a script named *qap_cpac_output_sublist_generator.py* which will create a subject list YAML file pointing to these already generated files. The QAP pipelines will then use these files and skip any pre-processing steps involved in creating them, saving time and allowing you to use your own method of processing your data.
 
 Below is a list of intermediary files used in the steps leading to the final QAP measures calculations. If you already have some of these processed for your data, they can be included in the subject list with the label on the left. For example, if you've already deobliqued, reoriented and skull-stripped your anatomical scans, you would list them in your subject list YAML file like so:
 
@@ -199,17 +217,15 @@ Executing either of the scripts with only the *-h* flag will produce a short hel
 
 ##Running the QAP Pipelines on AWS Amazon Cloud Instances
 
-*** STILL IN PROGRESS ***
-
 With access to the Amazon Cloud, the QAP measures can be calculated for a large volume of subjects quickly.
 
-[AMI setup.. documentation necessary here? or link to somewhere else]
+Since there is substantial overlap between the software pre-requisites of QAP and [C-PAC](http://fcp-indi.github.io/docs/user/index.html), it is recommended that you use the C-PAC AMI for your cloud instances.  The C-PAC AMI can be used as a base onto which you can [install QAP](#qap). Consult [C-PAC's cloud instructions](http://fcp-indi.github.io/docs/user/cloud.html) for more information on how to use the C-PAC AMI, as well as more general information about AWS.
 
-### install QAP on your AMI, and pre-requisites
+If you choose to use another AMI, you will need to install both QAP and its pre-requisites from scratch by [following the instructions above](#installing-the-qap-package).  You will also need to configure Starcluster to use the `mnt_config` and `cpac_sge` plugins by following the instructions [here](http://fcp-indi.github.io/docs/user/cloud.html#installing-the-c-pac-starcluster-plug-ins).
 
 ### Generating Your S3 Subject Dictionary File
 
-The QAP software package comes with a script called *qap_aws_s3_dict_generator.py*, which can be run from any directory once the package is installed. This script will create a YAML file containing the filepaths to your data stored on your AWS S3 bucket storage. You will need this dictionary YAML file to start an AWS Cloud run for QAP. This script takes in five input parameters:
+The QAP software package comes with a script called *qap_aws_s3_dict_generator.py*, which can be run from any directory once the package is installed. This script will create a YAML file containing the filepaths to the data stored in your AWS S3 bucket storage. You will need this dictionary YAML file to start an AWS Cloud run for QAP. This script takes in five input parameters:
 
 * **scan_type**: *anat* or *func*, depending on which QAP measures you will be using the S3 subject dictionary for
 * **bucket_name**: the name of your AWS S3 bucket
