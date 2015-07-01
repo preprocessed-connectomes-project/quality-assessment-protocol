@@ -133,7 +133,7 @@ def build_spatial_epi_qap_workflow(resource_pool, config, subject_info, \
     
     # start connecting the pipeline
        
-    if "qap_spatial_epi" not in resource_pool.keys():
+    if "qap_functional_spatial" not in resource_pool.keys():
 
         from qap.qap_workflows import qap_spatial_epi_workflow
 

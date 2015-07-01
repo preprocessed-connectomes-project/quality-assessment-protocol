@@ -137,7 +137,7 @@ def build_spatial_qap_workflow(resource_pool, config, subject_info, run_name):
     
     # start connecting the pipeline
        
-    if "qap_spatial" not in resource_pool.keys():
+    if "qap_anatomical_spatial" not in resource_pool.keys():
 
         from qap.qap_workflows import qap_spatial_workflow
 

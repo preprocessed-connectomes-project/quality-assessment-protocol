@@ -56,26 +56,28 @@ def merge_qap_outputs(output_directory):
 
     import glob
 
-    spatial_outputs = glob.glob("%s/*/*/*/qap_spatial/*" % output_directory)
+    spatial_outputs = glob.glob("%s/*/*/*/qap_anatomical_spatial*/*.csv" \
+                                % output_directory)
 
-    spatial_epi_outputs = glob.glob("%s/*/*/*/qap_spatial_epi/*" % \
-                          output_directory)
+    spatial_epi_outputs = glob.glob("%s/*/*/*/qap_functional_spatial*/*.csv" \
+                                    % output_directory)
 
-    temporal_outputs = glob.glob("%s/*/*/*/qap_temporal/*" % output_directory)
+    temporal_outputs = glob.glob("%s/*/*/*/qap_functional_temporal*/*.csv" \
+                                 % output_directory)
 
 
     if spatial_outputs:
-        csv_merge(spatial_outputs, "qap_spatial_%s.csv" % \
+        csv_merge(spatial_outputs, "qap_anatomical_spatial_%s.csv" % \
                                    output_directory.split("/")[-1])
 
 
     if spatial_epi_outputs:
-        csv_merge(spatial_epi_outputs, "qap_spatial_epi_%s.csv" % \
+        csv_merge(spatial_epi_outputs, "qap_functional_spatial_%s.csv" % \
                                        output_directory.split("/")[-1])
 
 
     if temporal_outputs:
-        csv_merge(temporal_outputs, "qap_temporal_%s.csv" % \
+        csv_merge(temporal_outputs, "qap_functional_temporal_%s.csv" % \
                                     output_directory.split("/")[-1])
 
 

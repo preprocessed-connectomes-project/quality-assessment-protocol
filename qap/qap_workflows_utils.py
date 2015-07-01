@@ -407,7 +407,7 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask, \
     
     
     
-def append_to_csv(sub_qap_dict, outfile, append):
+def write_to_csv(sub_qap_dict):  #, outfile):
 
     import os
     import csv
@@ -431,35 +431,17 @@ def append_to_csv(sub_qap_dict, outfile, append):
         fields.remove("scan")
         fields.insert(2, "scan")
 
-    if append:
 
-        if not os.path.isfile(outfile):
+    outfile = os.path.join(os.getcwd(), "qap_measures.csv")
 
-            with open(outfile, "a") as out_f:
 
-                csv_writer = csv.DictWriter(out_f, fields)
+    with open(outfile, "wt") as out_f:
 
-                csv_writer.writeheader()
+        csv_writer = csv.DictWriter(out_f, fields)
 
-                csv_writer.writerow(sub_qap_dict)
+        csv_writer.writeheader()
 
-        else:
-
-            with open(outfile, "a") as out_f:
-
-                csv_writer = csv.DictWriter(out_f, fields)
-
-                csv_writer.writerow(sub_qap_dict)
-
-    else:
-
-            with open(outfile, "wt") as out_f:
-
-                csv_writer = csv.DictWriter(out_f, fields)
-
-                csv_writer.writeheader()
-
-                csv_writer.writerow(sub_qap_dict)
+        csv_writer.writerow(sub_qap_dict)
 
 
     return outfile

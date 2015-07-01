@@ -159,7 +159,7 @@ def qap_spatial_workflow(workflow, resource_pool, config):
     import nipype.interfaces.utility as util
     
     from qap_workflows_utils import qap_anatomical_spatial, \
-                                    append_to_csv
+                                    write_to_csv
 
 
     if "qap_head_mask" not in resource_pool.keys():
@@ -201,20 +201,10 @@ def qap_spatial_workflow(workflow, resource_pool, config):
                                     name='qap_spatial')
                                       
                                         
-    spatial_to_csv = pe.Node(util.Function(input_names=['sub_qap_dict',
-                                                        'outfile',
-                                                        'append'],
+    spatial_to_csv = pe.Node(util.Function(input_names=['sub_qap_dict'],
                                            output_names=['outfile'],
-                                           function=append_to_csv),
+                                           function=write_to_csv),
                                            name='qap_spatial_to_csv')
-
-
-    spatial_to_main_csv = pe.Node(util.Function(input_names=['sub_qap_dict',
-                                                             'outfile',
-                                                             'append'],
-                                                output_names=['outfile'],
-                                                function=append_to_csv),
-                                               name='qap_spatial_to_main_csv')
                                                                                 
 
     if len(resource_pool["anatomical_reorient"]) == 2:
@@ -263,28 +253,8 @@ def qap_spatial_workflow(workflow, resource_pool, config):
     spatial.inputs.scan_id = config["scan_id"]
             
     workflow.connect(spatial, 'qc', spatial_to_csv, 'sub_qap_dict')
-
-    spatial_to_csv.inputs.outfile = os.path.join(os.getcwd(), \
-                                     "qap_anatomical_spatial_%s_%s_%s.csv" \
-                                     % (config["subject_id"], \
-                                        config["session_id"], \
-                                        config["scan_id"]))
-
-    spatial_to_csv.inputs.append = False
-
             
-    resource_pool["qap_spatial"] = (spatial_to_csv, 'outfile')
-
-
-    # append to the main CSV
-
-    workflow.connect(spatial, 'qc', spatial_to_main_csv, 'sub_qap_dict')
-
-    spatial_to_main_csv.inputs.outfile = \
-            os.path.join(config["output_directory"], \
-            "qap_anatomical_spatial_%s.csv" % config["run_name"])
-
-    spatial_to_main_csv.inputs.append = True
+    resource_pool["qap_anatomical_spatial"] = (spatial_to_csv, 'outfile')
     
     
     return workflow, resource_pool
@@ -306,7 +276,7 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
     import nipype.interfaces.utility as util
     
     from qap_workflows_utils import qap_functional_spatial, \
-                                    append_to_csv
+                                    write_to_csv
 
     from workflow_utils import check_input_resources
   
@@ -337,21 +307,10 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
                                         name='qap_spatial_epi')
                                          
                                            
-    spatial_epi_to_csv = pe.Node(util.Function(input_names=['sub_qap_dict',
-                                                            'outfile',
-                                                            'append'],
+    spatial_epi_to_csv = pe.Node(util.Function(input_names=['sub_qap_dict'],
                                                output_names=['outfile'],
-                                               function=append_to_csv),
-                                               name='qap_spatial_epi_to_csv')
-
-
-    spatial_epi_to_main_csv = pe.Node(util.Function(input_names= \
-                                               ['sub_qap_dict',
-                                                'outfile',
-                                                'append'],
-                                               output_names=['outfile'],
-                                               function=append_to_csv),
-                                           name='qap_spatial_epi_to_main_csv')                                       
+                                               function=write_to_csv),
+                                               name='qap_spatial_epi_to_csv')                                     
                                               
 
     if len(resource_pool["mean_functional"]) == 2:
@@ -377,29 +336,7 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
     
     workflow.connect(spatial_epi, 'qc', spatial_epi_to_csv, 'sub_qap_dict')
 
-    spatial_epi_to_csv.inputs.outfile = os.path.join(os.getcwd(), \
-                                       "qap_functional_spatial_%s_%s_%s.csv" \
-                                       % (config["subject_id"], \
-                                          config["session_id"], \
-                                          config["scan_id"]))
-
-    spatial_epi_to_csv.inputs.append = False
-
- 
-    resource_pool["qap_spatial_epi"] = (spatial_epi_to_csv, 'outfile')
-
-
-    # append to the main CSV
-
-    workflow.connect(spatial_epi, 'qc',
-                         spatial_epi_to_main_csv, 'sub_qap_dict')
-
-    spatial_epi_to_main_csv.inputs.outfile = \
-            os.path.join(config["output_directory"], \
-                             "qap_functional_spatial_%s.csv" \
-                             % config["run_name"])
-
-    spatial_epi_to_main_csv.inputs.append = True
+    resource_pool["qap_functional_spatial"] = (spatial_epi_to_csv, 'outfile')
     
     
     return workflow, resource_pool
@@ -422,7 +359,7 @@ def qap_temporal_workflow(workflow, resource_pool, config):
     import nipype.interfaces.utility as util
     
     from qap_workflows_utils import qap_functional_temporal, \
-                                    append_to_csv
+                                    write_to_csv
    
     
     if "mean_functional" not in resource_pool.keys():
@@ -461,20 +398,10 @@ def qap_temporal_workflow(workflow, resource_pool, config):
                                      name='qap_temporal')
 
 
-    temporal_to_csv = pe.Node(util.Function(input_names=['sub_qap_dict',
-                                                         'outfile',
-                                                         'append'],
+    temporal_to_csv = pe.Node(util.Function(input_names=['sub_qap_dict'],
                                             output_names=['outfile'],
-                                            function=append_to_csv),
-                                            name='qap_temporal_to_csv')  
-
-
-    temporal_to_main_csv = pe.Node(util.Function(input_names=['sub_qap_dict',
-                                                              'outfile',
-                                                              'append'],
-                                                 output_names=['outfile'],
-                                                 function=append_to_csv),
-                                              name='qap_temporal_to_main_csv')                                  
+                                            function=write_to_csv),
+                                            name='qap_temporal_to_csv')                                   
                                                                                
     
     if len(resource_pool["func_motion_correct"]) == 2:
@@ -508,28 +435,8 @@ def qap_temporal_workflow(workflow, resource_pool, config):
     temporal.inputs.scan_id = config["scan_id"]
                 
     workflow.connect(temporal, 'qc', temporal_to_csv, 'sub_qap_dict')
-
-    temporal_to_csv.inputs.outfile = os.path.join(os.getcwd(), \
-                                     "qap_functional_temporal_%s_%s_%s.csv" \
-                                     % (config["subject_id"], \
-                                        config["session_id"], \
-                                        config["scan_id"]))
-
-    temporal_to_csv.inputs.append = False
     
-    resource_pool["qap_temporal"] = (temporal_to_csv, 'outfile')
-
-
-    # append to the main CSV
-
-    workflow.connect(temporal, 'qc', temporal_to_main_csv, 'sub_qap_dict')
-
-    temporal_to_main_csv.inputs.outfile = \
-            os.path.join(config["output_directory"], \
-                             "qap_functional_temporal_%s.csv" \
-                             % config["run_name"])
-    
-    temporal_to_main_csv.inputs.append = True
+    resource_pool["qap_functional_temporal"] = (temporal_to_csv, 'outfile')
     
     
     return workflow, resource_pool
