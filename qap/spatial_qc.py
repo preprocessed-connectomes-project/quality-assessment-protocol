@@ -79,11 +79,25 @@ def check_datatype(background):
     for vox in background.flatten():
         if vox < 0:
             print "\nWARNING: Negative voxel values in anatomical scan " \
-                  "converted to zero for artifacts calculation.\n"
+                  "converted to zero.\n"
             background = background.clip(0)
             break
 
     return background
+
+
+
+def convert_negatives(img_data):
+
+    # convert any negative voxel values to zero, provide warning
+    for vox in img_data.flatten():
+        if vox < 0:
+            print "\nWARNING: Negative voxel values in anatomical scan " \
+                  "converted to zero.\n"
+            img_data = img_data.clip(0)
+            break
+
+    return img_data
 
 
 
@@ -150,6 +164,9 @@ def efc(anat_data):
 
     import numpy as np
         
+    # let's get rid of those negative values
+    anat_data = convert_negatives(anat_data)
+        
     # Calculate the maximum value of the EFC (which occurs any time all voxels have the same value)
     efc_max = 1.0 * np.prod(anat_data.shape) * (1.0 / np.sqrt(np.prod(anat_data.shape))) * \
                 np.log(1.0 / np.sqrt(np.prod(anat_data.shape)))
@@ -161,7 +178,7 @@ def efc(anat_data):
     efc     = (1.0 / efc_max) * np.sum((anat_data / b_max) * np.log((anat_data + 1e-16) / b_max))
     
     if np.isnan(efc): 
-        print "NaN found for efc"
+        print "NaN found for efc (%3.2f,%3.2f)" % (efc_max,b_max)
     
     return efc
 
@@ -181,7 +198,7 @@ def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
     
     # make sure the datatype is an int
     background = check_datatype(background)
-    
+       
     # Find the background threshold (the most frequently occurring value excluding 0)
     bg_counts       = np.bincount(background.flatten())
     bg_threshold    = np.argmax(bg_counts[1:]) + 1

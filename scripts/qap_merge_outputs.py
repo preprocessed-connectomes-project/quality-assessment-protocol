@@ -88,16 +88,24 @@ def merge_qap_outputs(output_directory):
 
 
 
-def run():
+def main():
 
-    import sys
+    import argparse
 
-    output_dir = sys.argv[1]
+    parser = argparse.ArgumentParser()
 
-    merge_qap_outputs(output_dir)
+    parser.add_argument("qap_output_directory", type=str, \
+                            help="path to directory of subject output " \
+                                 "folders containing QAP measures CSVs")
+
+    args = parser.parse_args()
+
+    # run it!
+    merge_qap_outputs(args.qap_output_directory)
 
 
 
-run()
+if __name__ == "__main__":
+    main()
 
 
