@@ -19,6 +19,7 @@ For more information, please see our recent [resting-state poster and associated
 * [Subject List YAML Files](#subject-list-yaml-files)
 * [Running the QAP Pipelines](#running-the-qap-pipelines)
 * [Running the QAP Pipelines on AWS Cloud Instances](#running-the-qap-pipelines-on-aws-amazon-cloud-instances)
+* [Merging Outputs](#merging-outputs)
 * [References](#references)
 
 ## Installing the QAP Package
@@ -162,7 +163,7 @@ The script will go through your data folder structure and generate the subject l
 	    anatomical_scan:
 	      anat_1: /test-data/site_1/3154996/session_1/anat_1/mprage.nii.gz
 
-Note that *anatomical_scan* is the label for the type of resource (in this case, anatomical raw data for the anatomical spatial QAP measures), and *anat_1* is the name of the scan. There can be multiple scans, and the QAP pipeline will output a CSV spreadsheet with calculated values in rows, with each subject-session-scan combination having its own row of values.
+Note that *anatomical_scan* is the label for the type of resource (in this case, anatomical raw data for the anatomical spatial QAP measures), and *anat_1* is the name of the scan. There can be multiple scans, which will be combined with subject and session in the output. 
 
 ### Providing Already Pre-Processed Data
 
@@ -265,6 +266,26 @@ Once this script is run, it will output the S3 dictionary YAML file, and it will
 	# Run anatomical spatial qap
 	qap_anatomical_spatial.py --subj_idx $SGE_TASK_ID --s3_dict_yml $ANAT_S3_DICT $ANAT_SP_CONFIG_FILE
 	echo "End - TASKID " $SGE_TASK_ID " : " $(date)
+
+## Merging Outputs
+
+QAP generates outputs for each subject and session separately.  To view a comprehensive summary for all the measures for all the subjects, you will need to merge these separate outputs into a single file.  You can do this by running the following command.
+
+    qap_merge_outputs.py {path to qap output directory}
+
+`qap_merge_outputs.py` will automatically determine if you have calculated anatomical spatial, functional spatial or functional temporal measures.  The merged outputs will appear in a file named `qap_anatomical_spatial_{qap output directory name}.csv` in the directory from which the command is run.
+
+### Downloading Data from Your S3 Bucket
+
+If you ran QAP in the cloud, you will need to download the outputs from S3 before you can merge them.  To do this, run the following command:
+
+    qap_download_output_from_S3.py {path to the S3 directory containing subject outputs} {path to AWS key file} {s3 bucket name} {type of measure to download} {directory to download to}
+
+For example, if you wanted to obtain functional spatial measures from an S3 bucket named `the_big_run` with subject outputs in `subjects/outputs` you would use the following command.
+
+    qap_download_output_from_S3.py subjects/outputs /home/wintermute/Documents/aws-keys.csv the_big_run func_spatial /home/wintermute/qap_outputs
+
+With the above commands, the outputs will be stored in a directory named `qap_outputs` in the user wintermute's home folder.  As with the pipeline commands from earlier, more information on this command's usage can be obtained by running it with the *-h* flag.  
 
 ## References
 
