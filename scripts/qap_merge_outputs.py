@@ -37,9 +37,15 @@ def csv_merge(csv_list, outfile):
             
             
                 sub_nums_list.append(sub_info_dict)
+
             except:
+
                 print "didn't work: %s" % sub
                 pass
+
+
+    sub_nums_list = sorted(sub_nums_list, key=lambda k: k['subject']) 
+
 
     with open(outfile, "wt") as out_f:               
 
