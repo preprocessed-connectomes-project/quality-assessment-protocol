@@ -49,9 +49,9 @@ To install C3D, download the appropriate version for your platform from [Sourcef
 
 ### Python Dependencies
 
-QAP requires Numpy, Scipy, Nipype, Nibabel and Nitime.  If you have `pip`, you may install these by typing in the command below:
+QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, and PyYAML.  If you have `pip`, you may install these by typing in the command below:
 
-    pip install numpy scipy nipype nibabel nitime
+    pip install numpy scipy nipype nibabel nitime pyyaml
 
 ### QAP
 
@@ -66,9 +66,9 @@ Once the pre-requisites have been satisfied, you can install the QAP package its
 
 There are three sets of measures that can be run using the QAP software package:
 
-* Anatomical spatial measures
-* Functional (4D timeseries) spatial measures
-* Functional (4D timeseries) temporal measures
+* Spatial anatomical measures
+* Spatial functional measures, which use the mean functional image.
+* Temporal functional measures, which use the functional timeseries.
 
 The following sections will describe the measures belonging to these sets in detail.  The label used in the CSV files output by QAP is designated by brackets after the long form measure name.
 
@@ -76,28 +76,28 @@ To determine subjects that are outliers for any of these measures, run QAP on an
 
 ### Spatial Anatomical
 
-* **Contrast to Noise Ratio (CNR) [anat_cnr]:** Calculated as the mean of the gray matter values minus the mean of the white matter values, divided by the standard deviation of the air values, higher values are better [^1].
-* **Entropy Focus Criterion (EFC) [anat_efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion, lower is better [^2].
-* **Foreground to Background Energy Ratio (FBER) [anat_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head, higher values are better.
-* **Smoothness of Voxels (FWHM) [anat_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels, lower values are better [^3].
-* **Artifact Detection (Qi1) [anat_qi1]:** The proportion of voxels with intensity corrupted by artifacts normalized by the number of voxels in the background, lower values are better [^4].
-* **Signal-to-Noise Ratio (SNR) [anat_snr]:** The mean of image values within gray matter divided by the standard deviation of the image values within air (i.e., outside the head), higher values are better [^1].
+* **Contrast to Noise Ratio (CNR) [anat_cnr]:** Calculated as the mean of the gray matter values minus the mean of the white matter values, divided by the standard deviation of the air values.  Higher values are better [^1].
+* **Entropy Focus Criterion (EFC) [anat_efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion.  Lower values are better [^2].
+* **Foreground to Background Energy Ratio (FBER) [anat_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head.  Higher values are better.
+* **Smoothness of Voxels (FWHM) [anat_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels.  Lower values are better [^3].
+* **Artifact Detection (Qi1) [anat_qi1]:** The proportion of voxels with intensity corrupted by artifacts normalized by the number of voxels in the background.  Lower values are better [^4].
+* **Signal-to-Noise Ratio (SNR) [anat_snr]:** The mean of image values within gray matter divided by the standard deviation of the image values within air (i.e., outside the head).  Higher values are better [^1].
 
 ### Spatial Functional
 
-* **Entropy Focus Criterion [func_efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion, lower is better [^2]. _Uses mean functional._
-* **Foreground to Background Energy Ratio [func_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head, higher values are better. _Uses mean functional._
-* **Smoothness of Voxels [func_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels, lower values are better. _Uses mean functional._
-* **Ghost to Signal Ratio (GSR) [func_gsr]:** A measure of the mean signal in the ‘ghost’ image (signal present outside the brain due to acquisition in the phase encoding direction) relative to mean signal within the brain, lower values are better. _Uses mean functional._
+* **Entropy Focus Criterion [func_efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion.  Lower values are better [^2]. 
+* **Foreground to Background Energy Ratio [func_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head.  Higher values are better. 
+* **Smoothness of Voxels [func_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels.  Lower values are better. 
+* **Ghost to Signal Ratio (GSR) [func_gsr]:** A measure of the mean signal in the ‘ghost’ image (signal present outside the brain due to acquisition in the phase encoding direction) relative to mean signal within the brain.  Lower values are better. 
 
 ### Temporal Functional
 
-* **Standardized DVARS [func_dvars]:** The spatial standard deviation of the temporal derivative of the data, normalized by the temporal standard deviation and temporal autocorrelation, lower values are better [^5][^6]. _Uses functional time-series._
-* **Outlier Detection [func_outlier]:** The mean fraction of outliers found in each volume using the [3dTout](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni), lower values are better [^7]. _Uses functional time-series._
-* **Median Distance Index [func_quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s [3dTqual command](http://afni.nimh.nih.gov/afni), lower values are better [^7]. _Uses functional time-series._
-* **Mean Fractional Displacement - Jenkinson [func_mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere, lower values are better [^8][^10]. _Uses functional time-series._
-* **Number of volumes with FD greater than 0.2mm [func_num_fd]:** Lower values are better _Uses functional time-series._
-* **Percent of volumes with FD greater than 0.2mm [func_perc_fd]:** Lower values are better _Uses functional time-series._
+* **Standardized DVARS [func_dvars]:** The spatial standard deviation of the temporal derivative of the data, normalized by the temporal standard deviation and temporal autocorrelation.  Lower values are better [^5][^6]. 
+* **Outlier Detection [func_outlier]:** The mean fraction of outliers found in each volume using the [3dTout](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni).  Lower values are better [^7]. 
+* **Median Distance Index [func_quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s [3dTqual command](http://afni.nimh.nih.gov/afni).  Lower values are better [^7]. 
+* **Mean Fractional Displacement - Jenkinson [func_mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere.  Lower values are better [^8][^10]. 
+* **Number of volumes with FD greater than 0.2mm [func_num_fd]:** Lower values are better.
+* **Percent of volumes with FD greater than 0.2mm [func_perc_fd]:** Lower values are better.
 
 ## Normative Metrics
 
@@ -113,7 +113,7 @@ We have gathered QA metrics for two multi-site resting-state datasets: [ABIDE](h
 
 Certain pre-processed files derived from the raw data are required to calculate the measures described above. By default, the QAP software package will generate these pre-requisite files given the raw data you have (anatomical/structural scans for the anatomical measures, 4D anatomical+timeseries scans for the functional). A preprocessing pipeline will be constructed to create these files, and this pipeline can be customized with a pipeline configuration YAML file you provide.
 
-Some examples of customizable features include segmentation thresholds for anatomical preprocessing, and the option to run slice timing correction for functional preprocessing. Computer resource allocation can also be customized using the configuration files, such as dedicating multiple cores/threads to processing, etc.
+Some examples of customizable features include segmentation thresholds for anatomical preprocessing, and the option to run slice timing correction for functional preprocessing. Computer resource allocation can also be customized using the configuration files, such as dedicating multiple cores/threads to processing.
 
 Templates for these files are provided in the `/configs` folder in the QAP main repository directory. Below is a list of options which can be configured for each of the pipelines.
 
@@ -144,11 +144,15 @@ Make sure that you multiply *num_cores_per_subject*, *num_subjects_at_once*, and
 
 ### Providing Raw Data
 
-The QAP pipelines take in subject list YAML (.yml) files as an input. The filepaths to your raw data are defined in these subject lists, and these .yml files can be easily generated using the *qap_raw_data_sublist_generator.py* script included in the QAP software package. After installing the QAP software package, this script can be run from any directory. This subject list generator script assumes a specific file structure for your input data:
+The QAP pipelines take in subject list YAML (.yml) files as an input. The filepaths to your raw data are defined in these subject lists, and these YAML files can be easily generated using the *qap_raw_data_sublist_generator.py* script included in the QAP software package. After installing the QAP software package, this script can be run from any directory. This subject list generator script assumes a specific directory structure for your input data:
 
-	/data_folder/site_name/subject_id/session_id/scan_id/file.nii.gz
+	/data_directory/site_name/subject_id/session_id/scan_id/file.nii.gz
 
-The script will go through your data folder structure and generate the subject list YAML file for you. Note that these subject lists can also be created or edited by hand if you wish, though this can be cumbersome for larger data sets. For reference, an example of the subject list format follows:
+To make the script parse the above directory structure and generate the subject list YAML file, invoke the following command:
+
+    qap_raw_data_sublist_generator.py {absolute path to site_name directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'}
+
+These subject lists can also be created or edited by hand if you wish, though this can be cumbersome for larger data sets. For reference, an example of the subject list format follows:
 
 	'1019436':
 	  session_1:
@@ -167,7 +171,7 @@ Note that *anatomical_scan* is the label for the type of resource (in this case,
 
 ### Providing Already Pre-Processed Data
 
-Alternatively, if you have already preprocessed some or all of your raw data, you can provide these already-existing files as inputs directly to the QAP pipelines via your subject list manually. If these files were processed using the C-PAC software package, there is a script named *qap_cpac_output_sublist_generator.py* which will create a subject list YAML file pointing to these already generated files. The QAP pipelines will then use these files and skip any pre-processing steps involved in creating them, saving time and allowing you to use your own method of processing your data.
+Alternatively, if you have already preprocessed some or all of your raw data, you can provide these pre-existing files as inputs directly to the QAP pipelines via your subject list manually. If these files were processed using the [C-PAC](http://fcp-indi.github.io/docs/user/index.html) software package, there is a script named *qap_cpac_output_sublist_generator.py* which will create a subject list YAML file pointing to these already generated files. The QAP pipelines will then use these files and skip any pre-processing steps involved in creating them, saving time and allowing you to use your own method of processing your data.
 
 Below is a list of intermediary files used in the steps leading to the final QAP measures calculations. If you already have some of these processed for your data, they can be included in the subject list with the label on the left. For example, if you've already deobliqued, reoriented and skull-stripped your anatomical scans, you would list them in your subject list YAML file like so:
 
@@ -186,7 +190,7 @@ Below is a list of intermediary files used in the steps leading to the final QAP
 * **anatomical_wm_mask**: segmentation mask of the anatomical scan's white matter (.nii/.nii.gz)
 * **qap_head_mask**: a whole-skull binarized mask
 
-in the QAP head mask workflow, we also mask the background immediately in front of the scan participant's mouth - we do this to exclude breathing-induced noise from the calculation for the FBER QAP measure
+In the QAP head mask workflow, we also mask the background immediately in front of the scan participant's mouth.  We do this to exclude breathing-induced noise from the calculation for the FBER QAP measure
 
 ### Functional Spatial measures workflow resources
 
@@ -269,7 +273,7 @@ Once this script is run, it will output the S3 dictionary YAML file, and it will
 
 ## Merging Outputs
 
-QAP generates outputs for each subject and session separately.  To view a comprehensive summary for all the measures for all the subjects, you will need to merge these separate outputs into a single file.  You can do this by running the following command.
+QAP generates outputs for each subject and session separately.  To view a comprehensive summary for all the measures for all the subjects, you will need to merge these separate outputs into a single file.  You can do this by running the following command:
 
     qap_merge_outputs.py {path to qap output directory}
 
@@ -285,7 +289,7 @@ For example, if you wanted to obtain functional spatial measures from an S3 buck
 
     qap_download_output_from_S3.py subjects/outputs /home/wintermute/Documents/aws-keys.csv the_big_run func_spatial /home/wintermute/qap_outputs
 
-With the above commands, the outputs will be stored in a directory named `qap_outputs` in the user wintermute's home folder.  As with the pipeline commands from earlier, more information on this command's usage can be obtained by running it with the *-h* flag.  
+With the above commands, the outputs will be stored in a directory named `qap_outputs` in the user *wintermute*'s home folder.  As with the pipeline commands from earlier, more information on this command's usage can be obtained by running it with the *-h* flag.  
 
 ## References
 
