@@ -1,7 +1,7 @@
 
 
-def build_temporal_qap_workflow(resource_pool, config, subject_info, \
-                                run_name):
+def build_functional_temporal_workflow(resource_pool, config, subject_info, \
+                                           run_name, site_name=None):
     
     # build pipeline for each subject, individually
 
@@ -86,6 +86,10 @@ def build_temporal_qap_workflow(resource_pool, config, subject_info, \
     config["scan_id"] = scan_id
     
     config["run_name"] = run_name
+
+
+    if site_name:
+        config["site_name"] = site_name
     
     
 
@@ -212,6 +216,7 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
             subdict = yaml.load(f)
 
         flat_sub_dict = {}
+        sites_dict = {}
 
         for subid in subdict.keys():
 
@@ -237,6 +242,10 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
                                 flat_sub_dict[sub_info_tuple] = {}
 
                             flat_sub_dict[sub_info_tuple].update(resource_dict)
+
+                    elif resource == "site_name":
+
+                        sites_dict[subid] = subdict[subid][session][resource]
 
                     else:
 
@@ -285,9 +294,9 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
 
     if not cloudify:
         
-        procss = [Process(target=build_temporal_qap_workflow, \
+        procss = [Process(target=build_functional_temporal_workflow, \
                           args=(flat_sub_dict[sub_info], config, sub_info, \
-                                run_name)) \
+                                run_name, sites_dict[sub_info[0]])) \
                           for sub_info in flat_sub_dict.keys()]
                           
                           
@@ -368,8 +377,18 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
 
         # run on cloud
         sub = subject_list.keys()[0]
-        build_temporal_qap_workflow(subject_list[sub], config, sub, \
-                                    run_name)
+
+        # get the site name!
+        for resource_path in subject_list[sub]:
+            if ".nii" in resource_path:
+                filepath = resource_path
+                break
+
+        filesplit = filepath.split(config["bucket_prefix"])
+        site_name = filesplit[1].split("/")[1]
+        
+        build_functional_temporal_workflow(subject_list[sub], config, sub, \
+                                               run_name, site_name)
 
 
 

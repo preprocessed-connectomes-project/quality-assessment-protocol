@@ -242,7 +242,7 @@ def slice_head_mask(infile, transform, standard):
 def qap_anatomical_spatial(anatomical_reorient, head_mask_path, \
                                anatomical_gm_mask, anatomical_wm_mask, \
                                anatomical_csf_mask, subject_id, session_id, \
-                               scan_id, out_vox=True):
+                               scan_id, site_name=None, out_vox=True):
 
     import os
     import sys
@@ -269,6 +269,9 @@ def qap_anatomical_spatial(anatomical_reorient, head_mask_path, \
     qc['session'] = session_id
 
     qc['scan'] = scan_id
+
+    if site_name:
+        qc['site'] = site_name
 
    
     # FBER
@@ -311,13 +314,15 @@ def qap_anatomical_spatial(anatomical_reorient, head_mask_path, \
 
 
 
-def qap_functional_spatial(mean_epi, func_brain_mask, subject_id, \
-                               session_id, scan_id, out_vox=True):
+def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id, \
+                               session_id, scan_id, site_name=None, \
+                               out_vox=True):
 
     import os
     import sys
 
-    from qap.spatial_qc import summary_mask, snr, fber, efc, fwhm, ghost_all
+    from qap.spatial_qc import summary_mask, snr, fber, efc, fwhm, \
+                               ghost_direction
     from qap.qap_utils import load_image, load_mask
 
     # Load the data
@@ -334,6 +339,9 @@ def qap_functional_spatial(mean_epi, func_brain_mask, subject_id, \
 
     qc['scan'] = scan_id
 
+    if site_name:
+        qc['site'] = site_name
+
    
     # FBER
     qc['fber'] = fber(anat_data, fg_mask)
@@ -347,8 +355,8 @@ def qap_functional_spatial(mean_epi, func_brain_mask, subject_id, \
     qc['fwhm_x'], qc['fwhm_y'], qc['fwhm_z'], qc['fwhm'] = tmp
     
     # Ghosting
-    tmp         = ghost_all(anat_data, fg_mask)
-    qc['ghost_x'], qc['ghost_y'], qc['ghost_z'] = tmp
+    tmp         = ghost_direction(anat_data, fg_mask, direction)
+    qc['ghost_%s' % direction] = tmp
 
     
     # Summary Measures
@@ -369,7 +377,8 @@ def qap_functional_spatial(mean_epi, func_brain_mask, subject_id, \
 
 def qap_functional_temporal(func_motion_correct, func_brain_mask, \
                                 coord_xfm_matrix, subject_id, session_id, \
-                                scan_id, motion_threshold=1.0):
+                                scan_id, site_name=None, \
+                                motion_threshold=1.0):
 
     import sys
 
@@ -401,6 +410,9 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask, \
         "outlier":  mean_outlier,
         "quality":  mean_quality
     }
+
+    if site_name:
+        qc['site'] = site_name
     
 
     return qc
@@ -430,6 +442,10 @@ def write_to_csv(sub_qap_dict):  #, outfile):
     if "scan" in fields:
         fields.remove("scan")
         fields.insert(2, "scan")
+
+    if "site" in fields:
+        fields.remove("site")
+        fields.insert(3, "site")
 
 
     outfile = os.path.join(os.getcwd(), "qap_measures.csv")

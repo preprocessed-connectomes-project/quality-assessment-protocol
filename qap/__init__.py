@@ -58,10 +58,11 @@ __all__ = ['dl_subj_from_s3', \
            'mean_functional_workflow', \
            'run_mean_functional', \
            'select_thresh', \
+           'c3d_affine_convert', \
            'slice_head_mask', \
-           'qap_spatial', \
-           'qap_spatial_epi', \
-           'qap_temporal', \
+           'qap_anatomical_spatial', \
+           'qap_functional_spatial', \
+           'qap_functional_temporal', \
            'append_to_csv', \
            'qap_mask_workflow', \
            'qap_spatial_workflow', \

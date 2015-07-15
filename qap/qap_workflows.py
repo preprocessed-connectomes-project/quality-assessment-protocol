@@ -195,16 +195,17 @@ def qap_spatial_workflow(workflow, resource_pool, config):
                                                  'anatomical_csf_mask',
                                                  'subject_id',
                                                  'session_id',
-                                                 'scan_id'],
+                                                 'scan_id',
+                                                 'site_name'],
                                     output_names=['qc'],
                                     function=qap_anatomical_spatial),
-                                    name='qap_spatial')
+                                    name='qap_anatomical_spatial')
                                       
                                         
     spatial_to_csv = pe.Node(util.Function(input_names=['sub_qap_dict'],
                                            output_names=['outfile'],
                                            function=write_to_csv),
-                                           name='qap_spatial_to_csv')
+                                         name='qap_anatomical_spatial_to_csv')
                                                                                 
 
     if len(resource_pool["anatomical_reorient"]) == 2:
@@ -251,6 +252,9 @@ def qap_spatial_workflow(workflow, resource_pool, config):
     spatial.inputs.subject_id = config["subject_id"]
     spatial.inputs.session_id = config["session_id"]
     spatial.inputs.scan_id = config["scan_id"]
+
+    if "site_name" in config.keys():
+        spatial.inputs.site_name = config["site_name"]
             
     workflow.connect(spatial, 'qc', spatial_to_csv, 'sub_qap_dict')
             
@@ -299,18 +303,20 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
 
     spatial_epi = pe.Node(util.Function(input_names=['mean_epi',
                                                      'func_brain_mask',
+                                                     'direction',
                                                      'subject_id',
                                                      'session_id',
-                                                     'scan_id'],
+                                                     'scan_id',
+                                                     'site_name'],
                                         output_names=['qc'],
                                         function=qap_functional_spatial),
-                                        name='qap_spatial_epi')
+                                        name='qap_functional_spatial')
                                          
                                            
     spatial_epi_to_csv = pe.Node(util.Function(input_names=['sub_qap_dict'],
                                                output_names=['outfile'],
                                                function=write_to_csv),
-                                               name='qap_spatial_epi_to_csv')                                     
+                                         name='qap_functional_spatial_to_csv')                                     
                                               
 
     if len(resource_pool["mean_functional"]) == 2:
@@ -329,10 +335,15 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
           
     
     # Subject infos 
-     
+    
+    spatial_epi.inputs.direction = config["ghost_direction"]
+
     spatial_epi.inputs.subject_id = config["subject_id"]
     spatial_epi.inputs.session_id = config["session_id"]      
-    spatial_epi.inputs.scan_id = config["scan_id"]        
+    spatial_epi.inputs.scan_id = config["scan_id"]
+
+    if "site_name" in config.keys():
+        spatial_epi.inputs.site_name = config["site_name"]
     
     workflow.connect(spatial_epi, 'qc', spatial_epi_to_csv, 'sub_qap_dict')
 
@@ -392,16 +403,17 @@ def qap_temporal_workflow(workflow, resource_pool, config):
                                                   'coord_xfm_matrix',
                                                   'subject_id',
                                                   'session_id',
-                                                  'scan_id'],
+                                                  'scan_id',
+                                                  'site_name'],
                                      output_names=['qc'],
                                      function=qap_functional_temporal),
-                                     name='qap_temporal')
+                                     name='qap_functional_temporal')
 
 
     temporal_to_csv = pe.Node(util.Function(input_names=['sub_qap_dict'],
                                             output_names=['outfile'],
                                             function=write_to_csv),
-                                            name='qap_temporal_to_csv')                                   
+                                        name='qap_functional_temporal_to_csv')                                   
                                                                                
     
     if len(resource_pool["func_motion_correct"]) == 2:
@@ -433,6 +445,9 @@ def qap_temporal_workflow(workflow, resource_pool, config):
     temporal.inputs.subject_id = config["subject_id"]
     temporal.inputs.session_id = config["session_id"]
     temporal.inputs.scan_id = config["scan_id"]
+
+    if "site_name" in config.keys():
+        temporal.inputs.site_name = config["site_name"]
                 
     workflow.connect(temporal, 'qc', temporal_to_csv, 'sub_qap_dict')
     

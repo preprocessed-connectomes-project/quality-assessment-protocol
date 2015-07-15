@@ -22,6 +22,53 @@ def test_select_thresh():
 
 
 
+def test_c3d_affine_convert():
+
+    import os
+    import pkg_resources as p
+
+    from qap.qap_workflows_utils import c3d_affine_convert
+
+    infile = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                 "anat_1", \
+                                 "anatomical_reorient", \
+                                 "mprage_resample.nii.gz"))
+
+    transform = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                    "anat_1", \
+                                    "ants_affine_xfm", \
+                                    "transform2Affine.mat"))
+
+    standard = p.resource_filename("qap", os.path.join("test_data", \
+                                   "MNI152_T1_2mm.nii.gz"))
+
+    ref_xfm = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                  "anat_1", \
+                                  "qap_headmask_c3d_xfm", \
+                                  "qc_fsl_affine_xfm.mat"))
+
+    c3d_affine_convert(infile, transform, standard)
+
+    with open(ref_xfm,"r") as f:
+        ref_lines = f.readlines()
+
+    with open(os.path.join(os.getcwd(), "qc_fsl_affine_xfm.mat"),"r") as f:
+        out_lines = f.readlines()
+
+    flag = 0
+
+    for ref_line, out_line in zip(ref_lines, out_lines):
+
+        if ref_line == out_line:
+            flag += 1
+
+    os.system("rm qc_fsl_affine_xfm.mat")
+
+
+    assert flag == 4
+
+
+
 def test_slice_head_mask():
 
     import os
@@ -68,7 +115,10 @@ def test_slice_head_mask():
     os.system("rm %s" % slice_mask_path)
 
 
-    assert slice_mask_data.all() == test_mask_data.all()
+    # create a vector of True and False values
+    bool_vector = slice_mask_data == test_mask_data
+
+    assert bool_vector.all()
     
     
     
@@ -185,6 +235,7 @@ def test_qap_functional_temporal():
 def run_all_tests_qap_workflows_utils():
 
     test_select_thresh()
+    test_c3d_affine_convert()
     test_slice_head_mask()
     test_qap_anatomical_spatial()
     test_qap_functional_spatial()

@@ -1,6 +1,3 @@
-"""
-TODO
-"""
 
 import os
 import sys
@@ -46,10 +43,12 @@ def summary_mask(anat_data, mask_data):
 
 def get_background(anat_data, fg_mask_data):
 
-    # Define the image background by taking the inverse of the foreground mask.
+    # Define the image background by taking the inverse of the
+    # foreground mask.
     bg_mask = (fg_mask_data == 0) * 1
 
-    # Create an image containing only background voxels (everything outside bg_mask set to 0)
+    # Create an image containing only background voxels (everything 
+    # outside bg_mask set to 0)
     background = anat_data.copy()
     background[bg_mask != 1] = 0
 
@@ -66,13 +65,15 @@ def check_datatype(background):
         background2 = background.astype('int32')    
         # Ensure downgrading datatype didn't really change the values
         if np.abs(background2.astype('float32') - background).mean() > 0.05:
-            print "WARNING: Downgraded float to an int but values are different by more than 0.05"
+            print "WARNING: Downgraded float to an int but values are " \
+                  "different by more than 0.05"
         background = background2
         del background2
    
     # We only allow integer values for now
     if not np.issubdtype(background.dtype, int):
-        print "QI1 can not be calculated for data that is not integer or floating point: %s" % background.dtype
+        print "QI1 can not be calculated for data that is not integer or " \
+              "floating point: %s" % background.dtype
         raise TypeError
         
     # convert any negative voxel values to zero, provide warning
@@ -124,7 +125,8 @@ def cnr(mean_gm, mean_wm, std_bg):
     """
     Calculate Contrast-to-Noise Ratio (CNR)
     
-    CNR = |(mean GM intensity) - (mean WM intensity)| / (std of background intensities)    
+    CNR = |(mean GM intensity) - (mean WM intensity)| / (std of 
+                                                       background intensities)    
     """
 
     import numpy as np
@@ -158,8 +160,8 @@ def efc(anat_data):
     """
     Calculate the Entropy Focus Criterion (Atkinson 1997, IEEE TMI)
     
-    We normalize the original equation by the maximum entropy so our EFC can be 
-    easily compared across images with different dimensions.
+    We normalize the original equation by the maximum entropy so our EFC
+    can be easily compared across images with different dimensions.
     """
 
     import numpy as np
@@ -167,7 +169,8 @@ def efc(anat_data):
     # let's get rid of those negative values
     anat_data = convert_negatives(anat_data)
         
-    # Calculate the maximum value of the EFC (which occurs any time all voxels have the same value)
+    # Calculate the maximum value of the EFC (which occurs any time all 
+    # voxels have the same value)
     efc_max = 1.0 * np.prod(anat_data.shape) * (1.0 / np.sqrt(np.prod(anat_data.shape))) * \
                 np.log(1.0 / np.sqrt(np.prod(anat_data.shape)))
     
@@ -186,11 +189,13 @@ def efc(anat_data):
 
 def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
 
-    # Detect artifacts in the anatomical image using the method described in Mortamet et al. 2009 (MRM)
+    # Detect artifacts in the anatomical image using the method described in
+    # Mortamet et al. 2009 (MRM)
     # Calculates QI1, the fraction of total voxels that within artifacts.
     
-    # Optionally, also calculates QI2, the distance between the distribution of noise voxel
-    # (non-artifact background voxels) intensities, and a Ricean distribution.
+    # Optionally, also calculates QI2, the distance between the distribution 
+    # of noise voxel (non-artifact background voxels) intensities, and a 
+    # Ricean distribution.
 
     import numpy as np
 
@@ -199,11 +204,13 @@ def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
     # make sure the datatype is an int
     background = check_datatype(background)
        
-    # Find the background threshold (the most frequently occurring value excluding 0)
+    # Find the background threshold (the most frequently occurring value 
+    # excluding 0)
     bg_counts       = np.bincount(background.flatten())
     bg_threshold    = np.argmax(bg_counts[1:]) + 1
 
-    # Apply this threshold to the background voxels to identify voxels contributing artifacts. 
+    # Apply this threshold to the background voxels to identify voxels
+    # contributing artifacts. 
     background[background <= bg_threshold] = 0
     background[background != 0] = 1
 
@@ -217,13 +224,15 @@ def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
     # Perform an opening operation on the background data.
     background      = nd.binary_opening(background, structure=struct_elmnt)
 
-    # Count the number of voxels that remain after the opening operation. These are artifacts.
+    # Count the number of voxels that remain after the opening operation. 
+    # These are artifacts.
     QI1             = background.sum() / float(bg_mask.sum())
     
     ''' "bg" in code below not defined- need to ascertain what that should '''
     '''      be, and correct it- unit test for this part disabled for now  '''
     if calculate_qi2:
-        # Now lets focus on the noise, which is everything in the background that was not identified as artifact
+        # Now lets focus on the noise, which is everything in the background
+        # that was not identified as artifact
         bgNoise     = anat_data[(fg_mask_data-bg)==1]
 
         # calculate the histogram of the noise and its derivative
@@ -231,7 +240,9 @@ def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
         H           = 1.0*H/H.sum()
         dH          = H[1:]-H[:-1]
 
-        # find the first value on the right tail, i.e. tail with negative slope, i.e. dH < 0 that is less than or equal to half of the histograms max
+        # find the first value on the right tail, i.e. tail with negative
+        # slope, i.e. dH < 0 that is less than or equal to half of the
+        # histograms max
         firstNegSlope = np.nonzero(dH<0)[0][0]
         halfMaxRightTail = np.nonzero(H[firstNegSlope:]<(H.max()/2))[0][0]
 
@@ -294,7 +305,8 @@ def fwhm(anat_file, mask_file, out_vox=False):
         pixdim  = hdr['pixdim'][1:4]
     
         # convert to voxels
-        pixdim  = np.append(pixdim, cbrt(pixdim.prod())) # get the geometrix mean
+        pixdim  = np.append(pixdim, cbrt(pixdim.prod()))
+        # get the geometrix mean
         vals    = vals / pixdim
     
     return tuple(vals)
@@ -306,9 +318,11 @@ def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
 
     """
     Ghost to Signal Ratio
-    Giannelli 2010 - http://www.jacmp.org/index.php/jacmp/article/view/3237/2035
+    Giannelli 2010 -
+        http://www.jacmp.org/index.php/jacmp/article/view/3237/2035
     
-    This should be used for EPI images where the phase encoding direction is known.
+    This should be used for EPI images where the phase encoding direction
+    is known.
     
     Parameters
     ----------
@@ -327,15 +341,16 @@ def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
     
     import numpy as np
     
-    # first we need to make a nyquist ghost mask, we do this by circle shifting the original mask by N/2
-    # and then removing the intersection with the original mask
+    # first we need to make a nyquist ghost mask, we do this by circle 
+    # shifting the original mask by N/2 and then removing the intersection
+    # with the original mask
     n2_mask_data    = np.zeros_like(mask_data)
     
     ## rotate by n/2
     if direction == "x":
         n2                      = np.floor(mask_data.shape[0]/2)
         n2_mask_data[:n2,:,:]   = mask_data[n2:(n2*2),:,:]
-        n2_mask_data[n2:(n2*2),:,:]   = mask_data[:n2,:,:]        
+        n2_mask_data[n2:(n2*2),:,:]   = mask_data[:n2,:,:]
     elif direction == "y":
         n2                      = np.floor(mask_data.shape[1]/2)
         n2_mask_data[:,:n2,:]   = mask_data[:,n2:(n2*2),:]
@@ -345,7 +360,8 @@ def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
         n2_mask_data[:,:,:n2]   = mask_data[:,:,n2:(n2*2)]
         n2_mask_data[:,:,n2:(n2*2)]   = mask_data[:,:,:n2]        
     else:
-        raise Exception("Unknown direction %s, should be x, y, or z" % direction)
+        raise Exception("Unknown direction %s, should be x, y, or z" \
+                        % direction)
     
     ## now remove the intersection with the original mask
     n2_mask_data    = n2_mask_data * (1-mask_data)
@@ -355,12 +371,13 @@ def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
     
     # Save mask
     if ref_file is not None and out_file is not None:
+        import nibabel as nib
         ref = nib.load(ref_file)
         out = nib.Nifti1Image(n2_mask_data, ref.get_affine(), ref.get_header()) 
         out.to_filename(out_file)
-    
    
-    # now we calculate the Ghost to signal ratio, but here we define signal as the entire foreground image
+    # now we calculate the Ghost to signal ratio, but here we define signal
+    # as the entire foreground image
     gsr             = (epi_data[n2_mask_data==1].mean() - epi_data[n2_mask_data==2].mean())/epi_data[n2_mask_data==0].mean()
 
     
@@ -372,9 +389,11 @@ def ghost_all(epi_data, mask_data):
 
     """
     Ghost to Signal Ratio (GSR)
-    Giannelli 2010 - http://www.jacmp.org/index.php/jacmp/article/view/3237/2035
+    Giannelli 2010 -
+        http://www.jacmp.org/index.php/jacmp/article/view/3237/2035
     
-    This calls on `ghost_direction` to measure GSR in all possible phase encoding directions.
+    This calls on `ghost_direction` to measure GSR in all possible phase
+    encoding directions.
     
     Parameters
     ----------
@@ -389,10 +408,9 @@ def ghost_all(epi_data, mask_data):
         ghost to signal ratio for phase encoding in the x,y,z direction
     """
     
-    directions  = ["x", "y"]
-    gsrs        = [ ghost_direction(epi_data, mask_data, d) for d in directions ]
+    directions = ["x", "y"]
+    gsrs = [ ghost_direction(epi_data, mask_data, d) for d in directions ]
     
     return tuple(gsrs + [None])
-
 
 

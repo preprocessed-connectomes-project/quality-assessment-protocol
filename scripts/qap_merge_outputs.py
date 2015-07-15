@@ -24,6 +24,8 @@ def csv_merge(csv_list, outfile):
 
             if not fields:
                 fields = csv_reader.fieldnames
+            elif ("site" in csv_reader.fieldnames) and ("site" not in fields):
+                fields = csv_reader.fieldnames
 
             try:
             

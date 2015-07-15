@@ -1,6 +1,3 @@
-"""
-TODO
-"""
 
 import os
 import sys
