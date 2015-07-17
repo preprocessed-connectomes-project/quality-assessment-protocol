@@ -40,6 +40,24 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
             # since there is no session, let's assign one
             sessions = ["session_1"]
 
+        # if the session is embedded in the subject ID
+        if session_format == 3:
+            subject_session = sub_dir
+
+            if "_" not in sub_dir:
+                err = "\n\n[!] You said your CPAC output directory had the " \
+                      "session IDs embedded in the subject IDs, but it " \
+                      "doesn't seem that way!\n\nDoes it look like this?   " \
+                      "../pipeline_output/subject_session/output/..\n\nIf " \
+                      "not, you're using the wrong option for " \
+                      "session_format! Use the -h flag to see the " \
+                      "documentation.\n\n"
+                raise Exception(err)
+
+            session_id = sub_dir.split("_",1)[1]
+            sub_dir = sub_dir.split("_",1)[0]
+            sessions = [session_id]
+
 
         for session in sessions:
 
@@ -52,6 +70,11 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
                                                        session, resource)
                 elif session_format == 2:
                     resource_folder = os.path.join(cpac_outdir, sub_dir, \
+                                                       resource)
+
+                elif session_format == 3:
+                    resource_folder = os.path.join(cpac_outdir, \
+                                                       subject_session, \
                                                        resource)
 
 
@@ -178,7 +201,10 @@ def main():
                                  "file structure is organized as /subject_id"\
                                  "/session_id/output/.., '2' if there are " \
                                  "no sessions and the file structure is " \
-                                 "organized as /subject_id/output/..")
+                                 "organized as /subject_id/output/.., '3' " \
+                                 "if the session ID is embedded in the " \
+                                 "subject ID like so: /subject_session/" \
+                                 "output/..")
 
     args = parser.parse_args()
 
