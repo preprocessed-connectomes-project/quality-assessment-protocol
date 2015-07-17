@@ -6,8 +6,7 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
     import glob
     import yaml
 
-    ''' SCRIPT UNDER CONSTRUCTION!!! '''
-
+ 
     if qap_type == "anat":
 
         outputs = ["anatomical_reorient", "anatomical_csf_mask", \
@@ -175,7 +174,11 @@ def main():
                                  "or temporal)")
 
     parser.add_argument("session_format", type=int, \
-                            help="")
+                            help="input as integer: '1' if your CPAC output "\
+                                 "file structure is organized as /subject_id"\
+                                 "/session_id/output/.., '2' if there are " \
+                                 "no sessions and the file structure is " \
+                                 "organized as /subject_id/output/..")
 
     args = parser.parse_args()
 
