@@ -79,6 +79,11 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
                                                        subject_session, \
                                                        resource)
 
+                # if this current resource/output does not exist for this
+                # subject, go to next resource in list
+                if not os.path.isdir(resource_folder):
+                    continue
+
 
                 if qap_type == "anat":
 
