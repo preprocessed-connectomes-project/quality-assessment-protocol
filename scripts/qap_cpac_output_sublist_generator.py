@@ -47,12 +47,14 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
             if "_" not in sub_dir:
                 err = "\n\n[!] You said your CPAC output directory had the " \
                       "session IDs embedded in the subject IDs, but it " \
-                      "doesn't seem that way!\n\nDoes it look like this?   " \
-                      "../pipeline_output/subject_session/output/..\n\nIf " \
-                      "not, you're using the wrong option for " \
-                      "session_format! Use the -h flag to see the " \
-                      "documentation.\n\n"
-                raise Exception(err)
+                      "doesn't seem that way for subject ID %s!\n\nIs it " \
+                      " formatted like this?   ../pipeline_output/subject_" \
+                      "session/output/..\n\nIf not, you're using the wrong " \
+                      "option for session_format! Use the -h flag to see " \
+                      "the documentation.\n\n%s not being included in the " \
+                      "subject list.\n\n" % (sub_dir, sub_dir)
+                print err
+                continue
 
             session_id = sub_dir.split("_",1)[1]
             sub_dir = sub_dir.split("_",1)[0]
