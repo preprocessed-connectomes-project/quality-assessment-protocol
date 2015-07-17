@@ -1,6 +1,6 @@
 
 
-def run(cpac_outdir, outfile_name, qap_type):
+def run(cpac_outdir, outfile_name, qap_type, session_format):
 
     import os
     import glob
@@ -25,41 +25,109 @@ def run(cpac_outdir, outfile_name, qap_type):
 
     for sub_dir in os.listdir(cpac_outdir):
 
-        for resource in outputs:
+        if not os.path.isdir(os.path.join(cpac_outdir, sub_dir)):
+            continue
 
-            resource_path = ""
+        sessions = []
 
-            filepaths = glob.glob(os.path.join(cpac_outdir, sub_dir, \
-                                               resource))
+        # if the folder structure is sub_id/session_id/scan_id/...
+        if session_format == 1:
+            for session in os.listdir(os.path.join(cpac_outdir, sub_dir)):
+                if os.path.isdir(os.path.join(cpac_outdir, sub_dir, session)):
+                    sessions.append(session)
 
-
-            if len(filepaths) == 1:
-
-                for root, folders, files in os.walk(filepaths[0]):
-                
-                    for filename in files:
-
-                        if qap_type == "func":
-
-                            '''scan_id was removed! now must support multiple scans, multiple strategies, etc.!'''
-                            if scan_id in root:
-
-                                filepath = os.path.join(root, filename)
-
-                                resource_path = filepath
-
-                        elif qap_type == "anat":
-
-                            filepath = os.path.join(root, filename)
-
-                            resource_path = filepath
+        # if there is no session label in the folder structure
+        if session_format == 2:
+            # since there is no session, let's assign one
+            sessions = ["session_1"]
 
 
-                if sub_dir not in outputs_dict.keys():
-                    outputs_dict[sub_dir] = {}
+        for session in sessions:
 
-                if resource not in outputs_dict[sub_dir].keys():
-                    outputs_dict[sub_dir][resource] = resource_path
+            for resource in outputs:
+
+                resource_path = ""
+
+                if session_format == 1:
+                    resource_folder = os.path.join(cpac_outdir, sub_dir, \
+                                                       session, resource)
+                elif session_format == 2:
+                    resource_folder = os.path.join(cpac_outdir, sub_dir, \
+                                                       resource)
+
+
+                if qap_type == "anat":
+
+                    ''' until CPAC writes multiple anat scans in the '''
+                    ''' output folder structure '''
+                    scans = ["anat_1"]
+
+
+                if qap_type == "func":
+    
+                    scans = []
+
+                    for item in os.listdir(resource_folder):
+                        if os.path.isdir(os.path.join(resource_folder, item)):
+                            item = item.replace("_scan_","")
+                            item = item.replace("_rest","")
+                            scans.append(item)
+
+
+                for scan in scans:
+
+                    if qap_type == "anat":
+
+                        if "mask" in resource:
+                            resource_paths = glob.glob(os.path.join(resource_folder, "*", "*"))
+                        else:
+                            resource_paths = glob.glob(os.path.join(resource_folder, "*"))
+
+                        if len(resource_paths) == 1:
+                            resource_path = resource_paths[0]
+                        else:
+                            print "\nMultiple files for %s for subject %s!!" \
+                                  % (resource, sub_dir)
+                            print "Check the directory: %s" \
+                                      % resource_folder
+                            print "%s for %s has not been included in the " \
+                                  "subject list.\n" % (resource, sub_dir)
+                            continue
+
+                    if qap_type == "func":
+
+                        fullscan = "_scan_" + scan + "_rest"
+
+                        resource_paths = glob.glob(os.path.join(resource_folder, fullscan, "*"))
+
+                        if len(resource_paths) == 1:
+                            resource_path = resource_paths[0]
+                        else:
+                            print "\nMultiple files for %s for subject %s!!" \
+                                  % (resource, sub_dir)
+                            print "Check the directory: %s" \
+                                      % resource_folder
+                            print "%s for %s has not been included in the " \
+                                  "subject list.\n" % (resource, sub_dir)
+                            continue
+
+
+                    ''' put a catch here for multiple files '''
+
+
+                    if sub_dir not in outputs_dict.keys():
+                        outputs_dict[sub_dir] = {}
+
+                    if session not in outputs_dict[sub_dir].keys():
+                        outputs_dict[sub_dir][session] = {}
+
+                    if resource not in outputs_dict[sub_dir][session].keys():
+                        outputs_dict[sub_dir][session][resource] = {}
+
+                    if scan not in outputs_dict[sub_dir][session][resource].keys():
+                        outputs_dict[sub_dir][session][resource][scan] = resource_path
+
+
 
 
     # make up for QAP - CPAC resource naming discrepancy
@@ -102,17 +170,18 @@ def main():
                             help="'anat' or 'func' - whether to extract " \
                                  "the anatomical or functional outputs, " \
                                  "depending on which type of QAP measures " \
-                                 "you wish to run ('anat' for Spatial, " \
-                                 "'func' for Spatial EPI or Temporal)")
+                                 "you wish to run ('anat' for anatomical " \
+                                 "spatial, 'func' for functional spatial " \
+                                 "or temporal)")
 
-    parser.add_argument("-s", "--scan_id", type=str, \
-                            help="(for qap_type 'func' only) - the name of " \
-                                 "the scan you wish to run the measures for")
+    parser.add_argument("session_format", type=int, \
+                            help="")
 
     args = parser.parse_args()
 
     # run it!
-    run(args.cpac_output_dir, args.outfile_name, args.qap_type, args.scan_id)
+    run(args.cpac_output_dir, args.outfile_name, args.qap_type, \
+            args.session_format)
 
 
 
