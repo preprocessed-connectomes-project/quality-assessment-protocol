@@ -294,10 +294,19 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
 
     if not cloudify:
         
-        procss = [Process(target=build_functional_temporal_workflow, \
-                          args=(flat_sub_dict[sub_info], config, sub_info, \
-                                run_name, sites_dict[sub_info[0]])) \
-                          for sub_info in flat_sub_dict.keys()]
+        if len(sites_dict) > 0:
+
+            procss = [Process(target=build_anatomical_spatial_workflow, \
+                            args=(flat_sub_dict[sub_info], config, sub_info, \
+                                      run_name, sites_dict[sub_info[0]])) \
+                                for sub_info in flat_sub_dict.keys()]
+
+        elif len(sites_dict) == 0:
+
+            procss = [Process(target=build_anatomical_spatial_workflow, \
+                            args=(flat_sub_dict[sub_info], config, sub_info, \
+                                      run_name, None)) \
+                                for sub_info in flat_sub_dict.keys()]
                           
                           
         pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
