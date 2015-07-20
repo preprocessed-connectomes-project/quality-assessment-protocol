@@ -3,7 +3,7 @@ layout: page
 title: PCP Quality Assessment Protocol
 ---
 
-Various objective measures for MRI data quality have been proposed over the years.  However, until now no software has allowed researchers to obtain these measures with relative ease.  The QAP package allows you to obtain spatial and anatomical data quality measures for your own data.  Since no standard thresholds demarcating acceptable from unacceptable data are currently existent, you can then compare your data to normative distributions of measures obtained from the [ABIDE](http://fcon_1000.projects.nitrc.org/indi/abide/) and [CoRR](http://fcon_1000.projects.nitrc.org/indi/CoRR/html/index.html) datasets.
+Various objective measures for MRI data quality have been proposed over the years.  However, until now no software has allowed researchers to obtain all these measures in the same place with relative ease.  The QAP package allows you to obtain spatial and anatomical data quality measures for your own data.  Since no standard thresholds demarcating acceptable from unacceptable data are currently existent, you can then compare your data to normative distributions of measures obtained from the [ABIDE](http://fcon_1000.projects.nitrc.org/indi/abide/) and [CoRR](http://fcon_1000.projects.nitrc.org/indi/CoRR/html/index.html) datasets.
 
 For more information, please see our recent [resting-state poster and associated code]( http://github.com/czarrar/qap_poster).
 
@@ -33,8 +33,8 @@ For more information, please see our recent [resting-state poster and associated
 
 QAP requires AFNI, C3D, and FSL to run. Links to installation instructions for AFNI and FSL are listed below:
 
-* [AFNI Installation](#http://afni.nimh.nih.gov/pub/dist/HOWTO/howto/ht00_inst/html)
-* [FSL Installation](#http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation)
+* [AFNI Installation](http://afni.nimh.nih.gov/pub/dist/HOWTO/howto/ht00_inst/html)
+* [FSL Installation](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation)
 
 If you are using a Debian-based Linux distribution, you can use `apt-get` by first adding Neurodebian to the apt repository list and then installing the Neurodebian FSL and AFNI packages:
 
@@ -43,21 +43,20 @@ If you are using a Debian-based Linux distribution, you can use `apt-get` by fir
     apt-get update
     apt-get install -y fsl-5.0-complete afni
 
-To install C3D, download the appropriate version for your platform from [Sourceforge](#http://sourceforge.net/projects/c3d/).  Unzip or mount the archive containing C3D and copy it to a memorable location.  Finish by adding the following line to your `.bashrc` file:
+To install C3D, download the appropriate version for your platform from [Sourceforge](http://sourceforge.net/projects/c3d/).  Make sure the you use at least version 1.0.0.  Unzip or mount the archive containing C3D and copy it to a memorable location.  Finish by adding the following line to your `.bashrc` file:
 
     export PATH=/path_to/C3D/bin:$PATH
 
 ### Python Dependencies
 
-QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, and PyYAML.  If you have `pip`, you may install these by typing in the command below:
+QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas.   If you have `pip`, you may install these by typing in the command below:
 
-    pip install numpy scipy nipype nibabel nitime pyyaml
+    pip install numpy scipy && pip install nipype nibabel nitime pyyaml pandas
 
 ### QAP
 
 Once the pre-requisites have been satisfied, you can install the QAP package itself:
 
-    cd /tmp
     git clone https://github.com/preprocessed-connectomes-project/quality-assessment-protocol.git qap
     cd /qap
     python setup.py install
@@ -94,7 +93,7 @@ To determine subjects that are outliers for any of these measures, run QAP on an
 
 * **Standardized DVARS [func_dvars]:** The spatial standard deviation of the temporal derivative of the data, normalized by the temporal standard deviation and temporal autocorrelation.  Lower values are better [^5][^6]. 
 * **Outlier Detection [func_outlier]:** The mean fraction of outliers found in each volume using the [3dTout](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni).  Lower values are better [^7]. 
-* **Median Distance Index [func_quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s [3dTqual command](http://afni.nimh.nih.gov/afni).  Lower values are better [^7]. 
+* **Median Distance Index [func_quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s [3dTqual](http://afni.nimh.nih.gov/afni) command.  Lower values are better [^7]. 
 * **Mean Fractional Displacement - Jenkinson [func_mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere.  Lower values are better [^8][^10]. 
 * **Number of volumes with FD greater than 0.2mm [func_num_fd]:** Lower values are better.
 * **Percent of volumes with FD greater than 0.2mm [func_perc_fd]:** Lower values are better.
@@ -171,7 +170,19 @@ Note that *anatomical_scan* is the label for the type of resource (in this case,
 
 ### Providing Already Pre-Processed Data
 
-Alternatively, if you have already preprocessed some or all of your raw data, you can provide these pre-existing files as inputs directly to the QAP pipelines via your subject list manually. If these files were processed using the [C-PAC](http://fcp-indi.github.io/docs/user/index.html) software package, there is a script named *qap_cpac_output_sublist_generator.py* which will create a subject list YAML file pointing to these already generated files. The QAP pipelines will then use these files and skip any pre-processing steps involved in creating them, saving time and allowing you to use your own method of processing your data.
+Alternatively, if you have already preprocessed some or all of your raw data, you can provide these pre-existing files as inputs directly to the QAP pipelines via your subject list manually.  The QAP pipelines will then use these files and skip any pre-processing steps involved in creating them, saving time and allowing you to use your own method of processing your data.  If these files were processed using the [C-PAC](http://fcp-indi.github.io/docs/user/index.html) software package, there is a script named *qap_cpac_output_sublist_generator.py* which will create a subject list YAML file pointing to these already generated files.  Its usage is as follows:
+
+    qap_cpac_output_sublist_generator.py {absolute path to the C-PAC output directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'} {the session format- can be '1','2', or '3', whose corresponding formats are described in more detail below}
+
+The values for the session format argument can either be:
+
+    1 - For output organized in the form: /output/pipeline/subject_id/session_id/output/
+    2 - For output organized in the form: /output/pipeline/subject_id/output/
+    3 - For output organized in the form: /output/pipeline/subject_session/output/
+
+For example, if C-PAC results were stored in */home/wintermute/output/pipeline_ANTS/80386_session_1*, you wanted to run anatomical measures, and you wanted to store the subject list in *subj_list.yml*, you would invoke:
+
+    qap_cpac_output_sublist_generator.py /home/wintermute/output/pipeline_ANTS/80386_session_1 /home/wintermute/qap_analysis/subj_list.yml anat 3
 
 Below is a list of intermediary files used in the steps leading to the final QAP measures calculations. If you already have some of these processed for your data, they can be included in the subject list with the label on the left. For example, if you've already deobliqued, reoriented and skull-stripped your anatomical scans, you would list them in your subject list YAML file like so:
 
@@ -254,11 +265,13 @@ Once this script is run, it will output the S3 dictionary YAML file, and it will
 
 ### Setting Up Your SGE File
 
+Sun Grid Engine (SGE) allows you to parallelize your cloud analyses by having each node in an HPC cluster run QAP on an individual subject.  To use SGE on your AWS instance, create a new batch file in your favorite text editor and set up an SGE job in a format similar to below:
+
 	#! /bin/bash
 	#$ -cwd
 	#$ -S /bin/bash
 	#$ -V
-	#$ -t 1-{size of sub dictionary}
+	#$ -t 1-{number of subjects}
 	#$ -q all.q
 	#$ -pe mpi_smp 4
 	#$ -e /home/ubuntu/qap_run_anat.err
@@ -270,6 +283,10 @@ Once this script is run, it will output the S3 dictionary YAML file, and it will
 	# Run anatomical spatial qap
 	qap_anatomical_spatial.py --subj_idx $SGE_TASK_ID --s3_dict_yml $ANAT_S3_DICT $ANAT_SP_CONFIG_FILE
 	echo "End - TASKID " $SGE_TASK_ID " : " $(date)
+
+Note that the *mpi_smp* environment is created by the *cpac_sge* Starcluster plug-in mentioned earlier.  The *cpac_env.sh* script is a script containing all of the environmental variables used by AFNI, FSL, and C3D.  If you opt to not use the C-PAC AMI, you will need to create a comparable script and have the batchs script source it.  Submit the job to the SGE scheduler by typing:
+
+    qsub {path to the text file}
 
 ## Merging Outputs
 
