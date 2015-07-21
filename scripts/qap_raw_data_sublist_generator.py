@@ -36,16 +36,42 @@ def gather_raw_data(site_folder, yaml_outpath, scan_type, \
                 except:
                     pass
 
-
                 if include_sites:
-                    site_id = second_half_list[-5]
-                    subject_id = second_half_list[-4]
-                    session_id = second_half_list[-3]
-                    scan_id = second_half_list[-2]
+
+                    try:
+
+                        site_id = second_half_list[-5]
+                        subject_id = second_half_list[-4]
+                        session_id = second_half_list[-3]
+                        scan_id = second_half_list[-2]
+
+                    except:
+
+                        err = "\n\n[!] Could not parse the data directory " \
+                              "structure. Is it in the correct format?\n\n" \
+                              "Your directory structure:\n%s\n\nIt should " \
+                              "be something like this:\n/site_folder/subject"\
+                              "_id/session_id/scan_id/file.nii.gz\n\n" \
+                              % second_half
+                        raise Exception(err)
+
                 else:
-                    subject_id = second_half_list[-4]
-                    session_id = second_half_list[-3]
-                    scan_id = second_half_list[-2]
+
+                    try:
+
+                        subject_id = second_half_list[-4]
+                        session_id = second_half_list[-3]
+                        scan_id = second_half_list[-2]
+
+                    except:
+                        
+                        err = "\n\n[!] Could not parse the data directory " \
+                              "structure. Is it in the correct format?\n\n" \
+                              "Your directory structure:\n%s\n\nIt should " \
+                              "be something like this:\n/subject_id" \
+                              "/session_id/scan_id/file.nii.gz\n\n" \
+                              % second_half
+                        raise Exception(err)
 
 
                 if subject_inclusion == None:
