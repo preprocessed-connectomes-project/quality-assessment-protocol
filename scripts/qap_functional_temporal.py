@@ -296,14 +296,14 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
         
         if len(sites_dict) > 0:
 
-            procss = [Process(target=build_anatomical_spatial_workflow, \
+            procss = [Process(target=build_functional_temporal_workflow, \
                             args=(flat_sub_dict[sub_info], config, sub_info, \
                                       run_name, sites_dict[sub_info[0]])) \
                                 for sub_info in flat_sub_dict.keys()]
 
         elif len(sites_dict) == 0:
 
-            procss = [Process(target=build_anatomical_spatial_workflow, \
+            procss = [Process(target=build_functional_temporal_workflow, \
                             args=(flat_sub_dict[sub_info], config, sub_info, \
                                       run_name, None)) \
                                 for sub_info in flat_sub_dict.keys()]
@@ -315,7 +315,7 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
         job_queue = []
 
         # If we're allocating more processes than are subjects, run them all
-        if len(subject_list) <= config["num_subjects_at_once"]:
+        if len(flat_sub_dict) <= config["num_subjects_at_once"]:
     
             """
             Stream all the subjects as sublist is
@@ -339,7 +339,7 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
     
             idx = 0
     
-            while(idx < len(subject_list)):
+            while(idx < len(flat_sub_dict)):
     
                 # If the job queue is empty and we haven't started indexing
                 if len(job_queue) == 0 and idx == 0:
