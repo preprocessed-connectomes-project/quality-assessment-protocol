@@ -162,13 +162,18 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
     # make up for QAP - CPAC resource naming discrepancy
     for subid in outputs_dict.keys():
 
-        for resource in outputs_dict[subid].keys():
+        for session in outputs_dict[subid].keys():
 
-            if resource == "motion_correct":
+            for resource in outputs_dict[subid][session].keys():
 
-                filepath = outputs_dict[subid]["motion_correct"]
+                if resource == "motion_correct":
 
-                outputs_dict[subid]["func_motion_correct"] = filepath
+                    filepath = outputs_dict[subid][session]["motion_correct"]
+
+                    outputs_dict[subid][session]["func_motion_correct"] = \
+                        filepath
+
+                    del outputs_dict[subid][session]["motion_correct"]
 
 
 
