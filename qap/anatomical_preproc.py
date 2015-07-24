@@ -447,11 +447,19 @@ def segmentation_workflow(workflow, resource_pool, config):
         pick_seg.inputs.seg_type = seg
         
 
-        workflow.connect(segment, 'tissue_class_files',
-                             pick_seg, 'probability_maps')
+        if config["process_segmentation_maps"] == True:
 
-        
-        resource_pool["anatomical_%s_mask" % seg] = (pick_seg, 'filename')
+            workflow.connect(segment, 'probability_maps', \
+                                 pick_seg, 'probability_maps')
+
+            resource_pool["%s_probability_map" % seg] = (pick_seg, 'filename')
+
+        else:
+
+            workflow.connect(segment, 'tissue_class_files',
+                                 pick_seg, 'probability_maps')
+
+            resource_pool["anatomical_%s_mask" % seg] = (pick_seg, 'filename')
 
 
     return workflow, resource_pool
@@ -518,5 +526,286 @@ def run_segmentation_workflow(anatomical_brain, csf_threshold, gm_threshold, \
 
     return outpath
 
+
+
+def process_seg_maps_workflow(workflow, resource_pool, config):
+
+    # resource pool should have:
+    #     csf_probability_map
+    #     gm_probability_map
+    #     wm_probability_map
+
+    # configuration should have:
+    #     csf_threshold
+    #     gm_threshold
+    #     wm_threshold
+    #     csf_prior
+    #     gm_prior
+    #     wm_prior
+
+
+    import os
+    import sys
+
+    import nipype.interfaces.io as nio
+    import nipype.pipeline.engine as pe
+
+    import nipype.interfaces.fsl as fsl
+    import nipype.interfaces.ants as ants
+    import nipype.interfaces.utility as util
+
+    from anatomical_preproc_utils import pick_seg_type
+
+    from workflow_utils import check_input_resources, \
+                               check_config_settings
+
+
+    # for the "binarize_threshold_segmentmap" node
+    def form_threshold_string(threshold):
+        return '-thr %f -bin ' % (threshold)
+
+
+    if ("csf_probability_map" not in resource_pool.keys()) or \
+        ("gm_probability_map" not in resource_pool.keys()) or \
+            ("wm_probability_map" not in resource_pool.keys()):
+
+        from anatomical_preproc import segmentation_workflow
+
+        # this should already be set if this workflow is running, 
+        # but let's be safe for now
+        config["process_segmentation_maps"] = True
+
+        workflow, resource_pool = \
+            segmentation_workflow(workflow, resource_pool, config)
+
+
+    if ("csf_prior_standard_to_subject_warped" not in resource_pool.keys()) or \
+        ("gm_prior_standard_to_subject_warped" not in resource_pool.keys()) or \
+            ("wm_prior_standard_to_subject_warped" not in resource_pool.keys()):
+
+        seg_types = ["csf", "gm", "wm"]
+
+        for seg in seg_types:
+
+            ''' for now '''
+            config["registration_option"] = "ANTS"
+
+            if config["registration_option"] == "ANTS":
+
+                if ("ants_initial_xfm" not in resource_pool.keys()) or \
+                    ("ants_rigid_xfm" not in resource_pool.keys()) or \
+                        ("ants_affine_xfm" not in resource_pool.keys()):
+
+                    from anatomical_preproc import \
+                        ants_anatomical_linear_registration
+
+                    workflow, resource_pool = \
+                        ants_anatomical_linear_registration(workflow, \
+                            resource_pool, config)
+
+
+                # invert the subject-to-standard warps, then apply these
+                # inverted warps to the segmentation priors, bringing them
+                # from standard-space to subject-space
+                from anatomical_preproc import apply_ants_transforms_workflow
+
+                wf_config = {}
+                wf_config["name"] = "%s_prior_standard_to_subject" % seg
+                wf_config["input_image"] = config["%s_prior" % seg]
+                wf_config["ref_image"] = resource_pool["anatomical_brain"]
+                wf_config["interpolation"] = "NearestNeighbor"
+                wf_config["invert"] = True
+
+                wf_config["warps_list"] = [resource_pool["ants_initial_xfm"],\
+                                           resource_pool["ants_rigid_xfm"], \
+                                           resource_pool["ants_affine_xfm"]]
+
+                # returns:
+                # resource_pool["{seg_type}_prior_standard_to_subject_warped"]
+
+                workflow, resource_pool = \
+                    apply_ants_transforms_workflow(workflow, resource_pool, \
+                                                       wf_config)
+
+
+    for seg in seg_types:
+
+        # nodes
+
+        overlap_segmentmap_with_prior = pe.Node(interface=fsl.MultiImageMaths(), name='overlap_%s_map_with_prior' % seg)
+        overlap_segmentmap_with_prior.inputs.op_string = '-mas %s '
+
+        binarize_threshold_segmentmap = pe.Node(interface=fsl.ImageMaths(), name='binarize_threshold_%s' % seg)
+
+        segment_mask = pe.Node(interface=fsl.MultiImageMaths(), name='%s_mask' % seg)
+        segment_mask.inputs.op_string = '-mas %s '
+
+
+        # overlapping
+
+        if len(resource_pool["%s_probability_map" % seg]) == 2:
+            node, out_file = resource_pool["%s_probability_map" % seg]
+            workflow.connect(node, out_file, overlap_segmentmap_with_prior, 'in_file')
+        else:
+            overlap_segmentmap_with_prior.inputs.in_file = resource_pool["%s_probability_map" % seg]
+
+
+        if len(resource_pool["%s_prior_standard_to_subject_warped" % seg]) == 2:
+            node, out_file = resource_pool["%s_prior_standard_to_subject_warped" % seg]
+            workflow.connect(node, out_file, overlap_segmentmap_with_prior, 'operand_files')
+        else:
+            overlap_segmentmap_with_prior.inputs.operand_files = resource_pool["%s_prior_standard_to_subject_warped" % seg]
+
+
+        # binarize
+        workflow.connect(overlap_segmentmap_with_prior, 'out_file', binarize_threshold_segmentmap, 'in_file')
+        
+        binarize_threshold_segmentmap.inputs.op_string = form_threshold_string(config["%s_threshold" % seg])
+
+
+        # create segment mask
+        workflow.connect(binarize_threshold_segmentmap, 'out_file', segment_mask, 'in_file')
+
+        if len(resource_pool["%s_prior_standard_to_subject_warped" % seg]) == 2:
+            node, out_file = resource_pool["%s_prior_standard_to_subject_warped" % seg]
+            workflow.connect(node, out_file, segment_mask, 'operand_files')
+        else:
+            segment_mask.inputs.operand_files = resource_pool["%s_prior_standard_to_subject_warped" % seg]
+
+
+        resource_pool["anatomical_%s_mask" % seg] = (segment_mask, 'out_file')
+
+
+    return workflow, resource_pool
+
+
+
+def apply_ants_transforms_workflow(workflow, resource_pool, wf_config):
+
+    # input image
+    # reference
+    # warps
+    # invert? yes or no
+    # interpolation?
+
+    import os
+    import sys
+
+    import nipype.interfaces.io as nio
+    import nipype.pipeline.engine as pe
+
+    import nipype.interfaces.fsl as fsl
+    import nipype.interfaces.ants as ants
+    import nipype.interfaces.utility as util
+
+    from workflow_utils import check_input_resources, \
+                               check_config_settings
+
+    apply_name = wf_config["name"]
+
+    input_image = wf_config["input_image"]
+    ref_image = wf_config["ref_image"]
+
+    list_of_warps = wf_config["warps_list"]
+
+    invert = wf_config["invert"]
+    interpolation = wf_config["interpolation"]
+
+    num_warps = len(list_of_warps)
+
+
+    # nodes
+
+    collect_linear_transforms = pe.Node(util.Merge(num_warps), \
+                                        name='%s_collect_linear_transforms' \
+                                        % apply_name)
+
+    apply_ants_xfm = pe.Node(interface=ants.ApplyTransforms(), \
+                             name='%s_apply_ants_xfm' % apply_name)
+    apply_ants_xfm.inputs.interpolation = interpolation #'NearestNeighbor'
+
+    if invert == True:
+        # assuming we're inverting all warps provided
+        apply_ants_xfm.inputs.invert_transform_flags = [True, True, True]
+
+    '''
+    if invert == True:
+
+        # assuming we're inverting all warps provided
+        invert_flags = []
+        for warp in list_of_warps:
+            invert_flags.append(True)
+
+        apply_ants_xfm.inputs.invert_transform_flags = invert_flags
+    '''
+
+    # connections
+
+    if len(input_image) == 2:
+        node, out_file = input_image
+        workflow.connect(node, out_file, apply_ants_xfm, 'input_image')
+    else:
+        apply_ants_xfm.inputs.input_image = input_image
+
+
+    if len(ref_image) == 2:
+        node, out_file = ref_image
+        workflow.connect(node, out_file, apply_ants_xfm, 'reference_image')
+    else:
+        apply_ants_xfm.inputs.reference_image = ref_image
+
+
+    if len(list_of_warps[0]) == 2:
+        node, out_file = list_of_warps[0]
+        workflow.connect(node, out_file, collect_linear_transforms, 'in1')
+    else:
+        collect_linear_transforms.inputs.in1 = list_of_warps[0]
+
+
+    if len(list_of_warps[1]) == 2:
+        node, out_file = list_of_warps[1]
+        workflow.connect(node, out_file, collect_linear_transforms, 'in2')
+    else:
+        collect_linear_transforms.inputs.in2 = list_of_warps[1]
+
+
+    if len(list_of_warps[2]) == 2:
+        node, out_file = list_of_warps[2]
+        workflow.connect(node, out_file, collect_linear_transforms, 'in3')
+    else:
+        collect_linear_transforms.inputs.in3 = list_of_warps[2]
+
+
+    '''
+    warpcount = 1
+
+    for warp in list_of_warps:
+
+        if len(warp) == 2:
+            node, out_file = warp
+            workflow.connect(node, out_file, collect_linear_transforms,
+                                 'in%d' % warpcount)
+        else:
+            datasource = nio.DataGrabber(name = "%s_grabber" \
+                                             % warp.split("/")[-1])
+            datasource.inputs.base_directory = os.getcwd()
+            datasource.inputs.template = warp
+            workflow.connect(datasource, 'outfiles', 
+                                collect_linear_transforms, 'in%d' % warpcount)
+            # NEED A WAY TO HANDLE THIS!
+            #collect_linear_transforms.inputs.inX = warp
+
+        warpcount += 1
+    '''
+
+    workflow.connect(collect_linear_transforms, 'out',
+                         apply_ants_xfm, 'transforms')
+
+
+    resource_pool["%s_warped" % apply_name] = \
+        (apply_ants_xfm, 'output_image')
+
+
+    return workflow, resource_pool
 
 

@@ -174,10 +174,21 @@ def qap_spatial_workflow(workflow, resource_pool, config):
            ("anatomical_wm_mask" not in resource_pool.keys()) or \
                ("anatomical_csf_mask" not in resource_pool.keys()):
 
-        from anatomical_preproc import segmentation_workflow
+        # if true, use segmentation priors (must be provided by user) to
+        # process the segmentation outputs and make them more "stringent"
+        if config["process_segmentation_maps"] == True:
 
-        workflow, resource_pool = \
-            segmentation_workflow(workflow, resource_pool, config)
+            from anatomical_preproc import process_seg_maps_workflow
+
+            workflow, resource_pool = \
+                process_seg_maps_workflow(workflow, resource_pool, config)
+
+        else:
+
+            from anatomical_preproc import segmentation_workflow
+
+            workflow, resource_pool = \
+                segmentation_workflow(workflow, resource_pool, config)
 
     
     if "anatomical_reorient" not in resource_pool.keys():

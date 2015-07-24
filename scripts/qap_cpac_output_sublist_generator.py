@@ -11,7 +11,7 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
 
         outputs = ["anatomical_reorient", "anatomical_csf_mask", \
                    "anatomical_gm_mask", "anatomical_wm_mask", \
-                   "ants_affine_xfm"]
+                   "ants_affine_xfm", "qap_head_mask"]
 
     elif qap_type == "func":
 

@@ -49,6 +49,7 @@ __all__ = ['dl_subj_from_s3', \
            'anatomical_skullstrip_workflow', \
            'ants_anatomical_linear_registration', \
            'segmentation_workflow', \
+           'process_seg_maps_workflow', \
            'ants_lin_reg', \
            'separate_warps_list', \
            'pick_seg_type', \
