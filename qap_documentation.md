@@ -75,28 +75,30 @@ To determine subjects that are outliers for any of these measures, run QAP on an
 
 ### Spatial Anatomical
 
-* **Contrast to Noise Ratio (CNR) [anat_cnr]:** Calculated as the mean of the gray matter values minus the mean of the white matter values, divided by the standard deviation of the air values.  Higher values are better [^1].
-* **Entropy Focus Criterion (EFC) [anat_efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion.  Lower values are better [^2].
-* **Foreground to Background Energy Ratio (FBER) [anat_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head.  Higher values are better.
-* **Smoothness of Voxels (FWHM) [anat_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels.  Lower values are better [^3].
-* **Artifact Detection (Qi1) [anat_qi1]:** The proportion of voxels with intensity corrupted by artifacts normalized by the number of voxels in the background.  Lower values are better [^4].
-* **Signal-to-Noise Ratio (SNR) [anat_snr]:** The mean of image values within gray matter divided by the standard deviation of the image values within air (i.e., outside the head).  Higher values are better [^1].
+* **Contrast to Noise Ratio (CNR) [cnr]:** Calculated as the mean of the gray matter values minus the mean of the white matter values, divided by the standard deviation of the air values.  Higher values are better [^1].
+* **Entropy Focus Criterion (EFC) [efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion.  Lower values are better [^2].
+* **Foreground to Background Energy Ratio (FBER) [fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head.  Higher values are better.
+* **Smoothness of Voxels (FWHM) [fwhm, fwhm_x, fwhm_y, fwhm_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels.  Lower values are better [^3].
+* **Artifact Detection (Qi1) [qi1]:** The proportion of voxels with intensity corrupted by artifacts normalized by the number of voxels in the background.  Lower values are better [^4].
+* **Signal-to-Noise Ratio (SNR) [snr]:** The mean of image values within gray matter divided by the standard deviation of the image values within air (i.e., outside the head).  Higher values are better [^1].
+* **Summary Measures [fg_mean, fg_std, fg_size, bg_mean, bg_std, bg_size, gm_mean, gm_std, gm_size, wm_mean, wm_std, wm_size, csf_mean, csf_std, csf_size]
 
 ### Spatial Functional
 
-* **Entropy Focus Criterion [func_efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion.  Lower values are better [^2]. 
-* **Foreground to Background Energy Ratio [func_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head.  Higher values are better. 
-* **Smoothness of Voxels [func_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels.  Lower values are better. 
-* **Ghost to Signal Ratio (GSR) [func_gsr]:** A measure of the mean signal in the ‘ghost’ image (signal present outside the brain due to acquisition in the phase encoding direction) relative to mean signal within the brain.  Lower values are better. 
+* **Entropy Focus Criterion [efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion.  Lower values are better [^2]. 
+* **Foreground to Background Energy Ratio [fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head.  Higher values are better. 
+* **Smoothness of Voxels [fwhm, fwhm_x, fwhm_y, fwhm_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels.  Lower values are better. 
+* **Ghost to Signal Ratio (GSR) [ghost_<direction>]:** A measure of the mean signal in the ‘ghost’ image (signal present outside the brain due to acquisition in the phase encoding direction) relative to mean signal within the brain.  Lower values are better. 
+* **Summary Measures [fg_mean, fg_std, fg_size, bg_mean, bg_std, bg_size]
 
 ### Temporal Functional
 
-* **Standardized DVARS [func_dvars]:** The spatial standard deviation of the temporal derivative of the data, normalized by the temporal standard deviation and temporal autocorrelation.  Lower values are better [^5][^6]. 
-* **Outlier Detection [func_outlier]:** The mean fraction of outliers found in each volume using the [3dTout](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni).  Lower values are better [^7]. 
-* **Median Distance Index [func_quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s [3dTqual](http://afni.nimh.nih.gov/afni) command.  Lower values are better [^7]. 
-* **Mean Fractional Displacement - Jenkinson [func_mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere.  Lower values are better [^8][^10]. 
-* **Number of volumes with FD greater than 0.2mm [func_num_fd]:** Lower values are better.
-* **Percent of volumes with FD greater than 0.2mm [func_perc_fd]:** Lower values are better.
+* **Standardized DVARS [dvars]:** The spatial standard deviation of the temporal derivative of the data, normalized by the temporal standard deviation and temporal autocorrelation.  Lower values are better [^5][^6]. 
+* **Outlier Detection [outlier]:** The mean fraction of outliers found in each volume using the [3dToutcount](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni).  Lower values are better [^7]. 
+* **Median Distance Index [quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s [3dTqual](http://afni.nimh.nih.gov/afni) command.  Lower values are better [^7]. 
+* **Mean Fractional Displacement - Jenkinson [mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere.  Lower values are better [^8][^10]. 
+* **Number of volumes with FD greater than 0.2mm [num_fd]:** Lower values are better.
+* **Percent of volumes with FD greater than 0.2mm [perc_fd]:** Lower values are better.
 
 ## Normative Metrics
 
@@ -241,7 +243,7 @@ If you choose to use another AMI, you will need to install both QAP and its pre-
 
 ### Generating Your S3 Subject Dictionary File
 
-The QAP software package comes with a script called *qap_aws_s3_dict_generator.py*, which can be run from any directory once the package is installed. This script will create a YAML file containing the filepaths to the data stored in your AWS S3 bucket storage. You will need this dictionary YAML file to start an AWS Cloud run for QAP. This script takes in five input parameters:
+The QAP software package comes with a script called *qap_aws_s3_dict_generator.py*, which can be run from any directory once the package is installed. This script requires you to install C-PAC before it will work properly.  This script will create a YAML file containing the filepaths to the data stored in your AWS S3 bucket storage. You will need this dictionary YAML file to start an AWS Cloud run for QAP. This script takes in five input parameters:
 
 * **scan_type**: *anat* or *func*, depending on which QAP measures you will be using the S3 subject dictionary for
 * **bucket_name**: the name of your AWS S3 bucket
