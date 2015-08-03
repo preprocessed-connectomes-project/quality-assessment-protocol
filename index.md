@@ -2,35 +2,107 @@
 layout: page
 title: PCP Quality Assessment Protocol
 ---
-  
-  
-Here we detail running our different QC measures. We assume that the [quality-assessment-protocol repository](https://github.com/preprocessed-connectomes-project/quality-assessment-protocol) is in your python path as `qap`. You can download via the links given above or clone the repository as follows:
 
-    git clone https://github.com/preprocessed-connectomes-project/quality-assessment-protocol.git qap
+Various objective measures for MRI data quality have been proposed over the years.  However, until now no software has allowed researchers to obtain all these measures in the same place with relative ease.  The QAP package allows you to obtain spatial and anatomical data quality measures for your own data.  Since no standard thresholds demarcating acceptable from unacceptable data are currently existent, you can then compare your data to normative distributions of measures obtained from the [ABIDE](http://fcon_1000.projects.nitrc.org/indi/abide/) and [CoRR](http://fcon_1000.projects.nitrc.org/indi/CoRR/html/index.html) datasets.
 
-If you then want to add this to your python path from within your python code, you can append it to your path.
-
-    import sys
-    sys.path.append(".")  # assume that qap is in your current directory
-
-In what follows, we guide you through loading some data and then applying various QA metrics. We close with a brief section on how to determine if an image is an outlier.
-
-**If are interested in our recent resting-state poster and associated code, please see the [qap_poster github repository](http://github.com/czarrar/qap_poster).**
+For more information, please see our recent [resting-state poster and associated code]( http://github.com/czarrar/qap_poster).
 
 **Table of Contents**
 
-* [How to use normative metrics (ABIDE and CoRR)](#normative-metrics)
-* [How to load your data](#load-data)
-* [Spatial QA metrics of anatomical data](#spatial-anatomical)
-* [Spatial QA metrics of functional data](#spatial-functional)
-* [Temporal QA metrics of functional data](#temporal-functional)
-* [How to determine outliers](#determining-outliers)
+* [Installing the QAP Package](#installing-the-qap-package)
+* [Taxonomy of QA Measures](#taxonomy-of-qa-measures)
+  * [Spatial QA metrics of anatomical data](#spatial-anatomical)
+  * [Spatial QA metrics of functional data](#spatial-functional)
+  * [Temporal QA metrics of functional data](#temporal-functional)
+* [Normative Metrics (ABIDE and CoRR)](#normative-metrics)
+* [Pipeline Configuration YAML Files](#pipeline-configuration-yaml-files)
+* [Subject List YAML Files](#subject-list-yaml-files)
+* [Running the QAP Pipelines](#running-the-qap-pipelines)
+* [Running the QAP Pipelines on AWS Cloud Instances](#running-the-qap-pipelines-on-aws-amazon-cloud-instances)
+* [Merging Outputs](#merging-outputs)
+* [References](#references)
 
----
+## Installing the QAP Package
+
+### System Requirements
+
+* Any *nix-based operating system capable of running QAP will work, so long as it can run AFNI, FSL, and C3D.
+* The total amount of free hard disk space required is 5.7 GB.
+
+### Application Dependencies
+
+QAP requires AFNI, C3D, and FSL to run. Links to installation instructions for AFNI and FSL are listed below:
+
+* [AFNI Installation](http://afni.nimh.nih.gov/pub/dist/HOWTO/howto/ht00_inst/html)
+* [FSL Installation](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation)
+
+If you are using a Debian-based Linux distribution, you can use `apt-get` by first adding Neurodebian to the apt repository list and then installing the Neurodebian FSL and AFNI packages:
+
+    wget -O- http://neuro.debian.net/lists/$(lsb_release -cs).us-nh.full | tee /etc/apt/sources.list.d/neurodebian.sources.list
+    apt-key adv --recv-keys --keyserver pgp.mit.edu 2649A5A9
+    apt-get update
+    apt-get install -y fsl-5.0-complete afni
+
+To install C3D, download the appropriate version for your platform from [Sourceforge](http://sourceforge.net/projects/c3d/).  Make sure the you use at least version 1.0.0.  Unzip or mount the archive containing C3D and copy it to a memorable location.  Finish by adding the following line to your `.bashrc` file:
+
+    export PATH=/path_to/C3D/bin:$PATH
+
+### Python Dependencies
+
+QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas.   If you have `pip`, you may install these by typing in the command below:
+
+    pip install numpy scipy && pip install nipype nibabel nitime pyyaml pandas
+
+### QAP
+
+Once the pre-requisites have been satisfied, you can install the QAP package itself:
+
+    git clone https://github.com/preprocessed-connectomes-project/quality-assessment-protocol.git qap
+    cd /qap
+    python setup.py install
+
+## Taxonomy of QA Measures
+
+There are three sets of measures that can be run using the QAP software package:
+
+* Spatial anatomical measures
+* Spatial functional measures, which use the mean functional image.
+* Temporal functional measures, which use the functional timeseries.
+
+The following sections will describe the measures belonging to these sets in detail.  The label used in the CSV files output by QAP is designated by brackets after the long form measure name.
+
+To determine subjects that are outliers for any of these measures, run QAP on an array of subjects and take 1.5x or 3x the inter-quartile range.
+
+### Spatial Anatomical
+
+* **Contrast to Noise Ratio (CNR) [cnr]:** Calculated as the mean of the gray matter values minus the mean of the white matter values, divided by the standard deviation of the air values.  Higher values are better [^1].
+* **Entropy Focus Criterion (EFC) [efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion.  Lower values are better [^2].
+* **Foreground to Background Energy Ratio (FBER) [fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head.  Higher values are better.
+* **Smoothness of Voxels (FWHM) [fwhm, fwhm_x, fwhm_y, fwhm_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels.  Lower values are better [^3].
+* **Artifact Detection (Qi1) [qi1]:** The proportion of voxels with intensity corrupted by artifacts normalized by the number of voxels in the background.  Lower values are better [^4].
+* **Signal-to-Noise Ratio (SNR) [snr]:** The mean of image values within gray matter divided by the standard deviation of the image values within air (i.e., outside the head).  Higher values are better [^1].
+* **Summary Measures [fg_mean, fg_std, fg_size, bg_mean, bg_std, bg_size, gm_mean, gm_std, gm_size, wm_mean, wm_std, wm_size, csf_mean, csf_std, csf_size]
+
+### Spatial Functional
+
+* **Entropy Focus Criterion [efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion.  Lower values are better [^2]. 
+* **Foreground to Background Energy Ratio [fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head.  Higher values are better. 
+* **Smoothness of Voxels [fwhm, fwhm_x, fwhm_y, fwhm_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels.  Lower values are better. 
+* **Ghost to Signal Ratio (GSR) [ghost_<direction>]:** A measure of the mean signal in the ‘ghost’ image (signal present outside the brain due to acquisition in the phase encoding direction) relative to mean signal within the brain.  Lower values are better. 
+* **Summary Measures [fg_mean, fg_std, fg_size, bg_mean, bg_std, bg_size]
+
+### Temporal Functional
+
+* **Standardized DVARS [dvars]:** The spatial standard deviation of the temporal derivative of the data, normalized by the temporal standard deviation and temporal autocorrelation.  Lower values are better [^5][^6]. 
+* **Outlier Detection [outlier]:** The mean fraction of outliers found in each volume using the [3dToutcount](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni).  Lower values are better [^7]. 
+* **Median Distance Index [quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s [3dTqual](http://afni.nimh.nih.gov/afni) command.  Lower values are better [^7]. 
+* **Mean Fractional Displacement - Jenkinson [mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere.  Lower values are better [^8][^10]. 
+* **Number of volumes with FD greater than 0.2mm [num_fd]:** Lower values are better.
+* **Percent of volumes with FD greater than 0.2mm [perc_fd]:** Lower values are better.
 
 ## Normative Metrics
 
-We have gathered QA metrics for two multi-site resting-state datasets: ABIDE (1,110+ subject across 20+ sites) and CoRR (1,400+ subjects across 30+ sites). The QA metrics for these datasets have been made publically available. They can be used for a variety of applications, for instance, as a comparison to the QA results from your own data. For each link below, please right click and select save as:
+We have gathered QA metrics for two multi-site resting-state datasets: [ABIDE](http://fcon_1000.projects.nitrc.org/indi/abide/) (1,110+ subject across 20+ sites) and [CoRR](http://fcon_1000.projects.nitrc.org/indi/CoRR/html/index.html) (1,400+ subjects across 30+ sites). The QA metrics for these datasets have been made publicly available. They can be used for a variety of applications, for instance, as a comparison to the QA results from your own data. For each link below, please right click and select save as:
 
 * [ABIDE - Anatomical Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/abide_anat.csv)
 * [ABIDE - Functional Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/abide_func.csv)
@@ -38,168 +110,206 @@ We have gathered QA metrics for two multi-site resting-state datasets: ABIDE (1,
 * [CoRR - Functional Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/corr_func.csv)
 
 
-## Load Data
+## Pipeline Configuration YAML Files
 
-You can use some wrapper functions to load and mask the data. QC measures use five different files as inputs: anatomical data, anatomical head mask, functional time-series data, mean functional data, and functional head mask. Here, we show how to load or calculate each of those files. Ideally, the anatomical and functional data should be as 'raw' as possible. With our CPAC pipeline, we use anatomical data that has only been reoriented and use functional data that has been slice time and motion corrected.
+Certain pre-processed files derived from the raw data are required to calculate the measures described above. By default, the QAP software package will generate these pre-requisite files given the raw data you have (anatomical/structural scans for the anatomical measures, 4D anatomical+timeseries scans for the functional). A preprocessing pipeline will be constructed to create these files, and this pipeline can be customized with a pipeline configuration YAML file you provide.
 
-	from qap import load_image, load_mask, load_func
+Some examples of customizable features include segmentation thresholds for anatomical preprocessing, and the option to run slice timing correction for functional preprocessing. Computer resource allocation can also be customized using the configuration files, such as dedicating multiple cores/threads to processing.
 
-	anat_file			= "test_anat.nii.gz"
-	anat_mask_file	= "test_anat_mask.nii.gz"
-	anat_data			= load_image(anat_file)
-	anat_mask			= load_mask(anat_mask_file, anat_file)
-	
-	func_file			= "test_func.nii.gz"
-	func_mask_file	= "test_anat_mask.nii.gz"
-	func_data			= load_func(func_file, func_mask_file)
-	
+Templates for these files are provided in the `/configs` folder in the QAP main repository directory. Below is a list of options which can be configured for each of the pipelines.
 
-The mean functional data can be generated from the functional time-series via the following code, which will generate the mean functional image without any masking (e.g., preserving values outside the head, which are needed for various spatial metrics).
+### General (both types)
 
-	from qap import calc_mean_func, load_mask
-	
-	func_file 		= "test_func.nii.gz"
-	func_mask_file	= "test_anat_mask.nii.gz"
-	mean_func 		= calc_mean_func(func_file)
-	func_mask			= load_mask(func_mask_file)
-	
-Note that we will be using the above anatomical and functional outputs for our metrics described below.
+* **num_cores_per_subject**: Number of cores (on a single machine) or slots on a node (cluster/grid) per subject (or per instance of the pipeline). Slots are cores on a cluster/grid node. Dedicating multiple nodes allows each subject's processing pipeline to run certain operations in parallel to save time. 
+* **num_subjects_at_once**: Similar to *num_cores_per_subject*, except this determines how many pipelines to run at once.   
+* **output_directory**: The directory to write output files to.
+* **working_directory**: The directory to store intermediary processing files in.
 
+### Anatomical pipelines
 
-## Spatial Anatomical
+* **num_ants_threads**: Number of cores to dedicate to ANTS anatomical registration. More cores will result in a faster registration process.
+* **template_brain_for_anat**: Template brain to be used during anatomical registration, as a reference.
+* **csf_threshold**: A decimal value - only voxels with a CSF probability greater than this value will be classified as CSF.            
+* **gm_threshold**: A decimal value - only voxels with a gray matter probability greater than this value will be classified as gray matter.
+* **wm_threshold**: A decimal value - only voxels with a white matter probability greater than this value will be classified as white matter.
 
-We calculate the measures below with the associated variable in square brackets followed by a brief description and possible link to a reference.
+### Functional pipelines
 
-* **Contrast to Noise Ratio (CNR) [anat_cnr]:** Calculated as the mean of the gray matter values minus the mean of the white matter values, divided by the standard deviation of the air values, higher values are better [^1].
-* **Entropy Focus Criterion (EFC) [anat_efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion, lower is better [^2].
-* **Foreground to Background Energy Ratio (FBER) [anat_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head, higher values are better.
-* **Smoothness of Voxels (FWHM) [anat_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels, lower values are better [^3].
-* **Artifact Detection (Qi1) [anat_qi1]:** The proportion of voxels with intensity corrupted by artifacts normalized by the number of voxels in the background, lower values are better [^4].
-* **Signal-to-Noise Ratio (SNR) [anat_snr]:** The mean of image values within gray matter divided by the standard deviation of the image values within air (i.e., outside the head), higher values are better [^1].
+* **start_idx**: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the first timepoint you wish to include in the analysis. Enter *0* to include the first volume.          
+* **stop_idx**: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the last timepoint you wish to include in the analysis. Enter *End* to include the final volume. Enter *0* in start_idx and *End* in stop_idx to include the entire timeseries. 
+* **slice_timing_correction**: Whether or not to run slice timing correction - *True* or *False*. Interpolates voxel timeseries so that sampling occurs at the same time.
 
-### CNR
+Make sure that you multiply *num_cores_per_subject*, *num_subjects_at_once*, and *num_ants_threads* for the maximum amount of cores that could potentially be used during the anatomical pipeline run. For the functional pipeline run, multiply *num_cores_per_subject* and *num_subjects_at_once* to make sure that you have enough cores.
 
-We first compute the mean image values within gray matter (mean_gm) and within white-matter (mean_wm), and we will divide the difference of those values by standard deviation within the air (std_bg). Note that the air is considered anything outside the head mask.
+## Subject List YAML Files
 
-	from qap import load_mask, summary_mask, cnr
-	
-	# Load the different masks
-	fg_mask_data = anat_mask_data
-	bg_mask_data = 1 - fg_mask_data
-	gm_mask_data = load_mask(gm_mask_file, anat_mask_file)
-	wm_mask_data = load_mask(wm_mask_file, anat_mask_file)
-	
-	# Calculate mean grey-matter, mean white-matter 
-	# and standard deviation air
-	mean_gm,_,_	= summary_mask(anat_data, gm_mask_data)
-	mean_wm,_,_	= summary_mask(anat_data, wm_mask_data)
-	_,std_bg,_	= summary_mask(anat_data, bg_mask_data)
-	
-	# SNR
-	anat_cnr 		= cnr(mean_gm, mean_wm, std_bg)
+### Providing Raw Data
 
-### EFC
+The QAP pipelines take in subject list YAML (.yml) files as an input. The filepaths to your raw data are defined in these subject lists, and these YAML files can be easily generated using the *qap_raw_data_sublist_generator.py* script included in the QAP software package. After installing the QAP software package, this script can be run from any directory. This subject list generator script assumes a specific directory structure for your input data:
 
-	from qap import efc
-	anat_efc		= efc(anat_data)
+	/data_directory/site_name/subject_id/session_id/scan_id/file.nii.gz
 
-### FBER
+To make the script parse the above directory structure and generate the subject list YAML file, invoke the following command:
 
-	from qap import fber
-	anat_fber 	= fber(anat_data, anat_mask_data):
+    qap_raw_data_sublist_generator.py {absolute path to site_name directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'}
 
-### FWHM
+These subject lists can also be created or edited by hand if you wish, though this can be cumbersome for larger data sets. For reference, an example of the subject list format follows:
 
-While the other spatial metrics exclusively use python code, the smoothness measures makes use of AFNI's command-line tool `3dFWHMx`. The option `out_vox` to the function `fwhm` indicates if the fwhm output is given in mm (`out_vox=False`) or in number of voxels (`out_vox=True`).
+	'1019436':
+	  session_1:
+	    anatomical_scan:
+	      anat_1: /test-data/site_1/1019436/session_1/anat_1/mprage.nii.gz
+	'2014113':
+	  session_1:
+	    anatomical_scan:
+	      anat_1: /test-data/site_1/2014113/session_1/anat_1/mprage.nii.gz
+	'3154996':
+	  session_1:
+	    anatomical_scan:
+	      anat_1: /test-data/site_1/3154996/session_1/anat_1/mprage.nii.gz
 
-	from qap import fwhm
-	anat_fwhm 	= fwhm(anat_file, anat_mask_file, out_vox=False)
+Note that *anatomical_scan* is the label for the type of resource (in this case, anatomical raw data for the anatomical spatial QAP measures), and *anat_1* is the name of the scan. There can be multiple scans, which will be combined with subject and session in the output. 
 
-### Qi1
+### Providing Already Pre-Processed Data
 
-	from qap import artifacts
-	anat_qi1		= artifacts(anat_data, anat_mask_data, calculate_qi2=False)
+Alternatively, if you have already preprocessed some or all of your raw data, you can provide these pre-existing files as inputs directly to the QAP pipelines via your subject list manually.  The QAP pipelines will then use these files and skip any pre-processing steps involved in creating them, saving time and allowing you to use your own method of processing your data.  If these files were processed using the [C-PAC](http://fcp-indi.github.io/docs/user/index.html) software package, there is a script named *qap_cpac_output_sublist_generator.py* which will create a subject list YAML file pointing to these already generated files.  Its usage is as follows:
 
+    qap_cpac_output_sublist_generator.py {absolute path to the C-PAC output directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'} {the session format- can be '1','2', or '3', whose corresponding formats are described in more detail below}
 
-### SNR
+The values for the session format argument can either be:
 
-We first compute the mean image values within gray matter (mean_gm) and the standard deviation within the air (std_bg). Note that the air is considered anything outside the head mask.
+    1 - For output organized in the form: /output/pipeline/subject_id/session_id/output/
+    2 - For output organized in the form: /output/pipeline/subject_id/output/
+    3 - For output organized in the form: /output/pipeline/subject_session/output/
 
-	from qap import load_mask, summary_mask, snr
-	
-	# Load the different masks
-	fg_mask_data = anat_mask_data
-	bg_mask_data = 1 - fg_mask_data
-	gm_mask_data = load_mask(gm_mask_file, anat_mask_file)
-	
-	# Calculate mean grey-matter and standard deviation air
-	mean_gm,_,_	= summary_mask(anat_data, gm_mask_data)
-	_,std_bg,_	= summary_mask(anat_data, bg_mask_data)
-	
-	# SNR
-	anat_snr 		= snr(mean_gm, std_bg)
+For example, if C-PAC results were stored in */home/wintermute/output/pipeline_ANTS/80386_session_1*, you wanted to run anatomical measures, and you wanted to store the subject list in *subj_list.yml*, you would invoke:
 
+    qap_cpac_output_sublist_generator.py /home/wintermute/output/pipeline_ANTS/80386_session_1 /home/wintermute/qap_analysis/subj_list.yml anat 3
 
-## Spatial Functional
+Below is a list of intermediary files used in the steps leading to the final QAP measures calculations. If you already have some of these processed for your data, they can be included in the subject list with the label on the left. For example, if you've already deobliqued, reoriented and skull-stripped your anatomical scans, you would list them in your subject list YAML file like so:
 
-The spatial functional measures will make use of the mean functional image and include EFC, FBER, and FWHM (code which has been described above) along with GSR (code which has been described below).
+	anatomical_brain:  /path/to/image.nii.gz
 
-* **Entropy Focus Criterion [func_efc]:** SUses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion, lower is better [^2]. _Uses mean functional._
-* **Foreground to Background Energy Ratio [func_fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head, higher values are better. _Uses mean functional._
-* **Smoothness of Voxels [func_fwhm]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels, lower values are better. _Uses mean functional._
-* **Ghost to Signal Ratio (GSR) [func_gsr]:** A measure of the mean signal in the ‘ghost’ image (signal present outside the brain due to acquisition in the phase encoding direction) relative to mean signal within the brain, lower values are better. _Uses mean functional._
+###Anatomical Spatial measures workflow resources
 
-### GSR
+* **anatomical_reorient**: anatomical (structural) scan that has been deobliqued and reoriented to RPI (.nii/.nii.gz)
+* **anatomical_brain**: deobliqued & reoriented anatomical which has been skull-stripped (.nii/.nii.gz)
+* **ants_initial_xfm**: first of three warp matrix files output by ANTS linear registration (.mat)
+* **ants_rigid_xfm**: second of three warp matrix files output by ANTS (.mat)
+* **ants_affine_xfm**: third of three warp matrix files output by ANTS (.mat)
+* **ants_linear_warped_image**:	the ANTS-warped anatomical scan (.nii/.nii.gz)
+* **anatomical_csf_mask**: segmentation mask of the anatomical scan's CSF (.nii/.nii.gz)
+* **anatomical_gm_mask**: segmentation mask of the anatomical scan's gray matter (.nii/.nii.gz)
+* **anatomical_wm_mask**: segmentation mask of the anatomical scan's white matter (.nii/.nii.gz)
+* **qap_head_mask**: a whole-skull binarized mask
 
-You should know the phase encoding direction to decide if you want to use `func_ghost_x` (RL/LR) or `func_ghost_y` (AP/PA).
-	
-	from qap import ghost_all
-	func_ghost_x,func_ghost_y = ghost_all(mean_func_data, func_mask_data)
+In the QAP head mask workflow, we also mask the background immediately in front of the scan participant's mouth.  We do this to exclude breathing-induced noise from the calculation for the FBER QAP measure
 
+### Functional Spatial measures workflow resources
 
-## Temporal Functional
+* **func_motion_correct**: motion-corrected 4-D functional timeseries (.nii/.nii.gz)
+* **mcflirt_rel_rms**: if motion correction was performed using FSL's [MCFLIRT](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/MCFLIRT), use this to specify the path to the motion parameters file here.  Note that a motion parameters file will only be generated if you pass the *-rmsrel* flag to [MCFLIRT](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/MCFLIRT).  This resource requires that *func_motion_correct* also be defined manually (.rms)
+* **functional_brain_mask**: a binarized mask of the functional scan (.nii/.nii.gz)
+* **mean_functional**: a 3-D file containing the mean of the functional 4-D timeseries (.nii/.nii.gz)
 
-* **Standardized DVARS [func_dvars]:** The spatial standard deviation of the temporal derivative of the data, normalized by the temporal standard deviation and temporal autocorrelation, lower values are better [^5][^6]. _Uses functional time-series._
-* **Outlier Detection [func_outlier]:** The mean fraction of outliers found in each volume using 3dTout command in AFNI (http://afni.nimh.nih.gov/afni), lower values are better [^7]. _Uses functional time-series._
-* **Median Distance Index [func_quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s 3dTqual command (http://afni.nimh.nih.gov/afni), lower values are better [^7]. _Uses functional time-series._
-* **Mean Fractional Displacement - Jenkinson [func_mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere, lower values are better [^8][^10]. _Uses functional time-series._
-* **Number of volumes with FD greater than 0.2mm [func_num_fd]:** Lower values are better _Uses functional time-series._
-* **Percent of volumes with FD greater than 0.2mm [func_perc_fd]:** Lower values are better _Uses functional time-series._
+### Functional Temporal measures workflow resources
 
+* **func_motion_correct**: motion-corrected 4-D functional timeseries (.nii/.nii.gz)
+* **functional_brain_mask**: a binarized mask of the functional scan (.nii/.nii.gz)
+* **coordinate_transformation**: the matrix transformation from base to input coordinates, produced during motion correction (.aff12.1D)
 
-### Standardized DVARS
+Note that these are complete lists- obviously, not all intermediary files are required if you choose to provide them. For example, if you provide the skull-stripped *anatomical_brain*, then *anatomical_reorient* would not be necessary, and the pipeline will skip all steps before skull-stripping. Alternatively, if you do not have the *functional_brain_mask* for either of the functional pipelines, providing the *func_motion_correct* file will allow the pipeline to create it for you. Having none of these will simply cause the pipeline to take in the original *functional_scan* and produce all of these files on its own.
 
-The `output_all` option if `True` will spit out a three column matrix with standardized DVARS, regular DVARS, and a voxelwise standardization of DVARS.
+## Running the QAP Pipelines
 
-	from qap import calc_dvars
-	func_dvars	= calc_dvars(func_data, output_all=False)
+There is a launch script for each of these measures, with each one featuring a similar interface. The Python-friendly YAML file format is used for the input subject list and pipeline configuration files. You can use these scripts from the command line, from within iPython, or with AWS Cloud instances. After installing the QAP software package, these scripts can be run from any directory:
 
-### Outlier Detection
+* qap_anatomical_spatial.py
+* qap_functional_spatial.py
+* qap_functional_temporal.py
 
-The `out_fraction` option if `True` will return the mean _fraction_ of time-points per voxel that are outliers, whereas `False` will return the mean _number_ of time-points per voxel that are outliers.
+For command-line runs:
 
-	from qap import mean_outlier_timepoints
-	func_outlier	= mean_outlier_timepoints(func_file, func_mask_file, out_fraction=True)
+    qap_anatomical_spatial.py --sublist {path to subject list YAML file} {path to pipeline configuration YAML file}
 
-### Median Distance Index
+Executing either of the scripts with only the *-h* flag will produce a short help manual listing the command line arguments.
 
-The `auto_mask` option if `True` will automatically compute the brain mask from the data otherwise the whole dataset will be used.
+##Running the QAP Pipelines on AWS Amazon Cloud Instances
 
-	from qap import mean_quality_timepoints
-	func_quality	= mean_quality_timepoints(func_file, automask=True)
+With access to the Amazon Cloud, the QAP measures can be calculated for a large volume of subjects quickly.
 
-### FD
+Since there is substantial overlap between the software pre-requisites of QAP and [C-PAC](http://fcp-indi.github.io/docs/user/index.html), it is recommended that you use the C-PAC AMI for your cloud instances.  The C-PAC AMI can be used as a base onto which you can [install QAP](#qap). Consult [C-PAC's cloud instructions](http://fcp-indi.github.io/docs/user/cloud.html) for more information on how to use the C-PAC AMI, as well as more general information about AWS.
 
-Here we describe computing `mean_fd`, `num_fd`, and `perc_fd`. This requires that you have the input coordinate transforms that is output by AFNI's `3dvolreg` during motion correction. The option `threshold` sets the threshold for determining the number and percent of volumes with FD greater than said threshold.
+If you choose to use another AMI, you will need to install both QAP and its pre-requisites from scratch by [following the instructions above](#installing-the-qap-package).  You will also need to configure Starcluster to use the `mnt_config` and `cpac_sge` plugins by following the instructions [here](http://fcp-indi.github.io/docs/user/cloud.html#installing-the-c-pac-starcluster-plug-ins).
 
-	from qap import mean_fd_wrapper
-	mean_fd, num_fd, perc_fd = summarize_fd(motion_matrix_file, threshold=0.2)
+### Generating Your S3 Subject Dictionary File
+
+The QAP software package comes with a script called *qap_aws_s3_dict_generator.py*, which can be run from any directory once the package is installed. This script requires you to install C-PAC before it will work properly.  This script will create a YAML file containing the filepaths to the data stored in your AWS S3 bucket storage. You will need this dictionary YAML file to start an AWS Cloud run for QAP. This script takes in five input parameters:
+
+* **scan_type**: *anat* or *func*, depending on which QAP measures you will be using the S3 subject dictionary for
+* **bucket_name**: the name of your AWS S3 bucket
+* **bucket_prefix**:  the filepath prefix to the top level of your raw data directory on S3 storage
+
+For example, if your S3 storage is arranged like so:
+
+	/data/project/raw_data/sub001/session_1/scan_1/file.nii.gz
+	/data/project/raw_data/sub001/session_1/scan_2/file.nii.gz
+	/data/project/raw_data/sub002/session_1/scan_1/file.nii.gz
+                    
+Then the bucket_prefix would be:
+
+	/data/project/raw_data
 
 
-## Determining Outliers
+* **creds_path**: the path to the file containing your AWS credentials
+* **outfile_path**: the full filepath for the S3 subject YAML dictionary this script will create
 
-If you run the above procedure on an array of subjects, then you can take 1.5x or 3x the inter-quartile range to determine subjects that are outliers.
+Once this script is run, it will output the S3 dictionary YAML file, and it will give you the total number of subject-session-scans. Take note of this number, because you will need to list it in your SGE batch file (more below).
 
+### Setting Up Your SGE File
+
+Sun Grid Engine (SGE) allows you to parallelize your cloud analyses by having each node in an HPC cluster run QAP on an individual subject.  To use SGE on your AWS instance, create a new batch file in your favorite text editor and set up an SGE job in a format similar to below:
+
+	#! /bin/bash
+	#$ -cwd
+	#$ -S /bin/bash
+	#$ -V
+	#$ -t 1-{number of subjects}
+	#$ -q all.q
+	#$ -pe mpi_smp 4
+	#$ -e /home/ubuntu/qap_run_anat.err
+	#$ -o /home/ubuntu/qap_run_anat.out
+	source /etc/profile.d/cpac_env.sh
+	ANAT_S3_DICT=/home/ubuntu/configs/anat_s3_dict.yml
+	ANAT_SP_CONFIG_FILE=/home/ubuntu/configs/qap_config_anat_spatial.yml
+	echo "Start - TASKID " $SGE_TASK_ID " : " $(date)
+	# Run anatomical spatial qap
+	qap_anatomical_spatial.py --subj_idx $SGE_TASK_ID --s3_dict_yml $ANAT_S3_DICT $ANAT_SP_CONFIG_FILE
+	echo "End - TASKID " $SGE_TASK_ID " : " $(date)
+
+Note that the *mpi_smp* environment is created by the *cpac_sge* Starcluster plug-in mentioned earlier.  The *cpac_env.sh* script is a script containing all of the environmental variables used by AFNI, FSL, and C3D.  If you opt to not use the C-PAC AMI, you will need to create a comparable script and have the batchs script source it.  Submit the job to the SGE scheduler by typing:
+
+    qsub {path to the text file}
+
+## Merging Outputs
+
+QAP generates outputs for each subject and session separately.  To view a comprehensive summary for all the measures for all the subjects, you will need to merge these separate outputs into a single file.  You can do this by running the following command:
+
+    qap_merge_outputs.py {path to qap output directory}
+
+`qap_merge_outputs.py` will automatically determine if you have calculated anatomical spatial, functional spatial or functional temporal measures.  The merged outputs will appear in a file named `qap_anatomical_spatial_{qap output directory name}.csv` in the directory from which the command is run.
+
+### Downloading Data from Your S3 Bucket
+
+If you ran QAP in the cloud, you will need to download the outputs from S3 before you can merge them.  To do this, run the following command:
+
+    qap_download_output_from_S3.py {path to the S3 directory containing subject outputs} {path to AWS key file} {s3 bucket name} {type of measure to download} {directory to download to}
+
+For example, if you wanted to obtain functional spatial measures from an S3 bucket named `the_big_run` with subject outputs in `subjects/outputs` you would use the following command.
+
+    qap_download_output_from_S3.py subjects/outputs /home/wintermute/Documents/aws-keys.csv the_big_run func_spatial /home/wintermute/qap_outputs
+
+With the above commands, the outputs will be stored in a directory named `qap_outputs` in the user *wintermute*'s home folder.  As with the pipeline commands from earlier, more information on this command's usage can be obtained by running it with the *-h* flag.  
 
 ## References
 
