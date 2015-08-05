@@ -5,12 +5,12 @@ def main():
     from setuptools import setup
 
     setup(name='qap',
-          version='0.1.0',
+          version='1.0.0',
           description='A collection of three quality assessment pipelines ' \
                       'for anatomical MRI and functional MRI scans.',
           url='https://github.com/preprocessed-connectomes-project/' \
               'quality-assessment-protocol',
-          author='Cameron Craddock, Zarrar Shehzad, Steven Giavassis,' \
+          author='Cameron Craddock, Zarrar Shehzad, Steven Giavasis,' \
                  'Daniel Clark',
           author_email='cameron.craddock@childmind.org',
           license='',

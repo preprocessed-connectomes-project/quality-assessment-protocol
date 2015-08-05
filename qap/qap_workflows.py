@@ -335,7 +335,9 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
           
     
     # Subject infos 
-    
+    if "ghost_direction" not in config.keys():
+        config["ghost_direction"] = "all"
+
     spatial_epi.inputs.direction = config["ghost_direction"]
 
     spatial_epi.inputs.subject_id = config["subject_id"]
@@ -389,8 +391,9 @@ def qap_temporal_workflow(workflow, resource_pool, config):
             functional_brain_mask_workflow(workflow, resource_pool, config)
 
 
-    if ("func_motion_correct" not in resource_pool.keys()) or \
-           ("coordinate_transformation" not in resource_pool.keys()):
+    if (("func_motion_correct" not in resource_pool.keys()) or \
+           ("coordinate_transformation" not in resource_pool.keys())) and \
+               "mcflirt_rel_rms" not in resource_pool.keys():
 
         from functional_preproc import func_motion_correct_workflow
 
@@ -431,13 +434,19 @@ def qap_temporal_workflow(workflow, resource_pool, config):
         temporal.inputs.func_brain_mask = \
             resource_pool["functional_brain_mask"]
             
-            
-    if len(resource_pool["coordinate_transformation"]) == 2:
-        node, out_file = resource_pool["coordinate_transformation"]
-        workflow.connect(node, out_file, temporal, 'coord_xfm_matrix')
+    
+    if "mcflirt_rel_rms" in resource_pool.keys():
+
+        temporal.inputs.coord_xfm_matrix = resource_pool["mcflirt_rel_rms"]
+
     else:
-        temporal.inputs.coord_xfm_matrix = \
-            resource_pool["coordinate_transformation"]
+
+        if len(resource_pool["coordinate_transformation"]) == 2:
+            node, out_file = resource_pool["coordinate_transformation"]
+            workflow.connect(node, out_file, temporal, 'coord_xfm_matrix')
+        else:
+            temporal.inputs.coord_xfm_matrix = \
+                resource_pool["coordinate_transformation"]
             
     
     # Subject infos 
