@@ -355,7 +355,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id, \
     qc['fwhm_x'], qc['fwhm_y'], qc['fwhm_z'], qc['fwhm'] = tmp
     
     # Ghosting
-    if (direction == "all") or (direction == None):
+    if (direction == "all"):
         qc['ghost_x'] = ghost_direction(anat_data, fg_mask, "x")
         qc['ghost_y'] = ghost_direction(anat_data, fg_mask, "y")
         qc['ghost_z'] = ghost_direction(anat_data, fg_mask, "z")

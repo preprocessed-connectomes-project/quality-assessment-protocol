@@ -336,7 +336,7 @@ def qap_spatial_epi_workflow(workflow, resource_pool, config):
     
     # Subject infos 
     if "ghost_direction" not in config.keys():
-        config["ghost_direction"] = "all"
+        config["ghost_direction"] = "y"
 
     spatial_epi.inputs.direction = config["ghost_direction"]
 
