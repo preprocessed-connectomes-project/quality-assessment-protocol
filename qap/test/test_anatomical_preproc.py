@@ -33,14 +33,17 @@ def test_run_anatomical_reorient():
     # run the workflow
     output = run_anatomical_reorient(anat_scan)
 
-    # calculate the correlation
-    cmd = "3ddot -demean %s %s" % (output, ref_out)
-    correlation = commands.getoutput(cmd)
-
+    # make the correlation
+    ref_out_data = nb.load(ref_out).get_data()  
+    output_data = nb.load(output).get_data()
+    
     os.system("rm -R anatomical_reorient")
 
 
-    assert correlation > 0.98
+    # create a vector of True and False values
+    bool_vector = ref_out_data == output_data
+
+    assert bool_vector.all()
     
     
     
@@ -74,14 +77,17 @@ def test_run_anatomical_skullstrip():
     # run the workflow
     output = run_anatomical_skullstrip(anat_reorient)
 
-    # calculate the correlation
-    cmd = "3ddot -demean %s %s" % (output, ref_out)
-    correlation = commands.getoutput(cmd)
-
+    # make the correlation
+    ref_out_data = nb.load(ref_out).get_data()  
+    output_data = nb.load(output).get_data()
+    
     os.system("rm -R anatomical_skullstrip")
 
 
-    assert correlation > 0.98
+    # create a vector of True and False values
+    bool_vector = ref_out_data == output_data
+
+    assert bool_vector.all()
 
 
 
@@ -119,14 +125,17 @@ def test_run_ants_anatomical_linear_registration():
     output = run_ants_anatomical_linear_registration(anat_brain, \
                                                          template_brain)
 
-    # calculate the correlation
-    cmd = "3ddot -demean %s %s" % (output, ref_out)
-    correlation = commands.getoutput(cmd)
-
+    # make the correlation
+    ref_out_data = nb.load(ref_out).get_data()  
+    output_data = nb.load(output).get_data()
+    
     os.system("rm -R ants_anatomical_linear_registration")
 
 
-    assert correlation > 0.98
+    # create a vector of True and False values
+    bool_vector = ref_out_data == output_data
+
+    assert bool_vector.all()
     
     
     
@@ -177,11 +186,16 @@ def test_run_segmentation_workflow():
     # calculate the correlation
     for out, ref in zip(output, ref_list):
     
-        cmd = "3ddot -demean %s %s" % (out, ref)
-        correlation = commands.getoutput(cmd)
-        
-        if correlation > 0.98:
+        # make the correlation
+        ref_out_data = nb.load(ref).get_data()  
+        output_data = nb.load(out).get_data()
+    
+        # create a vector of True and False values
+        bool_vector = ref_out_data == output_data
+
+        if bool_vector.all():
             correlation_count += 1
+
 
     os.system("rm -R segmentation")
 
