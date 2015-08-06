@@ -26,12 +26,12 @@ For more information, please see our recent [resting-state poster and associated
 
 ### System Requirements
 
-* Any *nix-based operating system capable of running QAP will work, so long as it can run AFNI, FSL, and C3D.
-* The total amount of free hard disk space required is 5.7 GB.
+* Any *nix-based operating system capable of running QAP will work, so long as it can run [AFNI](http://afni.nimh.nih.gov), [FSL](http://fsl.fmrib.ox.ac.uk), [C3D](http://www.itksnap.org/c3d), and [ANTS](http://picsl.upenn.edu/software/ants/).
+* The total amount of free hard disk space required is 8.3 GB.
 
 ### Application Dependencies
 
-QAP requires AFNI, C3D, and FSL to run. Links to installation instructions for AFNI and FSL are listed below:
+QAP requires AFNI, FSL, C3D and ANTS to run. Links to installation instructions for AFNI and FSL are listed below:
 
 * [AFNI Installation](http://afni.nimh.nih.gov/pub/dist/HOWTO/howto/ht00_inst/html)
 * [FSL Installation](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation)
@@ -46,6 +46,18 @@ If you are using a Debian-based Linux distribution, you can use `apt-get` by fir
 To install C3D, download the appropriate version for your platform from [Sourceforge](http://sourceforge.net/projects/c3d/).  Make sure the you use at least version 1.0.0.  Unzip or mount the archive containing C3D and copy it to a memorable location.  Finish by adding the following line to your `.bashrc` file:
 
     export PATH=/path_to/C3D/bin:$PATH
+
+ANTS may be installed by first executing the following commands to build a binary (replace *{core_count}* with the number of cores you want to use for compilation; the maximum number of cores on your machine can be ascertained by typing `nproc`):
+
+    cd /tmp
+    git clone https://github.com/stnava/ANTs.git
+    cmake -c -g /tmp/ANTS
+    make -j {core_count}
+
+After ANTS is built, add the following lines to your `.bashrc` file:
+
+    export ANTSPATH=/opt/ants/bin
+    export PATH=/opt/ants/bin:$PATH
 
 ### Python Dependencies
 
@@ -88,7 +100,7 @@ To determine subjects that are outliers for any of these measures, run QAP on an
 * **Entropy Focus Criterion [efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion.  Lower values are better [^2]. 
 * **Foreground to Background Energy Ratio [fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head.  Higher values are better. 
 * **Smoothness of Voxels [fwhm, fwhm_x, fwhm_y, fwhm_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels.  Lower values are better. 
-* **Ghost to Signal Ratio (GSR) [ghost_<direction>]:** A measure of the mean signal in the ‘ghost’ image (signal present outside the brain due to acquisition in the phase encoding direction) relative to mean signal within the brain.  Lower values are better. 
+* **Ghost to Signal Ratio (GSR) [ghost_x, ghost_y or ghost_z]:** A measure of the mean signal in the ‘ghost’ image (signal present outside the brain due to acquisition in the phase encoding direction) relative to mean signal within the brain.  Lower values are better. 
 * **Summary Measures [fg_mean, fg_std, fg_size, bg_mean, bg_std, bg_size]
 
 ### Temporal Functional
@@ -138,6 +150,7 @@ Templates for these files are provided in the `/configs` folder in the QAP main 
 * **start_idx**: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the first timepoint you wish to include in the analysis. Enter *0* to include the first volume.          
 * **stop_idx**: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the last timepoint you wish to include in the analysis. Enter *End* to include the final volume. Enter *0* in start_idx and *End* in stop_idx to include the entire timeseries. 
 * **slice_timing_correction**: Whether or not to run slice timing correction - *True* or *False*. Interpolates voxel timeseries so that sampling occurs at the same time.
+* **ghost_direction**: Allows you to specify the phase encoding (x, y, z, or all) used to acquire the scan.  Omitting this option will default to *y*.
 
 Make sure that you multiply *num_cores_per_subject*, *num_subjects_at_once*, and *num_ants_threads* for the maximum amount of cores that could potentially be used during the anatomical pipeline run. For the functional pipeline run, multiply *num_cores_per_subject* and *num_subjects_at_once* to make sure that you have enough cores.
 
