@@ -93,7 +93,7 @@ To determine subjects that are outliers for any of these measures, run QAP on an
 * **Smoothness of Voxels (FWHM) [fwhm, fwhm_x, fwhm_y, fwhm_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels.  Lower values are better [^3].
 * **Artifact Detection (Qi1) [qi1]:** The proportion of voxels with intensity corrupted by artifacts normalized by the number of voxels in the background.  Lower values are better [^4].
 * **Signal-to-Noise Ratio (SNR) [snr]:** The mean of image values within gray matter divided by the standard deviation of the image values within air (i.e., outside the head).  Higher values are better [^1].
-* **Summary Measures [fg_mean, fg_std, fg_size, bg_mean, bg_std, bg_size, gm_mean, gm_std, gm_size, wm_mean, wm_std, wm_size, csf_mean, csf_std, csf_size]
+* **Summary Measures [fg_mean, fg_std, fg_size, bg_mean, bg_std, bg_size, gm_mean, gm_std, gm_size, wm_mean, wm_std, wm_size, csf_mean, csf_std, csf_size]:** Intermediate measures used to calculate the metrics above. Mean, standard deviation, and mask size are given for foreground, background, white matter, and CSF masks.
 
 ### Spatial Functional
 
@@ -101,7 +101,8 @@ To determine subjects that are outliers for any of these measures, run QAP on an
 * **Foreground to Background Energy Ratio [fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head.  Higher values are better. 
 * **Smoothness of Voxels [fwhm, fwhm_x, fwhm_y, fwhm_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels.  Lower values are better. 
 * **Ghost to Signal Ratio (GSR) [ghost_x, ghost_y or ghost_z]:** A measure of the mean signal in the ‘ghost’ image (signal present outside the brain due to acquisition in the phase encoding direction) relative to mean signal within the brain.  Lower values are better. 
-* **Summary Measures [fg_mean, fg_std, fg_size, bg_mean, bg_std, bg_size]
+* **Summary Measures [fg_mean, fg_std, fg_size, bg_mean, bg_std, bg_size]:** Intermediate measures used to calculate the metrics above. Mean, standard deviation, and mask size are given for foreground and background masks.
+
 
 ### Temporal Functional
 
@@ -141,16 +142,13 @@ Templates for these files are provided in the `/configs` folder in the QAP main 
 
 * **num_ants_threads**: Number of cores to dedicate to ANTS anatomical registration. More cores will result in a faster registration process.
 * **template_brain_for_anat**: Template brain to be used during anatomical registration, as a reference.
-* **csf_threshold**: A decimal value - only voxels with a CSF probability greater than this value will be classified as CSF.            
-* **gm_threshold**: A decimal value - only voxels with a gray matter probability greater than this value will be classified as gray matter.
-* **wm_threshold**: A decimal value - only voxels with a white matter probability greater than this value will be classified as white matter.
 
 ### Functional pipelines
 
 * **start_idx**: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the first timepoint you wish to include in the analysis. Enter *0* to include the first volume.          
 * **stop_idx**: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the last timepoint you wish to include in the analysis. Enter *End* to include the final volume. Enter *0* in start_idx and *End* in stop_idx to include the entire timeseries. 
 * **slice_timing_correction**: Whether or not to run slice timing correction - *True* or *False*. Interpolates voxel timeseries so that sampling occurs at the same time.
-* **ghost_direction**: Allows you to specify the phase encoding (x, y, z, or all) used to acquire the scan.  Omitting this option will default to *y*.
+* **ghost_direction**: Allows you to specify the phase encoding (*x* - RL/LR, *y* - AP/PA, *z* - SI/IS, or *all*) used to acquire the scan.  Omitting this option will default to *y*.
 
 Make sure that you multiply *num_cores_per_subject*, *num_subjects_at_once*, and *num_ants_threads* for the maximum amount of cores that could potentially be used during the anatomical pipeline run. For the functional pipeline run, multiply *num_cores_per_subject* and *num_subjects_at_once* to make sure that you have enough cores.
 
@@ -221,7 +219,7 @@ In the QAP head mask workflow, we also mask the background immediately in front 
 ### Functional Spatial measures workflow resources
 
 * **func_motion_correct**: motion-corrected 4-D functional timeseries (.nii/.nii.gz)
-* **mcflirt_rel_rms**: if motion correction was performed using FSL's [MCFLIRT](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/MCFLIRT), use this to specify the path to the motion parameters file here.  Note that a motion parameters file will only be generated if you pass the *-rmsrel* flag to [MCFLIRT](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/MCFLIRT).  This resource requires that *func_motion_correct* also be defined manually (.rms)
+* **mcflirt_rel_rms**: if motion correction was performed using FSL's [MCFLIRT](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/MCFLIRT), use this to specify the path to the motion parameters file.  Note that a motion parameters file will only be generated if you pass the *-rmsrel* flag to [MCFLIRT](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/MCFLIRT).  This resource requires that *func_motion_correct* also be defined manually (.rms)
 * **functional_brain_mask**: a binarized mask of the functional scan (.nii/.nii.gz)
 * **mean_functional**: a 3-D file containing the mean of the functional 4-D timeseries (.nii/.nii.gz)
 
@@ -281,7 +279,7 @@ Once this script is run, it will output the S3 dictionary YAML file, and it will
 
 ### Setting Up Your SGE File
 
-Sun Grid Engine (SGE) allows you to parallelize your cloud analyses by having each node in an HPC cluster run QAP on an individual subject.  To use SGE on your AWS instance, create a new batch file in your favorite text editor and set up an SGE job in a format similar to below:
+Sun Grid Engine (SGE) allows you to parallelize your cloud analyses by having each node in an HPC cluster run QAP on an individual subject.  To use SGE on your AWS instance, create a new batch file in your favorite text editor and set up an SGE job in a format similar to below (with settings in curly brackets replaced and the appropriate qap utility used according to your needs):
 
 	#! /bin/bash
 	#$ -cwd
@@ -289,18 +287,18 @@ Sun Grid Engine (SGE) allows you to parallelize your cloud analyses by having ea
 	#$ -V
 	#$ -t 1-{number of subjects}
 	#$ -q all.q
-	#$ -pe mpi_smp 4
-	#$ -e /home/ubuntu/qap_run_anat.err
-	#$ -o /home/ubuntu/qap_run_anat.out
+	#$ -pe mpi_smp {number of CPU cores to use}
+	#$ -e {absolute path to a file to store standard error from the terminal}
+	#$ -o /{absolute path to a file to store standard out from the terminal}
 	source /etc/profile.d/cpac_env.sh
-	ANAT_S3_DICT=/home/ubuntu/configs/anat_s3_dict.yml
-	ANAT_SP_CONFIG_FILE=/home/ubuntu/configs/qap_config_anat_spatial.yml
+	ANAT_S3_DICT={absolute path to S3 subject dictionary YAML file}
+	ANAT_SP_CONFIG_FILE={absolute path to configuration YAML file}
 	echo "Start - TASKID " $SGE_TASK_ID " : " $(date)
 	# Run anatomical spatial qap
 	qap_anatomical_spatial.py --subj_idx $SGE_TASK_ID --s3_dict_yml $ANAT_S3_DICT $ANAT_SP_CONFIG_FILE
 	echo "End - TASKID " $SGE_TASK_ID " : " $(date)
 
-Note that the *mpi_smp* environment is created by the *cpac_sge* Starcluster plug-in mentioned earlier.  The *cpac_env.sh* script is a script containing all of the environmental variables used by AFNI, FSL, and C3D.  If you opt to not use the C-PAC AMI, you will need to create a comparable script and have the batchs script source it.  Submit the job to the SGE scheduler by typing:
+Note that the *mpi_smp* environment is created by the *cpac_sge* Starcluster plug-in mentioned earlier.  The *cpac_env.sh* script is a script containing all of the environmental variables used by AFNI, FSL, C3D, and ANTS.  If you opt to not use the C-PAC AMI, you will need to create a comparable script and have the batch script source it.  Submit the job to the SGE scheduler by typing:
 
     qsub {path to the text file}
 
