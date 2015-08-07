@@ -91,17 +91,17 @@ def pick_seg_type(probability_maps, seg_type):
 
             if seg_type == "csf":
 
-                if filename.endswith("prob_0.nii.gz"):
+                if filename.endswith("_0.nii.gz"):
                     return filename
 
             elif seg_type == "gm":
 
-                if filename.endswith("prob_1.nii.gz"):
+                if filename.endswith("_1.nii.gz"):
                     return filename
 
             elif seg_type == "wm":
 
-                if filename.endswith("prob_2.nii.gz"):
+                if filename.endswith("_2.nii.gz"):
                     return filename
 
 

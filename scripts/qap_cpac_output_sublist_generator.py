@@ -1,13 +1,12 @@
 
 
-def run(cpac_outdir, outfile_name, qap_type):
+def run(cpac_outdir, outfile_name, qap_type, session_format):
 
     import os
     import glob
     import yaml
 
-    ''' SCRIPT UNDER CONSTRUCTION!!! '''
-
+ 
     if qap_type == "anat":
 
         outputs = ["anatomical_reorient", "anatomical_csf_mask", \
@@ -25,53 +24,156 @@ def run(cpac_outdir, outfile_name, qap_type):
 
     for sub_dir in os.listdir(cpac_outdir):
 
-        for resource in outputs:
+        if not os.path.isdir(os.path.join(cpac_outdir, sub_dir)):
+            continue
 
-            resource_path = ""
+        sessions = []
 
-            filepaths = glob.glob(os.path.join(cpac_outdir, sub_dir, \
-                                               resource))
+        # if the folder structure is sub_id/session_id/scan_id/...
+        if session_format == 1:
+            for session in os.listdir(os.path.join(cpac_outdir, sub_dir)):
+                if os.path.isdir(os.path.join(cpac_outdir, sub_dir, session)):
+                    sessions.append(session)
+
+        # if there is no session label in the folder structure
+        if session_format == 2:
+            # since there is no session, let's assign one
+            sessions = ["session_1"]
+
+        # if the session is embedded in the subject ID
+        if session_format == 3:
+            subject_session = sub_dir
+
+            if "_" not in sub_dir:
+                err = "\n\n[!] You said your CPAC output directory had the " \
+                      "session IDs embedded in the subject IDs, but it " \
+                      "doesn't seem that way for subject ID %s!\n\nIs it " \
+                      " formatted like this?   ../pipeline_output/subject_" \
+                      "session/output/..\n\nIf not, you're using the wrong " \
+                      "option for session_format! Use the -h flag to see " \
+                      "the documentation.\n\n%s not being included in the " \
+                      "subject list.\n\n" % (sub_dir, sub_dir)
+                print err
+                continue
+
+            session_id = sub_dir.split("_",1)[1]
+            sub_dir = sub_dir.split("_",1)[0]
+            sessions = [session_id]
 
 
-            if len(filepaths) == 1:
+        for session in sessions:
 
-                for root, folders, files in os.walk(filepaths[0]):
-                
-                    for filename in files:
+            for resource in outputs:
 
-                        if qap_type == "func":
+                resource_path = ""
 
-                            '''scan_id was removed! now must support multiple scans, multiple strategies, etc.!'''
-                            if scan_id in root:
+                if session_format == 1:
+                    resource_folder = os.path.join(cpac_outdir, sub_dir, \
+                                                       session, resource)
+                elif session_format == 2:
+                    resource_folder = os.path.join(cpac_outdir, sub_dir, \
+                                                       resource)
 
-                                filepath = os.path.join(root, filename)
+                elif session_format == 3:
+                    resource_folder = os.path.join(cpac_outdir, \
+                                                       subject_session, \
+                                                       resource)
 
-                                resource_path = filepath
-
-                        elif qap_type == "anat":
-
-                            filepath = os.path.join(root, filename)
-
-                            resource_path = filepath
+                # if this current resource/output does not exist for this
+                # subject, go to next resource in list
+                if not os.path.isdir(resource_folder):
+                    continue
 
 
-                if sub_dir not in outputs_dict.keys():
-                    outputs_dict[sub_dir] = {}
+                if qap_type == "anat":
 
-                if resource not in outputs_dict[sub_dir].keys():
-                    outputs_dict[sub_dir][resource] = resource_path
+                    ''' until CPAC writes multiple anat scans in the '''
+                    ''' output folder structure '''
+                    scans = ["anat_1"]
+
+
+                if qap_type == "func":
+    
+                    scans = []
+
+                    for item in os.listdir(resource_folder):
+                        if os.path.isdir(os.path.join(resource_folder, item)):
+                            item = item.replace("_scan_","")
+                            item = item.replace("_rest","")
+                            scans.append(item)
+
+
+                for scan in scans:
+
+                    if qap_type == "anat":
+
+                        if "mask" in resource:
+                            resource_paths = glob.glob(os.path.join(resource_folder, "*", "*"))
+                        else:
+                            resource_paths = glob.glob(os.path.join(resource_folder, "*"))
+
+                        if len(resource_paths) == 1:
+                            resource_path = resource_paths[0]
+                        else:
+                            print "\nMultiple files for %s for subject %s!!" \
+                                  % (resource, sub_dir)
+                            print "Check the directory: %s" \
+                                      % resource_folder
+                            print "%s for %s has not been included in the " \
+                                  "subject list.\n" % (resource, sub_dir)
+                            continue
+
+                    if qap_type == "func":
+
+                        fullscan = "_scan_" + scan + "_rest"
+
+                        resource_paths = glob.glob(os.path.join(resource_folder, fullscan, "*"))
+
+                        if len(resource_paths) == 1:
+                            resource_path = resource_paths[0]
+                        else:
+                            print "\nMultiple files for %s for subject %s!!" \
+                                  % (resource, sub_dir)
+                            print "Check the directory: %s" \
+                                      % resource_folder
+                            print "%s for %s has not been included in the " \
+                                  "subject list.\n" % (resource, sub_dir)
+                            continue
+
+
+                    ''' put a catch here for multiple files '''
+
+
+                    if sub_dir not in outputs_dict.keys():
+                        outputs_dict[sub_dir] = {}
+
+                    if session not in outputs_dict[sub_dir].keys():
+                        outputs_dict[sub_dir][session] = {}
+
+                    if resource not in outputs_dict[sub_dir][session].keys():
+                        outputs_dict[sub_dir][session][resource] = {}
+
+                    if scan not in outputs_dict[sub_dir][session][resource].keys():
+                        outputs_dict[sub_dir][session][resource][scan] = resource_path
+
+
 
 
     # make up for QAP - CPAC resource naming discrepancy
     for subid in outputs_dict.keys():
 
-        for resource in outputs_dict[subid].keys():
+        for session in outputs_dict[subid].keys():
 
-            if resource == "motion_correct":
+            for resource in outputs_dict[subid][session].keys():
 
-                filepath = outputs_dict[subid]["motion_correct"]
+                if resource == "motion_correct":
 
-                outputs_dict[subid]["func_motion_correct"] = filepath
+                    filepath = outputs_dict[subid][session]["motion_correct"]
+
+                    outputs_dict[subid][session]["func_motion_correct"] = \
+                        filepath
+
+                    del outputs_dict[subid][session]["motion_correct"]
 
 
 
@@ -102,17 +204,25 @@ def main():
                             help="'anat' or 'func' - whether to extract " \
                                  "the anatomical or functional outputs, " \
                                  "depending on which type of QAP measures " \
-                                 "you wish to run ('anat' for Spatial, " \
-                                 "'func' for Spatial EPI or Temporal)")
+                                 "you wish to run ('anat' for anatomical " \
+                                 "spatial, 'func' for functional spatial " \
+                                 "or temporal)")
 
-    parser.add_argument("-s", "--scan_id", type=str, \
-                            help="(for qap_type 'func' only) - the name of " \
-                                 "the scan you wish to run the measures for")
+    parser.add_argument("session_format", type=int, \
+                            help="input as integer: '1' if your CPAC output "\
+                                 "file structure is organized as /subject_id"\
+                                 "/session_id/output/.., '2' if there are " \
+                                 "no sessions and the file structure is " \
+                                 "organized as /subject_id/output/.., '3' " \
+                                 "if the session ID is embedded in the " \
+                                 "subject ID like so: /subject_session/" \
+                                 "output/..")
 
     args = parser.parse_args()
 
     # run it!
-    run(args.cpac_output_dir, args.outfile_name, args.qap_type, args.scan_id)
+    run(args.cpac_output_dir, args.outfile_name, args.qap_type, \
+            args.session_format)
 
 
 

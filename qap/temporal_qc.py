@@ -1,6 +1,3 @@
-"""
-TODO
-"""
 
 import os
 import sys
@@ -47,10 +44,12 @@ def fd_jenkinson(in_file):
     f = open(out_file, 'w')
 
     pm_ = np.genfromtxt(in_file)
-        
+
+    original_shape = pm_.shape
+
     pm = np.zeros((pm_.shape[0],pm_.shape[1]+4))
-    pm[:,:12]=pm_
-    pm[:,12:]=[0.0, 0.0, 0.0, 1.0]
+    pm[:,:original_shape[1]]=pm_
+    pm[:,original_shape[1]:]=[0.0, 0.0, 0.0, 1.0]
        
     flag = 0
 
@@ -91,11 +90,18 @@ def summarize_fd(in_file, fd_out_file=None, threshold=1.0):
     tmpdir = mkdtemp()
     curdir = os.getcwd()
     os.chdir(tmpdir)
-    
-    # Compute FD
-    out_file    = fd_jenkinson(in_file)
-    fd          = np.loadtxt(out_file)
-    
+      
+    # if in_file (coordinate_transformation) is actually the rel_mean output
+    # of the MCFLIRT command, take the mean FD straight out
+    if "rel.rms" in in_file:
+        fd = np.loadtxt(in_file)
+        out_file = in_file
+
+    else:
+        # Compute FD
+        out_file    = fd_jenkinson(in_file)
+        fd          = np.loadtxt(out_file)
+   
     # Calculate Mean
     mean_fd     = fd.mean()
     
@@ -103,13 +109,15 @@ def summarize_fd(in_file, fd_out_file=None, threshold=1.0):
     ## Number and Percent of frames (time points) where 
     ## movement (FD) exceeded threshold
     num_fd      = np.float((fd>threshold).sum())
-    percent_fd  = (num_fd*100)/(len(fd)+1)      
+    percent_fd  = (num_fd*100)/(len(fd)+1)
     
     # Clean-Up
-    if fd_out_file:
-        os.rename(out_file, fd_out_file)
-    else:
-        os.remove(out_file)
+    if "rel.rms" not in in_file:
+        if fd_out_file:
+            os.rename(out_file, fd_out_file)
+        else:
+            os.remove(out_file)
+
     os.chdir(curdir)
     os.rmdir(tmpdir)
     

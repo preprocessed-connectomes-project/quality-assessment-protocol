@@ -1,7 +1,7 @@
 
 
-def build_temporal_qap_workflow(resource_pool, config, subject_info, \
-                                run_name):
+def build_functional_temporal_workflow(resource_pool, config, subject_info, \
+                                           run_name, site_name=None):
     
     # build pipeline for each subject, individually
 
@@ -20,7 +20,7 @@ def build_temporal_qap_workflow(resource_pool, config, subject_info, \
     import glob
     import yaml
 
-
+    import time
     from time import strftime
     from nipype import config as nyconfig
     from nipype import logging
@@ -66,6 +66,8 @@ def build_temporal_qap_workflow(resource_pool, config, subject_info, \
     # take date+time stamp for run identification purposes
     unique_pipeline_id = strftime("%Y%m%d%H%M%S")
     pipeline_start_stamp = strftime("%Y-%m-%d_%H:%M:%S")
+    
+    pipeline_start_time = time.time()
 
 
     logger.info(pipeline_start_stamp)
@@ -84,6 +86,10 @@ def build_temporal_qap_workflow(resource_pool, config, subject_info, \
     config["scan_id"] = scan_id
     
     config["run_name"] = run_name
+
+
+    if site_name:
+        config["site_name"] = site_name
     
     
 
@@ -133,7 +139,7 @@ def build_temporal_qap_workflow(resource_pool, config, subject_info, \
     
     # start connecting the pipeline
        
-    if "qap_temporal" not in resource_pool.keys():
+    if "qap_functional_temporal" not in resource_pool.keys():
 
         from qap.qap_workflows import qap_temporal_workflow
 
@@ -181,8 +187,13 @@ def build_temporal_qap_workflow(resource_pool, config, subject_info, \
 
 
     pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
+    
+    pipeline_end_time = time.time()
 
-    logger.info(pipeline_end_stamp)
+    logger.info("Elapsed time (minutes) since last start: %s" \
+                % ((pipeline_end_time - pipeline_start_time)/60))
+
+    logger.info("Pipeline end time: %s" % pipeline_end_stamp)
 
 
 
@@ -205,6 +216,7 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
             subdict = yaml.load(f)
 
         flat_sub_dict = {}
+        sites_dict = {}
 
         for subid in subdict.keys():
 
@@ -230,6 +242,10 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
                                 flat_sub_dict[sub_info_tuple] = {}
 
                             flat_sub_dict[sub_info_tuple].update(resource_dict)
+
+                    elif resource == "site_name":
+
+                        sites_dict[subid] = subdict[subid][session][resource]
 
                     else:
 
@@ -278,10 +294,19 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
 
     if not cloudify:
         
-        procss = [Process(target=build_temporal_qap_workflow, \
-                          args=(flat_sub_dict[sub_info], config, sub_info, \
-                                run_name)) \
-                          for sub_info in flat_sub_dict.keys()]
+        if len(sites_dict) > 0:
+
+            procss = [Process(target=build_functional_temporal_workflow, \
+                            args=(flat_sub_dict[sub_info], config, sub_info, \
+                                      run_name, sites_dict[sub_info[0]])) \
+                                for sub_info in flat_sub_dict.keys()]
+
+        elif len(sites_dict) == 0:
+
+            procss = [Process(target=build_functional_temporal_workflow, \
+                            args=(flat_sub_dict[sub_info], config, sub_info, \
+                                      run_name, None)) \
+                                for sub_info in flat_sub_dict.keys()]
                           
                           
         pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
@@ -290,7 +315,7 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
         job_queue = []
 
         # If we're allocating more processes than are subjects, run them all
-        if len(subject_list) <= config["num_subjects_at_once"]:
+        if len(flat_sub_dict) <= config["num_subjects_at_once"]:
     
             """
             Stream all the subjects as sublist is
@@ -314,7 +339,7 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
     
             idx = 0
     
-            while(idx < len(subject_list)):
+            while(idx < len(flat_sub_dict)):
     
                 # If the job queue is empty and we haven't started indexing
                 if len(job_queue) == 0 and idx == 0:
@@ -361,8 +386,18 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
 
         # run on cloud
         sub = subject_list.keys()[0]
-        build_temporal_qap_workflow(subject_list[sub], config, sub, \
-                                    run_name)
+
+        # get the site name!
+        for resource_path in subject_list[sub]:
+            if ".nii" in resource_path:
+                filepath = resource_path
+                break
+
+        filesplit = filepath.split(config["bucket_prefix"])
+        site_name = filesplit[1].split("/")[1]
+        
+        build_functional_temporal_workflow(subject_list[sub], config, sub, \
+                                               run_name, site_name)
 
 
 

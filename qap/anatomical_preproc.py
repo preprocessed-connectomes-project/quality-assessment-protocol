@@ -385,14 +385,8 @@ def segmentation_workflow(workflow, resource_pool, config):
 
     # resource pool should have:
     #     anatomical_brain
-    #     ants_initial_xfm
-    #     ants_rigid_xfm
-    #     ants_affine_xfm
 
     # configuration should have:
-    #     prior_csf
-    #     prior_gm
-    #     prior_wm
     #     csf_threshold
     #     gm_threshold
     #     wm_threshold
@@ -414,33 +408,12 @@ def segmentation_workflow(workflow, resource_pool, config):
                                check_config_settings
 
 
-    if ("ants_affine_xfm" not in resource_pool.keys()) or \
-           ("ants_rigid_xfm" not in resource_pool.keys()) or \
-               ("ants_initial_xfm" not in resource_pool.keys()):
-
-        from anatomical_preproc import ants_anatomical_linear_registration
-
-        workflow, resource_pool = \
-            ants_anatomical_linear_registration(workflow, resource_pool,
-                                                config)
-
-
     if "anatomical_brain" not in resource_pool.keys():
 
         from anatomical_preproc import anatomical_skullstrip_workflow
 
         workflow, resource_pool = \
             anatomical_skullstrip_workflow(workflow, resource_pool, config)
-
-
-    #check_input_resources(resource_pool, "ants_initial_xfm")
-    #check_input_resources(resource_pool, "ants_rigid_xfm")
-    #check_input_resources(resource_pool, "ants_affine_xfm")
-    #check_input_resources(resource_pool, "anatomical_brain")
-
-    check_config_settings(config, "prior_csf")
-    check_config_settings(config, "prior_gm")
-    check_config_settings(config, "prior_wm")
 
 
     segment = pe.Node(interface=fsl.FAST(), name='segmentation')
@@ -460,24 +433,9 @@ def segmentation_workflow(workflow, resource_pool, config):
 
     # process masks
 
-    def form_threshold_string(threshold):
-        return '-thr %f -bin ' % (threshold)
-
     seg_types = ["gm", "wm", "csf"]
 
     for seg in seg_types:
-
-        collect_linear_transforms = pe.Node(util.Merge(3), 
-                                            name='%s_collect_xfm' % seg)
-
-
-        tissueprior_mni_to_t1 = pe.Node(interface=ants.ApplyTransforms(),
-                                        name='%s_prior_mni_to_t1' % seg)
-
-        tissueprior_mni_to_t1.inputs.invert_transform_flags = \
-            [True, True, True]
-        tissueprior_mni_to_t1.inputs.interpolation = 'NearestNeighbor'
-
 
         pick_seg = pe.Node(interface=util.Function(
                            input_names=['probability_maps',
@@ -486,112 +444,79 @@ def segmentation_workflow(workflow, resource_pool, config):
                            function=pick_seg_type),
                            name='pick_%s' % seg)
 
-
-        overlap_segmentmap_with_prior = pe.Node(interface= \
-                                                fsl.MultiImageMaths(),
-                                       name='overlap_%s_map_with_prior' % seg)
-
-        overlap_segmentmap_with_prior.inputs.op_string = '-mas %s '
-
-
-        binarize_threshold_segmentmap = pe.Node(interface=fsl.ImageMaths(),
-                                           name='binarize_threshold_%s' % seg)
-
-
-        segment_mask = pe.Node(interface=fsl.MultiImageMaths(),
-                               name='%s_mask' % seg)
-
-        segment_mask.inputs.op_string = '-mas %s '
-
-
-        if len(resource_pool["anatomical_brain"]) == 2:
-            node, out_file = resource_pool["anatomical_brain"]
-            workflow.connect(node, out_file,
-                                 tissueprior_mni_to_t1, 'reference_image')
-        else:
-            tissueprior_mni_to_t1.inputs.reference_image = \
-                resource_pool["anatomical_brain"]
-
-
-        if len(resource_pool["ants_initial_xfm"]) == 2:
-            node, out_file = resource_pool["ants_initial_xfm"]
-            workflow.connect(node, out_file,
-                                 collect_linear_transforms, 'in1')
-        else:
-            collect_linear_transforms.inputs.in1 = \
-                resource_pool["ants_initial_xfm"]
-
-
-        if len(resource_pool["ants_rigid_xfm"]) == 2:
-            node, out_file = resource_pool["ants_rigid_xfm"]
-            workflow.connect(node, out_file,
-                                 collect_linear_transforms, 'in2')
-        else:
-            collect_linear_transforms.inputs.in2 = \
-                resource_pool["ants_rigid_xfm"]
-
-
-        if len(resource_pool["ants_affine_xfm"]) == 2:
-            node, out_file = resource_pool["ants_affine_xfm"]
-            workflow.connect(node, out_file,
-                                 collect_linear_transforms, 'in3')
-        else:
-            collect_linear_transforms.inputs.in3 = \
-                resource_pool["ants_affine_xfm"]
-
-
-        tissueprior_mni_to_t1.inputs.input_image = config["prior_%s" % seg]
-
-        binarize_threshold_segmentmap.inputs.op_string = \
-            form_threshold_string(config["%s_threshold" % seg])
-
         pick_seg.inputs.seg_type = seg
         
 
-
-        workflow.connect(segment, 'probability_maps',
+        workflow.connect(segment, 'tissue_class_files',
                              pick_seg, 'probability_maps')
 
-
-        workflow.connect(pick_seg, 'filename',
-                             overlap_segmentmap_with_prior, 'in_file')
-
-
-        workflow.connect(collect_linear_transforms, 'out',
-                             tissueprior_mni_to_t1, 'transforms')
-
-
-        # overlapping
-        workflow.connect(tissueprior_mni_to_t1, 'output_image',
-                             overlap_segmentmap_with_prior, 'operand_files')
-
-
-        # binarize
-        workflow.connect(overlap_segmentmap_with_prior, 'out_file',
-                             binarize_threshold_segmentmap, 'in_file')
-
-
-        # create segment mask
-        workflow.connect(binarize_threshold_segmentmap, 'out_file',
-                             segment_mask, 'in_file')
-
-        workflow.connect(tissueprior_mni_to_t1, 'output_image',
-                             segment_mask, 'operand_files')
-
-
-        resource_pool["anatomical_%s_mask" % seg] = (segment_mask, 'out_file')
+        
+        resource_pool["anatomical_%s_mask" % seg] = (pick_seg, 'filename')
 
 
     return workflow, resource_pool
 
 
 
-def run_segmentation_workflow(anatomical_brain):
+def run_segmentation_workflow(anatomical_brain, csf_threshold, gm_threshold, \
+                              wm_threshold):
 
-    pass
+    # stand-alone runner for segmentation workflow
+
+    import os
+    import sys
+
+    import glob
+
+    import nipype.interfaces.io as nio
+    import nipype.pipeline.engine as pe
+
+    workflow = pe.Workflow(name='segmentation_workflow')
+
+    current_dir = os.getcwd()
+
+    workflow_dir = os.path.join(current_dir, "segmentation")
+    workflow.base_dir = workflow_dir
 
 
+    resource_pool = {}
+    config = {}
+    num_cores_per_subject = 1
 
+
+    resource_pool["anatomical_brain"] = anatomical_brain
+    
+    config["csf_threshold"] = csf_threshold
+    config["gm_threshold"] = gm_threshold
+    config["wm_threshold"] = wm_threshold
+    
+    
+    workflow, resource_pool = \
+            segmentation_workflow(workflow, resource_pool, config)
+
+
+    ds = pe.Node(nio.DataSink(), name='datasink_segmentation')
+    ds.inputs.base_directory = workflow_dir
+    
+    
+    seg_types = ["gm", "wm", "csf"]
+
+    for seg in seg_types:
+    
+        node, out_file = resource_pool["anatomical_%s_mask" % seg]
+
+        workflow.connect(node, out_file, ds, 'anatomical_%s_mask' % seg)
+
+
+    workflow.run(plugin='MultiProc', plugin_args= \
+                     {'n_procs': num_cores_per_subject})
+
+
+    outpath = glob.glob(os.path.join(workflow_dir, "anatomical_*_mask", \
+                                     "*"))
+
+
+    return outpath
 
 
 

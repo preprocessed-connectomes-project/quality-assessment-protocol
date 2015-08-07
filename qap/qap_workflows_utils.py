@@ -242,7 +242,7 @@ def slice_head_mask(infile, transform, standard):
 def qap_anatomical_spatial(anatomical_reorient, head_mask_path, \
                                anatomical_gm_mask, anatomical_wm_mask, \
                                anatomical_csf_mask, subject_id, session_id, \
-                               scan_id, out_vox=True):
+                               scan_id, site_name=None, out_vox=True):
 
     import os
     import sys
@@ -269,6 +269,9 @@ def qap_anatomical_spatial(anatomical_reorient, head_mask_path, \
     qc['session'] = session_id
 
     qc['scan'] = scan_id
+
+    if site_name:
+        qc['site'] = site_name
 
    
     # FBER
@@ -311,13 +314,15 @@ def qap_anatomical_spatial(anatomical_reorient, head_mask_path, \
 
 
 
-def qap_functional_spatial(mean_epi, func_brain_mask, subject_id, \
-                               session_id, scan_id, out_vox=True):
+def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id, \
+                               session_id, scan_id, site_name=None, \
+                               out_vox=True):
 
     import os
     import sys
 
-    from qap.spatial_qc import summary_mask, snr, fber, efc, fwhm, ghost_all
+    from qap.spatial_qc import summary_mask, snr, fber, efc, fwhm, \
+                               ghost_direction
     from qap.qap_utils import load_image, load_mask
 
     # Load the data
@@ -334,6 +339,9 @@ def qap_functional_spatial(mean_epi, func_brain_mask, subject_id, \
 
     qc['scan'] = scan_id
 
+    if site_name:
+        qc['site'] = site_name
+
    
     # FBER
     qc['fber'] = fber(anat_data, fg_mask)
@@ -347,8 +355,14 @@ def qap_functional_spatial(mean_epi, func_brain_mask, subject_id, \
     qc['fwhm_x'], qc['fwhm_y'], qc['fwhm_z'], qc['fwhm'] = tmp
     
     # Ghosting
-    tmp         = ghost_all(anat_data, fg_mask)
-    qc['ghost_x'], qc['ghost_y'], qc['ghost_z'] = tmp
+    if (direction == "all"):
+        qc['ghost_x'] = ghost_direction(anat_data, fg_mask, "x")
+        qc['ghost_y'] = ghost_direction(anat_data, fg_mask, "y")
+        qc['ghost_z'] = ghost_direction(anat_data, fg_mask, "z")
+
+    else:
+        qc['ghost_%s' % direction] = ghost_direction(anat_data, fg_mask, \
+                                         direction)
 
     
     # Summary Measures
@@ -369,7 +383,8 @@ def qap_functional_spatial(mean_epi, func_brain_mask, subject_id, \
 
 def qap_functional_temporal(func_motion_correct, func_brain_mask, \
                                 coord_xfm_matrix, subject_id, session_id, \
-                                scan_id, motion_threshold=1.0):
+                                scan_id, site_name=None, \
+                                motion_threshold=1.0):
 
     import sys
 
@@ -381,7 +396,8 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask, \
     mean_dvars  = mean_dvars_wrapper(func_motion_correct, func_brain_mask)
 
     # Mean FD (Jenkinson)
-    (mean_fd, num_fd, percent_fd) = summarize_fd(coord_xfm_matrix, threshold=motion_threshold)
+    (mean_fd, num_fd, percent_fd) = summarize_fd(coord_xfm_matrix, \
+                                                 threshold=motion_threshold)
 
     # 3dTout
     mean_outlier= mean_outlier_timepoints(func_motion_correct, func_brain_mask)
@@ -393,7 +409,7 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask, \
     qc = {
         "subject":  subject_id,
         "session":  session_id,
-        "scan":     scan_id, 
+        "scan":     scan_id,
         "dvars":    mean_dvars, 
         "mean_fd":  mean_fd, 
         'num_fd':   num_fd, 
@@ -401,13 +417,16 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask, \
         "outlier":  mean_outlier,
         "quality":  mean_quality
     }
+
+    if site_name:
+        qc['site'] = site_name
     
 
     return qc
     
     
     
-def append_to_csv(sub_qap_dict, outfile, append):
+def write_to_csv(sub_qap_dict):  #, outfile):
 
     import os
     import csv
@@ -431,35 +450,21 @@ def append_to_csv(sub_qap_dict, outfile, append):
         fields.remove("scan")
         fields.insert(2, "scan")
 
-    if append:
+    if "site" in fields:
+        fields.remove("site")
+        fields.insert(3, "site")
 
-        if not os.path.isfile(outfile):
 
-            with open(outfile, "a") as out_f:
+    outfile = os.path.join(os.getcwd(), "qap_measures.csv")
 
-                csv_writer = csv.DictWriter(out_f, fields)
 
-                csv_writer.writeheader()
+    with open(outfile, "wt") as out_f:
 
-                csv_writer.writerow(sub_qap_dict)
+        csv_writer = csv.DictWriter(out_f, fields)
 
-        else:
+        csv_writer.writeheader()
 
-            with open(outfile, "a") as out_f:
-
-                csv_writer = csv.DictWriter(out_f, fields)
-
-                csv_writer.writerow(sub_qap_dict)
-
-    else:
-
-            with open(outfile, "wt") as out_f:
-
-                csv_writer = csv.DictWriter(out_f, fields)
-
-                csv_writer.writeheader()
-
-                csv_writer.writerow(sub_qap_dict)
+        csv_writer.writerow(sub_qap_dict)
 
 
     return outfile

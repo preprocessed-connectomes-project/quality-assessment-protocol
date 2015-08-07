@@ -473,4 +473,3 @@ def run_mean_functional(func_motion_correct):
     return outpath
 
 
-
