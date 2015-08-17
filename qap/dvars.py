@@ -22,11 +22,13 @@ def remove_zero_variance_voxels(func_timeseries, mask):
 
 
 def load(func_file, mask_file, check4d=True):
+
     func_img    = nib.load(func_file)
     mask_img    = nib.load(mask_file)
 
     mask        = mask_img.get_data()
     func        = func_img.get_data().astype(np.float)
+
     if check4d and len(func.shape) != 4:
         raise Exception("Input functional %s should be 4-dimensional" % func_file)
 
@@ -34,7 +36,8 @@ def load(func_file, mask_file, check4d=True):
 
     func        = func[mask_var_filtered.nonzero()].T # will have ntpts x nvoxs
     
-    return(func)
+    
+    return func
 
 
 
@@ -49,6 +52,8 @@ def robust_stdev(func, interp="fraction"):
     #upper_qs    = stats.scoreatpercentile(func, 75, interpolation_method=interp, axis=0)
     stdev       = (upper_qs - lower_qs)/1.349
     return stdev
+
+
 
 def ar_nitime(x, order=1, center=False):
     """
@@ -68,11 +73,15 @@ def ar_nitime(x, order=1, center=False):
     ak  = linalg.solve(Tm, y)
     return ak[0]
 
+
+
 def ar_statsmodels(x, order=(1,0), trend='nc'):
     import statsmodels.api as sm
     arma_mod = sm.tsa.ARMA(x)
     arma_res = arma_mod.fit(order=order, trend=trend, disp=False)
     return arma_res.arparams[0]
+
+
 
 def ar1(func, method=ar_nitime):
     func_centered = func - func.mean(0)
@@ -80,6 +89,8 @@ def ar1(func, method=ar_nitime):
     #code.interact(local=locals())
     ar_vals = np.apply_along_axis(method, 0, func_centered)
     return ar_vals
+
+
 
 def calc_dvars(func, output_all=False, interp="fraction"):
     # Robust standard deviation
@@ -111,9 +122,13 @@ def calc_dvars(func, output_all=False, interp="fraction"):
     
     return out
 
+
+
 def calc_mean_dvars(dvars):
     mean_dvars = dvars.mean(0)
     return mean_dvars
+
+
 
 def mean_dvars_wrapper(func_file, mask_file, dvars_out_file=None):
     func    = load(func_file, mask_file)
@@ -123,6 +138,8 @@ def mean_dvars_wrapper(func_file, mask_file, dvars_out_file=None):
     mean_d  = calc_mean_dvars(dvars)
     return mean_d[0]
 
+
+
 def test():
     func    = load("sample_func.nii.gz", "sample_func_mask.nii.gz")
     dvars   = calc_dvars(func)
@@ -130,8 +147,10 @@ def test():
     ref_dvars = np.loadtxt("sample_dvars.txt")
     ref_dvars = ref_dvars[:,[1,0,2]]
     
+
+
 def specific_tests():
-    from numpy.testing import *
+    import numpy.testing
     
     ffile   = "sample_func.nii.gz"
     mfile   = "sample_func_mask.nii.gz"
