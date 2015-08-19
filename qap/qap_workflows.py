@@ -23,6 +23,7 @@ def qap_mask_workflow(workflow, resource_pool, config):
     check_config_settings(config, "template_skull_for_anat")
 
 
+    '''
     if "ants_affine_xfm" not in resource_pool.keys():
         
         from anatomical_preproc import ants_anatomical_linear_registration
@@ -30,6 +31,16 @@ def qap_mask_workflow(workflow, resource_pool, config):
         workflow, resource_pool = \
             ants_anatomical_linear_registration(workflow, resource_pool, 
                                                 config)
+    '''
+
+
+    if "flirt_affine_xfm" not in resource_pool.keys():
+        
+        from anatomical_preproc import flirt_anatomical_linear_registration
+
+        workflow, resource_pool = \
+            flirt_anatomical_linear_registration(workflow, resource_pool, 
+                                                 config)
 
 
     if "anatomical_reorient" not in resource_pool.keys():
@@ -66,12 +77,14 @@ def qap_mask_workflow(workflow, resource_pool, config):
     erode_node.inputs.args = "-eroF -eroF -eroF -eroF -eroF -eroF"
 
 
+    '''
     convert_fsl_xfm = pe.Node(util.Function(input_names=['infile', \
                                                          'transform', \
                                                          'standard'],
                                             output_names=['converted_xfm'],
                                             function=c3d_affine_convert),
                               name="qap_headmask_c3d_xfm")
+    '''
 
 
     slice_head_mask = pe.Node(util.Function(input_names=['infile', \
@@ -94,35 +107,43 @@ def qap_mask_workflow(workflow, resource_pool, config):
         node, out_file = resource_pool["anatomical_reorient"]
         workflow.connect(node, out_file, select_thresh, 'input_skull')
         workflow.connect(node, out_file, mask_skull, 'in_file')
-        workflow.connect(node, out_file, convert_fsl_xfm, 'infile')
+        #workflow.connect(node, out_file, convert_fsl_xfm, 'infile')
         workflow.connect(node, out_file, slice_head_mask, 'infile')
     else:
         select_thresh.inputs.input_skull = \
             resource_pool["anatomical_reorient"]
         mask_skull.inputs.in_file = \
             resource_pool["anatomical_reorient"]
-        convert_fsl_xfm.inputs.infile = \
-            resource_pool["anatomical_reorient"]
+        #convert_fsl_xfm.inputs.infile = \
+        #    resource_pool["anatomical_reorient"]
         slice_head_mask.inputs.infile = \
             resource_pool["anatomical_reorient"]
 
-     
+    '''
     if len(resource_pool["ants_affine_xfm"]) == 2:
         node, out_file = resource_pool["ants_affine_xfm"]
         workflow.connect(node, out_file, convert_fsl_xfm, 'transform')
     else:
         convert_fsl_xfm.inputs.transform = resource_pool["ants_affine_xfm"]
+    '''
+
+
+    if len(resource_pool["flirt_affine_xfm"]) == 2:
+        node, out_file = resource_pool["flirt_affine_xfm"]
+        workflow.connect(node, out_file, slice_head_mask, 'transform')
+    else:
+        slice_head_mask.inputs.transform = resource_pool["flirt_affine_xfm"]
                 
 
-    convert_fsl_xfm.inputs.standard = config["template_skull_for_anat"]    
+    #convert_fsl_xfm.inputs.standard = config["template_skull_for_anat"]    
     slice_head_mask.inputs.standard = config["template_skull_for_anat"]
 
 
 
     workflow.connect(select_thresh, 'thresh_out', mask_skull, 'thresh')
 
-    workflow.connect(convert_fsl_xfm, 'converted_xfm', \
-                         slice_head_mask, 'transform')
+    #workflow.connect(convert_fsl_xfm, 'converted_xfm', \
+    #                     slice_head_mask, 'transform')
 
     workflow.connect(mask_skull, 'out_file', dilate_node, 'in_file')
 

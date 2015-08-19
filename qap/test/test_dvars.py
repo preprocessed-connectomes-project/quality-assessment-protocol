@@ -75,6 +75,10 @@ def test_load():
                                   "loaded_func.p"))
                                     
     func_out_data = load(func_motion, func_mask)
+
+    # to match the size of the reference output (shortened for file size
+    # issues)
+    func_out_data = func_out_data[0:20]
     
     with open(ref_out, "r") as f:
         ref_out_data = pickle.load(f)

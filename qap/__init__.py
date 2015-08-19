@@ -47,6 +47,7 @@ __all__ = ['dl_subj_from_s3', \
            'mean_quality_timepoints'
            'anatomical_reorient_workflow', \
            'anatomical_skullstrip_workflow', \
+           'flirt_anatomical_linear_registration', \
            'ants_anatomical_linear_registration', \
            'segmentation_workflow', \
            'ants_lin_reg', \
