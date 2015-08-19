@@ -26,12 +26,12 @@ For more information, please see our recent [resting-state poster and associated
 
 ### System Requirements
 
-* Any *nix-based operating system capable of running QAP will work, so long as it can run [AFNI](http://afni.nimh.nih.gov), [FSL](http://fsl.fmrib.ox.ac.uk), [C3D](http://www.itksnap.org/c3d), and [ANTS](http://picsl.upenn.edu/software/ants/).
-* The total amount of free hard disk space required is 8.3 GB.
+* Any *nix-based operating system capable of running QAP will work, so long as it can run [AFNI](http://afni.nimh.nih.gov), and [FSL](http://fsl.fmrib.ox.ac.uk).
+* The total amount of free hard disk space required is 5.7 GB.
 
 ### Application Dependencies
 
-QAP requires AFNI, FSL, C3D and ANTS to run. Links to installation instructions for AFNI and FSL are listed below:
+QAP requires AFNI and FSL to run. Links to installation instructions for AFNI and FSL are listed below:
 
 * [AFNI Installation](http://afni.nimh.nih.gov/pub/dist/HOWTO/howto/ht00_inst/html)
 * [FSL Installation](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation)
@@ -42,22 +42,6 @@ If you are using a Debian-based Linux distribution, you can use `apt-get` by fir
     apt-key adv --recv-keys --keyserver pgp.mit.edu 2649A5A9
     apt-get update
     apt-get install -y fsl-5.0-complete afni
-
-To install C3D, download the appropriate version for your platform from [Sourceforge](http://sourceforge.net/projects/c3d/).  Make sure the you use at least version 1.0.0.  Unzip or mount the archive containing C3D and copy it to a memorable location.  Finish by adding the following line to your `.bashrc` file:
-
-    export PATH=/path_to/C3D/bin:$PATH
-
-ANTS may be installed by first executing the following commands to build a binary (replace *{core_count}* with the number of cores you want to use for compilation; the maximum number of cores on your machine can be ascertained by typing `nproc`):
-
-    cd /tmp
-    git clone https://github.com/stnava/ANTs.git
-    cmake -c -g /tmp/ANTS
-    make -j {core_count}
-
-After ANTS is built, add the following lines to your `.bashrc` file:
-
-    export ANTSPATH=/opt/ants/bin
-    export PATH=/opt/ants/bin:$PATH
 
 ### Python Dependencies
 
@@ -137,10 +121,10 @@ Templates for these files are provided in the `/configs` folder in the QAP main 
 * **num_subjects_at_once**: Similar to *num_cores_per_subject*, except this determines how many pipelines to run at once.   
 * **output_directory**: The directory to write output files to.
 * **working_directory**: The directory to store intermediary processing files in.
+* **write_all_outputs**: A boolean option to determine whether or not all files used in the process of calculating the QAP measures will be saved to the output directory or not.  If *True*, all outputs will be saved.  If *False*, only the csv file containing the measures will be saved.
 
 ### Anatomical pipelines
 
-* **num_ants_threads**: Number of cores to dedicate to ANTS anatomical registration. More cores will result in a faster registration process.
 * **template_brain_for_anat**: Template brain to be used during anatomical registration, as a reference.
 
 ### Functional pipelines
@@ -150,7 +134,7 @@ Templates for these files are provided in the `/configs` folder in the QAP main 
 * **slice_timing_correction**: Whether or not to run slice timing correction - *True* or *False*. Interpolates voxel timeseries so that sampling occurs at the same time.
 * **ghost_direction**: Allows you to specify the phase encoding (*x* - RL/LR, *y* - AP/PA, *z* - SI/IS, or *all*) used to acquire the scan.  Omitting this option will default to *y*.
 
-Make sure that you multiply *num_cores_per_subject*, *num_subjects_at_once*, and *num_ants_threads* for the maximum amount of cores that could potentially be used during the anatomical pipeline run. For the functional pipeline run, multiply *num_cores_per_subject* and *num_subjects_at_once* to make sure that you have enough cores.
+Make sure that you multiply *num_cores_per_subject* and *num_subjects_at_once* for the maximum amount of cores that could potentially be used during an anatomical or functional pipeline run.
 
 ## Subject List YAML Files
 
@@ -183,7 +167,7 @@ Note that *anatomical_scan* is the label for the type of resource (in this case,
 
 ### Providing Already Pre-Processed Data
 
-Alternatively, if you have already preprocessed some or all of your raw data, you can provide these pre-existing files as inputs directly to the QAP pipelines via your subject list manually.  The QAP pipelines will then use these files and skip any pre-processing steps involved in creating them, saving time and allowing you to use your own method of processing your data.  If these files were processed using the [C-PAC](http://fcp-indi.github.io/docs/user/index.html) software package, there is a script named *qap_cpac_output_sublist_generator.py* which will create a subject list YAML file pointing to these already generated files.  Its usage is as follows:
+Alternatively, if you have already preprocessed some or all of your raw data, you can provide these pre-existing files as inputs directly to the QAP pipelines via your subject list manually.  The QAP pipelines will then use these files and skip any pre-processing steps involved in creating them, saving time and allowing you to use your own method of processing your data.  If these files were processed using the [C-PAC](http://fcp-indi.github.io/docs/user/index.html) software package, there is a script named *qap_cpac_output_sublist_generator.py* which will create a subject list YAML file pointing to these already generated files.  Note that this script will only work for C-PAC runs where FSL is used.  Its usage is as follows:
 
     qap_cpac_output_sublist_generator.py {absolute path to the C-PAC output directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'} {the session format- can be '1','2', or '3', whose corresponding formats are described in more detail below}
 
@@ -193,9 +177,9 @@ The values for the session format argument can either be:
     2 - For output organized in the form: /output/pipeline/subject_id/output/
     3 - For output organized in the form: /output/pipeline/subject_session/output/
 
-For example, if C-PAC results were stored in */home/wintermute/output/pipeline_ANTS/80386_session_1*, you wanted to run anatomical measures, and you wanted to store the subject list in *subj_list.yml*, you would invoke:
+For example, if C-PAC results were stored in */home/wintermute/output/pipeline_FLIRT/80386_session_1*, you wanted to run anatomical measures, and you wanted to store the subject list in *subj_list.yml*, you would invoke:
 
-    qap_cpac_output_sublist_generator.py /home/wintermute/output/pipeline_ANTS/80386_session_1 /home/wintermute/qap_analysis/subj_list.yml anat 3
+    qap_cpac_output_sublist_generator.py /home/wintermute/output/pipeline_FLIRT/80386_session_1 /home/wintermute/qap_analysis/subj_list.yml anat 3
 
 Below is a list of intermediary files used in the steps leading to the final QAP measures calculations. If you already have some of these processed for your data, they can be included in the subject list with the label on the left. For example, if you've already deobliqued, reoriented and skull-stripped your anatomical scans, you would list them in your subject list YAML file like so:
 
@@ -204,11 +188,9 @@ Below is a list of intermediary files used in the steps leading to the final QAP
 ###Anatomical Spatial measures workflow resources
 
 * **anatomical_reorient**: anatomical (structural) scan that has been deobliqued and reoriented to RPI (.nii/.nii.gz)
-* **anatomical_brain**: deobliqued & reoriented anatomical which has been skull-stripped (.nii/.nii.gz)
-* **ants_initial_xfm**: first of three warp matrix files output by ANTS linear registration (.mat)
-* **ants_rigid_xfm**: second of three warp matrix files output by ANTS (.mat)
-* **ants_affine_xfm**: third of three warp matrix files output by ANTS (.mat)
-* **ants_linear_warped_image**:	the ANTS-warped anatomical scan (.nii/.nii.gz)
+* **anatomical_brain**: deobliqued & reoriented anatomical that has been skull-stripped (.nii/.nii.gz)
+* **flirt_affine_xfm**: a warp matrix file output by [FLIRT](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FLIRT) (.mat)
+* **flirt_linear_warped_image**: the [FLIRT](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FLIRT)-warped anatomical scan (.nii/.nii.gz)
 * **anatomical_csf_mask**: segmentation mask of the anatomical scan's CSF (.nii/.nii.gz)
 * **anatomical_gm_mask**: segmentation mask of the anatomical scan's gray matter (.nii/.nii.gz)
 * **anatomical_wm_mask**: segmentation mask of the anatomical scan's white matter (.nii/.nii.gz)
@@ -298,7 +280,7 @@ Sun Grid Engine (SGE) allows you to parallelize your cloud analyses by having ea
 	qap_anatomical_spatial.py --subj_idx $SGE_TASK_ID --s3_dict_yml $ANAT_S3_DICT $ANAT_SP_CONFIG_FILE
 	echo "End - TASKID " $SGE_TASK_ID " : " $(date)
 
-Note that the *mpi_smp* environment is created by the *cpac_sge* Starcluster plug-in mentioned earlier.  The *cpac_env.sh* script is a script containing all of the environmental variables used by AFNI, FSL, C3D, and ANTS.  If you opt to not use the C-PAC AMI, you will need to create a comparable script and have the batch script source it.  Submit the job to the SGE scheduler by typing:
+Note that the *mpi_smp* environment is created by the *cpac_sge* Starcluster plug-in mentioned earlier.  The *cpac_env.sh* script is a script containing all of the environmental variables used by AFNI and FSL.  If you opt to not use the C-PAC AMI, you will need to create a comparable script and have the batch script source it.  Submit the job to the SGE scheduler by typing:
 
     qsub {path to the text file}
 
