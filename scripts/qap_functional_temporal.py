@@ -206,6 +206,19 @@ def build_functional_temporal_workflow(resource_pool, config, subject_info, \
         print "\nEverything is already done for subject %s." % sub_id
 
 
+    # Remove working directory when done
+    if config["write_all_outputs"] == False:
+        try:
+            work_dir = os.path.join(workflow.base_dir, scan_id)
+
+            if os.path.exists(work_dir):
+                import shutil
+                shutil.rmtree(work_dir)
+        except:
+            print "Couldn\'t remove the working directory!"
+            pass
+
+
     pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
     
     pipeline_end_time = time.time()
