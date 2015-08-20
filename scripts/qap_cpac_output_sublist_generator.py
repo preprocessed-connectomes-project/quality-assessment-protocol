@@ -11,7 +11,7 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
 
         outputs = ["anatomical_reorient", "anatomical_csf_mask", \
                    "anatomical_gm_mask", "anatomical_wm_mask", \
-                   "ants_affine_xfm"]
+                   "anatomical_to_mni_linear_xfm"]
 
     elif qap_type == "func":
 
@@ -174,6 +174,15 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
                         filepath
 
                     del outputs_dict[subid][session]["motion_correct"]
+
+                if resource == "anatomical_to_mni_linear_xfm":
+
+                    filepath = outputs_dict[subid][session]["anatomical_to_mni_linear_xfm"]
+
+                    outputs_dict[subid][session]["flirt_affine_xfm"] = \
+                        filepath
+
+                    del outputs_dict[subid][session]["anatomical_to_mni_linear_xfm"]
 
 
 

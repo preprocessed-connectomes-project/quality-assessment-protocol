@@ -218,6 +218,120 @@ def run_anatomical_skullstrip(anatomical_reorient):
 
 
 
+def flirt_anatomical_linear_registration(workflow, resource_pool, config):
+
+    # resource pool should have:
+    #     anatomical_brain
+
+    import os
+    import sys
+
+    import nipype.interfaces.io as nio
+    import nipype.pipeline.engine as pe
+
+    import nipype.interfaces.utility as util
+
+    import nipype.interfaces.fsl as fsl
+
+    from workflow_utils import check_input_resources, \
+                               check_config_settings
+
+
+    check_config_settings(config, "template_brain_for_anat")
+
+
+    if "anatomical_brain" not in resource_pool.keys():
+
+        from anatomical_preproc import anatomical_skullstrip_workflow
+
+        workflow, resource_pool = \
+            anatomical_skullstrip_workflow(workflow, resource_pool, config)
+
+
+    #check_input_resources(resource_pool, "anatomical_brain")
+
+    calc_flirt_warp = pe.Node(interface=fsl.FLIRT(), name='calc_flirt_warp')
+
+    calc_flirt_warp.inputs.cost = 'corratio'
+
+
+    if len(resource_pool["anatomical_brain"]) == 2:
+        node, out_file = resource_pool["anatomical_brain"]
+        workflow.connect(node, out_file, calc_flirt_warp, 'in_file')
+    else:
+        calc_flirt_warp.inputs.in_file = resource_pool["anatomical_brain"]
+
+
+    calc_flirt_warp.inputs.reference = config["template_brain_for_anat"]
+
+
+    resource_pool["flirt_affine_xfm"] = (calc_flirt_warp, 'out_matrix_file')
+
+    resource_pool["flirt_linear_warped_image"] = (calc_flirt_warp, 'out_file')
+
+
+    return workflow, resource_pool
+
+
+
+def run_flirt_anatomical_linear_registration(anatomical_brain, \
+                                                 template_brain):
+
+    # stand-alone runner for FSL FLIRT anatomical linear registration workflow
+
+    import os
+    import sys
+
+    import glob
+
+    import nipype.interfaces.io as nio
+    import nipype.pipeline.engine as pe
+
+    workflow = pe.Workflow(name='flirt_anatomical_linear_registration_' \
+                                'workflow')
+
+    current_dir = os.getcwd()
+
+    workflow_dir = os.path.join(current_dir, "flirt_anatomical_linear_" \
+                                    "registration")
+    workflow.base_dir = workflow_dir
+
+
+    num_cores_per_subject = 1
+
+
+    resource_pool = {}
+    config = {}
+    
+    
+    resource_pool["anatomical_brain"] = anatomical_brain
+    config["template_brain_for_anat"] = template_brain
+    
+    workflow, resource_pool = \
+        flirt_anatomical_linear_registration(workflow, resource_pool, config)
+
+
+    ds = pe.Node(nio.DataSink(), name='datasink_flirt_anatomical_linear_' \
+                                      'registration')
+    ds.inputs.base_directory = workflow_dir
+    
+    node, out_file = resource_pool["flirt_linear_warped_image"]
+
+    workflow.connect(node, out_file, ds, 'flirt_linear_warped_image')
+
+
+    workflow.run(plugin='MultiProc', plugin_args= \
+                     {'n_procs': num_cores_per_subject})
+
+
+    outpath = glob.glob(os.path.join(workflow_dir, "flirt_linear_warped_" \
+                                     "image", "*"))[0]
+
+
+    return outpath
+
+
+
 def ants_anatomical_linear_registration(workflow, resource_pool, config):
 
     # resource pool should have:
@@ -386,12 +500,6 @@ def segmentation_workflow(workflow, resource_pool, config):
     # resource pool should have:
     #     anatomical_brain
 
-    # configuration should have:
-    #     csf_threshold
-    #     gm_threshold
-    #     wm_threshold
-
-
     import os
     import sys
 
@@ -458,8 +566,7 @@ def segmentation_workflow(workflow, resource_pool, config):
 
 
 
-def run_segmentation_workflow(anatomical_brain, csf_threshold, gm_threshold, \
-                              wm_threshold):
+def run_segmentation_workflow(anatomical_brain):
 
     # stand-alone runner for segmentation workflow
 
@@ -484,12 +591,7 @@ def run_segmentation_workflow(anatomical_brain, csf_threshold, gm_threshold, \
     num_cores_per_subject = 1
 
 
-    resource_pool["anatomical_brain"] = anatomical_brain
-    
-    config["csf_threshold"] = csf_threshold
-    config["gm_threshold"] = gm_threshold
-    config["wm_threshold"] = wm_threshold
-    
+    resource_pool["anatomical_brain"] = anatomical_brain  
     
     workflow, resource_pool = \
             segmentation_workflow(workflow, resource_pool, config)

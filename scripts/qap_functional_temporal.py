@@ -151,27 +151,47 @@ def build_functional_temporal_workflow(resource_pool, config, subject_info, \
     # set up the datasinks
     new_outputs = 0
     
-    for output in resource_pool.keys():
-    
-        # we use a check for len()==2 here to select those items in the
-        # resource pool which are tuples of (node, node_output), instead of
-        # the items which are straight paths to files
+    if "write_all_outputs" not in config.keys():
+        config["write_all_outputs"] = False
 
-        # resource pool items which are in the tuple format are the outputs
-        # that have been created in this workflow because they were not
-        # present in the subject list YML (the starting resource pool) and had
-        # to be generated
+    if config["write_all_outputs"] == True:
 
-        if len(resource_pool[output]) == 2:
+        for output in resource_pool.keys():
     
-            ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
-            ds.inputs.base_directory = output_dir
-    
-            node, out_file = resource_pool[output]
+            # we use a check for len()==2 here to select those items in the
+            # resource pool which are tuples of (node, node_output), instead
+            # of the items which are straight paths to files
 
-            workflow.connect(node, out_file, ds, output)
+            # resource pool items which are in the tuple format are the
+            # outputs that have been created in this workflow because they
+            # were not present in the subject list YML (the starting resource 
+            # pool) and had to be generated
+
+            if len(resource_pool[output]) == 2:
+    
+                ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
+                ds.inputs.base_directory = output_dir
+    
+                node, out_file = resource_pool[output]
+
+                workflow.connect(node, out_file, ds, output)
             
-            new_outputs += 1
+                new_outputs += 1
+
+    else:
+
+        # write out only the output CSV (default)
+
+        output = "qap_functional_temporal"
+
+        ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
+        ds.inputs.base_directory = output_dir
+    
+        node, out_file = resource_pool[output]
+
+        workflow.connect(node, out_file, ds, output)
+            
+        new_outputs += 1
          
             
        
@@ -184,6 +204,19 @@ def build_functional_temporal_workflow(resource_pool, config, subject_info, \
     else:
 
         print "\nEverything is already done for subject %s." % sub_id
+
+
+    # Remove working directory when done
+    if config["write_all_outputs"] == False:
+        try:
+            work_dir = os.path.join(workflow.base_dir, scan_id)
+
+            if os.path.exists(work_dir):
+                import shutil
+                shutil.rmtree(work_dir)
+        except:
+            print "Couldn\'t remove the working directory!"
+            pass
 
 
     pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
