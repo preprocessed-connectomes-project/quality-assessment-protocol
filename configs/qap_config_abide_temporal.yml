@@ -6,6 +6,8 @@ output_directory: /mnt/output
 
 working_directory: /mnt/working
 
+write_all_outputs: False
+
 start_idx: 0
 
 stop_idx: None
