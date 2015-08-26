@@ -203,7 +203,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
 
 
 def run_func_motion_correct(functional_scan, start_idx, stop_idx,
-                                slice_timing_correction=False):
+                                slice_timing_correction=False, run=True):
 
     # stand-alone runner for functional motion correct workflow
 
