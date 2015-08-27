@@ -1,0 +1,14 @@
+digraph segmentation_workflow{
+  label="segmentation_workflow";
+  segmentation_workflow_segmentation[label="segmentation (fsl)"];
+  segmentation_workflow_pick_gm[label="pick_gm (utility)"];
+  segmentation_workflow_pick_csf[label="pick_csf (utility)"];
+  segmentation_workflow_pick_wm[label="pick_wm (utility)"];
+  segmentation_workflow_datasink_segmentation[label="datasink_segmentation (io)"];
+  segmentation_workflow_segmentation -> segmentation_workflow_pick_gm;
+  segmentation_workflow_segmentation -> segmentation_workflow_pick_csf;
+  segmentation_workflow_segmentation -> segmentation_workflow_pick_wm;
+  segmentation_workflow_pick_gm -> segmentation_workflow_datasink_segmentation;
+  segmentation_workflow_pick_csf -> segmentation_workflow_datasink_segmentation;
+  segmentation_workflow_pick_wm -> segmentation_workflow_datasink_segmentation;
+}
