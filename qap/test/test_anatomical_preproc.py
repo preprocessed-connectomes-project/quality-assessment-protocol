@@ -96,7 +96,7 @@ def test_anatomical_reorient():
         
     if ref_inputs_string == out_wf_inputs_string:
         flag += 1
-              
+
         
     assert flag == 2
 
@@ -274,7 +274,8 @@ def test_flirt_anatomical_linear_registration():
                                      "wf_inputs.txt"))
 
     # build the workflow and return it
-    wf = run_flirt_anatomical_linear_registration(anat_brain, False)
+    wf = run_flirt_anatomical_linear_registration(anat_brain, template_brain,\
+                                                      False)
 
     # write the dependency graph of the workflow we are testing
     out_graph = os.path.join(os.getcwd(), "flirt_linear_reg_test", \

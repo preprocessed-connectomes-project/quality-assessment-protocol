@@ -90,6 +90,120 @@ def test_run_func_motion_correct_no_slice_time():
                                   "func_motion_correct", \
                                   "rest_calc_tshift_resample_volreg.nii.gz"))
                                     
+    # build the workflow
+    wf = run_func_motion_correct(func_scan, 0, "End", False, False)
+
+    ref_graph = p.resource_filename("qap", os.path.join("test_data", \
+                                    "workflow_reference", \
+                                    "func_motion_correct", \
+                                    "graph_func_motion_correct.dot"))
+                                    
+    ref_inputs = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                     "anat_1", \
+                                     "anatomical_reorient", \
+                                     "wf_inputs.txt"))
+
+    # build the workflow and return it
+    wf = run_anatomical_reorient(anat_scan, False)
+
+
+    # write the dependency graph of the workflow we are testing
+    out_graph = os.path.join(os.getcwd(), "anatomical_reorient_test", \
+                                 "graph.dot")
+    
+    wf.write_graph(dotfilename=out_graph)
+    
+    # load the both the reference and the to-test dependency graphs
+    with open(ref_graph,"r") as f:
+        ref_graph_lines = f.readlines()
+
+    with open(out_graph,"r") as f:
+        out_graph_lines = f.readlines()
+        
+        
+    
+    
+    # write the workflow inputs of the workflow we are testing
+    out_wf_inputs = os.path.join(os.getcwd(), "anatomical_reorient_test", \
+                                     "out_wf_inputs.txt")
+    
+    with open(out_wf_inputs,"wt") as f:
+        print >>f, wf.inputs           
+        
+    # get the reference workflow inputs
+    with open(ref_inputs,"r") as f:
+        ref_inputs_lines = f.readlines()
+        
+    ref_inputs_string = ""
+    
+    for line in ref_inputs_lines:
+        ref_inputs_string = ref_inputs_string + line
+        
+    base_dir = os.path.join(os.getcwd(), "anatomical_reorient")
+        
+    ref_inputs_string = ref_inputs_string.replace("IN_FILE_HERE", anat_scan)
+    ref_inputs_string = ref_inputs_string.replace("BASE_DIR_HERE", base_dir)
+    
+    
+    # get the workflow inputs of the workflow being tested
+    with open(out_wf_inputs,"r") as f:
+        out_wf_inputs_lines = f.readlines()
+        
+    out_wf_inputs_string = ""
+    
+    for line in out_wf_inputs_lines:
+        out_wf_inputs_string = out_wf_inputs_string + line
+        
+
+    # clear temporary working files
+    try:
+        os.system("rm -R %s" % os.path.join(os.getcwd(), \
+                      "anatomical_reorient_test"))
+    except:
+        pass
+
+
+    # test the case
+    flag = 0
+    
+    if ref_graph_lines == out_graph_lines:
+        flag += 1
+        
+    if ref_inputs_string == out_wf_inputs_string:
+        flag += 1
+
+        
+    assert flag == 2
+
+
+
+def test_run_func_motion_correct_no_slice_time():
+
+    import os
+    import nibabel as nb
+
+    import pkg_resources as p
+
+    from qap.functional_preproc import run_func_motion_correct
+
+
+    if "func_motion_correct" in os.listdir(os.getcwd()):
+
+        err = "\n[!] The output folder for this workflow already exists.\n"
+
+        raise Exception(err)
+
+    
+    func_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                    "rest_1", \
+                                    "functional_scan", \
+                                    "rest.nii.gz"))
+                                    
+    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                  "rest_1", \
+                                  "func_motion_correct", \
+                                  "rest_calc_tshift_resample_volreg.nii.gz"))
+                                    
     # run the workflow
     output = run_func_motion_correct(func_scan, 0, "End", False)
 

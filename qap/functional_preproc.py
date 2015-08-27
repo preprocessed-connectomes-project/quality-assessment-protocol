@@ -252,14 +252,19 @@ def run_func_motion_correct(functional_scan, start_idx, stop_idx,
     workflow.connect(node, out_file, ds, 'coordinate_transformation')
 
 
-    workflow.run(plugin='MultiProc', plugin_args= \
-                     {'n_procs': num_cores_per_subject})
+    if run == True:
 
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
 
-    outpath = glob.glob(os.path.join(workflow_dir, "func_motion_correct", \
-                                     "*"))[0] 
+        outpath = glob.glob(os.path.join(workflow_dir, "func_motion_correct",\
+                                         "*"))[0]
 
-    return outpath
+        return outpath
+        
+    else:
+    
+        return workflow, workflow.base_dir
 
 
 
@@ -314,7 +319,7 @@ def functional_brain_mask_workflow(workflow, resource_pool, config):
 
 
 
-def run_functional_brain_mask(func_motion_correct, use_bet=False):
+def run_functional_brain_mask(func_motion_correct, use_bet=False, run=True):
 
     # stand-alone runner for functional brain mask workflow
 
@@ -354,15 +359,19 @@ def run_functional_brain_mask(func_motion_correct, use_bet=False):
 
     workflow.connect(node, out_file, ds, output)
 
+    if run == True:
 
-    workflow.run(plugin='MultiProc', plugin_args= \
-                     {'n_procs': num_cores_per_subject})
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
 
+        outpath = glob.glob(os.path.join(workflow_dir, "functional_brain" \
+                                "_mask", "*"))[0]
 
-    outpath = glob.glob(os.path.join(workflow_dir, "functional_brain_mask", \
-                                     "*"))[0] 
-
-    return outpath 
+        return outpath
+        
+    else:
+    
+        return workflow 
 
 
 
@@ -421,7 +430,7 @@ def mean_functional_workflow(workflow, resource_pool, config):
 
 
  
-def run_mean_functional(func_motion_correct):
+def run_mean_functional(func_motion_correct, run=True):
 
     # stand-alone runner for mean functional workflow
 
@@ -462,14 +471,18 @@ def run_mean_functional(func_motion_correct):
 
     workflow.connect(node, out_file, ds, output)
 
+    if run == True:
 
-    workflow.run(plugin='MultiProc', plugin_args= \
-                     {'n_procs': num_cores_per_subject})
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
 
+        outpath = glob.glob(os.path.join(workflow_dir, "mean_functional", \
+                                         "*"))[0] 
 
-    outpath = glob.glob(os.path.join(workflow_dir, "mean_functional", \
-                                     "*"))[0] 
-
-    return outpath
-
+        return outpath
+        
+    else:
+    
+        return workflow
+        
 

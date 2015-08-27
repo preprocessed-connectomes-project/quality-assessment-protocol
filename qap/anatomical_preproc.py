@@ -639,4 +639,3 @@ def run_segmentation_workflow(anatomical_brain, run=True):
 
         return workflow
 
-
