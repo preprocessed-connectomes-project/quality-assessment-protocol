@@ -371,7 +371,7 @@ def run_functional_brain_mask(func_motion_correct, use_bet=False, run=True):
         
     else:
     
-        return workflow 
+        return workflow, workflow.base_dir
 
 
 
@@ -483,6 +483,6 @@ def run_mean_functional(func_motion_correct, run=True):
         
     else:
     
-        return workflow
+        return workflow, workflow.base_dir
         
 

@@ -5,7 +5,7 @@
 #       workflows
 
 #__all__ = ['qclib', 'workflows']
-                                            
+'''                                           
 from anatomical_preproc import run_anatomical_reorient, \
                                run_anatomical_skullstrip, \
                                run_segmentation_workflow
@@ -72,4 +72,4 @@ __all__ = ['dl_subj_from_s3', \
            'check_input_resources', \
            'check_config_settings']
            
-
+'''

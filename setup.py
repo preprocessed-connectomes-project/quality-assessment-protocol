@@ -17,6 +17,7 @@ def main():
           packages=['qap'],
           package_data={'qap': ['inpoint*.txt',
                                 'test_data/*.nii.gz',
+                                'test_data/workflow_reference/*/*',
                                 'test_data/*/*/*/*/*']},
           scripts=glob("scripts/*"),
           zip_safe=False)
