@@ -24,7 +24,7 @@ voxel_size = <undefined>
 
 datasink_anatomical_reorient = 
 _outputs = {}
-base_directory = BASE_DIR_HERE
+base_directory = BASE_DIRECTORY_HERE
 container = <undefined>
 ignore_exception = False
 parameterization = True

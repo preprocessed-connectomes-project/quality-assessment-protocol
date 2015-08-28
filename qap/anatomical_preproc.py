@@ -99,7 +99,7 @@ def run_anatomical_reorient(anatomical_scan, run=True):
 
     else:
 
-        return workflow
+        return workflow, workflow.base_dir
 
 
 
@@ -221,7 +221,7 @@ def run_anatomical_skullstrip(anatomical_reorient, run=True):
 
     else:
 
-        return workflow
+        return workflow, workflow.base_dir
 
 
 
@@ -339,7 +339,7 @@ def run_flirt_anatomical_linear_registration(anatomical_brain, \
 
     else:
 
-        return workflow
+        return workflow, workflow.base_dir
 
 
 
@@ -637,5 +637,5 @@ def run_segmentation_workflow(anatomical_brain, run=True):
 
     else:
 
-        return workflow
+        return workflow, workflow.base_dir
 

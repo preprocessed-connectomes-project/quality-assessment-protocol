@@ -162,6 +162,65 @@ def qap_mask_workflow(workflow, resource_pool, config):
 
 
 
+def run_qap_mask(anatomical_reorient, flirt_affine_xfm, template_skull, \
+                     run=True):
+
+    # stand-alone runner for anatomical reorient workflow
+
+    import os
+    import sys
+
+    import glob
+
+    import nipype.interfaces.io as nio
+    import nipype.pipeline.engine as pe
+
+    output = "qap_head_mask"
+
+    workflow = pe.Workflow(name='%s_workflow' % output)
+
+    current_dir = os.getcwd()
+
+    workflow_dir = os.path.join(current_dir, output)
+    workflow.base_dir = workflow_dir
+
+
+    resource_pool = {}
+    config = {}
+    num_cores_per_subject = 1
+
+
+    resource_pool["anatomical_reorient"] = anatomical_reorient
+    resource_pool["flirt_affine_xfm"] = flirt_affine_xfm
+    config["template_skull_for_anat"] = template_skull
+    
+    workflow, resource_pool = \
+            qap_mask_workflow(workflow, resource_pool, config)
+
+
+    ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
+    ds.inputs.base_directory = workflow_dir
+    
+    node, out_file = resource_pool[output]
+
+    workflow.connect(node, out_file, ds, output)
+
+
+    if run == True:
+
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
+
+        outpath = glob.glob(os.path.join(workflow_dir, output, "*"))[0]
+
+        return outpath
+
+    else:
+
+        return workflow, workflow.base_dir
+
+
+
 def qap_spatial_workflow(workflow, resource_pool, config):
 
     # resource pool should have:

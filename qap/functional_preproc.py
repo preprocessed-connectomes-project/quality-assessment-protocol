@@ -296,11 +296,27 @@ def functional_brain_mask_workflow(workflow, resource_pool, config):
             func_motion_correct_workflow(workflow, resource_pool, config)
 
   
-    func_get_brain_mask = pe.Node(interface=preprocess.Automask(),
-                                  name='func_get_brain_mask')
+    if config["use_bet"] == False:
 
-    func_get_brain_mask.inputs.outputtype = 'NIFTI_GZ'
-        
+        func_get_brain_mask = pe.Node(interface=preprocess.Automask(),
+                                      name='func_get_brain_mask')
+
+        func_get_brain_mask.inputs.outputtype = 'NIFTI_GZ'
+
+    else:
+
+        func_get_brain_mask = pe.Node(interface=fsl.BET(),
+                                      name='func_get_brain_mask_BET')
+
+        func_get_brain_mask.inputs.mask = True
+        func_get_brain_mask.inputs.functional = True
+
+        erode_one_voxel = pe.Node(interface=fsl.ErodeImage(),
+                                  name='erode_one_voxel')
+
+        erode_one_voxel.inputs.kernel_shape = 'box'
+        erode_one_voxel.inputs.kernel_size = 1.0
+       
 
     #if isinstance(tuple, resource_pool["func_motion_correct"]):
         
@@ -312,7 +328,17 @@ def functional_brain_mask_workflow(workflow, resource_pool, config):
             resource_pool["func_motion_correct"]
 
 
-    resource_pool["functional_brain_mask"] = (func_get_brain_mask, 'out_file')
+    if config["use_bet"] == False:
+
+        resource_pool["functional_brain_mask"] = (func_get_brain_mask, \
+                                                     'out_file')
+
+    else:
+
+        workflow.connect(func_get_brain_mask, 'mask_file',
+                             erode_one_voxel, 'in_file')
+
+        resource_pool["functional_brain_mask"] = (erode_one_voxel, 'out_file')
 
 
     return workflow, resource_pool
