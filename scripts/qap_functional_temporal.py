@@ -141,10 +141,10 @@ def build_functional_temporal_workflow(resource_pool, config, subject_info, \
        
     if "qap_functional_temporal" not in resource_pool.keys():
 
-        from qap.qap_workflows import qap_temporal_workflow
+        from qap.qap_workflows import qap_functional_temporal_workflow
 
         workflow, resource_pool = \
-            qap_temporal_workflow(workflow, resource_pool, config)
+            qap_functional_temporal_workflow(workflow, resource_pool, config)
 
     
 

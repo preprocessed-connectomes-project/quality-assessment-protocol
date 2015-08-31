@@ -143,10 +143,10 @@ def build_anatomical_spatial_workflow(resource_pool, config, subject_info, \
        
     if "qap_anatomical_spatial" not in resource_pool.keys():
 
-        from qap.qap_workflows import qap_spatial_workflow
+        from qap.qap_workflows import qap_anatomical_spatial_workflow
 
         workflow, resource_pool = \
-            qap_spatial_workflow(workflow, resource_pool, config)
+            qap_anatomical_spatial_workflow(workflow, resource_pool, config)
 
     
 

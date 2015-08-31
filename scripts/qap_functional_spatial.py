@@ -139,10 +139,10 @@ def build_functional_spatial_workflow(resource_pool, config, subject_info, \
        
     if "qap_functional_spatial" not in resource_pool.keys():
 
-        from qap.qap_workflows import qap_spatial_epi_workflow
+        from qap.qap_workflows import qap_functional_spatial_workflow
 
         workflow, resource_pool = \
-            qap_spatial_epi_workflow(workflow, resource_pool, config)
+            qap_functional_spatial_workflow(workflow, resource_pool, config)
 
     
 
