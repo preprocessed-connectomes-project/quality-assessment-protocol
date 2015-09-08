@@ -22,53 +22,6 @@ def test_select_thresh():
 
 
 
-def test_c3d_affine_convert():
-
-    import os
-    import pkg_resources as p
-
-    from qap.qap_workflows_utils import c3d_affine_convert
-
-    infile = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                 "anat_1", \
-                                 "anatomical_reorient", \
-                                 "mprage_resample.nii.gz"))
-
-    transform = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "anat_1", \
-                                    "ants_affine_xfm", \
-                                    "transform2Affine.mat"))
-
-    standard = p.resource_filename("qap", os.path.join("test_data", \
-                                   "MNI152_T1_2mm.nii.gz"))
-
-    ref_xfm = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                  "anat_1", \
-                                  "qap_headmask_c3d_xfm", \
-                                  "qc_fsl_affine_xfm.mat"))
-
-    c3d_affine_convert(infile, transform, standard)
-
-    with open(ref_xfm,"r") as f:
-        ref_lines = f.readlines()
-
-    with open(os.path.join(os.getcwd(), "qc_fsl_affine_xfm.mat"),"r") as f:
-        out_lines = f.readlines()
-
-    flag = 0
-
-    for ref_line, out_line in zip(ref_lines, out_lines):
-
-        if ref_line == out_line:
-            flag += 1
-
-    os.system("rm qc_fsl_affine_xfm.mat")
-
-
-    assert flag == 4
-
-
-
 def test_slice_head_mask():
 
     import os
@@ -143,17 +96,17 @@ def test_qap_anatomical_spatial():
     gm_path = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                   "anat_1", \
                                   "anatomical_gm_mask", \
-                                  "segment_prob_1_maths_maths_maths.nii.gz"))
+                                  "segment_seg_1.nii.gz"))
                                   
     wm_path = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                   "anat_1", \
                                   "anatomical_wm_mask", \
-                                  "segment_prob_2_maths_maths_maths.nii.gz"))
+                                  "segment_seg_2.nii.gz"))
                                   
     csf_path = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                    "anat_1", \
                                    "anatomical_csf_mask", \
-                                   "segment_prob_0_maths_maths_maths.nii.gz"))
+                                   "segment_seg_0.nii.gz"))
     
     subject = "1019436"
     session = "session_1"
@@ -173,7 +126,7 @@ def test_qap_functional_spatial():
     
     from qap.qap_workflows_utils import qap_functional_spatial
 
-    anat_path = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    mean_func = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                     "rest_1", \
                                     "mean_functional", \
                                     "rest_calc_tshift_resample_volreg_" \
@@ -190,10 +143,13 @@ def test_qap_functional_spatial():
     session = "session_1"
     scan = "rest_1"
 
-    qc = qap_functional_spatial(anat_path, func_mask, subject, session, \
-                                        scan)
+    direction = "y"
 
-    assert (len(qc.keys()) == 19) #and (None not in qc.values())
+    qc = qap_functional_spatial(mean_func, func_mask, direction, subject, \
+                                    session, scan)
+
+
+    assert (len(qc.keys()) == 17) and (None not in qc.values())
 
 
 
@@ -228,18 +184,16 @@ def test_qap_functional_temporal():
     qc = qap_functional_temporal(func_path, mask_path, matrix, subject, \
                                      session, scan)
 
-    assert (len(qc.keys()) == 9) and (None not in qc.values())
+    assert (len(qc.keys()) == 10) and (None not in qc.values())
 
 
 
 def run_all_tests_qap_workflows_utils():
 
     test_select_thresh()
-    test_c3d_affine_convert()
     test_slice_head_mask()
     test_qap_anatomical_spatial()
     test_qap_functional_spatial()
     test_qap_functional_temporal()
   
-
 

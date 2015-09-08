@@ -201,7 +201,7 @@ def test_workflow_segmentation():
 
 
 
-def run_unit_tests_anatomical_preproc():
+def run_all_tests_anatomical_preproc():
 
     test_workflow_anatomical_reorient()
     test_workflow_anatomical_skullstrip()

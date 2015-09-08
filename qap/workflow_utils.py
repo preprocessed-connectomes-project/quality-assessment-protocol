@@ -135,4 +135,21 @@ def generate_test_files(workflow, test_data_folder):
 
 
 
+def run_all_tests():
+
+    from test_anatomical_preproc import run_all_tests_anatomical_preproc
+    from test_dvars import run_all_tests_dvars
+    from test_functional_preproc import run_all_tests_functional_preproc
+    from test_qap_workflows import run_all_tests_qap_workflows
+    from test_qap_workflows_utils import run_all_tests_qap_workflows_utils
+    from test_spatial_qc import run_all_tests_spatial_qc
+    from test_temporal_qc import run_all_tests_temporal_qc
+
+    run_all_tests_anatomical_preproc()
+    run_all_tests_dvars()
+    run_all_tests_functional_preproc()
+    run_all_tests_qap_workflows()
+    run_all_tests_qap_workflows_utils()
+    run_all_tests_spatial_qc()
+    run_all_tests_temporal_qc()
 

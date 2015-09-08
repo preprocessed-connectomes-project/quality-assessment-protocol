@@ -182,19 +182,25 @@ def build_functional_spatial_workflow(resource_pool, config, subject_info, \
 
         output = "qap_functional_spatial"
 
-        ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
-        ds.inputs.base_directory = output_dir
-    
-        node, out_file = resource_pool[output]
+        if len(resource_pool[output]) == 2:
 
-        workflow.connect(node, out_file, ds, output)
+            ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
+            ds.inputs.base_directory = output_dir
+    
+            node, out_file = resource_pool[output]
+
+            workflow.connect(node, out_file, ds, output)
             
-        new_outputs += 1
+            new_outputs += 1
          
-            
-       
+    
+
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
+    
+        workflow.write_graph(dotfilename=os.path.join(output_dir, run_name + \
+                                                          ".dot"), \
+                                                          simple_form=False)
         
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': config["num_cores_per_subject"]})

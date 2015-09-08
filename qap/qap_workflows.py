@@ -11,8 +11,7 @@ def qap_mask_workflow(workflow, resource_pool, config):
     import nipype.interfaces.fsl.maths as fsl
 
     from qap_workflows_utils import select_thresh, \
-                                    slice_head_mask, \
-                                    c3d_affine_convert
+                                    slice_head_mask
 
     from workflow_utils import check_input_resources, \
                                check_config_settings

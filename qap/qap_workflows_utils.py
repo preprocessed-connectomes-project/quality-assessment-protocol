@@ -353,7 +353,7 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask, \
 
     from qap.temporal_qc import mean_dvars_wrapper, summarize_fd, \
                                 mean_outlier_timepoints, \
-                                mean_quality_timepoints
+                                mean_quality_timepoints, global_correlation
 
     # DVARS
     mean_dvars  = mean_dvars_wrapper(func_motion_correct, func_brain_mask)
@@ -363,10 +363,14 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask, \
                                                  threshold=motion_threshold)
 
     # 3dTout
-    mean_outlier= mean_outlier_timepoints(func_motion_correct, func_brain_mask)
+    mean_outlier = mean_outlier_timepoints(func_motion_correct, \
+                                               func_brain_mask)
 
     # 3dTqual
-    mean_quality= mean_quality_timepoints(func_motion_correct)
+    mean_quality = mean_quality_timepoints(func_motion_correct)
+
+    # new thing
+    gcor = global_correlation(func_motion_correct, func_brain_mask)
 
     # Compile
     qc = {
@@ -378,7 +382,8 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask, \
         'num_fd':   num_fd, 
         'perc_fd':  percent_fd, 
         "outlier":  mean_outlier,
-        "quality":  mean_quality
+        "quality":  mean_quality,
+        "gcor": gcor
     }
 
     if site_name:

@@ -304,4 +304,10 @@ def test_workflow_qap_functional_temporal():
     assert flag == 2, err
 
 
-    
+
+def run_all_tests_qap_workflows():
+
+    test_workflow_qap_mask()
+    test_workflow_qap_anatomical_spatial()
+    test_workflow_qap_functional_spatial()
+    test_workflow_qap_functional_temporal()

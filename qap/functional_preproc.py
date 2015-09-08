@@ -287,6 +287,9 @@ def functional_brain_mask_workflow(workflow, resource_pool, config):
 
     #check_input_resources(resource_pool, "func_motion_correct")
 
+    if "use_bet" not in config.keys():
+        config["use_bet"] = False
+
 
     if "func_motion_correct" not in resource_pool.keys():
 

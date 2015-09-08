@@ -168,6 +168,32 @@ def test_quality_timepoints_no_automask():
 
 
 
+def test_global_correlation():
+
+    import os
+    import pkg_resources as p
+
+    from qap.temporal_qc import global_correlation
+
+    func_motion = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                      "rest_1", \
+                                      "func_motion_correct", \
+                                      "rest_calc_tshift_resample_" \
+                                      "volreg.nii.gz"))
+                                  
+    func_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                    "rest_1", \
+                                    "functional_brain_mask", \
+                                    "rest_calc_tshift_resample_volreg" \
+                                    "_mask.nii.gz"))
+
+    gcor = global_correlation(func_motion, func_mask)
+
+
+    assert gcor == 0.0090767564485253263
+
+
+
 def run_all_tests_temporal_qc():
 
     test_fd_jenkinson()
@@ -175,7 +201,8 @@ def run_all_tests_temporal_qc():
     test_summarize_fd_threshold_01()
     test_outlier_timepoints()
     test_quality_timepoints()
-    test_quality_timepoints_no_automask()    
+    test_quality_timepoints_no_automask()
+    test_global_correlation()
     
     
     
