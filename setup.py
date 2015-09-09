@@ -8,11 +8,13 @@ def main():
           version='1.0.2',
           description='A collection of three quality assessment pipelines ' \
                       'for anatomical MRI and functional MRI scans.',
-          url='https://github.com/preprocessed-connectomes-project/' \
-              'quality-assessment-protocol',
           author='Cameron Craddock, Zarrar Shehzad, Steven Giavasis,' \
                  'Daniel Clark',
           author_email='cameron.craddock@childmind.org',
+          url='https://github.com/preprocessed-connectomes-project/' \
+              'quality-assessment-protocol',
+          download_url='https://github.com/preprocessed-connectomes-project/'\
+                       'quality-assessment-protocol/tarball/1.0.2',
           license='',
           packages=['qap'],
           package_data={'qap': ['inpoint*.txt',
