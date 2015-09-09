@@ -203,7 +203,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
 
 
 def run_func_motion_correct(functional_scan, start_idx, stop_idx,
-                                slice_timing_correction=False):
+                                slice_timing_correction=False, run=True):
 
     # stand-alone runner for functional motion correct workflow
 
@@ -252,14 +252,19 @@ def run_func_motion_correct(functional_scan, start_idx, stop_idx,
     workflow.connect(node, out_file, ds, 'coordinate_transformation')
 
 
-    workflow.run(plugin='MultiProc', plugin_args= \
-                     {'n_procs': num_cores_per_subject})
+    if run == True:
 
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
 
-    outpath = glob.glob(os.path.join(workflow_dir, "func_motion_correct", \
-                                     "*"))[0] 
+        outpath = glob.glob(os.path.join(workflow_dir, "func_motion_correct",\
+                                         "*"))[0]
 
-    return outpath
+        return outpath
+        
+    else:
+    
+        return workflow, workflow.base_dir
 
 
 
@@ -282,6 +287,9 @@ def functional_brain_mask_workflow(workflow, resource_pool, config):
 
     #check_input_resources(resource_pool, "func_motion_correct")
 
+    if "use_bet" not in config.keys():
+        config["use_bet"] = False
+
 
     if "func_motion_correct" not in resource_pool.keys():
 
@@ -291,11 +299,27 @@ def functional_brain_mask_workflow(workflow, resource_pool, config):
             func_motion_correct_workflow(workflow, resource_pool, config)
 
   
-    func_get_brain_mask = pe.Node(interface=preprocess.Automask(),
-                                  name='func_get_brain_mask')
+    if config["use_bet"] == False:
 
-    func_get_brain_mask.inputs.outputtype = 'NIFTI_GZ'
-        
+        func_get_brain_mask = pe.Node(interface=preprocess.Automask(),
+                                      name='func_get_brain_mask')
+
+        func_get_brain_mask.inputs.outputtype = 'NIFTI_GZ'
+
+    else:
+
+        func_get_brain_mask = pe.Node(interface=fsl.BET(),
+                                      name='func_get_brain_mask_BET')
+
+        func_get_brain_mask.inputs.mask = True
+        func_get_brain_mask.inputs.functional = True
+
+        erode_one_voxel = pe.Node(interface=fsl.ErodeImage(),
+                                  name='erode_one_voxel')
+
+        erode_one_voxel.inputs.kernel_shape = 'box'
+        erode_one_voxel.inputs.kernel_size = 1.0
+       
 
     #if isinstance(tuple, resource_pool["func_motion_correct"]):
         
@@ -307,14 +331,24 @@ def functional_brain_mask_workflow(workflow, resource_pool, config):
             resource_pool["func_motion_correct"]
 
 
-    resource_pool["functional_brain_mask"] = (func_get_brain_mask, 'out_file')
+    if config["use_bet"] == False:
+
+        resource_pool["functional_brain_mask"] = (func_get_brain_mask, \
+                                                     'out_file')
+
+    else:
+
+        workflow.connect(func_get_brain_mask, 'mask_file',
+                             erode_one_voxel, 'in_file')
+
+        resource_pool["functional_brain_mask"] = (erode_one_voxel, 'out_file')
 
 
     return workflow, resource_pool
 
 
 
-def run_functional_brain_mask(func_motion_correct, use_bet=False):
+def run_functional_brain_mask(func_motion_correct, use_bet=False, run=True):
 
     # stand-alone runner for functional brain mask workflow
 
@@ -354,15 +388,19 @@ def run_functional_brain_mask(func_motion_correct, use_bet=False):
 
     workflow.connect(node, out_file, ds, output)
 
+    if run == True:
 
-    workflow.run(plugin='MultiProc', plugin_args= \
-                     {'n_procs': num_cores_per_subject})
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
 
+        outpath = glob.glob(os.path.join(workflow_dir, "functional_brain" \
+                                "_mask", "*"))[0]
 
-    outpath = glob.glob(os.path.join(workflow_dir, "functional_brain_mask", \
-                                     "*"))[0] 
-
-    return outpath 
+        return outpath
+        
+    else:
+    
+        return workflow, workflow.base_dir
 
 
 
@@ -421,7 +459,7 @@ def mean_functional_workflow(workflow, resource_pool, config):
 
 
  
-def run_mean_functional(func_motion_correct):
+def run_mean_functional(func_motion_correct, run=True):
 
     # stand-alone runner for mean functional workflow
 
@@ -462,14 +500,18 @@ def run_mean_functional(func_motion_correct):
 
     workflow.connect(node, out_file, ds, output)
 
+    if run == True:
 
-    workflow.run(plugin='MultiProc', plugin_args= \
-                     {'n_procs': num_cores_per_subject})
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
 
+        outpath = glob.glob(os.path.join(workflow_dir, "mean_functional", \
+                                         "*"))[0] 
 
-    outpath = glob.glob(os.path.join(workflow_dir, "mean_functional", \
-                                     "*"))[0] 
-
-    return outpath
-
+        return outpath
+        
+    else:
+    
+        return workflow, workflow.base_dir
+        
 

@@ -11,9 +11,6 @@ from tempfile import mkdtemp
 # DVARS
 from dvars import mean_dvars_wrapper
 
-# MeanFD
-## borrowed from C-PAC
-## from CPAC.generate_motion_statistics import calculate_FD_J as fd_jenkinson
 
 def fd_jenkinson(in_file):
 
@@ -225,3 +222,44 @@ def mean_quality_timepoints(*args, **kwrds):
     return mean_qualities
     
     
+
+def global_correlation(func_motion, func_mask):
+
+    import scipy
+    import numpy as np
+    from dvars import load
+
+    zero_variance_func = load(func_motion, func_mask)
+
+    list_of_ts = zero_variance_func.transpose()
+
+    # get array of z-scored values of each voxel in each volume of the
+    # timeseries
+    demeaned_normed = []
+
+    for ts in list_of_ts:
+
+        demeaned_normed.append(scipy.stats.mstats.zscore(ts))
+
+    demeaned_normed = np.asarray(demeaned_normed)
+
+
+    # make an average of the normalized timeseries, into one averaged
+    # timeseries, a vector of N volumes
+    volume_list = demeaned_normed.transpose()
+
+    avg_ts = []
+
+    for voxel in volume_list:
+
+        avg_ts.append(voxel.mean())
+    
+    avg_ts = np.asarray(avg_ts)
+
+
+    # calculate the global correlation
+    gcor = (avg_ts.transpose().dot(avg_ts))/len(avg_ts)
+
+
+    return gcor
+

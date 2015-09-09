@@ -5,7 +5,7 @@ def main():
     from setuptools import setup
 
     setup(name='qap',
-          version='1.0.1',
+          version='1.0.2',
           description='A collection of three quality assessment pipelines ' \
                       'for anatomical MRI and functional MRI scans.',
           url='https://github.com/preprocessed-connectomes-project/' \
@@ -17,6 +17,7 @@ def main():
           packages=['qap'],
           package_data={'qap': ['inpoint*.txt',
                                 'test_data/*.nii.gz',
+                                'test_data/workflow_reference/*/*',
                                 'test_data/*/*/*/*/*']},
           scripts=glob("scripts/*"),
           zip_safe=False)

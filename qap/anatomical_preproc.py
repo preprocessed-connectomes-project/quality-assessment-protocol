@@ -48,7 +48,7 @@ def anatomical_reorient_workflow(workflow, resource_pool, config):
 
 
 
-def run_anatomical_reorient(anatomical_scan):
+def run_anatomical_reorient(anatomical_scan, run=True):
 
     # stand-alone runner for anatomical reorient workflow
 
@@ -87,15 +87,19 @@ def run_anatomical_reorient(anatomical_scan):
     workflow.connect(node, out_file, ds, 'anatomical_reorient')
 
 
-    workflow.run(plugin='MultiProc', plugin_args= \
-                     {'n_procs': num_cores_per_subject})
+    if run == True:
 
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
 
-    outpath = glob.glob(os.path.join(workflow_dir, "anatomical_reorient", \
-                                     "*"))[0]
+        outpath = glob.glob(os.path.join(workflow_dir, "anatomical_reorient",\
+                                         "*"))[0]
 
+        return outpath
 
-    return outpath
+    else:
+
+        return workflow, workflow.base_dir
 
 
 
@@ -167,7 +171,7 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config):
 
 
 
-def run_anatomical_skullstrip(anatomical_reorient):
+def run_anatomical_skullstrip(anatomical_reorient, run=True):
 
     # stand-alone runner for anatomical skullstrip workflow
 
@@ -205,16 +209,19 @@ def run_anatomical_skullstrip(anatomical_reorient):
 
     workflow.connect(node, out_file, ds, 'anatomical_brain')
 
+    if run == True:
 
-    workflow.run(plugin='MultiProc', plugin_args= \
-                     {'n_procs': num_cores_per_subject})
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
 
+        outpath = glob.glob(os.path.join(workflow_dir, "anatomical_brain", \
+                                         "*"))[0]
 
-    outpath = glob.glob(os.path.join(workflow_dir, "anatomical_brain", \
-                                     "*"))[0]
+        return outpath
 
+    else:
 
-    return outpath
+        return workflow, workflow.base_dir
 
 
 
@@ -275,7 +282,7 @@ def flirt_anatomical_linear_registration(workflow, resource_pool, config):
 
 
 def run_flirt_anatomical_linear_registration(anatomical_brain, \
-                                                 template_brain):
+                                                 template_brain, run=True):
 
     # stand-alone runner for FSL FLIRT anatomical linear registration workflow
 
@@ -319,16 +326,20 @@ def run_flirt_anatomical_linear_registration(anatomical_brain, \
 
     workflow.connect(node, out_file, ds, 'flirt_linear_warped_image')
 
+    if run == True:
 
-    workflow.run(plugin='MultiProc', plugin_args= \
-                     {'n_procs': num_cores_per_subject})
-
-
-    outpath = glob.glob(os.path.join(workflow_dir, "flirt_linear_warped_" \
-                                     "image", "*"))[0]
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
 
 
-    return outpath
+        outpath = glob.glob(os.path.join(workflow_dir, "flirt_linear_" \
+                                         "warped_image", "*"))[0]
+
+        return outpath
+
+    else:
+
+        return workflow, workflow.base_dir
 
 
 
@@ -437,7 +448,8 @@ def ants_anatomical_linear_registration(workflow, resource_pool, config):
     
     
 def run_ants_anatomical_linear_registration(anatomical_brain, \
-                                                template_brain, num_cores=1):
+                                                template_brain, num_cores=1, \
+                                                run=True):
 
     # stand-alone runner for anatomical skullstrip workflow
 
@@ -482,16 +494,19 @@ def run_ants_anatomical_linear_registration(anatomical_brain, \
 
     workflow.connect(node, out_file, ds, 'ants_linear_warped_image')
 
+    if run == True:
 
-    workflow.run(plugin='MultiProc', plugin_args= \
-                     {'n_procs': num_cores_per_subject})
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
 
+        outpath = glob.glob(os.path.join(workflow_dir, "ants_linear_warped_" \
+                                         "image", "*"))[0]
 
-    outpath = glob.glob(os.path.join(workflow_dir, "ants_linear_warped_" \
-                                     "image", "*"))[0]
+        return outpath
 
+    else:
 
-    return outpath
+        return workflow
 
 
 
@@ -566,7 +581,7 @@ def segmentation_workflow(workflow, resource_pool, config):
 
 
 
-def run_segmentation_workflow(anatomical_brain):
+def run_segmentation_workflow(anatomical_brain, run=True):
 
     # stand-alone runner for segmentation workflow
 
@@ -610,15 +625,17 @@ def run_segmentation_workflow(anatomical_brain):
         workflow.connect(node, out_file, ds, 'anatomical_%s_mask' % seg)
 
 
-    workflow.run(plugin='MultiProc', plugin_args= \
-                     {'n_procs': num_cores_per_subject})
+    if run == True:
 
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
 
-    outpath = glob.glob(os.path.join(workflow_dir, "anatomical_*_mask", \
-                                     "*"))
+        outpath = glob.glob(os.path.join(workflow_dir, "anatomical_*_mask", \
+                                         "*"))
 
+        return outpath
 
-    return outpath
+    else:
 
-
+        return workflow, workflow.base_dir
 

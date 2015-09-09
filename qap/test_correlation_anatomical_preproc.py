@@ -44,69 +44,15 @@ def test_run_anatomical_reorient():
     bool_vector = ref_out_data == output_data
 
     assert bool_vector.all()
-    
-    
-    
-def test_run_anatomical_skullstrip():
+
+
+
+def test_run_flirt_anatomical_linear_registration():
 
     import os
-    import commands
-    
     import pkg_resources as p
 
-    from qap.anatomical_preproc import run_anatomical_skullstrip
-
-
-    if "anatomical_skullstrip" in os.listdir(os.getcwd()):
-
-        err = "\n[!] The output folder for this workflow already exists.\n"
-
-        raise Exception(err)
-
-
-    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                        "anat_1", \
-                                        "anatomical_reorient", \
-                                        "mprage_resample.nii.gz"))
-
-    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                  "anat_1", \
-                                  "anatomical_brain", \
-                                  "mprage_resample_calc.nii.gz"))
-
-    # run the workflow
-    output = run_anatomical_skullstrip(anat_reorient)
-
-    # make the correlation
-    ref_out_data = nb.load(ref_out).get_data()  
-    output_data = nb.load(output).get_data()
-    
-    os.system("rm -R anatomical_skullstrip")
-
-
-    # create a vector of True and False values
-    bool_vector = ref_out_data == output_data
-
-    assert bool_vector.all()
-
-
-
-def test_run_ants_anatomical_linear_registration():
-
-    import os
-    import commands
-    
-    import pkg_resources as p
-
-    from qap.anatomical_preproc import run_ants_anatomical_linear_registration
-
-
-    if "ants_anatomical_linear_registration" in os.listdir(os.getcwd()):
-
-        err = "\n[!] The output folder for this workflow already exists.\n"
-
-        raise Exception(err)
-
+    from qap.anatomical_preproc import run_flirt_anatomical_linear_registration
 
     anat_brain = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                      "anat_1", \
@@ -116,29 +62,39 @@ def test_run_ants_anatomical_linear_registration():
     template_brain = p.resource_filename("qap", os.path.join("test_data", \
                                          "MNI152_T1_2mm_brain.nii.gz"))
 
-    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                  "anat_1", \
-                                  "ants_linear_warped_image", \
-                                  "transform_Warped.nii.gz"))
+    ref_wf_input_file = p.resource_filename("qap", os.path.join(test_sub_dir,\
+                                            "anat_1", \
+                                            "flirt_affine_xfm", \
+                                            "wf_input_string.txt"))
 
-    # run the workflow
-    output = run_ants_anatomical_linear_registration(anat_brain, \
-                                                         template_brain)
+    wf = run_flirt_anatomical_linear_registration(anat_brain, \
+                                                      template_brain, 0)
 
-    # make the correlation
-    ref_out_data = nb.load(ref_out).get_data()  
-    output_data = nb.load(output).get_data()
+
+    calc_flirt_warp = wf.get_node("calc_flirt_warp")
     
-    os.system("rm -R ants_anatomical_linear_registration")
+    inputs = []
+    ref_inputs = []
+    
+    inputs.append(calc_flirt_warp.inputs.in_file)
+    inputs.append(calc_flirt_warp.inputs.reference)
+    inputs.append(calc_flirt_warp.inputs.cost)
+    
+    ref_inputs.append(anat_brain)
+    ref_inputs.append(template_brain)
+    ref_inputs.append("corratio")
+    
+    flag = 0
+    
+    for test,ref in zip(inputs,ref_inputs):
+        if test == ref:
+            flag += 1
 
 
-    # create a vector of True and False values
-    bool_vector = ref_out_data == output_data
+    assert flag == 3
 
-    assert bool_vector.all()
-    
-    
-    
+
+
 def test_run_segmentation_workflow():
 
     import os
@@ -201,15 +157,3 @@ def test_run_segmentation_workflow():
 
 
     assert correlation_count == 3
-
-
-
-def run_all_tests_anatomical_preproc():
-
-    test_run_anatomical_reorient()
-    test_run_anatomical_skullstrip()
-    test_run_ants_anatomical_linear_registration()
-    test_run_segmentation_workflow()
-
-
-

@@ -3,66 +3,6 @@
 test_sub_dir = "test_data/1019436/session_1"
 
 
-def test_get_idx_whole_timeseries():
-
-    import os
-    import pkg_resources as p
-
-    from qap.functional_preproc import get_idx
-    
-    
-    func_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "rest_1", \
-                                    "functional_scan", \
-                                    "rest.nii.gz"))    
-    
-    idx_tuple = get_idx(func_scan, "End", 0)
-    
-    
-    assert idx_tuple == (151,0)
-    
-    
-    
-def test_get_idx_partial_timeseries():
-
-    import os
-    import pkg_resources as p
-
-    from qap.functional_preproc import get_idx
-    
-    
-    func_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "rest_1", \
-                                    "functional_scan", \
-                                    "rest.nii.gz"))    
-    
-    idx_tuple = get_idx(func_scan, 100, 20)
-    
-    
-    assert idx_tuple == (100,20)
-    
-    
-    
-def test_get_idx_partial_timeseries_overshoot():
-
-    import os
-    import pkg_resources as p
-
-    from qap.functional_preproc import get_idx
-    
-    
-    func_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "rest_1", \
-                                    "functional_scan", \
-                                    "rest.nii.gz"))    
-    
-    idx_tuple = get_idx(func_scan, 250, 20)
-    
-    
-    assert idx_tuple == (151,20)
-    
-                                 
-                                    
 def test_run_func_motion_correct_no_slice_time():
 
     import os
@@ -148,8 +88,8 @@ def test_run_func_motion_correct_slice_time():
     bool_vector = ref_out_data == output_data
 
     assert bool_vector.all()
-    
-    
+
+
 
 def test_run_functional_brain_mask_3dautomask():
 
@@ -194,9 +134,9 @@ def test_run_functional_brain_mask_3dautomask():
     bool_vector = ref_out_data == output_data
 
     assert bool_vector.all()
-    
-    
-    
+
+
+
 def test_run_functional_brain_mask_BET():
 
     import os
@@ -240,9 +180,9 @@ def test_run_functional_brain_mask_BET():
     bool_vector = ref_out_data == output_data
 
     assert bool_vector.all()
-    
-    
-    
+
+
+
 def test_run_mean_functional():
 
     import os
@@ -288,17 +228,4 @@ def test_run_mean_functional():
     assert bool_vector.all()
 
 
-
-def run_all_tests_functional_preproc():
-
-    test_get_idx_whole_timeseries()
-    test_get_idx_partial_timeseries()
-    test_get_idx_partial_timeseries_overshoot()
-    test_run_func_motion_correct_no_slice_time()
-    test_run_func_motion_correct_slice_time()
-    test_run_functional_brain_mask_3dautomask()
-    test_run_functional_brain_mask_BET()
-    test_run_mean_functional()   
-    
-    
     

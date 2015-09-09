@@ -39,45 +39,8 @@ def select_thresh(input_skull):
 
     return thresh_out
 
-
-
-def c3d_affine_convert(infile, transform, standard):
-
-    import os
-
-    # convert the ANTS anat->standard affine to FSL format, so we can use
-    # std2imgcoord below
-
-    node_dir = os.getcwd()
-    
-    converted_xfm = os.path.join(node_dir, "qc_fsl_affine_xfm.mat")
-    
-
-    try:
-
-        c3d_cmd = "c3d_affine_tool -itk %s -ref %s -src %s -ras2fsl -o %s" \
-                  % (transform, standard, infile, converted_xfm)
-
-        os.system(c3d_cmd)
-
-    except:
-
-        err = "\n[!] The C3D Affine Tool failed to convert the ANTS " \
-              "affine transform file to FSL format.\n\nCommand: %s" \
-              % c3d_cmd
-        raise Exception(err)
-
-    
-    if os.path.isfile(converted_xfm):        
-        return converted_xfm
-    else:
-        err = "\n[!] The C3D Affine Tool did not successfully produce its " \
-              "converted ANTS-to-FSL format transform.\n\nCommand: %s" \
-              % c3d_cmd
-        raise Exception(err)
         
         
-
 def slice_head_mask(infile, transform, standard):
 
     import os
@@ -390,7 +353,7 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask, \
 
     from qap.temporal_qc import mean_dvars_wrapper, summarize_fd, \
                                 mean_outlier_timepoints, \
-                                mean_quality_timepoints
+                                mean_quality_timepoints, global_correlation
 
     # DVARS
     mean_dvars  = mean_dvars_wrapper(func_motion_correct, func_brain_mask)
@@ -400,10 +363,14 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask, \
                                                  threshold=motion_threshold)
 
     # 3dTout
-    mean_outlier= mean_outlier_timepoints(func_motion_correct, func_brain_mask)
+    mean_outlier = mean_outlier_timepoints(func_motion_correct, \
+                                               func_brain_mask)
 
     # 3dTqual
-    mean_quality= mean_quality_timepoints(func_motion_correct)
+    mean_quality = mean_quality_timepoints(func_motion_correct)
+
+    # new thing
+    gcor = global_correlation(func_motion_correct, func_brain_mask)
 
     # Compile
     qc = {
@@ -415,7 +382,8 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask, \
         'num_fd':   num_fd, 
         'perc_fd':  percent_fd, 
         "outlier":  mean_outlier,
-        "quality":  mean_quality
+        "quality":  mean_quality,
+        "gcor": gcor
     }
 
     if site_name:

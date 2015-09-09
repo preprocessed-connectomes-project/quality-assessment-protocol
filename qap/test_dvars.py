@@ -164,3 +164,9 @@ def test_ar1():
                                     
                                 
 
+def run_all_tests_dvars():
+
+    test_remove_zero_variance_voxels()
+    test_load()
+    test_robust_stdev()
+    test_ar1()

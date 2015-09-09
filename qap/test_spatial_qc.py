@@ -27,7 +27,7 @@ def test_summary_mask():
 
     summary_tuple = summary_mask(anat_data, mask_data)
 
-    assert summary_tuple == (419.6682196897284, 313.74669703973018, 3349975)
+    assert summary_tuple == (252.25360846882191, 288.84526666983822, 6449165)
     
     
     
@@ -116,7 +116,7 @@ def test_fber():
 
     fber_out = fber(anat_data, mask_data)
 
-    assert fber_out == 672.5508111505
+    assert fber_out == 539.65627087395478
 
 
 
@@ -138,7 +138,7 @@ def test_efc():
 
     efc_out = efc(anat_data)
 
-    assert efc_out == 0.430141308439828
+    assert efc_out == 0.43014130843982828
 
 
 
@@ -167,7 +167,7 @@ def test_artifacts_no_qi2():
 
     art_out = artifacts(anat_data, mask_data, calculate_qi2=False)
 
-    assert art_out == (0.063601601, None)
+    assert art_out == (0.06788309163289169, None)
 
 
 
@@ -224,8 +224,8 @@ def test_fwhm_out_vox():
 
     fwhm_out = fwhm(anat_file, mask_file, out_vox=True)
 
-    assert fwhm_out == (3.5655491499068379, 3.9207807010902229, \
-                        4.0859699705086703, 3.8512161978600825)
+    assert fwhm_out == (3.8645990786077786, 4.2436707588274638, \
+                        4.4152715799969178, 4.168066707775659)
 
 
 
@@ -249,12 +249,12 @@ def test_fwhm_no_out_vox():
 
     fwhm_out = fwhm(anat_file, mask_file, out_vox=False)
 
-    assert fwhm_out == (3.56555, 3.9207800000000002, 4.0859500000000004, \
-                        3.85121)
+    assert fwhm_out == (3.8645999999999998, 4.2436699999999998, \
+                        4.4152500000000003, 4.1680599999999997)
 
 
 
-def test_ghost_direction_x():
+def test_ghost_direction():
 
     import os
     import pickle
@@ -278,39 +278,15 @@ def test_ghost_direction_x():
     mean_epi_data = load_image(mean_epi)
     funcmask_data = load_mask(func_brain_mask, mean_epi)
 
-    gsr_out = ghost_direction(mean_epi_data, funcmask_data, "x")
+    gsr_out_x = ghost_direction(mean_epi_data, funcmask_data, "x")
+    gsr_out_y = ghost_direction(mean_epi_data, funcmask_data, "y")
+    gsr_out_z = ghost_direction(mean_epi_data, funcmask_data, "z")
 
-    assert gsr_out == -0.016198311
+    gsr_out_all = (gsr_out_x, gsr_out_y, gsr_out_z)
 
+    print gsr_out_all
 
-
-def test_ghost_direction_y():
-
-    import os
-    import pickle
-    import pkg_resources as p
-
-    from qap.spatial_qc import ghost_direction
-    from qap.qap_utils import load_image, load_mask
-
-    mean_epi = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                   "rest_1", \
-                                   "mean_functional", \
-                                   "rest_calc_tshift_resample_volreg_" \
-                                   "tstat.nii.gz"))
-                                   
-    func_brain_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                          "rest_1", \
-                                          "functional_brain_mask", \
-                                          "rest_calc_tshift_resample_volreg" \
-                                          "_mask.nii.gz"))
-
-    mean_epi_data = load_image(mean_epi)
-    funcmask_data = load_mask(func_brain_mask, mean_epi)
-
-    gsr_out = ghost_direction(mean_epi_data, funcmask_data, "y")
-
-    assert gsr_out == 0.016582608
+    assert gsr_out_all == (-0.013489312, 0.016911652, 0.080058813)
 
 
 
@@ -326,8 +302,7 @@ def run_all_tests_spatial_qc():
     #test_artifacts()
     test_fwhm_out_vox()
     test_fwhm_no_out_vox()
-    test_ghost_direction_x()
-    test_ghost_direction_y()
+    test_ghost_direction()
 
     
     
