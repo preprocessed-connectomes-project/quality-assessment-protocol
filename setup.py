@@ -22,17 +22,18 @@ def main():
                                 'test_data/workflow_reference/*/*',
                                 'test_data/*/*/*/*/*']},
           scripts=glob("scripts/*"),
+          install_requires=["scipy", "nipype", "nibabel", "nitime", "pyyaml", "pandas"],
           zip_safe=False)
-          
-          
-          
+
+
+
 if __name__ == "__main__":
 
     import os
     import sys
-    
+
     local_path = os.path.dirname(os.path.abspath(sys.argv[0]))
     os.chdir(local_path)
     sys.path.insert(0, local_path)
-    
+
     main()
