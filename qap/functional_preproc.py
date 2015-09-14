@@ -3,9 +3,9 @@
 def get_idx(in_files, stop_idx=None, start_idx=None):
 
     """
-    Method to get the first and the last slice for
+    Method to get the first and the last volume for
     the functional run. It verifies the user specified
-    first and last slice. If the values are not valid, it 
+    first and last volume. If the values are not valid, it 
     calculates and returns the very first and the last slice 
     
     Parameters
@@ -24,10 +24,10 @@ def get_idx(in_files, stop_idx=None, start_idx=None):
     Returns
     -------
     stop_idx :  int
-        Value of first slice to consider for the functional run 
+        Value of first volume to consider for the functional run 
         
     start_idx : int 
-        Value of last slice to consider for the functional run
+        Value of last volume to consider for the functional run
         
     """
 
