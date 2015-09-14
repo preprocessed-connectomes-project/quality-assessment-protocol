@@ -35,10 +35,7 @@ def get_idx(in_files, stop_idx=None, start_idx=None):
     #startidx = None
     from nibabel import load
 
-    img = load(in_files)
-    hdr = img.get_header()
-    nvols = int(hdr.get_data_shape()[3])
-    
+    nvols = load(in_files).shape[3]
 
     if (start_idx == None) or (start_idx < 0) or (start_idx > (nvols - 1)):
         startidx = 0
