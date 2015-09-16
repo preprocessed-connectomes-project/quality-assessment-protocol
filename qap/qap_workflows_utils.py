@@ -105,6 +105,10 @@ def slice_head_mask(infile, transform, standard):
 
     for coord in coords:
 
+        # in some cases, std2imgcoord outputs the string of coordinates twice
+        if "\n" in coord:
+            coord = coord.split("\n")[0]
+
         co_nums = coord.split(" ")
 
         co_nums_newlist = []
