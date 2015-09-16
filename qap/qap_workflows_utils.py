@@ -26,7 +26,7 @@ def select_thresh(input_skull):
 
     for line in cmd_out.split("\n"):
 
-        if "*" in line:
+        if "*" in line and not line.startswith("*"):
 
             vox_bin = line.replace(" ","").split(":")[0]
 
