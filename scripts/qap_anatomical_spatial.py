@@ -154,7 +154,6 @@ def build_anatomical_spatial_workflow(
             ds.inputs.base_directory = output_dir
             node, out_file = resource_pool[output]
             workflow.connect(node, out_file, ds, output)
-
             new_outputs += 1
 
     # PDF reporting
@@ -163,6 +162,8 @@ def build_anatomical_spatial_workflow(
             input_names=['in_csv'], output_names=['out_file'],
             function=report_anatomical))
         # connect pdfnode here
+        node, _ = resource_pool[output]
+        workflow.connect(node, 'csv_file', pdfnode, 'in_csv')
 
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
