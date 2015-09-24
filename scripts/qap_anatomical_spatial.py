@@ -4,8 +4,7 @@
 
 
 def build_anatomical_spatial_workflow(
-        resource_pool, config, subject_info, run_name, site_name=None,
-        with_reports=False):
+        resource_pool, config, subject_info, run_name, site_name=None):
 
     # build pipeline for each subject, individually
 
@@ -128,7 +127,7 @@ def build_anatomical_spatial_workflow(
     if "write_all_outputs" not in config.keys():
         config["write_all_outputs"] = False
 
-    if config["write_all_outputs"] == True:
+    if config["write_all_outputs"]:
         for output in resource_pool.keys():
             # we use a check for len()==2 here to select those items in the
             # resource pool which are tuples of (node, node_output), instead
@@ -157,7 +156,8 @@ def build_anatomical_spatial_workflow(
             new_outputs += 1
 
     # PDF reporting
-    if with_reports:
+    if config['write_report']:
+        logger.info('Appending PDF reporting node')
         import qap.viz.reports as qvr
         pdfnode = pe.Node(niu.Function(
             input_names=['in_csv'], output_names=['out_file'],
@@ -180,7 +180,7 @@ def build_anatomical_spatial_workflow(
         print "\nEverything is already done for subject %s." % sub_id
 
     # Remove working directory when done
-    if config["write_all_outputs"] == False:
+    if not config["write_all_outputs"]:
         try:
             work_dir = os.path.join(workflow.base_dir, scan_id)
 
@@ -200,8 +200,7 @@ def build_anatomical_spatial_workflow(
     return workflow
 
 
-def run(subject_list, pipeline_config_yaml, cloudify=False,
-        with_reports=False):
+def run(subject_list, pipeline_config_yaml, cloudify=False):
 
     import os
     import yaml
@@ -292,14 +291,14 @@ def run(subject_list, pipeline_config_yaml, cloudify=False,
             procss = [Process(
                 target=build_anatomical_spatial_workflow,
                 args=(flat_sub_dict[sub_info], config, sub_info, run_name,
-                      sites_dict[sub_info[0]], with_reports))
+                      sites_dict[sub_info[0]]))
                       for sub_info in flat_sub_dict.keys()]
 
         elif len(sites_dict) == 0:
             procss = [Process(
                 target=build_anatomical_spatial_workflow,
                 args=(flat_sub_dict[sub_info], config, sub_info, run_name,
-                      None, with_reports))
+                      None))
                       for sub_info in flat_sub_dict.keys()]
 
         pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
@@ -389,7 +388,7 @@ def run(subject_list, pipeline_config_yaml, cloudify=False,
         site_name = filesplit[1].split("/")[1]
 
         build_anatomical_spatial_workflow(subject_list[sub], config, sub,
-                                          run_name, site_name, with_reports)
+                                          run_name, site_name)
 
 
 # Main routine
@@ -450,6 +449,10 @@ def main():
               "sure which you are trying to do!)\n")
 
     else:
+        config = args.config
+
+        if getattr(config, 'write_report') is None:
+            config['write_report'] = args.with_reports
 
         if args.subj_idx and args.s3_dict_yml:
 
@@ -458,7 +461,7 @@ def main():
             from qap.cloud_utils import dl_subj_from_s3, upl_qap_output
 
             # Download and build a one-subject dictionary from S3
-            sub_dict = dl_subj_from_s3(args.subj_idx, args.config,
+            sub_dict = dl_subj_from_s3(args.subj_idx, config,
                                        args.s3_dict_yml)
 
             if not sub_dict:
@@ -467,17 +470,15 @@ def main():
                 raise Exception(err)
 
             # Run it
-            run(sub_dict, args.config, cloudify=True,
-                with_reports=args.with_reports)
+            run(sub_dict, config, cloudify=True)
 
             # Upload results
-            upl_qap_output(args.config)
+            upl_qap_output(config)
 
         elif args.sublist:
 
             # Run it
-            run(args.sublist, args.config, cloudify=False,
-                with_reports=args.with_reports)
+            run(args.sublist, config, cloudify=False)
 
 
 # Make executable
