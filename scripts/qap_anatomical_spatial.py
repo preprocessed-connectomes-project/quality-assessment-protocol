@@ -22,6 +22,7 @@ def build_anatomical_spatial_workflow(
     import glob
     import yaml
 
+    from qap.viz.reports import report_anatomical
     import time
     from time import strftime
     from nipype import config as nyconfig
@@ -160,7 +161,7 @@ def build_anatomical_spatial_workflow(
     if with_reports:
         pdfnode = pe.Node(niu.Function(
             input_names=['in_csv'], output_names=['out_file'],
-            function=report_anatomical))
+            function=report_anatomical), name='ReportPDF')
         # connect pdfnode here
         node, _ = resource_pool[output]
         workflow.connect(node, 'csv_file', pdfnode, 'in_csv')
