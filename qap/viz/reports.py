@@ -169,6 +169,15 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
 
 def report_anatomical(in_csv, subject=None, sc_split=False,
                       out_file='anatomical.pdf'):
+    import numpy as np
+    import pandas as pd
+    import math
+    import nibabel as nb
+    import seaborn as sns
+    from matplotlib import rc
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+    from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
     report = PdfPages(out_file)
     df = pd.read_csv(in_csv)
     sessions = pd.unique(df.session.ravel())
