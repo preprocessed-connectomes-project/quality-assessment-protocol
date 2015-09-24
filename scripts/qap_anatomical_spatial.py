@@ -17,7 +17,6 @@ def build_anatomical_spatial_workflow(
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
-
     import nipype.interfaces.fsl.maths as fsl
 
     import glob
@@ -69,25 +68,19 @@ def build_anatomical_spatial_workflow(
 
     pipeline_start_time = time.time()
 
-    logger.info("Pipeline start time: %s" % pipeline_start_stamp)
-
-    logger.info("Contents of resource pool:\n" + str(resource_pool))
-
-    logger.info("Configuration settings:\n" + str(config))
+    logger.info(
+        ("Pipeline start time: %s.\nContents of resource pool: %s.\n"
+         "Configuration settings: %s.\n") % (
+            pipeline_start_stamp, str(resource_pool), str(config)))
 
     # for QAP spreadsheet generation only
-    config["subject_id"] = sub_id
-
-    config["session_id"] = session_id
-
-    config["scan_id"] = scan_id
-
-    config["run_name"] = run_name
+    config = {'subject_id' = sub_id, 'session_id' = session_id,
+              'scan_id' = scan_id, 'run_name' = run_name}
 
     if site_name:
         config["site_name"] = site_name
 
-    # os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS'] = \
+    # os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS'] =
     #    str(config["num_ants_threads"])
 
     workflow = pe.Workflow(name=scan_id)
@@ -96,48 +89,38 @@ def build_anatomical_spatial_workflow(
                                      session_id)
 
     # set up crash directory
-    workflow.config['execution'] = \
-        {'crashdump_dir': config["output_directory"]}
+    workflow.config['execution'] = {
+        'crashdump_dir': config["output_directory"]}
 
     # update that resource pool with what's already in the output directory
     for resource in os.listdir(output_dir):
-
-        if os.path.isdir(os.path.join(output_dir, resource)) and \
-                resource not in resource_pool.keys():
-
-            resource_pool[resource] = glob.glob(os.path.join(output_dir,
-                                                             resource, "*"))[0]
+        if (os.path.isdir(os.path.join(output_dir, resource)) and
+                resource not in resource_pool.keys()):
+            resource_pool[resource] = glob.glob(os.path.join(
+                output_dir, resource, "*"))[0]
 
     # resource pool check
     invalid_paths = []
 
     for resource in resource_pool.keys():
-
         if not os.path.isfile(resource_pool[resource]):
-
             invalid_paths.append((resource, resource_pool[resource]))
 
     if len(invalid_paths) > 0:
-
-        err = "\n\n[!] The paths provided in the subject list to the " \
-              "following resources are not valid:\n"
+        err = ("\n\n[!] The paths provided in the subject list to the "
+               "following resources are not valid:\n")
 
         for path_tuple in invalid_paths:
-
             err = err + path_tuple[0] + ": " + path_tuple[1] + "\n"
 
         err = err + "\n\n"
-
         raise Exception(err)
 
     # start connecting the pipeline
-
     if "qap_anatomical_spatial" not in resource_pool.keys():
-
         from qap.qap_workflows import qap_anatomical_spatial_workflow
-
-        workflow, resource_pool = \
-            qap_anatomical_spatial_workflow(workflow, resource_pool, config)
+        workflow, resource_pool = qap_anatomical_spatial_workflow(
+            workflow, resource_pool, config)
 
     # set up the datasinks
     new_outputs = 0
@@ -146,9 +129,7 @@ def build_anatomical_spatial_workflow(
         config["write_all_outputs"] = False
 
     if config["write_all_outputs"] == True:
-
         for output in resource_pool.keys():
-
             # we use a check for len()==2 here to select those items in the
             # resource pool which are tuples of (node, node_output), instead
             # of the items which are straight paths to files
@@ -159,29 +140,19 @@ def build_anatomical_spatial_workflow(
             # pool) and had to be generated
 
             if len(resource_pool[output]) == 2:
-
                 ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
                 ds.inputs.base_directory = output_dir
-
                 node, out_file = resource_pool[output]
-
                 workflow.connect(node, out_file, ds, output)
-
                 new_outputs += 1
-
     else:
-
         # write out only the output CSV (default)
-
         output = "qap_anatomical_spatial"
 
         if len(resource_pool[output]) == 2:
-
             ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
             ds.inputs.base_directory = output_dir
-
             node, out_file = resource_pool[output]
-
             workflow.connect(node, out_file, ds, output)
 
             new_outputs += 1
@@ -195,17 +166,15 @@ def build_anatomical_spatial_workflow(
 
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
-
-        workflow.write_graph(dotfilename=os.path.join(output_dir, run_name +
-                                                      ".dot"),
-                             simple_form=False)
+        workflow.write_graph(
+            dotfilename=os.path.join(output_dir, run_name + ".dot"),
+            simple_form=False)
 
         workflow.run(
             plugin='MultiProc',
             plugin_args={'n_procs': config["num_cores_per_subject"]})
 
     else:
-
         print "\nEverything is already done for subject %s." % sub_id
 
     # Remove working directory when done
@@ -221,14 +190,11 @@ def build_anatomical_spatial_workflow(
             pass
 
     pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
-
     pipeline_end_time = time.time()
 
     logger.info("Elapsed time (minutes) since last start: %s"
                 % ((pipeline_end_time - pipeline_start_time) / 60))
-
     logger.info("Pipeline end time: %s" % pipeline_end_stamp)
-
     return workflow
 
 
@@ -299,8 +265,8 @@ def run(subject_list, pipeline_config_yaml, cloudify=False,
         os.makedirs(config["output_directory"])
     except:
         if not os.path.isdir(config["output_directory"]):
-            err = "[!] Output directory unable to be created.\n" \
-                  "Path: %s\n\n" % config["output_directory"]
+            err = "[!] Output directory unable to be created.\n"
+                "Path: %s\n\n" % config["output_directory"]
             raise Exception(err)
         else:
             pass
@@ -309,8 +275,8 @@ def run(subject_list, pipeline_config_yaml, cloudify=False,
         os.makedirs(config["working_directory"])
     except:
         if not os.path.isdir(config["working_directory"]):
-            err = "[!] Output directory unable to be created.\n" \
-                  "Path: %s\n\n" % config["working_directory"]
+            err = "[!] Output directory unable to be created.\n"
+                "Path: %s\n\n" % config["working_directory"]
             raise Exception(err)
         else:
             pass
@@ -460,26 +426,26 @@ def main():
 
     # checks
     if args.subj_idx and not args.s3_dict_yml and not args.sublist:
-        print "\n[!] You provided --subj_idx, but not --s3_dict_yml. When " \
-              "executing cloud-based runs, please provide both inputs.\n"
+        print "\n[!] You provided --subj_idx, but not --s3_dict_yml. When "
+            "executing cloud-based runs, please provide both inputs.\n"
 
     elif args.s3_dict_yml and not args.subj_idx and not args.sublist:
-        print "\n[!] You provided --s3_dict_yml, but not --subj_idx. When " \
-              "executing cloud-based runs, please provide both inputs.\n"
+        print "\n[!] You provided --s3_dict_yml, but not --subj_idx. When "
+            "executing cloud-based runs, please provide both inputs.\n"
 
     elif not args.sublist and not args.subj_idx and not args.s3_dict_yml:
-        print "\n[!] Either --sublist is required for regular runs, or both "\
-              "--subj_idx and --s3_dict_yml for cloud-based runs.\n"
+        print "\n[!] Either --sublist is required for regular runs, or both "
+            "--subj_idx and --s3_dict_yml for cloud-based runs.\n"
 
     elif args.sublist and args.subj_idx and args.s3_dict_yml:
-        print "\n[!] Either --sublist is required for regular runs, or both "\
-              "--subj_idx and --s3_dict_yml for cloud-based runs, but not " \
-              "all three. (I'm not sure which you are trying to do!)\n"
+        print "\n[!] Either --sublist is required for regular runs, or both "
+            "--subj_idx and --s3_dict_yml for cloud-based runs, but not "
+            "all three. (I'm not sure which you are trying to do!)\n"
 
     elif args.sublist and (args.subj_idx or args.s3_dict_yml):
-        print "\n[!] Either --sublist is required for regular runs, or both "\
-              "--subj_idx and --s3_dict_yml for cloud-based runs. (I'm not " \
-              "sure which you are trying to do!)\n"
+        print "\n[!] Either --sublist is required for regular runs, or both "
+            "--subj_idx and --s3_dict_yml for cloud-based runs. (I'm not "
+            "sure which you are trying to do!)\n"
 
     else:
 
@@ -494,8 +460,8 @@ def main():
                                        args.s3_dict_yml)
 
             if not sub_dict:
-                err = "\n[!] Subject dictionary was not successfully " \
-                      "downloaded from the S3 bucket!\n"
+                err = "\n[!] Subject dictionary was not successfully "
+                    "downloaded from the S3 bucket!\n"
                 raise Exception(err)
 
             # Run it
