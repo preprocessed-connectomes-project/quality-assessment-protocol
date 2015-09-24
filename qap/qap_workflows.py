@@ -39,11 +39,10 @@ def qap_mask_workflow(workflow, resource_pool, config):
         workflow, resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config)
 
-    select_thresh = pe.Node(niu.Function(input_names=['input_skull'],
-                                         output_names=['thresh_out'],
-                                         function=select_thresh),
-                            name='qap_headmask_select_thresh',
-                            iterfield=['input_skull'])
+    select_thresh = pe.Node(niu.Function(
+        input_names=['input_skull'], output_names=['thresh_out'],
+        function=select_thresh), name='qap_headmask_select_thresh',
+        iterfield=['input_skull'])
 
     mask_skull = pe.Node(
         fsl.Threshold(args='-bin'), name='qap_headmask_thresh')
