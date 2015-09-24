@@ -149,8 +149,7 @@ def run_qap_mask(anatomical_reorient, flirt_affine_xfm, template_skull,
         return workflow, workflow.base_dir
 
 
-def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
-                                    out_csv='qap_anatomical_spatial.csv'):
+def qap_anatomical_spatial_workflow(workflow, resource_pool, config):
     # resource pool should have:
     #     anatomical_reorient
     #     qap_head_mask
@@ -202,6 +201,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
 #                                          output_names=['outfile'],
 #                                          function=write_to_csv),
 #                             name='qap_anatomical_spatial_to_csv')
+    out_csv = op.join(config['output_directory'], 'qap_anatomical_spatial.csv')
     spatial_to_csv = pe.Node(
         nam.AddCSVRow(in_file=out_csv), name='qap_anatomical_spatial_to_csv')
 
@@ -435,8 +435,7 @@ def run_single_qap_functional_spatial(
         return workflow, workflow.base_dir
 
 
-def qap_functional_temporal_workflow(workflow, resource_pool, config,
-                                     out_csv='qap_functional_temporal.csv'):
+def qap_functional_temporal_workflow(workflow, resource_pool, config):
 
     # resource pool should have:
     #     functional_brain_mask
@@ -483,6 +482,8 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config,
 #    temporal_to_csv = pe.Node(niu.Function(
 #        input_names=['sub_qap_dict'], output_names=['outfile'],
 #        function=write_to_csv), name='qap_functional_temporal_to_csv')
+    out_csv = op.join(
+        config['output_directory'], 'qap_functional_temporal.csv')
     temporal_to_csv = pe.Node(
         nam.AddCSVRow(in_file=out_csv), name='qap_functional_temporal_to_csv')
 
@@ -592,3 +593,4 @@ def run_single_qap_functional_temporal(func_motion, functional_brain_mask,
     else:
 
         return workflow, workflow.base_dir
+base_dir

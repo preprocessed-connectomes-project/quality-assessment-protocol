@@ -159,8 +159,10 @@ def build_anatomical_spatial_workflow(
         logger.info('Appending PDF reporting node')
         import qap.viz.reports as qvr
         pdfnode = pe.Node(niu.Function(
-            input_names=['in_csv'], output_names=['out_file'],
+            input_names=['in_csv', 'out_file'], output_names=['out_file'],
             function=qvr.report_anatomical), name='ReportPDF')
+        pdfnode.inputs.out_file = op.join(
+            config['output_directory'], 'anatomical.pdf')
         # connect pdfnode here
         node, _ = resource_pool[output]
         workflow.connect(node, 'csv_file', pdfnode, 'in_csv')
@@ -475,4 +477,6 @@ def main():
 
 # Make executable
 if __name__ == "__main__":
+    main()
+:
     main()
