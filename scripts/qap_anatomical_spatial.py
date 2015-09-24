@@ -3,8 +3,9 @@
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 
 
-def build_anatomical_spatial_workflow(resource_pool, config, subject_info,
-                                      run_name, site_name=None):
+def build_anatomical_spatial_workflow(
+        resource_pool, config, subject_info, run_name, site_name=None,
+        with_reports=False):
 
     # build pipeline for each subject, individually
 
@@ -15,8 +16,8 @@ def build_anatomical_spatial_workflow(resource_pool, config, subject_info,
 
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
+    import nipype.interfaces.utility as niu
 
-    import nipype.interfaces.utility as util
     import nipype.interfaces.fsl.maths as fsl
 
     import glob
@@ -185,6 +186,13 @@ def build_anatomical_spatial_workflow(resource_pool, config, subject_info,
 
             new_outputs += 1
 
+    # PDF reporting
+    if with_reports:
+        pdfnode = pe.Node(niu.Function(
+            input_names=['in_csv'], output_names=['out_file'],
+            function=report_anatomical))
+        # connect pdfnode here
+
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
 
@@ -193,7 +201,8 @@ def build_anatomical_spatial_workflow(resource_pool, config, subject_info,
                              simple_form=False)
 
         workflow.run(
-            plugin='MultiProc', plugin_args={'n_procs': config["num_cores_per_subject"]})
+            plugin='MultiProc',
+            plugin_args={'n_procs': config["num_cores_per_subject"]})
 
     else:
 
@@ -223,7 +232,8 @@ def build_anatomical_spatial_workflow(resource_pool, config, subject_info,
     return workflow
 
 
-def run(subject_list, pipeline_config_yaml, cloudify=False):
+def run(subject_list, pipeline_config_yaml, cloudify=False,
+        with_reports=False):
 
     import os
     import yaml
@@ -311,17 +321,17 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
     if not cloudify:
 
         if len(sites_dict) > 0:
-
-            procss = [Process(target=build_anatomical_spatial_workflow,
-                              args=(flat_sub_dict[sub_info], config, sub_info,
-                                    run_name, sites_dict[sub_info[0]]))
+            procss = [Process(
+                target=build_anatomical_spatial_workflow,
+                args=(flat_sub_dict[sub_info], config, sub_info, run_name,
+                      sites_dict[sub_info[0]], with_reports))
                       for sub_info in flat_sub_dict.keys()]
 
         elif len(sites_dict) == 0:
-
-            procss = [Process(target=build_anatomical_spatial_workflow,
-                              args=(flat_sub_dict[sub_info], config, sub_info,
-                                    run_name, None))
+            procss = [Process(
+                target=build_anatomical_spatial_workflow,
+                args=(flat_sub_dict[sub_info], config, sub_info, run_name,
+                      None, with_reports))
                       for sub_info in flat_sub_dict.keys()]
 
         pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
@@ -411,7 +421,7 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
         site_name = filesplit[1].split("/")[1]
 
         build_anatomical_spatial_workflow(subject_list[sub], config, sub,
-                                          run_name, site_name)
+                                          run_name, site_name, with_reports)
 
 
 # Main routine
@@ -441,6 +451,10 @@ def main():
 
     req.add_argument("config", type=str,
                      help="filepath to pipeline configuration YAML")
+
+    # Write PDF reports
+    group.add_argument("--with-reports", action='store_true', default=False,
+                       help="Write a summary report in PDF format.")
 
     args = parser.parse_args()
 
@@ -485,7 +499,8 @@ def main():
                 raise Exception(err)
 
             # Run it
-            run(sub_dict, args.config, cloudify=True)
+            run(sub_dict, args.config, cloudify=True,
+                with_reports=args.with_reports)
 
             # Upload results
             upl_qap_output(args.config)
@@ -493,7 +508,8 @@ def main():
         elif args.sublist:
 
             # Run it
-            run(args.sublist, args.config, cloudify=False)
+            run(args.sublist, args.config, cloudify=False,
+                with_reports=args.with_reports)
 
 
 # Make executable

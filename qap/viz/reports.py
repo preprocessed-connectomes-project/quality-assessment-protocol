@@ -48,7 +48,7 @@ def plot_measures(df, measures, ncols=4, title='Group level report',
     if nmeasures % ncols > 0:
         nrows += 1
 
-    fig = plt.figure(figsize=(3*ncols, 3*nrows))
+    fig = plt.figure(figsize=(3 * ncols, 3 * nrows))
     gs = gridspec.GridSpec(nrows, ncols)
 
     axes = []
@@ -95,7 +95,7 @@ def plot_all(df, groups, subject=None, out_file='testplot.pdf'):
     for i, snames in enumerate(groups):
         axes.append(plt.subplot(gs[i]))
         sns.violinplot(data=df[snames], ax=axes[-1])
-        #df[snames].plot(kind='box', ax=axes[-1])
+        # df[snames].plot(kind='box', ax=axes[-1])
 
         if subject is not None:
             fig.suptitle(subject)
@@ -125,7 +125,7 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
         mean_data = nifti_file
 
     n_images = mean_data.shape[2]
-    row, col = _calc_rows_columns(figsize[0]/figsize[1], n_images)
+    row, col = _calc_rows_columns(figsize[0] / figsize[1], n_images)
 
     if overlay_mask:
         overlay_data = nb.load(overlay_mask).get_data()
@@ -136,7 +136,7 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
 
     fig.subplots_adjust(top=0.85)
     for image in (range(n_images)):
-        ax = fig.add_subplot(row, col, image+1)
+        ax = fig.add_subplot(row, col, image + 1)
         data_mask = np.logical_not(np.isnan(mean_data))
         if overlay_mask:
             ax.set_rasterized(True)
@@ -148,7 +148,7 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
         if overlay_mask:
             cmap = cm.Reds  # @UndefinedVariable
             cmap._init()
-            alphas = np.linspace(0, 0.75, cmap.N+3)
+            alphas = np.linspace(0, 0.75, cmap.N + 3)
             cmap._lut[:, -1] = alphas
             ax.imshow(np.fliplr(overlay_data[:, :, image].T), vmin=0, vmax=1,
                       cmap=cmap, interpolation='nearest', origin='lower')
