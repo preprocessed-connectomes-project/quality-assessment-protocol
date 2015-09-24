@@ -73,9 +73,9 @@ def build_anatomical_spatial_workflow(
          "Configuration settings: %s.\n") % (
             pipeline_start_stamp, str(resource_pool), str(config)))
 
-    # for QAP spreadsheet generation only
-    config = {'subject_id': sub_id, 'session_id': session_id,
-              'scan_id': scan_id, 'run_name': run_name}
+    # for QAP spreadsheet generation onlygit
+    config.update({'subject_id': sub_id, 'session_id': session_id,
+                   'scan_id': scan_id, 'run_name': run_name})
 
     if site_name:
         config["site_name"] = site_name
@@ -427,26 +427,26 @@ def main():
 
     # checks
     if args.subj_idx and not args.s3_dict_yml and not args.sublist:
-        print ("\n[!] You provided --subj_idx, but not --s3_dict_yml. When "
-               "executing cloud-based runs, please provide both inputs.\n")
+        print("\n[!] You provided --subj_idx, but not --s3_dict_yml. When "
+              "executing cloud-based runs, please provide both inputs.\n")
 
     elif args.s3_dict_yml and not args.subj_idx and not args.sublist:
-        print ("\n[!] You provided --s3_dict_yml, but not --subj_idx. When "
-               "executing cloud-based runs, please provide both inputs.\n")
+        print("\n[!] You provided --s3_dict_yml, but not --subj_idx. When "
+              "executing cloud-based runs, please provide both inputs.\n")
 
     elif not args.sublist and not args.subj_idx and not args.s3_dict_yml:
-        print ("\n[!] Either --sublist is required for regular runs, or both "
-               "--subj_idx and --s3_dict_yml for cloud-based runs.\n")
+        print("\n[!] Either --sublist is required for regular runs, or both "
+              "--subj_idx and --s3_dict_yml for cloud-based runs.\n")
 
     elif args.sublist and args.subj_idx and args.s3_dict_yml:
-        print ("\n[!] Either --sublist is required for regular runs, or both "
-               "--subj_idx and --s3_dict_yml for cloud-based runs, but not "
-               "all three. (I'm not sure which you are trying to do!)\n")
+        print("\n[!] Either --sublist is required for regular runs, or both "
+              "--subj_idx and --s3_dict_yml for cloud-based runs, but not "
+              "all three. (I'm not sure which you are trying to do!)\n")
 
     elif args.sublist and (args.subj_idx or args.s3_dict_yml):
-        print ("\n[!] Either --sublist is required for regular runs, or both "
-               "--subj_idx and --s3_dict_yml for cloud-based runs. (I'm not "
-               "sure which you are trying to do!)\n")
+        print("\n[!] Either --sublist is required for regular runs, or both "
+              "--subj_idx and --s3_dict_yml for cloud-based runs. (I'm not "
+              "sure which you are trying to do!)\n")
 
     else:
 
