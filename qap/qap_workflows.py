@@ -2,6 +2,7 @@
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 
+import os.path as op
 
 def qap_mask_workflow(workflow, resource_pool, config):
 
@@ -593,4 +594,3 @@ def run_single_qap_functional_temporal(func_motion, functional_brain_mask,
     else:
 
         return workflow, workflow.base_dir
-base_dir

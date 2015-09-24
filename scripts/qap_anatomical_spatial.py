@@ -11,6 +11,7 @@ def build_anatomical_spatial_workflow(
     # ~ 29 minutes per subject with 1 core to ANTS
 
     import os
+    import os.path as op
     import sys
 
     import nipype.interfaces.io as nio
@@ -478,5 +479,4 @@ def main():
 # Make executable
 if __name__ == "__main__":
     main()
-:
-    main()
+
