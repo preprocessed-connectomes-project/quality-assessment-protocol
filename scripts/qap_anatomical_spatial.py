@@ -19,7 +19,6 @@ def build_anatomical_spatial_workflow(
     import nipype.interfaces.fsl.maths as fsl
 
     import glob
-    import yaml
 
     import time
     from time import strftime
@@ -200,12 +199,10 @@ def build_anatomical_spatial_workflow(
     return workflow
 
 
-def run(subject_list, pipeline_config_yaml, cloudify=False):
-
+def run(subject_list, config, cloudify=False):
     import os
     import yaml
     import time
-
     from multiprocessing import Process
 
     if not cloudify:
@@ -259,9 +256,6 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
 
                         flat_sub_dict[sub_info_tuple].update(resource_dict)
 
-    with open(pipeline_config_yaml, "r") as f:
-        config = yaml.load(f)
-
     try:
         os.makedirs(config["output_directory"])
     except:
@@ -283,7 +277,7 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
             pass
 
     # get the pipeline config file name, use it as the run name
-    run_name = pipeline_config_yaml.split("/")[-1].split(".")[0]
+    run_name = config['pipeline_config_yaml'].split("/")[-1].split(".")[0]
 
     if not cloudify:
 
@@ -393,21 +387,18 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
 
 # Main routine
 def main():
-
     import argparse
+    import yaml
 
     parser = argparse.ArgumentParser()
-
     group = parser.add_argument_group("Regular Use Inputs (non-cloud runs)")
 
     cloudgroup = parser.add_argument_group("AWS Cloud Inputs (only required "
                                            "for AWS Cloud runs)")
 
     req = parser.add_argument_group("Required Inputs")
-
     cloudgroup.add_argument('--subj_idx', type=int,
                             help='Subject index to run')
-
     cloudgroup.add_argument('--s3_dict_yml', type=str,
                             help='Path to YAML file containing S3 input '
                             'filepaths dictionary')
@@ -415,10 +406,8 @@ def main():
     # Subject list (YAML file)
     group.add_argument("--sublist", type=str,
                        help="filepath to subject list YAML")
-
     req.add_argument("config", type=str,
                      help="filepath to pipeline configuration YAML")
-
     # Write PDF reports
     group.add_argument("--with-reports", action='store_true', default=False,
                        help="Write a summary report in PDF format.")
@@ -449,7 +438,10 @@ def main():
               "sure which you are trying to do!)\n")
 
     else:
-        config = args.config
+        with open(args.config, "r") as f:
+            config = yaml.load(f)
+
+        config['pipeline_config_yaml'] = args.config
 
         if getattr(config, 'write_report') is None:
             config['write_report'] = args.with_reports
