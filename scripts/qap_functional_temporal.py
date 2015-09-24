@@ -3,8 +3,9 @@
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 
 
-def build_functional_temporal_workflow(resource_pool, config, subject_info,
-                                       run_name, site_name=None):
+def build_functional_temporal_workflow(
+        resource_pool, config, subject_info, run_name,
+        site_name=None, with_reports=False):
 
     # build pipeline for each subject, individually
 
@@ -69,26 +70,18 @@ def build_functional_temporal_workflow(resource_pool, config, subject_info,
 
     pipeline_start_time = time.time()
 
-    logger.info(pipeline_start_stamp)
-
-    logger.info("Contents of resource pool:\n" + str(resource_pool))
-
-    logger.info("Configuration settings:\n" + str(config))
+    logger.info(
+        ("%s\nContents of resource pool:\n%s\nConfiguration settings:\n%s\n") %
+        (pipeline_start_stamp, str(resource_pool), str(config)))
 
     # for QAP spreadsheet generation only
-    config["subject_id"] = sub_id
-
-    config["session_id"] = session_id
-
-    config["scan_id"] = scan_id
-
-    config["run_name"] = run_name
+    config = {"subject_id" = sub_id, "session_id" = session_id,
+              "scan_id" = scan_id, "run_name" = run_name}
 
     if site_name:
         config["site_name"] = site_name
 
     workflow = pe.Workflow(name=scan_id)
-
     workflow.base_dir = os.path.join(config["working_directory"], sub_id,
                                      session_id)
 
@@ -98,9 +91,8 @@ def build_functional_temporal_workflow(resource_pool, config, subject_info,
 
     # update that resource pool with what's already in the output directory
     for resource in os.listdir(output_dir):
-
-        if os.path.isdir(os.path.join(output_dir, resource)) and resource not in resource_pool.keys():
-
+        if (os.path.isdir(os.path.join(output_dir, resource)) and
+                resource not in resource_pool.keys()):
             resource_pool[resource] = glob.glob(os.path.join(output_dir,
                                                              resource, "*"))[0]
 
@@ -108,30 +100,23 @@ def build_functional_temporal_workflow(resource_pool, config, subject_info,
     invalid_paths = []
 
     for resource in resource_pool.keys():
-
         if not os.path.isfile(resource_pool[resource]):
-
             invalid_paths.append((resource, resource_pool[resource]))
 
     if len(invalid_paths) > 0:
-
         err = "\n\n[!] The paths provided in the subject list to the " \
               "following resources are not valid:\n"
 
         for path_tuple in invalid_paths:
-
             err = err + path_tuple[0] + ": " + path_tuple[1] + "\n"
 
         err = err + "\n\n"
-
         raise Exception(err)
 
     # start connecting the pipeline
 
     if "qap_functional_temporal" not in resource_pool.keys():
-
         from qap.qap_workflows import qap_functional_temporal_workflow
-
         workflow, resource_pool = \
             qap_functional_temporal_workflow(workflow, resource_pool, config)
 
@@ -142,7 +127,6 @@ def build_functional_temporal_workflow(resource_pool, config, subject_info,
         config["write_all_outputs"] = False
 
     if config["write_all_outputs"] == True:
-
         for output in resource_pool.keys():
 
             # we use a check for len()==2 here to select those items in the
@@ -155,45 +139,42 @@ def build_functional_temporal_workflow(resource_pool, config, subject_info,
             # pool) and had to be generated
 
             if len(resource_pool[output]) == 2:
-
                 ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
                 ds.inputs.base_directory = output_dir
-
                 node, out_file = resource_pool[output]
-
                 workflow.connect(node, out_file, ds, output)
-
                 new_outputs += 1
 
     else:
-
         # write out only the output CSV (default)
-
         output = "qap_functional_temporal"
-
         if len(resource_pool[output]) == 2:
-
             ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
             ds.inputs.base_directory = output_dir
-
             node, out_file = resource_pool[output]
-
             workflow.connect(node, out_file, ds, output)
-
             new_outputs += 1
+
+    # PDF reporting
+    if with_reports:
+        pdfnode = pe.Node(niu.Function(
+            input_names=['in_csv'], output_names=['out_file'],
+            function=report_anatomical))
+        # connect pdfnode here
+        node, _ = resource_pool[output]
+        workflow.connect(node, 'csv_file', pdfnode, 'in_csv')
 
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
-
-        workflow.write_graph(dotfilename=os.path.join(output_dir, run_name +
-                                                      ".dot"),
-                             simple_form=False)
+        workflow.write_graph(
+            dotfilename=os.path.join(output_dir, run_name + ".dot"),
+            simple_form=False)
 
         workflow.run(
-            plugin='MultiProc', plugin_args={'n_procs': config["num_cores_per_subject"]})
+            plugin='MultiProc',
+            plugin_args={'n_procs': config["num_cores_per_subject"]})
 
     else:
-
         print "\nEverything is already done for subject %s." % sub_id
 
     # Remove working directory when done
@@ -209,18 +190,16 @@ def build_functional_temporal_workflow(resource_pool, config, subject_info,
             pass
 
     pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
-
     pipeline_end_time = time.time()
 
     logger.info("Elapsed time (minutes) since last start: %s"
                 % ((pipeline_end_time - pipeline_start_time) / 60))
-
     logger.info("Pipeline end time: %s" % pipeline_end_stamp)
-
     return workflow
 
 
-def run(subject_list, pipeline_config_yaml, cloudify=False):
+def run(subject_list, pipeline_config_yaml, cloudify=False,
+        with_reports=False):
 
     import os
     import yaml
@@ -306,19 +285,18 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
     run_name = pipeline_config_yaml.split("/")[-1].split(".")[0]
 
     if not cloudify:
-
         if len(sites_dict) > 0:
-
-            procss = [Process(target=build_functional_temporal_workflow,
-                              args=(flat_sub_dict[sub_info], config, sub_info,
-                                    run_name, sites_dict[sub_info[0]]))
+            procss = [Process(
+                target=build_functional_temporal_workflow,
+                args=(flat_sub_dict[sub_info], config, sub_info, run_name,
+                      [sub_info[0]], with_reports))
                       for sub_info in flat_sub_dict.keys()]
 
         elif len(sites_dict) == 0:
-
-            procss = [Process(target=build_functional_temporal_workflow,
-                              args=(flat_sub_dict[sub_info], config, sub_info,
-                                    run_name, None))
+            procss = [Process(
+                target=build_functional_temporal_workflow,
+                args=(flat_sub_dict[sub_info], config, sub_info, run_name,
+                      None, with_reports))
                       for sub_info in flat_sub_dict.keys()]
 
         pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
@@ -394,7 +372,6 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
         pid.close()
 
     else:
-
         # run on cloud
         sub = subject_list.keys()[0]
 
@@ -408,7 +385,7 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
         site_name = filesplit[1].split("/")[1]
 
         build_functional_temporal_workflow(subject_list[sub], config, sub,
-                                           run_name, site_name)
+                                           run_name, site_name, with_reports)
 
 
 def main():
@@ -434,6 +411,10 @@ def main():
     # Subject list (YAML file)
     group.add_argument("--sublist", type=str,
                        help="filepath to subject list YAML")
+
+    # Write PDF reports
+    group.add_argument("--with-reports", action='store_true', default=False,
+                       help="Write a summary report in PDF format.")
 
     req.add_argument("config", type=str,
                      help="filepath to pipeline configuration YAML")
@@ -481,15 +462,16 @@ def main():
                 raise Exception(err)
 
             # Run it
-            run(sub_dict, args.config, cloudify=True)
+            run(sub_dict, args.config, cloudify=True,
+                with_reports=args.with_reports)
 
             # Upload results
             upl_qap_output(args.config)
 
         elif args.sublist:
-
             # Run it
-            run(args.sublist, args.config, cloudify=False)
+            run(args.sublist, args.config, cloudify=False,
+                with_reports=args.with_reports)
 
 
 if __name__ == "__main__":

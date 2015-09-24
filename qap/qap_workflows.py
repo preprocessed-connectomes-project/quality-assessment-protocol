@@ -165,6 +165,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
+    import nipype.algorithms.misc as nam
 
     from qap_workflows_utils import qap_anatomical_spatial, \
         write_to_csv
@@ -240,7 +241,6 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
             resource_pool["anatomical_csf_mask"]
 
     # Subject infos
-
     spatial.inputs.subject_id = config["subject_id"]
     spatial.inputs.session_id = config["session_id"]
     spatial.inputs.scan_id = config["scan_id"]
@@ -436,7 +436,8 @@ def run_single_qap_functional_spatial(
         return workflow, workflow.base_dir
 
 
-def qap_functional_temporal_workflow(workflow, resource_pool, config):
+def qap_functional_temporal_workflow(workflow, resource_pool, config,
+                                     out_csv='qap_functional_temporal.csv'):
 
     # resource pool should have:
     #     functional_brain_mask
@@ -445,11 +446,10 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
 
     import os
     import sys
-
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
-
     import nipype.interfaces.utility as niu
+    import nipype.algorithms.misc as nam
 
     from qap_workflows_utils import qap_functional_temporal, \
         write_to_csv
@@ -481,9 +481,11 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
                      'scan_id', 'site_name'], output_names=['qc'],
         function=qap_functional_temporal), name='qap_functional_temporal')
 
-    temporal_to_csv = pe.Node(niu.Function(
-        input_names=['sub_qap_dict'], output_names=['outfile'],
-        function=write_to_csv), name='qap_functional_temporal_to_csv')
+#    temporal_to_csv = pe.Node(niu.Function(
+#        input_names=['sub_qap_dict'], output_names=['outfile'],
+#        function=write_to_csv), name='qap_functional_temporal_to_csv')
+    temporal_to_csv = pe.Node(
+        nam.AddCSVRow(in_file=out_csv), name='qap_functional_temporal_to_csv')
 
     if len(resource_pool["func_motion_correct"]) == 2:
         node, out_file = resource_pool["func_motion_correct"]
@@ -518,8 +520,10 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
     if "site_name" in config.keys():
         temporal.inputs.site_name = config["site_name"]
 
-    workflow.connect(temporal, 'qc', temporal_to_csv, 'sub_qap_dict')
-    resource_pool["qap_functional_temporal"] = (temporal_to_csv, 'outfile')
+#    workflow.connect(temporal, 'qc', temporal_to_csv, 'sub_qap_dict')
+#    resource_pool["qap_functional_temporal"] = (temporal_to_csv, 'outfile')
+    workflow.connect(temporal, 'qc', temporal_to_csv, '_outputs')
+    resource_pool["qap_anatomical_spatial"] = (temporal_to_csv, 'csv_file')
     return workflow, resource_pool
 
 
