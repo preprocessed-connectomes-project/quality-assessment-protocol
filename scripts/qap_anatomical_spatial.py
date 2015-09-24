@@ -162,7 +162,7 @@ def build_anatomical_spatial_workflow(
             input_names=['in_csv'], output_names=['out_file'],
             function=qvr.report_anatomical), name='ReportPDF')
         # connect pdfnode here
-        node, _ = resource_pool[output]
+        node, out_file = resource_pool['qap_anatomical_spatial']
         workflow.connect(node, 'csv_file', pdfnode, 'in_csv')
 
     # run the pipeline (if there is anything to do)
@@ -443,7 +443,7 @@ def main():
 
         config['pipeline_config_yaml'] = args.config
 
-        if getattr(config, 'write_report') is None:
+        if 'write_report' not in config:
             config['write_report'] = args.with_reports
 
         if args.subj_idx and args.s3_dict_yml:
