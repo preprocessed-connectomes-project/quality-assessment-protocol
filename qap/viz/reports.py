@@ -200,10 +200,14 @@ def report_anatomical(in_csv, subject=None, sc_split=False,
 
     for ss in sessions:
         sesdf = df.loc[df['session'] == ss]
+        scans = pd.unique(sesdf.scan.ravel())
+
+        if subject is not None:
+            for sc in scans:
+                data = sesdf.loc[sesdf['scan'] == sc]['anat_data']
+                plot_mosaic(data, title=subject)
 
         if sc_split:
-            scans = pd.unique(sesdf.scan.ravel())
-
             for sc in scans:
                 subset = sesdf.loc[sesdf['scan'] == sc]
 
