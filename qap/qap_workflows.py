@@ -4,6 +4,7 @@
 
 import os.path as op
 
+
 def qap_mask_workflow(workflow, resource_pool, config):
 
     import os
@@ -582,7 +583,7 @@ def run_single_qap_functional_temporal(func_motion, functional_brain_mask,
 
     workflow.connect(node, out_file, ds, output)
 
-    if run == True:
+    if run:
 
         workflow.run(
             plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})

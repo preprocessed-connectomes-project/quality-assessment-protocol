@@ -4,8 +4,7 @@
 
 
 def build_functional_temporal_workflow(
-        resource_pool, config, subject_info, run_name,
-        site_name=None, with_reports=False):
+        resource_pool, config, subject_info, run_name, site_name=None):
 
     # build pipeline for each subject, individually
 
@@ -155,15 +154,6 @@ def build_functional_temporal_workflow(
             workflow.connect(node, out_file, ds, output)
             new_outputs += 1
 
-    # PDF reporting
-    if with_reports:
-        pdfnode = pe.Node(niu.Function(
-            input_names=['in_csv'], output_names=['out_file'],
-            function=report_anatomical))
-        # connect pdfnode here
-        node, _ = resource_pool[output]
-        workflow.connect(node, 'csv_file', pdfnode, 'in_csv')
-
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
         workflow.write_graph(
@@ -198,25 +188,21 @@ def build_functional_temporal_workflow(
     return workflow
 
 
-def run(subject_list, pipeline_config_yaml, cloudify=False,
-        with_reports=False):
-
+def run(subject_list, config, cloudify=False):
     import os
     import yaml
     from multiprocessing import Process
 
     import time
 
+    with open(subject_list, "r") as f:
+        subdict = yaml.load(f)
+
     if not cloudify:
-
-        with open(subject_list, "r") as f:
-            subdict = yaml.load(f)
-
         flat_sub_dict = {}
         sites_dict = {}
 
         for subid in subdict.keys():
-
             # sessions
             for session in subdict[subid].keys():
 
@@ -258,9 +244,6 @@ def run(subject_list, pipeline_config_yaml, cloudify=False,
 
                         flat_sub_dict[sub_info_tuple].update(resource_dict)
 
-    with open(pipeline_config_yaml, "r") as f:
-        config = yaml.load(f)
-
     try:
         os.makedirs(config["output_directory"])
     except:
@@ -282,21 +265,21 @@ def run(subject_list, pipeline_config_yaml, cloudify=False,
             pass
 
     # get the pipeline config file name, use it as the run name
-    run_name = pipeline_config_yaml.split("/")[-1].split(".")[0]
+    run_name = config['pipeline_config_yaml'].split("/")[-1].split(".")[0]
 
     if not cloudify:
         if len(sites_dict) > 0:
             procss = [Process(
                 target=build_functional_temporal_workflow,
                 args=(flat_sub_dict[sub_info], config, sub_info, run_name,
-                      [sub_info[0]], with_reports))
+                      [sub_info[0]]))
                       for sub_info in flat_sub_dict.keys()]
 
         elif len(sites_dict) == 0:
             procss = [Process(
                 target=build_functional_temporal_workflow,
                 args=(flat_sub_dict[sub_info], config, sub_info, run_name,
-                      None, with_reports))
+                      None))
                       for sub_info in flat_sub_dict.keys()]
 
         pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
@@ -385,12 +368,27 @@ def run(subject_list, pipeline_config_yaml, cloudify=False,
         site_name = filesplit[1].split("/")[1]
 
         build_functional_temporal_workflow(subject_list[sub], config, sub,
-                                           run_name, site_name, with_reports)
+                                           run_name, site_name)
+
+    # PDF reporting
+    if config['write_report']:
+        from nipype import logging
+        logger = logging.getLogger('workflow')
+        logger.info('Writing reports of subjects %s' % str(subdict.keys()))
+
+        import qap.viz.reports as qvr
+        in_csv = op.join(
+            config['output_directory'], 'qap_functional_temporal.csv')
+
+        for sub in subdict.keys():
+            out_file = op.join(
+                config['output_directory'], 'qap_func_temp_%s.pdf' % sub)
+            qvr.report_functional(in_csv, subject=sub, out_file=out_file)
 
 
 def main():
-
     import argparse
+    import yaml
 
     parser = argparse.ArgumentParser()
 
@@ -445,6 +443,16 @@ def main():
               "sure which you are trying to do!)\n"
 
     else:
+        with open(args.config, "r") as f:
+            config = yaml.load(f)
+
+        config['pipeline_config_yaml'] = args.config
+
+        if 'write_report' not in config:
+            config['write_report'] = False
+
+        if args.with_reports:
+            config['write_report'] = True
 
         if args.subj_idx and args.s3_dict_yml:
 
@@ -462,16 +470,14 @@ def main():
                 raise Exception(err)
 
             # Run it
-            run(sub_dict, args.config, cloudify=True,
-                with_reports=args.with_reports)
+            run(sub_dict, config, cloudify=True)
 
             # Upload results
             upl_qap_output(args.config)
 
         elif args.sublist:
             # Run it
-            run(args.sublist, args.config, cloudify=False,
-                with_reports=args.with_reports)
+            run(args.sublist, config, cloudify=False)
 
 
 if __name__ == "__main__":

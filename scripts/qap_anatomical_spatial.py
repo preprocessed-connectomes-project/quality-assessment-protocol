@@ -193,11 +193,10 @@ def run(subject_list, config, cloudify=False):
     import time
     from multiprocessing import Process
 
+    with open(subject_list, "r") as f:
+        subdict = yaml.load(f)
+
     if not cloudify:
-
-        with open(subject_list, "r") as f:
-            subdict = yaml.load(f)
-
         flat_sub_dict = {}
         sites_dict = {}
 
@@ -447,7 +446,10 @@ def main():
         config['pipeline_config_yaml'] = args.config
 
         if 'write_report' not in config:
-            config['write_report'] = args.with_reports
+            config['write_report'] = False
+
+        if args.with_reports:
+            config['write_report'] = True
 
         if args.subj_idx and args.s3_dict_yml:
 
@@ -468,10 +470,9 @@ def main():
             run(sub_dict, config, cloudify=True)
 
             # Upload results
-            upl_qap_output(config)
+            upl_qap_output(args.config)
 
         elif args.sublist:
-
             # Run it
             run(args.sublist, config, cloudify=False)
 
