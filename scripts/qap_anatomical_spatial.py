@@ -376,13 +376,13 @@ def run(subject_list, config, cloudify=False):
     if config['write_report']:
         from nipype import logging
         logger = logging.getLogger('workflow')
-        logger.info('Writing reports of subjects %s' % str(subject_list))
+        logger.info('Writing reports of subjects %s' % str(subdict.keys()))
 
         import qap.viz.reports as qvr
         in_csv = op.join(
             config['output_directory'], 'qap_anatomical_spatial.csv')
 
-        for sub in subject_list:
+        for sub in subdict.keys():
             out_file = op.join(
                 config['output_directory'], 'qap_anat_%s.pdf' % sub)
             qvr.report_anatomical(in_csv, subject=sub, out_file=out_file)

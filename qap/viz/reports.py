@@ -1,17 +1,19 @@
 #!/usr/bin/env python
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
+import matplotlib
+matplotlib.use('Agg')
+
 import numpy as np
 import pandas as pd
 import math
 import nibabel as nb
 import seaborn as sns
-from matplotlib import rc
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
 
-# rc('figure', figsize=(11.69, 8.27))  # for DINA4 size
+# matplotlib.rc('figure', figsize=(11.69, 8.27))  # for DINA4 size
 
 
 def _calc_rows_columns(ratio, n_images):
