@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
-
+import os
+import os.path as op
+import sys
 
 def build_anatomical_spatial_workflow(
         resource_pool, config, subject_info, run_name, site_name=None):
@@ -9,11 +11,6 @@ def build_anatomical_spatial_workflow(
     # build pipeline for each subject, individually
 
     # ~ 29 minutes per subject with 1 core to ANTS
-
-    import os
-    import os.path as op
-    import sys
-
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
@@ -154,19 +151,6 @@ def build_anatomical_spatial_workflow(
             node, out_file = resource_pool[output]
             workflow.connect(node, out_file, ds, output)
             new_outputs += 1
-
-    # PDF reporting
-    if config['write_report']:
-        logger.info('Appending PDF reporting node')
-        import qap.viz.reports as qvr
-        pdfnode = pe.Node(niu.Function(
-            input_names=['in_csv', 'out_file'], output_names=['out_file'],
-            function=qvr.report_anatomical), name='ReportPDF')
-        pdfnode.inputs.out_file = op.join(
-            config['output_directory'], 'anatomical.pdf')
-        # connect pdfnode here
-        node, out_file = resource_pool['qap_anatomical_spatial']
-        workflow.connect(node, 'csv_file', pdfnode, 'in_csv')
 
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
@@ -386,6 +370,17 @@ def run(subject_list, config, cloudify=False):
 
         build_anatomical_spatial_workflow(subject_list[sub], config, sub,
                                           run_name, site_name)
+
+    # PDF reporting
+    if config['write_report']:
+        from nipype import logging
+        logger = logging.getLogger('workflow')
+        logger.info('Writing reports...')
+        print subject_list
+
+        import qap.viz.reports as qvr
+        in_csv = op.join(
+            config['output_directory'], 'qap_anatomical_spatial.csv')
 
 
 # Main routine
