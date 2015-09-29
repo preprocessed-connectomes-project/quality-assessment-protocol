@@ -4,6 +4,7 @@
 import matplotlib
 matplotlib.use('Agg')
 
+import os.path as op
 import numpy as np
 import pandas as pd
 import math
@@ -120,7 +121,10 @@ def plot_all(df, groups, subject=None, out_file='testplot.pdf'):
 
 def plot_mosaic(nifti_file, title=None, overlay_mask=None,
                 figsize=(11.7, 8.3)):
-    if isinstance(nifti_file, str):
+    from six import string_types
+    from pylab import cm
+
+    if isinstance(nifti_file, string_types):
         nii = nb.load(nifti_file)
         mean_data = nii.get_data()
     else:
@@ -133,7 +137,7 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
         overlay_data = nb.load(overlay_mask).get_data()
 
     # create figures
-    fig = Figure(figsize=figsize)
+    fig = plt.Figure(figsize=figsize)
     FigureCanvas(fig)
 
     fig.subplots_adjust(top=0.85)
@@ -161,15 +165,15 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
         left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.01, hspace=0.1)
 
     if not title:
-        _, title = os.path.split(nifti_file)
+        _, title = op.split(nifti_file)
         title += " (last modified: %s)" % time.ctime(
-            os.path.getmtime(nifti_file))
+            op.getmtime(nifti_file))
     fig.suptitle(title, fontsize='10')
 
     return fig
 
 
-def report_anatomical(in_csv, subject=None, sc_split=False,
+def report_anatomical(in_csv, subject_wise=True, sc_split=False,
                       out_file='anatomical.pdf'):
     import numpy as np
     import pandas as pd
@@ -198,14 +202,22 @@ def report_anatomical(in_csv, subject=None, sc_split=False,
               ['snr']]
     headers = [v for gnames in groups for v in gnames]
 
+    subject_list = pd.unique(df.subject.ravel())
+
     for ss in sessions:
         sesdf = df.loc[df['session'] == ss]
         scans = pd.unique(sesdf.scan.ravel())
 
-        if subject is not None:
-            for sc in scans:
-                data = sesdf.loc[sesdf['scan'] == sc]['anat_data']
-                plot_mosaic(data, title=subject)
+        if subject_wise:
+            for subject in subject_list:
+                subdf = sesdf.loc[sesdf['subject'] == subject]
+                scans = pd.unique(subdf.scan.ravel())
+                for sc in scans:
+                    data = subdf.loc[subdf['scan'] == sc].anat_data[0]
+                    print data
+                    fig = plot_mosaic(data, title=subject)
+                    report.savefig(fig, dpi=300)
+                    fig.clf()
 
         if sc_split:
             for sc in scans:
