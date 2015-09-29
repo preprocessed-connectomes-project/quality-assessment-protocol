@@ -353,9 +353,10 @@ def run(subject_list, config, cloudify=False):
 
         pid.close()
 
-        # Join all processes
-        for p in procss:
-            p.join()
+        # Join all processes if report must be written out
+        if config['write_report']:
+            for p in procss:
+                p.join()
     else:
 
         # run on cloud

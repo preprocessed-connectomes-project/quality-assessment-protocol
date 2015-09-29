@@ -44,14 +44,15 @@ def plot_vline(cur_val, label, ax):
 
 
 def plot_measures(df, measures, ncols=4, title='Group level report',
-                  subject=None, out_file='testplot.pdf'):
+                  subject=None, figsize=(8.27, 11.69),
+                  out_file='testplot.pdf'):
     import matplotlib.gridspec as gridspec
     nmeasures = len(measures)
     nrows = nmeasures // ncols
     if nmeasures % ncols > 0:
         nrows += 1
 
-    fig = plt.figure(figsize=(3 * ncols, 3 * nrows))
+    fig = plt.figure(figsize=figsize)
     gs = gridspec.GridSpec(nrows, ncols)
 
     axes = []
@@ -85,13 +86,14 @@ def plot_measures(df, measures, ncols=4, title='Group level report',
     return fig
 
 
-def plot_all(df, groups, subject=None, out_file='testplot.pdf'):
+def plot_all(df, groups, subject=None, figsize=(11.69, 3),
+             out_file='testplot.pdf'):
     import matplotlib.gridspec as gridspec
     colnames = [v for gnames in groups for v in gnames]
     lengs = [len(el) for el in groups]
     ncols = np.sum(lengs)
 
-    fig = plt.figure(figsize=[ncols, 5])
+    fig = plt.figure(figsize=(8.3, 2))
     gs = gridspec.GridSpec(1, len(groups), width_ratios=lengs)
 
     axes = []
@@ -115,7 +117,7 @@ def plot_all(df, groups, subject=None, out_file='testplot.pdf'):
 
                 axes[-1].plot(pos, vals, markersize=5, linestyle='None',
                               color='w', marker='o', markeredgecolor='k')
-    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+    # plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
     return fig
 
 
@@ -173,7 +175,7 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
     return fig
 
 
-def report_anatomical(in_csv, subject_wise=True, sc_split=False,
+def report_anatomical(in_csv, sc_split=False,
                       out_file='anatomical.pdf'):
     import numpy as np
     import pandas as pd
@@ -208,38 +210,34 @@ def report_anatomical(in_csv, subject_wise=True, sc_split=False,
         sesdf = df.loc[df['session'] == ss]
         scans = pd.unique(sesdf.scan.ravel())
 
-        if subject_wise:
-            for subject in subject_list:
-                subdf = sesdf.loc[sesdf['subject'] == subject]
-                scans = pd.unique(subdf.scan.ravel())
-                for sc in scans:
-                    data = subdf.loc[subdf['scan'] == sc].anat_data[0]
-                    print data
-                    fig = plot_mosaic(data, title=subject)
-                    report.savefig(fig, dpi=300)
-                    fig.clf()
-
-        if sc_split:
+        for subject in subject_list:
+            print 'Generating subject %s' % subject
+            subdf = sesdf.loc[sesdf['subject'] == subject]
+            scans = pd.unique(subdf.scan.ravel())
             for sc in scans:
-                subset = sesdf.loc[sesdf['scan'] == sc]
-
-                if len(subset.index) > 1:
+                data = subdf.loc[subdf['scan'] == sc].anat_data.tolist()
+                fig = plot_mosaic(data[0], title=subject)
+                report.savefig(fig, dpi=300)
+                fig.clf()
+            if sc_split:
+                for sc in scans:
+                    subset = sesdf.loc[sesdf['scan'] == sc]
+                    if len(subset.index) > 1:
+                        fig = plot_measures(
+                            subset, headers, subject=subject,
+                            title='Report %s_%s' % (ss, sc))
+                        report.savefig(fig, dpi=300)
+                        fig.clf()
+            else:
+                if len(sesdf.index) > 1:
                     fig = plot_measures(
-                        subset, headers, subject=subject,
-                        title='Report %s_%s' % (ss, sc))
+                        sesdf, headers, subject=subject,
+                        title='Report %s' % ss)
                     report.savefig(fig, dpi=300)
                     fig.clf()
-        else:
-            if len(sesdf.index) > 1:
-                fig = plot_measures(
-                    sesdf, headers, subject=subject,
-                    title='Report %s' % ss)
-                report.savefig(fig, dpi=300)
-                fig.clf()
-
-                fig = plot_all(sesdf, groups, subject=subject)
-                report.savefig(fig, dpi=300)
-                fig.clf()
+                    fig = plot_all(sesdf, groups, subject=subject)
+                    report.savefig(fig, dpi=300)
+                    fig.clf()
 
     report.close()
     plt.close()
