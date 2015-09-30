@@ -276,13 +276,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
     bg_mask = 1 - fg_mask
 
     # Initialize QC
-    qc = dict()
-
-    qc['subject'] = subject_id
-
-    qc['session'] = session_id
-
-    qc['scan'] = scan_id
+    qc = dict(subject=subject_id, session=session_id, scan=scan_id)
 
     if site_name:
         qc['site'] = site_name
@@ -317,6 +311,9 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
     # SNR
     qc['snr'] = snr(qc['fg_mean'], qc['bg_std'])
+
+    qc['mean_epi'] = mean_epi
+    qc['mask'] = func_brain_mask
 
     return qc
 

@@ -284,7 +284,7 @@ def report_anatomical(in_csv, sc_split=False, split_files=True,
     return out_file
 
 
-def report_functional(in_csv, subject=None, sc_split=False,
+def report_functional(in_csv, sc_split=False, split_files=True,
                       out_file='functional.pdf'):
     import numpy as np
     import pandas as pd
@@ -295,41 +295,62 @@ def report_functional(in_csv, subject=None, sc_split=False,
     import matplotlib.pyplot as plt
     from matplotlib.backends.backend_pdf import PdfPages
     from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
-    report = PdfPages(out_file)
     df = pd.read_csv(in_csv)
-    sessions = pd.unique(df.session.ravel())
 
     groups = [[['dvars'], ['gcor'], ['mean_fd'],
                ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]]
     headers = [v for gnames in groups for v in gnames]
 
+    sessions = pd.unique(df.session.ravel())
+    subject_list = pd.unique(df.subject.ravel())
+
+    if not split_files:
+        report = PdfPages(out_file)
+    else:
+        tpl, _ = op.splitext(op.basename(out_file))
+        tpl = op.join(op.dirname(out_file), tpl) + '_%s.pdf'
+
     for ss in sessions:
         sesdf = df.loc[df['session'] == ss]
+        scans = pd.unique(sesdf.scan.ravel())
 
-        if sc_split:
-            scans = pd.unique(sesdf.scan.ravel())
+        for subject in subject_list:
+            if split_files:
+                report = PdfPages(tpl % subject)
 
+            subdf = sesdf.loc[sesdf['subject'] == subject]
+            scans = pd.unique(subdf.scan.ravel())
             for sc in scans:
-                subset = sesdf.loc[sesdf['scan'] == sc]
-
-                if len(subset.index) > 1:
-                    fig = plot_measures(
-                        subset, headers, subject=subject,
-                        title='Report %s_%s' % (ss, sc))
+                data = subdf.loc[subdf['scan'] == sc].mean_epi.tolist()
+                fig = plot_mosaic(data[0], title=subject)
+                report.savefig(fig, dpi=300)
+                fig.clf()
+            if sc_split:
+                for sc in scans:
+                    subset = sesdf.loc[sesdf['scan'] == sc]
+                    if len(subset.index) > 1:
+                        fig = plot_measures(
+                            subset, headers, subject=subject,
+                            title='Report %s_%s' % (ss, sc))
+                        report.savefig(fig, dpi=300)
+                        fig.clf()
+            else:
+                if len(sesdf.index) > 1:
+                    fig = plot_all(sesdf, groups, subject=subject)
                     report.savefig(fig, dpi=300)
                     fig.clf()
-        else:
-            if len(sesdf.index) > 1:
-                fig = plot_measures(
-                    sesdf, headers, subject=subject,
-                    title='Report %s' % ss)
-                report.savefig(fig, dpi=300)
-                fig.clf()
+                    fig = plot_measures(
+                        sesdf, headers, subject=subject,
+                        title='Report %s' % ss)
+                    report.savefig(fig, dpi=300)
+                    fig.clf()
 
-                fig = plot_all(sesdf, groups, subject=subject)
-                report.savefig(fig, dpi=300)
-                fig.clf()
+            if split_files:
+                report.close()
+                print 'Written report for subject %s' % subject
 
-    report.close()
+    if not split_files:
+        report.close()
+
     plt.close()
     return out_file

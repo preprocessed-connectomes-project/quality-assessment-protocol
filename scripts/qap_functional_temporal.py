@@ -354,6 +354,10 @@ def run(subject_list, config, cloudify=False):
 
         pid.close()
 
+        # Join all processes if report must be written out
+        if config['write_report']:
+            for p in procss:
+                p.join()
     else:
         # run on cloud
         sub = subject_list.keys()[0]
@@ -372,18 +376,16 @@ def run(subject_list, config, cloudify=False):
 
     # PDF reporting
     if config['write_report']:
+        import qap.viz.reports as qvr
         from nipype import logging
         logger = logging.getLogger('workflow')
-        logger.info('Writing reports of subjects %s' % str(subdict.keys()))
 
-        import qap.viz.reports as qvr
         in_csv = op.join(
             config['output_directory'], 'qap_functional_temporal.csv')
+        out_file = op.join(
+            config['output_directory'], 'qap_functional_temporal.pdf')
 
-        for sub in subdict.keys():
-            out_file = op.join(
-                config['output_directory'], 'qap_func_temp_%s.pdf' % sub)
-            qvr.report_functional(in_csv, subject=sub, out_file=out_file)
+        qvr.report_anatomical(in_csv, out_file=out_file)
 
 
 def main():
