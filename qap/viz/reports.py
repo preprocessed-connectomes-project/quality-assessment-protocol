@@ -44,8 +44,7 @@ def plot_vline(cur_val, label, ax):
 
 
 def plot_measures(df, measures, ncols=4, title='Group level report',
-                  subject=None, figsize=(8.27, 11.69),
-                  out_file='testplot.pdf'):
+                  subject=None, figsize=(8.27, 11.69)):
     import matplotlib.gridspec as gridspec
     nmeasures = len(measures)
     nrows = nmeasures // ncols
@@ -60,7 +59,13 @@ def plot_measures(df, measures, ncols=4, title='Group level report',
     for i, mname in enumerate(measures):
         axes.append(plt.subplot(gs[i]))
         axes[-1].set_xlabel(mname)
-        sns.distplot(df[[mname]], ax=axes[-1], color="b")
+        sns.distplot(
+            df[[mname]], ax=axes[-1], color="b", rug=True,  norm_hist=True)
+
+        # labels = np.array(axes[-1].get_xticklabels())
+        # labels[2:-2] = ''
+        axes[-1].set_xticklabels([])
+        plt.ticklabel_format(style='sci', axis='y', scilimits=(-1, 1))
 
         if subject is not None:
             subdf = df.loc[df['subject'] == subject].copy()
@@ -75,31 +80,35 @@ def plot_measures(df, measures, ncols=4, title='Group level report',
                     plot_vline(
                         scndf.iloc[0][mname], '%s_%s' % (ss, sc), axes[-1])
 
-                out_file = subject + '_distplots.pdf'
-
     if subject is not None:
         fig.suptitle(subject)
     else:
         fig.suptitle(title)
 
-    # plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+    plt.subplots_adjust(top=0.95)
     return fig
 
 
-def plot_all(df, groups, subject=None, figsize=(11.69, 3),
+def plot_all(df, groups, subject=None, figsize=(11.69, 5),
              out_file='testplot.pdf'):
     import matplotlib.gridspec as gridspec
     colnames = [v for gnames in groups for v in gnames]
     lengs = [len(el) for el in groups]
     ncols = np.sum(lengs)
 
-    fig = plt.figure(figsize=(8.3, 2))
+    fig = plt.figure(figsize=figsize)
     gs = gridspec.GridSpec(1, len(groups), width_ratios=lengs)
 
     axes = []
     for i, snames in enumerate(groups):
         axes.append(plt.subplot(gs[i]))
         sns.violinplot(data=df[snames], ax=axes[-1])
+
+        axes[-1].set_xticklabels(
+            [el.get_text() for el in axes[-1].get_xticklabels()],
+            rotation='vertical')
+        plt.ticklabel_format(style='sci', axis='y', scilimits=(-1, 1))
         # df[snames].plot(kind='box', ax=axes[-1])
 
         if subject is not None:
@@ -117,7 +126,8 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 3),
 
                 axes[-1].plot(pos, vals, markersize=5, linestyle='None',
                               color='w', marker='o', markeredgecolor='k')
-    # plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+    plt.subplots_adjust(top=0.85)
     return fig
 
 
@@ -132,6 +142,17 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
     else:
         mean_data = nifti_file
 
+    z_vals = np.array(range(0, mean_data.shape[2]))
+    # Reduce the number of slices shown
+    if mean_data.shape[2] > 70:
+        rem = 15
+        # Crop inferior and posterior
+        mean_data = mean_data[..., rem:-rem]
+        z_vals = z_vals[rem:-rem]
+        # Discard one every two slices
+        mean_data = mean_data[..., ::2]
+        z_vals = z_vals[::2]
+
     n_images = mean_data.shape[2]
     row, col = _calc_rows_columns(figsize[0] / figsize[1], n_images)
 
@@ -143,7 +164,7 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
     FigureCanvas(fig)
 
     fig.subplots_adjust(top=0.85)
-    for image in (range(n_images)):
+    for image, z_val in enumerate(z_vals):
         ax = fig.add_subplot(row, col, image + 1)
         data_mask = np.logical_not(np.isnan(mean_data))
         if overlay_mask:
@@ -153,6 +174,7 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
             mean_data[data_mask], 0.5),
             vmax=np.percentile(mean_data[data_mask], 99.5),
             cmap=cm.Greys_r, interpolation='nearest', origin='lower')
+
         if overlay_mask:
             cmap = cm.Reds  # @UndefinedVariable
             cmap._init()
@@ -160,6 +182,11 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
             cmap._lut[:, -1] = alphas
             ax.imshow(np.fliplr(overlay_data[:, :, image].T), vmin=0, vmax=1,
                       cmap=cmap, interpolation='nearest', origin='lower')
+
+        ax.annotate(
+            str(z_val), xy=(.95, .015), xycoords='axes fraction',
+            fontsize=10, color='white', horizontalalignment='right',
+            verticalalignment='bottom')
 
         ax.axis('off')
 
@@ -175,7 +202,7 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
     return fig
 
 
-def report_anatomical(in_csv, sc_split=False,
+def report_anatomical(in_csv, sc_split=False, split_files=True,
                       out_file='anatomical.pdf'):
     import numpy as np
     import pandas as pd
@@ -186,7 +213,6 @@ def report_anatomical(in_csv, sc_split=False,
     import matplotlib.pyplot as plt
     from matplotlib.backends.backend_pdf import PdfPages
     from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
-    report = PdfPages(out_file)
     df = pd.read_csv(in_csv)
     sessions = pd.unique(df.session.ravel())
 
@@ -206,12 +232,20 @@ def report_anatomical(in_csv, sc_split=False,
 
     subject_list = pd.unique(df.subject.ravel())
 
+    if not split_files:
+        report = PdfPages(out_file)
+    else:
+        tpl, _ = op.splitext(op.basename(out_file))
+        tpl = op.join(op.dirname(out_file), tpl) + '_%s.pdf'
+
     for ss in sessions:
         sesdf = df.loc[df['session'] == ss]
         scans = pd.unique(sesdf.scan.ravel())
 
         for subject in subject_list:
-            print 'Generating subject %s' % subject
+            if split_files:
+                report = PdfPages(tpl % subject)
+
             subdf = sesdf.loc[sesdf['subject'] == subject]
             scans = pd.unique(subdf.scan.ravel())
             for sc in scans:
@@ -230,16 +264,22 @@ def report_anatomical(in_csv, sc_split=False,
                         fig.clf()
             else:
                 if len(sesdf.index) > 1:
+                    fig = plot_all(sesdf, groups, subject=subject)
+                    report.savefig(fig, dpi=300)
+                    fig.clf()
                     fig = plot_measures(
                         sesdf, headers, subject=subject,
                         title='Report %s' % ss)
                     report.savefig(fig, dpi=300)
                     fig.clf()
-                    fig = plot_all(sesdf, groups, subject=subject)
-                    report.savefig(fig, dpi=300)
-                    fig.clf()
 
-    report.close()
+            if split_files:
+                report.close()
+                print 'Written report for subject %s' % subject
+
+    if not split_files:
+        report.close()
+
     plt.close()
     return out_file
 
