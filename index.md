@@ -22,7 +22,7 @@ For more information, please see our recent [resting-state poster and associated
 * [Merging Outputs](#merging-outputs)
 * [References](#references)
 
-## Installing the QAP Package
+## Installing the QAP Package (and updates)
 
 ### System Requirements
 
