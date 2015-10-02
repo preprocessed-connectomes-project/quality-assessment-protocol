@@ -166,9 +166,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config):
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
     import nipype.algorithms.misc as nam
-
-    from qap_workflows_utils import qap_anatomical_spatial, \
-        write_to_csv
+    from qap_workflows_utils import qap_anatomical_spatial
 
     if "qap_head_mask" not in resource_pool.keys():
 
@@ -199,10 +197,6 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config):
         output_names=['qc'], function=qap_anatomical_spatial),
         name='qap_anatomical_spatial')
 
-#    spatial_to_csv = pe.Node(niu.Function(input_names=['sub_qap_dict'],
-#                                          output_names=['outfile'],
-#                                          function=write_to_csv),
-#                             name='qap_anatomical_spatial_to_csv')
     out_csv = op.join(config['output_directory'], 'qap_anatomical_spatial.csv')
     spatial_to_csv = pe.Node(
         nam.AddCSVRow(in_file=out_csv), name='qap_anatomical_spatial_to_csv')
@@ -249,9 +243,6 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config):
     if "site_name" in config.keys():
         spatial.inputs.site_name = config["site_name"]
 
-#    workflow.connect(spatial, 'qc', spatial_to_csv, 'sub_qap_dict')
-#    resource_pool["qap_anatomical_spatial"] = (spatial_to_csv, 'outfile')
-
     workflow.connect(spatial, 'qc', spatial_to_csv, '_outputs')
     resource_pool["qap_anatomical_spatial"] = (spatial_to_csv, 'csv_file')
     return workflow, resource_pool
@@ -277,19 +268,20 @@ def run_single_qap_anatomical_spatial(
     workflow_dir = os.path.join(current_dir, output)
     workflow.base_dir = workflow_dir
 
-    resource_pool = {}
-    config = {}
     num_cores_per_subject = 1
+    resource_pool = {
+        "anatomical_reorient": anatomical_reorient,
+        "qap_head_mask": qap_head_mask,
+        "anatomical_csf_mask": anatomical_csf_mask,
+        "anatomical_gm_mask": anatomical_gm_mask,
+        "anatomical_wm_mask": anatomical_wm_mask
+    }
 
-    resource_pool["anatomical_reorient"] = anatomical_reorient
-    resource_pool["qap_head_mask"] = qap_head_mask
-    resource_pool["anatomical_csf_mask"] = anatomical_csf_mask
-    resource_pool["anatomical_gm_mask"] = anatomical_gm_mask
-    resource_pool["anatomical_wm_mask"] = anatomical_wm_mask
-
-    config["subject_id"] = subject_id
-    config["session_id"] = session_id
-    config["scan_id"] = scan_id
+    config = {
+        "subject_id": subject_id,
+        "session_id": session_id,
+        "scan_id": scan_id
+    }
 
     if site_name:
         config["site_name"] = site_name
@@ -328,8 +320,7 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config):
 
     import nipype.interfaces.utility as niu
 
-    from qap_workflows_utils import qap_functional_spatial, \
-        write_to_csv
+    from qap_workflows_utils import qap_functional_spatial
 
     from workflow_utils import check_input_resources
 
@@ -349,9 +340,10 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config):
         output_names=['qc'], function=qap_functional_spatial),
         name='qap_functional_spatial')
 
-    spatial_epi_to_csv = pe.Node(niu.Function(
-        input_names=['sub_qap_dict'], output_names=['outfile'],
-        function=write_to_csv), name='qap_functional_spatial_to_csv')
+    out_csv = op.join(
+        config['output_directory'], 'qap_functional_spatial.csv')
+    spatial_epi_to_csv = pe.Node(
+        nam.AddCSVRow(in_file=out_csv), name='qap_functional_spatial_to_csv')
 
     if len(resource_pool["mean_functional"]) == 2:
         node, out_file = resource_pool["mean_functional"]
@@ -378,8 +370,9 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config):
     if "site_name" in config.keys():
         spatial_epi.inputs.site_name = config["site_name"]
 
-    workflow.connect(spatial_epi, 'qc', spatial_epi_to_csv, 'sub_qap_dict')
+    workflow.connect(spatial_epi, 'qc', spatial_epi_to_csv, '_outputs')
     resource_pool["qap_functional_spatial"] = (spatial_epi_to_csv, 'outfile')
+
     return workflow, resource_pool
 
 
@@ -451,8 +444,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
     import nipype.interfaces.utility as niu
     import nipype.algorithms.misc as nam
 
-    from qap_workflows_utils import qap_functional_temporal, \
-        write_to_csv
+    from qap_workflows_utils import qap_functional_temporal
 
     '''
     if "mean_functional" not in resource_pool.keys():
@@ -481,9 +473,6 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
                      'scan_id', 'site_name'], output_names=['qc'],
         function=qap_functional_temporal), name='qap_functional_temporal')
 
-#    temporal_to_csv = pe.Node(niu.Function(
-#        input_names=['sub_qap_dict'], output_names=['outfile'],
-#        function=write_to_csv), name='qap_functional_temporal_to_csv')
     out_csv = op.join(
         config['output_directory'], 'qap_functional_temporal.csv')
     temporal_to_csv = pe.Node(
@@ -522,10 +511,8 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
     if "site_name" in config.keys():
         temporal.inputs.site_name = config["site_name"]
 
-#    workflow.connect(temporal, 'qc', temporal_to_csv, 'sub_qap_dict')
-#    resource_pool["qap_functional_temporal"] = (temporal_to_csv, 'outfile')
     workflow.connect(temporal, 'qc', temporal_to_csv, '_outputs')
-    resource_pool["qap_anatomical_spatial"] = (temporal_to_csv, 'csv_file')
+    resource_pool["qap_functional_temporal"] = (temporal_to_csv, 'csv_file')
     return workflow, resource_pool
 
 
@@ -584,7 +571,6 @@ def run_single_qap_functional_temporal(func_motion, functional_brain_mask,
     workflow.connect(node, out_file, ds, output)
 
     if run:
-
         workflow.run(
             plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
 
@@ -593,5 +579,4 @@ def run_single_qap_functional_temporal(func_motion, functional_brain_mask,
         return outpath
 
     else:
-
         return workflow, workflow.base_dir

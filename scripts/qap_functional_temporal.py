@@ -21,9 +21,8 @@ def build_functional_temporal_workflow(
     import nipype.interfaces.fsl.maths as fsl
 
     import glob
-    import yaml
-
     import time
+
     from time import strftime
     from nipype import config as nyconfig
     from nipype import logging
@@ -113,7 +112,6 @@ def build_functional_temporal_workflow(
         raise Exception(err)
 
     # start connecting the pipeline
-
     if "qap_functional_temporal" not in resource_pool.keys():
         from qap.qap_workflows import qap_functional_temporal_workflow
         workflow, resource_pool = \
@@ -125,7 +123,7 @@ def build_functional_temporal_workflow(
     if "write_all_outputs" not in config.keys():
         config["write_all_outputs"] = False
 
-    if config["write_all_outputs"] == True:
+    if config["write_all_outputs"]:
         for output in resource_pool.keys():
 
             # we use a check for len()==2 here to select those items in the
@@ -168,7 +166,7 @@ def build_functional_temporal_workflow(
         print "\nEverything is already done for subject %s." % sub_id
 
     # Remove working directory when done
-    if config["write_all_outputs"] == False:
+    if not config["write_all_outputs"]:
         try:
             work_dir = os.path.join(workflow.base_dir, scan_id)
 
@@ -385,7 +383,7 @@ def run(subject_list, config, cloudify=False):
         out_file = op.join(
             config['output_directory'], 'qap_functional_temporal.pdf')
 
-        qvr.report_anatomical(in_csv, out_file=out_file)
+        qvr.report_func_temporal(in_csv, out_file=out_file)
 
 
 def main():

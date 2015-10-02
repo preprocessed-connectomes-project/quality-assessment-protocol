@@ -352,56 +352,16 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask,
         "session":  session_id,
         "scan":     scan_id,
         "dvars":    mean_dvars,
+        "fd_file":  coord_xfm_matrix,
         "mean_fd":  mean_fd,
         'num_fd':   num_fd,
         'perc_fd':  percent_fd,
         "outlier":  mean_outlier,
         "quality":  mean_quality,
-        "gcor": gcor
+        "gcor":     gcor
     }
 
     if site_name:
         qc['site'] = site_name
 
     return qc
-
-
-def write_to_csv(sub_qap_dict):  # , outfile):
-
-    import os
-    import csv
-
-    fields = sub_qap_dict.keys()
-
-    # put these at the forefront of the list of header items, to make the
-    # output CSV's more readable
-
-    fields = sorted(fields)
-
-    if "subject" in fields:
-        fields.remove("subject")
-        fields.insert(0, "subject")
-
-    if "session" in fields:
-        fields.remove("session")
-        fields.insert(1, "session")
-
-    if "scan" in fields:
-        fields.remove("scan")
-        fields.insert(2, "scan")
-
-    if "site" in fields:
-        fields.remove("site")
-        fields.insert(3, "site")
-
-    outfile = os.path.join(os.getcwd(), "qap_measures.csv")
-
-    with open(outfile, "wt") as out_f:
-
-        csv_writer = csv.DictWriter(out_f, fields)
-
-        csv_writer.writeheader()
-
-        csv_writer.writerow(sub_qap_dict)
-
-    return outfile
