@@ -318,6 +318,7 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config):
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
 
+    import nipype.algorithms.misc as nam
     import nipype.interfaces.utility as niu
 
     from qap_workflows_utils import qap_functional_spatial
