@@ -448,14 +448,10 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
 
     from qap_workflows_utils import qap_functional_temporal
 
-    '''
-    if "mean_functional" not in resource_pool.keys():
-
-        from functional_preproc import mean_functional_workflow
-
-        workflow, resource_pool = \
-            mean_functional_workflow(workflow, resource_pool, config)
-    '''
+    # if "mean_functional" not in resource_pool.keys():
+    #     from functional_preproc import mean_functional_workflow
+    #     workflow, resource_pool = \
+    #         mean_functional_workflow(workflow, resource_pool, config)
 
     if "functional_brain_mask" not in resource_pool.keys():
         from functional_preproc import functional_brain_mask_workflow
@@ -487,9 +483,11 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
         workflow.connect(node, out_file, tsnr, 'in_file')
         workflow.connect(node, out_file, temporal, 'func_motion_correct')
     else:
-        tsnr.inputs.in_file = resource_pool["functional_scan"]
-        temporal.inputs.func_motion_correct = \
-            resource_pool["func_motion_correct"]
+        from workflow_utils import check_input_resources
+        check_input_resources(resource_pool, "func_motion_correct")
+        input_file = resource_pool['func_motion_correct']
+        tsnr.inputs.in_file = input_file
+        temporal.inputs.func_motion_correct = input_file
 
     if len(resource_pool["functional_brain_mask"]) == 2:
         node, out_file = resource_pool["functional_brain_mask"]
