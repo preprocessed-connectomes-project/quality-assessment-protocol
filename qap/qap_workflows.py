@@ -468,7 +468,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
     tsnr = pe.Node(nam.TSNR(), name='compute_tsnr')
 
     temporal = pe.Node(niu.Function(
-        input_names=['func_motion_correct', 'func_brain_mask', 'tsnr',
+        input_names=['func_motion_correct', 'func_brain_mask', 'tsnr_volume',
                      'coord_xfm_matrix', 'subject_id', 'session_id',
                      'scan_id', 'site_name'], output_names=['qc'],
         function=qap_functional_temporal), name='qap_functional_temporal')
