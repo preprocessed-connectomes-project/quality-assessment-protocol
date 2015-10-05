@@ -374,6 +374,7 @@ def run(subject_list, config, cloudify=False):
 
     # PDF reporting
     if config['write_report']:
+        import os.path as op
         import qap.viz.reports as qvr
         from nipype import logging
         logger = logging.getLogger('workflow')

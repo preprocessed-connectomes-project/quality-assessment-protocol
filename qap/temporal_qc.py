@@ -7,6 +7,7 @@ import pandas as pd
 import scipy.ndimage as nd
 import scipy.stats as stats
 from tempfile import mkdtemp
+import shutil
 
 # DVARS
 from dvars import mean_dvars_wrapper
@@ -45,7 +46,7 @@ def fd_jenkinson(in_file):
 
     original_shape = pm_.shape
 
-    pm = np.zeros((pm_.shape[0], pm_.shape[1]+4))
+    pm = np.zeros((pm_.shape[0], pm_.shape[1] + 4))
     pm[:, :original_shape[1]] = pm_
     pm[:, original_shape[1]:] = [0.0, 0.0, 0.0, 1.0]
 
@@ -71,7 +72,7 @@ def fd_jenkinson(in_file):
             b = M[0:3, 3]
 
             FD_J = math.sqrt(
-                (rmax*rmax/5)*np.trace(np.dot(A.T, A)) + np.dot(b.T, b))
+                (rmax * rmax / 5) * np.trace(np.dot(A.T, A)) + np.dot(b.T, b))
             print >> f, '%.8f' % FD_J
 
         T_rb_prev = T_rb
@@ -105,7 +106,7 @@ def summarize_fd(in_file, fd_out_file=None, threshold=1.0):
     # Number and Percent of frames (time points) where
     # movement (FD) exceeded threshold
     num_fd = np.float((fd > threshold).sum())
-    percent_fd = (num_fd*100)/(len(fd)+1)
+    percent_fd = (num_fd * 100) / (len(fd) + 1)
 
     # Clean-Up
     if "rel.rms" not in in_file:
@@ -113,7 +114,7 @@ def summarize_fd(in_file, fd_out_file=None, threshold=1.0):
             os.rename(fd_file, fd_out_file)
 
     os.chdir(curdir)
-    os.rmdir(tmpdir)
+    shutil.rmtree(tmpdir)
 
     return (fd_file, fd.mean(), num_fd, percent_fd)
 
@@ -247,6 +248,6 @@ def global_correlation(func_motion, func_mask):
     avg_ts = np.asarray(avg_ts)
 
     # calculate the global correlation
-    gcor = (avg_ts.transpose().dot(avg_ts))/len(avg_ts)
+    gcor = (avg_ts.transpose().dot(avg_ts)) / len(avg_ts)
 
     return gcor
