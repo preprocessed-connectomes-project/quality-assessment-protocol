@@ -91,7 +91,7 @@ def report_func_temporal(in_csv, sc_split=False, split_files=True,
                          out_file='func_temporal.pdf'):
     df = pd.read_csv(in_csv)
 
-    groups = [[['dvars'], ['gcor'], ['mean_tsnr'], ['mean_fd'],
+    groups = [[['dvars'], ['gcor'], ['m_tsnr'], ['mean_fd'],
                ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]]
     headers = [v for gnames in groups for v in gnames]
 
@@ -131,11 +131,10 @@ def report_func_temporal(in_csv, sc_split=False, split_files=True,
                     fig.clf()
 
                     mask = subdf.loc[subdf['scan'] == sc].mask_file.tolist()[0]
-                    median_tsnr = sesdf[['m_tsnr']].tolist()
                     fig = plot_distrbution_of_values(
                         data, mask,
                         "tSNR inside the mask, subject %s" % subject_id,
-                        median_tsnr,
+                        sesdf[['m_tsnr']].tolist(),
                         "Distribution of median tSNR of all subjects",
                         figsize=(8.3, 8.3))
                     report.savefig(fig, dpi=300)
