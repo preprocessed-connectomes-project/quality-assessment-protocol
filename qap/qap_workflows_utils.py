@@ -318,7 +318,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
     return qc
 
 
-def qap_functional_temporal(func_motion_correct, func_brain_mask,
+def qap_functional_temporal(func_motion_correct, func_brain_mask, tsnr,
                             coord_xfm_matrix, subject_id, session_id,
                             scan_id, site_name=None,
                             motion_threshold=1.0):
@@ -348,17 +348,18 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask,
 
     # Compile
     qc = {
-        "subject":  subject_id,
-        "session":  session_id,
-        "scan":     scan_id,
-        "dvars":    mean_dvars,
-        "fd_file":  coord_xfm_matrix,
-        "mean_fd":  mean_fd,
-        'num_fd':   num_fd,
-        'perc_fd':  percent_fd,
-        "outlier":  mean_outlier,
-        "quality":  mean_quality,
-        "gcor":     gcor
+        "subject":   subject_id,
+        "session":   session_id,
+        "scan":      scan_id,
+        "dvars":     mean_dvars,
+        "fd_file":   coord_xfm_matrix,
+        "tsnr_file": tsnr,
+        "mean_fd":   mean_fd,
+        'num_fd':    num_fd,
+        'perc_fd':   percent_fd,
+        "outlier":   mean_outlier,
+        "quality":   mean_quality,
+        "gcor":      gcor
     }
 
     if site_name:

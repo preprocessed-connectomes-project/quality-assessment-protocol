@@ -123,6 +123,13 @@ def report_func_temporal(in_csv, sc_split=False, split_files=True,
                     report.savefig(fig, dpi=300)
                     fig.clf()
 
+            if 'tsnr_file' in sesdf.columns:
+                for sc in scans:
+                    data = subdf.loc[subdf['scan'] == sc].tsnr_file.tolist()[0]
+                    fig = plot_mosaic(data, title=subject)
+                    report.savefig(fig, dpi=300)
+                    fig.clf()
+
             if sc_split:
                 for sc in scans:
                     subset = sesdf.loc[sesdf['scan'] == sc]
@@ -187,13 +194,6 @@ def report_func_spatial(in_csv, sc_split=False, split_files=True,
                 fig = plot_mosaic(data[0], title=subject)
                 report.savefig(fig, dpi=300)
                 fig.clf()
-
-            if 'tsnr_path' in subdf.columns:
-                for sc in scans:
-                    data = subdf.loc[subdf['scan'] == sc].tsnr_path.tolist()[0]
-                    fig = plot_mosaic(data, title=subject)
-                    report.savefig(fig, dpi=300)
-                    fig.clf()
 
             if sc_split:
                 for sc in scans:

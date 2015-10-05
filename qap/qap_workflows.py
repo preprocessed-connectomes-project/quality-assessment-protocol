@@ -469,8 +469,10 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
         workflow, resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config)
 
+    tsnr = pe.Node(nam.TSNR(), name='compute_tsnr')
+
     temporal = pe.Node(niu.Function(
-        input_names=['func_motion_correct', 'func_brain_mask',
+        input_names=['func_motion_correct', 'func_brain_mask', 'tsnr',
                      'coord_xfm_matrix', 'subject_id', 'session_id',
                      'scan_id', 'site_name'], output_names=['qc'],
         function=qap_functional_temporal), name='qap_functional_temporal')
@@ -482,8 +484,10 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
 
     if len(resource_pool["func_motion_correct"]) == 2:
         node, out_file = resource_pool["func_motion_correct"]
+        workflow.connect(node, out_file, tsnr, 'in_file')
         workflow.connect(node, out_file, temporal, 'func_motion_correct')
     else:
+        tsnr.inputs.in_file = resource_pool["funct_motion_correct"]
         temporal.inputs.func_motion_correct = \
             resource_pool["func_motion_correct"]
 
@@ -506,6 +510,8 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
                 resource_pool["coordinate_transformation"]
 
     # Subject infos
+    workflow.connect(tsnr, 'out_file', temporal, 'tsnr')
+
     temporal.inputs.subject_id = config["subject_id"]
     temporal.inputs.session_id = config["session_id"]
     temporal.inputs.scan_id = config["scan_id"]
@@ -513,7 +519,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
     if "site_name" in config.keys():
         temporal.inputs.site_name = config["site_name"]
 
-    workflow.connect(temporal, 'qc', temporal_to_csv, '_outputs')
+    workflow.connect(tsnr, 'out_file', temporal_to_csv, '')
     resource_pool["qap_functional_temporal"] = (temporal_to_csv, 'csv_file')
     return workflow, resource_pool
 
