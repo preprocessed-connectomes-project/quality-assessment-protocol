@@ -487,7 +487,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
         workflow.connect(node, out_file, tsnr, 'in_file')
         workflow.connect(node, out_file, temporal, 'func_motion_correct')
     else:
-        tsnr.inputs.in_file = resource_pool["funct_motion_correct"]
+        tsnr.inputs.in_file = resource_pool["functional_scan"]
         temporal.inputs.func_motion_correct = \
             resource_pool["func_motion_correct"]
 
