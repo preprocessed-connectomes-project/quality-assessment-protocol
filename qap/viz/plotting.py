@@ -208,6 +208,29 @@ def plot_fd(fd_file, mean_fd_dist=None, figsize=(11.7, 8.3)):
     return fig
 
 
+def plot_distrbution_of_values(
+        main_file, mask_file, xlabel, distribution=None, xlabel2=None,
+        figsize=(11.7, 8.3)):
+    data = _get_values_inside_a_mask(main_file, mask_file)
+
+    fig = plt.Figure(figsize=figsize)
+    FigureCanvas(fig)
+
+    gs = GridSpec(2, 1)
+    ax = fig.add_subplot(gs[0, 0])
+    sns.distplot(data.astype(np.double), kde=False, bins=100, ax=ax)
+    ax.set_xlabel(xlabel)
+
+    ax = fig.add_subplot(gs[1, 0])
+    sns.distplot(np.array(distribution).astype(np.double), ax=ax)
+    cur_val = np.median(data)
+    label = "%g" % cur_val
+    plot_vline(cur_val, label, ax=ax)
+    ax.set_xlabel(xlabel2)
+
+    return fig
+
+
 def plot_vline(cur_val, label, ax):
     ax.axvline(cur_val)
     ylim = ax.get_ylim()
@@ -243,7 +266,7 @@ def _calc_fd(fd_file):
     rotations = np.transpose(np.abs(np.diff(cols[3:6, :])))
 
     FD_power = np.sum(translations, axis=1) + \
-        (50*3.141/180)*np.sum(rotations, axis=1)
+        (50 * 3.141 / 180) * np.sum(rotations, axis=1)
 
     # FD is zero for the first time point
     FD_power = np.insert(FD_power, 0, 0)
@@ -260,3 +283,13 @@ def _get_mean_fd_distribution(fd_files):
         max_FDs.append(FD_power.max())
 
     return mean_FDs, max_FDs
+
+
+def _get_values_inside_a_mask(main_file, mask_file):
+    main_nii = nb.load(main_file)
+    main_data = main_nii.get_data()
+    nan_mask = np.logical_not(np.isnan(main_data))
+    mask = nb.load(mask_file).get_data() > 0
+
+    data = main_data[np.logical_and(nan_mask, mask)]
+    return data

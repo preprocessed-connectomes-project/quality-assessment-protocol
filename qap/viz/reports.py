@@ -91,7 +91,7 @@ def report_func_temporal(in_csv, sc_split=False, split_files=True,
                          out_file='func_temporal.pdf'):
     df = pd.read_csv(in_csv)
 
-    groups = [[['dvars'], ['gcor'], ['mean_fd'],
+    groups = [[['dvars'], ['gcor'], ['mean_tsnr'], ['mean_fd'],
                ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]]
     headers = [v for gnames in groups for v in gnames]
 

@@ -318,12 +318,13 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
     return qc
 
 
-def qap_functional_temporal(func_motion_correct, func_brain_mask, tsnr,
-                            coord_xfm_matrix, subject_id, session_id,
-                            scan_id, site_name=None,
-                            motion_threshold=1.0):
+def qap_functional_temporal(
+        func_motion_correct, func_brain_mask, tsnr_volume, coord_xfm_matrix,
+        subject_id, session_id, scan_id, site_name=None, motion_threshold=1.0):
 
     import sys
+    import nibabel as nb
+    import numpy as np
 
     from qap.temporal_qc import mean_dvars_wrapper, summarize_fd, \
         mean_outlier_timepoints, \
@@ -346,6 +347,16 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask, tsnr,
     # new thing
     gcor = global_correlation(func_motion_correct, func_brain_mask)
 
+    # tSNR
+    tsnr_data = nb.load(tsnr_volume).get_data()
+    msk_data = np.ones_like(tsnr_data)
+    try:
+        msk_data = nb.load(func_brain_mask).get_data()
+    except:
+        pass
+
+    mean_tsnr = tsnr_data[msk_data > 0].mean()
+
     # Compile
     qc = {
         "subject":   subject_id,
@@ -353,7 +364,9 @@ def qap_functional_temporal(func_motion_correct, func_brain_mask, tsnr,
         "scan":      scan_id,
         "dvars":     mean_dvars,
         "fd_file":   coord_xfm_matrix,
-        "tsnr_file": tsnr,
+        "tsnr_file": tsnr_volume,
+        "mask_file": func_brain_mask,
+        "mean_tsnr": mean_tsnr,
         "mean_fd":   mean_fd,
         'num_fd':    num_fd,
         'perc_fd':   percent_fd,

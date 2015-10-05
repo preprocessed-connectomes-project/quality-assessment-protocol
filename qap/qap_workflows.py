@@ -508,7 +508,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
                 resource_pool["coordinate_transformation"]
 
     # Subject infos
-    workflow.connect(tsnr, 'out_file', temporal, 'tsnr')
+    workflow.connect(tsnr, 'tsnr_file', temporal, 'tsnr_volume')
 
     temporal.inputs.subject_id = config["subject_id"]
     temporal.inputs.session_id = config["session_id"]
@@ -517,7 +517,6 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
     if "site_name" in config.keys():
         temporal.inputs.site_name = config["site_name"]
 
-    workflow.connect(tsnr, 'out_file', temporal_to_csv, '')
     resource_pool["qap_functional_temporal"] = (temporal_to_csv, 'csv_file')
     return workflow, resource_pool
 
