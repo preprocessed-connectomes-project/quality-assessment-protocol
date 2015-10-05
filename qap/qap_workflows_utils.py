@@ -355,8 +355,6 @@ def qap_functional_temporal(
     except:
         pass
 
-    mean_tsnr = tsnr_data[msk_data > 0].mean()
-
     # Compile
     qc = {
         "subject":   subject_id,
@@ -366,7 +364,7 @@ def qap_functional_temporal(
         "fd_file":   coord_xfm_matrix,
         "tsnr_file": tsnr_volume,
         "mask_file": func_brain_mask,
-        "mean_tsnr": mean_tsnr,
+        "m_tsnr":    np.median(tsnr_data[msk_data > 0]),
         "mean_fd":   mean_fd,
         'num_fd':    num_fd,
         'perc_fd':   percent_fd,

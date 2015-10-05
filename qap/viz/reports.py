@@ -130,6 +130,17 @@ def report_func_temporal(in_csv, sc_split=False, split_files=True,
                     report.savefig(fig, dpi=300)
                     fig.clf()
 
+                    mask = subdf.loc[subdf['scan'] == sc].mask_file.tolist()[0]
+                    median_tsnr = sesdf[['m_tsnr']].tolist()
+                    fig = plot_distrbution_of_values(
+                        data, mask,
+                        "tSNR inside the mask, subject %s" % subject_id,
+                        median_tsnr,
+                        "Distribution of median tSNR of all subjects",
+                        figsize=(8.3, 8.3))
+                    report.savefig(fig, dpi=300)
+                    fig.clf()
+
             if sc_split:
                 for sc in scans:
                     subset = sesdf.loc[sesdf['scan'] == sc]
