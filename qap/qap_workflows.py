@@ -517,6 +517,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
     if "site_name" in config.keys():
         temporal.inputs.site_name = config["site_name"]
 
+    workflow.connect(temporal, 'qc', temporal_to_csv, '_outputs')
     resource_pool["qap_functional_temporal"] = (temporal_to_csv, 'csv_file')
     return workflow, resource_pool
 
