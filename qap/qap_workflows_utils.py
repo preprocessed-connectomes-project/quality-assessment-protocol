@@ -334,8 +334,8 @@ def qap_functional_temporal(
     mean_dvars = mean_dvars_wrapper(func_motion_correct, func_brain_mask)
 
     # Mean FD (Jenkinson)
-    (mean_fd, num_fd, percent_fd) = summarize_fd(coord_xfm_matrix,
-                                                 threshold=motion_threshold)
+    (fd_file, mean_fd, num_fd, percent_fd) = summarize_fd(
+        coord_xfm_matrix, threshold=motion_threshold)
 
     # 3dTout
     mean_outlier = mean_outlier_timepoints(func_motion_correct,
@@ -361,7 +361,7 @@ def qap_functional_temporal(
         "session":   session_id,
         "scan":      scan_id,
         "dvars":     mean_dvars,
-        "fd_file":   coord_xfm_matrix,
+        "fd_file":   fd_file,
         "tsnr_file": tsnr_volume,
         "mask_file": func_brain_mask,
         "m_tsnr":    np.median(tsnr_data[msk_data > 0]),
