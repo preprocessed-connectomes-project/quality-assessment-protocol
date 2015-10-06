@@ -188,6 +188,7 @@ def build_functional_temporal_workflow(
 
 def run(subject_list, config, cloudify=False):
     import os
+    import os.path as op
     import yaml
     import time
     from multiprocessing import Process
@@ -195,6 +196,8 @@ def run(subject_list, config, cloudify=False):
     from nipype import logging
     logger = logging.getLogger('workflow')
 
+    output_dir = config.get('output_directory', os.getcwd())
+    ns_atonce = config.get('num_subjects_at_once', 1)
     write_report = config.get('write_report', False)
     if write_report:
         logger.info('PDF Reports enabled')
@@ -209,20 +212,14 @@ def run(subject_list, config, cloudify=False):
         for subid in subdict.keys():
             # sessions
             for session in subdict[subid].keys():
-
                 # resource files
                 for resource in subdict[subid][session].keys():
-
                     if type(subdict[subid][session][resource]) is dict:
                         # then this has sub-scans defined
-
                         for scan in subdict[subid][session][resource].keys():
-
                             filepath = subdict[subid][session][resource][scan]
-
                             resource_dict = {}
                             resource_dict[resource] = filepath
-
                             sub_info_tuple = (subid, session, scan)
 
                             if sub_info_tuple not in flat_sub_dict.keys():
@@ -231,16 +228,12 @@ def run(subject_list, config, cloudify=False):
                             flat_sub_dict[sub_info_tuple].update(resource_dict)
 
                     elif resource == "site_name":
-
                         sites_dict[subid] = subdict[subid][session][resource]
 
                     else:
-
                         filepath = subdict[subid][session][resource]
-
                         resource_dict = {}
                         resource_dict[resource] = filepath
-
                         sub_info_tuple = (subid, session, None)
 
                         if sub_info_tuple not in flat_sub_dict.keys():
@@ -249,11 +242,11 @@ def run(subject_list, config, cloudify=False):
                         flat_sub_dict[sub_info_tuple].update(resource_dict)
 
     try:
-        os.makedirs(config["output_directory"])
+        os.makedirs(output_dir)
     except:
-        if not os.path.isdir(config["output_directory"]):
+        if not os.path.isdir(output_dir):
             err = "[!] Output directory unable to be created.\n" \
-                  "Path: %s\n\n" % config["output_directory"]
+                  "Path: %s\n\n" % output_dir
             raise Exception(err)
         else:
             pass
@@ -286,27 +279,24 @@ def run(subject_list, config, cloudify=False):
                       None))
                       for sub_info in flat_sub_dict.keys()]
 
-        pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
+        pid = open(os.path.join(output_dir, 'pid.txt'), 'w')
 
         # Init job queue
         job_queue = []
 
         # If we're allocating more processes than are subjects, run them all
-        if len(flat_sub_dict) <= config["num_subjects_at_once"]:
-
+        if len(flat_sub_dict) <= ns_atonce:
             """
             Stream all the subjects as sublist is
             less than or equal to the number of
             subjects that need to run
             """
-
             for p in procss:
                 p.start()
                 print >>pid, p.pid
 
         # Otherwise manage resources to run processes incrementally
         else:
-
             """
             Stream the subject workflows for preprocessing.
             At Any time in the pipeline c.numSubjectsAtOnce
@@ -317,16 +307,12 @@ def run(subject_list, config, cloudify=False):
             idx = 0
 
             while(idx < len(flat_sub_dict)):
-
                 # If the job queue is empty and we haven't started indexing
                 if len(job_queue) == 0 and idx == 0:
-
                     # Init subject process index
                     idc = idx
-
                     # Launch processes (one for each subject)
-                    for p in procss[idc: idc + config["num_subjects_at_once"]]:
-
+                    for p in procss[idc: idc + ns_atonce]:
                         p.start()
                         print >>pid, p.pid
                         job_queue.append(p)
@@ -334,23 +320,25 @@ def run(subject_list, config, cloudify=False):
 
                 # Otherwise, jobs are running - check them
                 else:
-
                     # Check every job in the queue's status
                     for job in job_queue:
-
                         # If the job is not alive
                         if not job.is_alive():
-
                             # Find job and delete it from queue
-                            print 'found dead job ', job
+                            logger.info('found dead job: %s' % str(job))
                             loc = job_queue.index(job)
                             del job_queue[loc]
 
                             # ..and start the next available process (subject)
-                            procss[idx].start()
+                            try:
+                                procss[idx].start()
+                                # Append this to job queue and increment index
+                                job_queue.append(procss[idx])
+                            except IndexError:
+                                logger.warn(
+                                    'Index %d failed, total procss is %d' %
+                                    (idx, len(procss)))
 
-                            # Append this to job queue and increment index
-                            job_queue.append(procss[idx])
                             idx += 1
 
                     # Add sleep so while loop isn't consuming 100% of CPU
