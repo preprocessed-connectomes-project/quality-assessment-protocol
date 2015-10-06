@@ -192,6 +192,13 @@ def run(subject_list, config, cloudify=False):
     import time
     from multiprocessing import Process
 
+    from nipype import logging
+    logger = logging.getLogger('workflow')
+
+    write_report = config.get('write_report', False)
+    if write_report:
+        logger.info('PDF Reports enabled')
+
     with open(subject_list, "r") as f:
         subdict = yaml.load(f)
 
@@ -354,7 +361,7 @@ def run(subject_list, config, cloudify=False):
         pid.close()
 
         # Join all processes if report must be written out
-        if config['write_report']:
+        if write_report:
             for p in procss:
                 p.join()
     else:
@@ -375,10 +382,9 @@ def run(subject_list, config, cloudify=False):
                                           run_name, site_name)
 
     # PDF reporting
-    if config['write_report']:
+    if write_report:
+        import os.path as op
         import qap.viz.reports as qvr
-        from nipype import logging
-        logger = logging.getLogger('workflow')
 
         in_csv = op.join(
             config['output_directory'], 'qap_anatomical_spatial.csv')

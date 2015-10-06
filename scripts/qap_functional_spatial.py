@@ -181,7 +181,7 @@ def build_functional_spatial_workflow(resource_pool, config, subject_info,
     pipeline_end_time = time.time()
 
     logger.info("Elapsed time (minutes) since last start: %s"
-                % ((pipeline_end_time - pipeline_start_time)/60))
+                % ((pipeline_end_time - pipeline_start_time) / 60))
     logger.info("Pipeline end time: %s" % pipeline_end_stamp)
     return workflow
 
@@ -189,9 +189,15 @@ def build_functional_spatial_workflow(resource_pool, config, subject_info,
 def run(subject_list, config, cloudify=False):
     import os
     import yaml
+    import time
     from multiprocessing import Process
 
-    import time
+    from nipype import logging
+    logger = logging.getLogger('workflow')
+
+    write_report = config.get('write_report', False)
+    if write_report:
+        logger.info('PDF Reports enabled')
 
     with open(subject_list, "r") as f:
         subdict = yaml.load(f)
@@ -319,7 +325,7 @@ def run(subject_list, config, cloudify=False):
                     idc = idx
 
                     # Launch processes (one for each subject)
-                    for p in procss[idc: idc+config["num_subjects_at_once"]]:
+                    for p in procss[idc: idc + config["num_subjects_at_once"]]:
 
                         p.start()
                         print >>pid, p.pid
@@ -353,7 +359,7 @@ def run(subject_list, config, cloudify=False):
         pid.close()
 
         # Join all processes if report must be written out
-        if config['write_report']:
+        if write_report:
             for p in procss:
                 p.join()
     else:
@@ -373,10 +379,9 @@ def run(subject_list, config, cloudify=False):
                                           run_name, site_name)
 
     # PDF reporting
-    if config['write_report']:
+    if write_report:
+        import os.path as op
         import qap.viz.reports as qvr
-        from nipype import logging
-        logger = logging.getLogger('workflow')
 
         in_csv = op.join(
             config['output_directory'], 'qap_functional_spatial.csv')
