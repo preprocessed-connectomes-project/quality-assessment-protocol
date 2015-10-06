@@ -305,44 +305,32 @@ def run(subject_list, config, cloudify=False):
             """
 
             idx = 0
+            nprocs = len(procss)
 
-            while(idx < len(flat_sub_dict)):
-                # If the job queue is empty and we haven't started indexing
-                if len(job_queue) == 0 and idx == 0:
-                    # Init subject process index
+            while idx < nprocs:
+                # Check every job in the queue's status
+                for job in job_queue:
+                    # If the job is not alive
+                    if not job.is_alive():
+                        # Find job and delete it from queue
+                        logger.info('found dead job: %s' % str(job))
+                        loc = job_queue.index(job)
+                        del job_queue[loc]
+                        # ..and start the next available process (subject)
+
+                slots = ns_atonce - len(job_queue)
+                if slots > 0:
                     idc = idx
-                    # Launch processes (one for each subject)
-                    for p in procss[idc: idc + ns_atonce]:
+                    for p in procss[idc:idc + slots]:
                         p.start()
                         print >>pid, p.pid
+
+                        # Append this to job queue and increment index
                         job_queue.append(p)
                         idx += 1
 
-                # Otherwise, jobs are running - check them
-                else:
-                    # Check every job in the queue's status
-                    for job in job_queue:
-                        # If the job is not alive
-                        if not job.is_alive():
-                            # Find job and delete it from queue
-                            logger.info('found dead job: %s' % str(job))
-                            loc = job_queue.index(job)
-                            del job_queue[loc]
-
-                            # ..and start the next available process (subject)
-                            try:
-                                procss[idx].start()
-                                # Append this to job queue and increment index
-                                job_queue.append(procss[idx])
-                            except IndexError:
-                                logger.warn(
-                                    'Index %d failed, total procss is %d' %
-                                    (idx, len(procss)))
-
-                            idx += 1
-
-                    # Add sleep so while loop isn't consuming 100% of CPU
-                    time.sleep(2)
+                # Add sleep so while loop isn't consuming 100% of CPU
+                time.sleep(2)
 
         pid.close()
 
