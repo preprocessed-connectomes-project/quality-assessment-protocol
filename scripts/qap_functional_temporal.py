@@ -7,7 +7,6 @@ def build_functional_temporal_workflow(
         resource_pool, config, subject_info, run_name, site_name=None):
 
     # build pipeline for each subject, individually
-
     # ~ 5 min 45 sec per subject
     # (roughly 345 seconds)
 
@@ -178,10 +177,6 @@ def build_functional_temporal_workflow(
             pass
 
     pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
-    pipeline_end_time = time.time()
-
-    logger.info("Elapsed time (minutes) since last start: %s"
-                % ((pipeline_end_time - pipeline_start_time) / 60))
     logger.info("Pipeline end time: %s" % pipeline_end_stamp)
     return workflow
 
@@ -283,54 +278,40 @@ def run(subject_list, config, cloudify=False):
 
         # Init job queue
         job_queue = []
+        ns_atonce = config.get('num_subjects_at_once', 1)
 
-        # If we're allocating more processes than are subjects, run them all
-        if len(flat_sub_dict) <= ns_atonce:
-            """
-            Stream all the subjects as sublist is
-            less than or equal to the number of
-            subjects that need to run
-            """
-            for p in procss:
-                p.start()
-                print >>pid, p.pid
+        # Stream the subject workflows for preprocessing.
+        # At Any time in the pipeline c.numSubjectsAtOnce
+        # will run, unless the number remaining is less than
+        # the value of the parameter stated above
 
-        # Otherwise manage resources to run processes incrementally
-        else:
-            """
-            Stream the subject workflows for preprocessing.
-            At Any time in the pipeline c.numSubjectsAtOnce
-            will run, unless the number remaining is less than
-            the value of the parameter stated above
-            """
+        idx = 0
+        nprocs = len(procss)
+        while idx < nprocs:
+            # Check every job in the queue's status
+            for job in job_queue:
+                # If the job is not alive
+                if not job.is_alive():
+                    # Find job and delete it from queue
+                    logger.info('found dead job: %s' % str(job))
+                    loc = job_queue.index(job)
+                    del job_queue[loc]
 
-            idx = 0
-            nprocs = len(procss)
+            # Check free slots after prunning jobs
+            slots = ns_atonce - len(job_queue)
 
-            while idx < nprocs:
-                # Check every job in the queue's status
-                for job in job_queue:
-                    # If the job is not alive
-                    if not job.is_alive():
-                        # Find job and delete it from queue
-                        logger.info('found dead job: %s' % str(job))
-                        loc = job_queue.index(job)
-                        del job_queue[loc]
-                        # ..and start the next available process (subject)
+            if slots > 0:
+                idc = idx
+                for p in procss[idc:idc + slots]:
+                    # ..and start the next available process (subject)
+                    p.start()
+                    print >>pid, p.pid
+                    # Append this to job queue and increment index
+                    job_queue.append(p)
+                    idx += 1
 
-                slots = ns_atonce - len(job_queue)
-                if slots > 0:
-                    idc = idx
-                    for p in procss[idc:idc + slots]:
-                        p.start()
-                        print >>pid, p.pid
-
-                        # Append this to job queue and increment index
-                        job_queue.append(p)
-                        idx += 1
-
-                # Add sleep so while loop isn't consuming 100% of CPU
-                time.sleep(2)
+            # Add sleep so while loop isn't consuming 100% of CPU
+            time.sleep(2)
 
         pid.close()
 
