@@ -75,7 +75,8 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
     axes = []
     for i, snames in enumerate(groups):
         axes.append(plt.subplot(gs[i]))
-        sns.violinplot(data=df[snames], ax=axes[-1])
+        vardf = df[np.atleast_1d(snames).tolist()]
+        sns.violinplot(data=vardf, ax=axes[-1])
 
         axes[-1].set_xticklabels(
             [el.get_text() for el in axes[-1].get_xticklabels()],
@@ -181,7 +182,7 @@ def plot_fd(fd_file, mean_fd_dist=None, figsize=(11.7, 8.3)):
     fig = plt.Figure(figsize=figsize)
     FigureCanvas(fig)
 
-    if mean_fd_distribution:
+    if mean_fd_dist:
         grid = GridSpec(2, 4)
     else:
         grid = GridSpec(1, 4)
@@ -197,12 +198,12 @@ def plot_fd(fd_file, mean_fd_dist=None, figsize=(11.7, 8.3)):
     sns.distplot(fd_power, vertical=True, ax=ax)
     ax.set_ylim(ylim)
 
-    if mean_fd_distribution:
+    if mean_fd_dist:
         ax = fig.add_subplot(grid[1, :])
-        sns.distplot(mean_fd_distribution, ax=ax)
+        sns.distplot(mean_fd_dist, ax=ax)
         ax.set_xlabel("Mean Frame Displacement (over all subjects) [mm]")
         mean_fd = fd_power.mean()
-        label = r'$\bar{\text{FD}$ = %g' % mean_fd
+        label = r'$\bar{FD}$ = %g' % mean_fd
         plot_vline(mean_fd, label, ax=ax)
 
     return fig

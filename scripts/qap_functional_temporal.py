@@ -194,8 +194,6 @@ def run(subject_list, config, cloudify=False):
     output_dir = config.get('output_directory', os.getcwd())
     ns_atonce = config.get('num_subjects_at_once', 1)
     write_report = config.get('write_report', False)
-    if write_report:
-        logger.info('PDF Reports enabled')
 
     with open(subject_list, "r") as f:
         subdict = yaml.load(f)
@@ -339,6 +337,7 @@ def run(subject_list, config, cloudify=False):
     if write_report:
         import os.path as op
         import qap.viz.reports as qvr
+        logger.info('Writting PDF reports')
 
         in_csv = op.join(
             config['output_directory'], 'qap_functional_temporal.csv')

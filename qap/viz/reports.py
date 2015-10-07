@@ -9,7 +9,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-from .plotting import plot_measures, plot_mosaic, plot_all, plot_fd
+from .plotting import (plot_measures, plot_mosaic, plot_all,
+                       plot_fd, plot_distrbution_of_values)
 
 # matplotlib.rc('figure', figsize=(11.69, 8.27))  # for DINA4 size
 
@@ -118,8 +119,8 @@ def report_func_temporal(in_csv, sc_split=False, split_files=True,
             if 'fd_file' in sesdf.columns:
                 for sc in scans:
                     data = subdf.loc[subdf['scan'] == sc].fd_file.tolist()[0]
-                    mean_df = sesdf[['mean_df']].tolist()
-                    fig = plot_fd(data, mean_df_dist=mean_df, title=subject)
+                    mean_fd = sesdf.mean_fd.tolist()
+                    fig = plot_fd(data, mean_fd_dist=mean_fd)
                     report.savefig(fig, dpi=300)
                     fig.clf()
 
@@ -133,8 +134,8 @@ def report_func_temporal(in_csv, sc_split=False, split_files=True,
                     mask = subdf.loc[subdf['scan'] == sc].mask_file.tolist()[0]
                     fig = plot_distrbution_of_values(
                         data, mask,
-                        "tSNR inside the mask, subject %s" % subject_id,
-                        sesdf[['m_tsnr']].tolist(),
+                        "tSNR inside the mask, subject %s" % subject,
+                        sesdf.m_tsnr,
                         "Distribution of median tSNR of all subjects",
                         figsize=(8.3, 8.3))
                     report.savefig(fig, dpi=300)
@@ -151,9 +152,9 @@ def report_func_temporal(in_csv, sc_split=False, split_files=True,
                         fig.clf()
             else:
                 if len(sesdf.index) > 1:
-                    fig = plot_all(sesdf, groups, subject=subject)
-                    report.savefig(fig, dpi=300)
-                    fig.clf()
+                    # fig = plot_all(sesdf, groups, subject=subject)
+                    # report.savefig(fig, dpi=300)
+                    # fig.clf()
                     fig = plot_measures(
                         sesdf, headers, subject=subject,
                         title='Report %s' % ss)
