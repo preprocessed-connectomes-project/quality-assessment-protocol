@@ -7,7 +7,6 @@ def build_functional_temporal_workflow(
         resource_pool, config, subject_info, run_name, site_name=None):
 
     # build pipeline for each subject, individually
-
     # ~ 5 min 45 sec per subject
     # (roughly 345 seconds)
 
@@ -178,20 +177,25 @@ def build_functional_temporal_workflow(
             pass
 
     pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
-    pipeline_end_time = time.time()
-
-    logger.info("Elapsed time (minutes) since last start: %s"
-                % ((pipeline_end_time - pipeline_start_time) / 60))
     logger.info("Pipeline end time: %s" % pipeline_end_stamp)
     return workflow
 
 
 def run(subject_list, config, cloudify=False):
     import os
+    import os.path as op
     import yaml
+    import time
     from multiprocessing import Process
 
-    import time
+    from nipype import logging
+    logger = logging.getLogger('workflow')
+
+    output_dir = config.get('output_directory', os.getcwd())
+    ns_atonce = config.get('num_subjects_at_once', 1)
+    write_report = config.get('write_report', False)
+    if write_report:
+        logger.info('PDF Reports enabled')
 
     with open(subject_list, "r") as f:
         subdict = yaml.load(f)
@@ -203,20 +207,14 @@ def run(subject_list, config, cloudify=False):
         for subid in subdict.keys():
             # sessions
             for session in subdict[subid].keys():
-
                 # resource files
                 for resource in subdict[subid][session].keys():
-
                     if type(subdict[subid][session][resource]) is dict:
                         # then this has sub-scans defined
-
                         for scan in subdict[subid][session][resource].keys():
-
                             filepath = subdict[subid][session][resource][scan]
-
                             resource_dict = {}
                             resource_dict[resource] = filepath
-
                             sub_info_tuple = (subid, session, scan)
 
                             if sub_info_tuple not in flat_sub_dict.keys():
@@ -225,16 +223,12 @@ def run(subject_list, config, cloudify=False):
                             flat_sub_dict[sub_info_tuple].update(resource_dict)
 
                     elif resource == "site_name":
-
                         sites_dict[subid] = subdict[subid][session][resource]
 
                     else:
-
                         filepath = subdict[subid][session][resource]
-
                         resource_dict = {}
                         resource_dict[resource] = filepath
-
                         sub_info_tuple = (subid, session, None)
 
                         if sub_info_tuple not in flat_sub_dict.keys():
@@ -243,11 +237,11 @@ def run(subject_list, config, cloudify=False):
                         flat_sub_dict[sub_info_tuple].update(resource_dict)
 
     try:
-        os.makedirs(config["output_directory"])
+        os.makedirs(output_dir)
     except:
-        if not os.path.isdir(config["output_directory"]):
+        if not os.path.isdir(output_dir):
             err = "[!] Output directory unable to be created.\n" \
-                  "Path: %s\n\n" % config["output_directory"]
+                  "Path: %s\n\n" % output_dir
             raise Exception(err)
         else:
             pass
@@ -280,80 +274,49 @@ def run(subject_list, config, cloudify=False):
                       None))
                       for sub_info in flat_sub_dict.keys()]
 
-        pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
+        pid = open(os.path.join(output_dir, 'pid.txt'), 'w')
 
         # Init job queue
         job_queue = []
+        ns_atonce = config.get('num_subjects_at_once', 1)
 
-        # If we're allocating more processes than are subjects, run them all
-        if len(flat_sub_dict) <= config["num_subjects_at_once"]:
+        # Stream the subject workflows for preprocessing.
+        # At Any time in the pipeline c.numSubjectsAtOnce
+        # will run, unless the number remaining is less than
+        # the value of the parameter stated above
 
-            """
-            Stream all the subjects as sublist is
-            less than or equal to the number of
-            subjects that need to run
-            """
+        idx = 0
+        nprocs = len(procss)
+        while idx < nprocs:
+            # Check every job in the queue's status
+            for job in job_queue:
+                # If the job is not alive
+                if not job.is_alive():
+                    # Find job and delete it from queue
+                    logger.info('found dead job: %s' % str(job))
+                    loc = job_queue.index(job)
+                    del job_queue[loc]
 
-            for p in procss:
-                p.start()
-                print >>pid, p.pid
+            # Check free slots after prunning jobs
+            slots = ns_atonce - len(job_queue)
 
-        # Otherwise manage resources to run processes incrementally
-        else:
+            if slots > 0:
+                idc = idx
+                for p in procss[idc:idc + slots]:
+                    # ..and start the next available process (subject)
+                    p.start()
+                    print >>pid, p.pid
+                    # Append this to job queue and increment index
+                    job_queue.append(p)
+                    idx += 1
 
-            """
-            Stream the subject workflows for preprocessing.
-            At Any time in the pipeline c.numSubjectsAtOnce
-            will run, unless the number remaining is less than
-            the value of the parameter stated above
-            """
-
-            idx = 0
-
-            while(idx < len(flat_sub_dict)):
-
-                # If the job queue is empty and we haven't started indexing
-                if len(job_queue) == 0 and idx == 0:
-
-                    # Init subject process index
-                    idc = idx
-
-                    # Launch processes (one for each subject)
-                    for p in procss[idc: idc + config["num_subjects_at_once"]]:
-
-                        p.start()
-                        print >>pid, p.pid
-                        job_queue.append(p)
-                        idx += 1
-
-                # Otherwise, jobs are running - check them
-                else:
-
-                    # Check every job in the queue's status
-                    for job in job_queue:
-
-                        # If the job is not alive
-                        if not job.is_alive():
-
-                            # Find job and delete it from queue
-                            print 'found dead job ', job
-                            loc = job_queue.index(job)
-                            del job_queue[loc]
-
-                            # ..and start the next available process (subject)
-                            procss[idx].start()
-
-                            # Append this to job queue and increment index
-                            job_queue.append(procss[idx])
-                            idx += 1
-
-                    # Add sleep so while loop isn't consuming 100% of CPU
-                    time.sleep(2)
+            # Add sleep so while loop isn't consuming 100% of CPU
+            time.sleep(2)
 
         pid.close()
 
         # Join all processes if report must be written out
-        if config['write_report']:
+        if write_report:
             for p in procss:
                 p.join()
     else:
@@ -373,11 +336,9 @@ def run(subject_list, config, cloudify=False):
                                            run_name, site_name)
 
     # PDF reporting
-    if config['write_report']:
+    if write_report:
         import os.path as op
         import qap.viz.reports as qvr
-        from nipype import logging
-        logger = logging.getLogger('workflow')
 
         in_csv = op.join(
             config['output_directory'], 'qap_functional_temporal.csv')

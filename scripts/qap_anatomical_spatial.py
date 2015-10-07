@@ -192,6 +192,13 @@ def run(subject_list, config, cloudify=False):
     import time
     from multiprocessing import Process
 
+    from nipype import logging
+    logger = logging.getLogger('workflow')
+
+    write_report = config.get('write_report', False)
+    if write_report:
+        logger.info('PDF Reports enabled')
+
     with open(subject_list, "r") as f:
         subdict = yaml.load(f)
 
@@ -285,76 +292,44 @@ def run(subject_list, config, cloudify=False):
 
         # Init job queue
         job_queue = []
+        ns_atonce = config.get('num_subjects_at_once', 1)
 
-        # If we're allocating more processes than are subjects, run them all
-        if len(flat_sub_dict) <= config["num_subjects_at_once"]:
+        # Stream the subject workflows for preprocessing.
+        # At Any time in the pipeline c.numSubjectsAtOnce
+        # will run, unless the number remaining is less than
+        # the value of the parameter stated above
 
-            """
-            Stream all the subjects as sublist is
-            less than or equal to the number of
-            subjects that need to run
-            """
+        idx = 0
+        nprocs = len(procss)
+        while idx < nprocs:
+            # Check every job in the queue's status
+            for job in job_queue:
+                # If the job is not alive
+                if not job.is_alive():
+                    # Find job and delete it from queue
+                    logger.info('found dead job: %s' % str(job))
+                    loc = job_queue.index(job)
+                    del job_queue[loc]
 
-            for p in procss:
-                p.start()
-                print >>pid, p.pid
+            # Check free slots after prunning jobs
+            slots = ns_atonce - len(job_queue)
 
-        # Otherwise manage resources to run processes incrementally
-        else:
+            if slots > 0:
+                idc = idx
+                for p in procss[idc:idc + slots]:
+                    # ..and start the next available process (subject)
+                    p.start()
+                    print >>pid, p.pid
+                    # Append this to job queue and increment index
+                    job_queue.append(p)
+                    idx += 1
 
-            """
-            Stream the subject workflows for preprocessing.
-            At Any time in the pipeline c.numSubjectsAtOnce
-            will run, unless the number remaining is less than
-            the value of the parameter stated above
-            """
-
-            idx = 0
-
-            while(idx < len(flat_sub_dict)):
-
-                # If the job queue is empty and we haven't started indexing
-                if len(job_queue) == 0 and idx == 0:
-
-                    # Init subject process index
-                    idc = idx
-
-                    # Launch processes (one for each subject)
-                    for p in procss[idc: idc + config["num_subjects_at_once"]]:
-
-                        p.start()
-                        print >>pid, p.pid
-                        job_queue.append(p)
-                        idx += 1
-
-                # Otherwise, jobs are running - check them
-                else:
-
-                    # Check every job in the queue's status
-                    for job in job_queue:
-
-                        # If the job is not alive
-                        if not job.is_alive():
-
-                            # Find job and delete it from queue
-                            print 'found dead job ', job
-                            loc = job_queue.index(job)
-                            del job_queue[loc]
-
-                            # ...and start the next available process (subject)
-                            procss[idx].start()
-
-                            # Append this to job queue and increment index
-                            job_queue.append(procss[idx])
-                            idx += 1
-
-                    # Add sleep so while loop isn't consuming 100% of CPU
-                    time.sleep(2)
-
+            # Add sleep so while loop isn't consuming 100% of CPU
+            time.sleep(2)
         pid.close()
 
         # Join all processes if report must be written out
-        if config['write_report']:
+        if write_report:
             for p in procss:
                 p.join()
     else:
@@ -375,10 +350,9 @@ def run(subject_list, config, cloudify=False):
                                           run_name, site_name)
 
     # PDF reporting
-    if config['write_report']:
+    if write_report:
+        import os.path as op
         import qap.viz.reports as qvr
-        from nipype import logging
-        logger = logging.getLogger('workflow')
 
         in_csv = op.join(
             config['output_directory'], 'qap_anatomical_spatial.csv')

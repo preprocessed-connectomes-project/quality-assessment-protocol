@@ -448,6 +448,12 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
 
     from qap_workflows_utils import qap_functional_temporal
 
+    def _getfirst(inlist):
+        if isinstance(inlist, list):
+            return inlist[0]
+
+        return inlist
+
     # if "mean_functional" not in resource_pool.keys():
     #     from functional_preproc import mean_functional_workflow
     #     workflow, resource_pool = \
@@ -472,11 +478,40 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
                      'coord_xfm_matrix', 'subject_id', 'session_id',
                      'scan_id', 'site_name'], output_names=['qc'],
         function=qap_functional_temporal), name='qap_functional_temporal')
+    temporal.inputs.subject_id = config["subject_id"]
+    temporal.inputs.session_id = config["session_id"]
+    temporal.inputs.scan_id = config["scan_id"]
+
+    if "site_name" in config.keys():
+        temporal.inputs.site_name = config["site_name"]
+
+    motion_ds = pe.Node(nio.DataSink(
+        base_directory=config['output_directory']), name='MotionDS')
+    motion_ds.inputs.subject_id = config["subject_id"]
+    motion_ds.inputs.session_id = config["session_id"]
+    motion_ds.inputs.scan_id = config["scan_id"]
+
+    if "site_name" in config.keys():
+        motion_ds.inputs.site_name = config["site_name"]
 
     out_csv = op.join(
         config['output_directory'], 'qap_functional_temporal.csv')
     temporal_to_csv = pe.Node(
         nam.AddCSVRow(in_file=out_csv), name='qap_functional_temporal_to_csv')
+
+    if "mcflirt_rel_rms" in resource_pool.keys():
+        motion_ds.inputs.coord_xfm_matrix = resource_pool["mcflirt_rel_rms"]
+
+    else:
+        if len(resource_pool["coordinate_transformation"]) == 2:
+            node, out_file = resource_pool["coordinate_transformation"]
+            workflow.connect(node, out_file, motion_ds, 'coord_xfm_matrix')
+        else:
+            motion_ds.inputs.coord_xfm_matrix = \
+                resource_pool["coordinate_transformation"]
+
+    workflow.connect(motion_ds, ('out_file', _getfirst),
+                     temporal, 'coord_xfm_matrix')
 
     if len(resource_pool["func_motion_correct"]) == 2:
         node, out_file = resource_pool["func_motion_correct"]
@@ -496,27 +531,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
         temporal.inputs.func_brain_mask = \
             resource_pool["functional_brain_mask"]
 
-    if "mcflirt_rel_rms" in resource_pool.keys():
-        temporal.inputs.coord_xfm_matrix = resource_pool["mcflirt_rel_rms"]
-
-    else:
-        if len(resource_pool["coordinate_transformation"]) == 2:
-            node, out_file = resource_pool["coordinate_transformation"]
-            workflow.connect(node, out_file, temporal, 'coord_xfm_matrix')
-        else:
-            temporal.inputs.coord_xfm_matrix = \
-                resource_pool["coordinate_transformation"]
-
-    # Subject infos
     workflow.connect(tsnr, 'tsnr_file', temporal, 'tsnr_volume')
-
-    temporal.inputs.subject_id = config["subject_id"]
-    temporal.inputs.session_id = config["session_id"]
-    temporal.inputs.scan_id = config["scan_id"]
-
-    if "site_name" in config.keys():
-        temporal.inputs.site_name = config["site_name"]
-
     workflow.connect(temporal, 'qc', temporal_to_csv, '_outputs')
     resource_pool["qap_functional_temporal"] = (temporal_to_csv, 'csv_file')
     return workflow, resource_pool
