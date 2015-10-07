@@ -13,7 +13,7 @@ import shutil
 from dvars import mean_dvars_wrapper
 
 
-def fd_jenkinson(in_file):
+def fd_jenkinson(in_file, out_file=None):
     '''
     @ Krsna
     May 2013
@@ -38,7 +38,10 @@ def fd_jenkinson(in_file):
     import sys
     import math
 
-    out_file = os.path.join(os.getcwd(), 'FD_J.1D')
+    if out_file is None:
+        bdir = os.path.dirname(in_file)
+        fname, ext = os.path.splitext(os.path.basename(in_file))
+        out_file = os.path.join(bdir, fname + '_FD_J' + ext)
 
     f = open(out_file, 'w')
 

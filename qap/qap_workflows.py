@@ -494,11 +494,6 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
     if "site_name" in config.keys():
         motion_ds.inputs.site_name = config["site_name"]
 
-    out_csv = op.join(
-        config['output_directory'], 'qap_functional_temporal.csv')
-    temporal_to_csv = pe.Node(
-        nam.AddCSVRow(in_file=out_csv), name='qap_functional_temporal_to_csv')
-
     if "mcflirt_rel_rms" in resource_pool.keys():
         motion_ds.inputs.coord_xfm_matrix = resource_pool["mcflirt_rel_rms"]
 
@@ -530,6 +525,11 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
     else:
         temporal.inputs.func_brain_mask = \
             resource_pool["functional_brain_mask"]
+
+    out_csv = op.join(
+        config['output_directory'], 'qap_functional_temporal.csv')
+    temporal_to_csv = pe.Node(
+        nam.AddCSVRow(in_file=out_csv), name='qap_functional_temporal_to_csv')
 
     workflow.connect(tsnr, 'tsnr_file', temporal, 'tsnr_volume')
     workflow.connect(temporal, 'qc', temporal_to_csv, '_outputs')
