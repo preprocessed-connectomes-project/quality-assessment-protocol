@@ -106,14 +106,14 @@ def report_func_temporal(in_csv, sc_split=False, split_files=True,
         tpl = op.join(op.dirname(out_file), tpl) + '_%s.pdf'
 
     for ss in sessions:
-        sesdf = df.loc[df['session'] == ss]
+        sesdf = df.copy().loc[df['session'] == ss]
         scans = pd.unique(sesdf.scan.ravel())
 
         for subject in subject_list:
             if split_files:
                 report = PdfPages(tpl % subject)
 
-            subdf = sesdf.loc[sesdf['subject'] == subject]
+            subdf = sesdf.copy().loc[sesdf['subject'] == subject]
             scans = pd.unique(subdf.scan.ravel())
 
             if 'fd_file' in sesdf.columns:
@@ -152,14 +152,21 @@ def report_func_temporal(in_csv, sc_split=False, split_files=True,
                         fig.clf()
             else:
                 if len(sesdf.index) > 1:
-                    # fig = plot_all(sesdf, groups, subject=subject)
-                    # report.savefig(fig, dpi=300)
-                    # fig.clf()
-                    fig = plot_measures(
-                        sesdf, headers, subject=subject,
-                        title='Report %s' % ss)
-                    report.savefig(fig, dpi=300)
-                    fig.clf()
+                    try:
+                        fig = plot_all(sesdf, groups, subject=subject)
+                        report.savefig(fig, dpi=300)
+                        fig.clf()
+                    except TypeError:
+                        print sesdf
+
+                    try:
+                        fig = plot_measures(
+                            sesdf, headers, subject=subject,
+                            title='Report %s' % ss)
+                        report.savefig(fig, dpi=300)
+                        fig.clf()
+                    except TypeError:
+                        pass
 
             if split_files:
                 report.close()

@@ -75,8 +75,7 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
     axes = []
     for i, snames in enumerate(groups):
         axes.append(plt.subplot(gs[i]))
-        vardf = df[np.atleast_1d(snames).tolist()]
-        sns.violinplot(data=vardf, ax=axes[-1])
+        sns.violinplot(data=df[snames], ax=axes[-1])
 
         axes[-1].set_xticklabels(
             [el.get_text() for el in axes[-1].get_xticklabels()],
