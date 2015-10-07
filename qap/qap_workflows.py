@@ -373,7 +373,7 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config):
         spatial_epi.inputs.site_name = config["site_name"]
 
     workflow.connect(spatial_epi, 'qc', spatial_epi_to_csv, '_outputs')
-    resource_pool["qap_functional_spatial"] = (spatial_epi_to_csv, 'outfile')
+    resource_pool["qap_functional_spatial"] = (spatial_epi_to_csv, 'csv_file')
 
     return workflow, resource_pool
 
