@@ -448,6 +448,12 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
 
     from qap_workflows_utils import qap_functional_temporal
 
+    def _getfirst(inlist):
+        if isinstance(inlist, list):
+            return inlist[0]
+
+        return inlist
+
     # if "mean_functional" not in resource_pool.keys():
     #     from functional_preproc import mean_functional_workflow
     #     workflow, resource_pool = \
@@ -504,7 +510,8 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
             motion_ds.inputs.coord_xfm_matrix = \
                 resource_pool["coordinate_transformation"]
 
-    workflow.connect(motion_ds, 'out_file', temporal, 'coord_xfm_matrix')
+    workflow.connect(motion_ds, ('out_file', _getfirst),
+                     temporal, 'coord_xfm_matrix')
 
     if len(resource_pool["func_motion_correct"]) == 2:
         node, out_file = resource_pool["func_motion_correct"]
