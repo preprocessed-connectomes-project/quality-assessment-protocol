@@ -17,7 +17,7 @@ from .plotting import (plot_measures, plot_mosaic, plot_all,
 
 def report_anatomical(in_csv, sc_split=False, split_files=True,
                       out_file='anatomical.pdf'):
-    df = pd.read_csv(in_csv)
+    df = pd.read_csv(in_csv).fillna(0)
     sessions = pd.unique(df.session.ravel())
 
     groups = [['bg_size', 'fg_size'],
@@ -90,7 +90,7 @@ def report_anatomical(in_csv, sc_split=False, split_files=True,
 
 def report_func_temporal(in_csv, sc_split=False, split_files=True,
                          out_file='func_temporal.pdf'):
-    df = pd.read_csv(in_csv)
+    df = pd.read_csv(in_csv).fillna(0)
 
     groups = [[['dvars'], ['gcor'], ['m_tsnr'], ['mean_fd'],
                ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]]
@@ -181,7 +181,7 @@ def report_func_temporal(in_csv, sc_split=False, split_files=True,
 
 def report_func_spatial(in_csv, sc_split=False, split_files=True,
                         out_file='func_spatial.pdf'):
-    df = pd.read_csv(in_csv)
+    df = pd.read_csv(in_csv).fillna(0)
 
     groups = [[['dvars'], ['gcor'], ['mean_fd'],
                ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]]
