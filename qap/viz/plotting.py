@@ -52,18 +52,14 @@ def plot_measures(df, measures, ncols=4, title='Group level report',
                     plot_vline(
                         scndf.iloc[0][mname], '%s_%s' % (ss, sc), axes[-1])
 
-    if subject is not None:
-        fig.suptitle(subject)
-    else:
-        fig.suptitle(title)
-
+    fig.suptitle(title)
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-    plt.subplots_adjust(top=0.95)
+    plt.subplots_adjust(top=0.85)
     return fig
 
 
 def plot_all(df, groups, subject=None, figsize=(11.69, 5),
-             out_file='testplot.pdf'):
+             title='Summary report', out_file='testplot.pdf'):
     import matplotlib.gridspec as gridspec
     colnames = [v for gnames in groups for v in gnames]
     lengs = [len(el) for el in groups]
@@ -84,20 +80,23 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
         # df[snames].plot(kind='box', ax=axes[-1])
 
         if subject is not None:
-            fig.suptitle(subject)
+            fig.suptitle(title + ' ' + subject)
             out_file = subject + '.pdf'
             subdf = df.loc[df['subject'] == subject].copy()
             reps = len(subdf)
             for j, s in enumerate(snames):
                 vals = np.atleast_1d(subdf[[s]]).reshape(-1).tolist()
 
+                if len(vals) == 0:
+                    continue
+
                 pos = [j]
                 if len(vals) > 1:
                     pos = np.array([j] * len(vals)) + 0.12 * \
                         (np.arange(0.0, len(vals)) - 0.5 * len(vals))
+                axes[-1].plot(pos, vals, markersize=9, linestyle='None',
+                              color='w', marker='*', markeredgecolor='k')
 
-                axes[-1].plot(pos, vals, markersize=5, linestyle='None',
-                              color='w', marker='o', markeredgecolor='k')
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
     plt.subplots_adjust(top=0.85)
     return fig
@@ -208,7 +207,7 @@ def plot_fd(fd_file, mean_fd_dist=None, figsize=(11.7, 8.3)):
     return fig
 
 
-def plot_distrbution_of_values(
+def plot_dist(
         main_file, mask_file, xlabel, distribution=None, xlabel2=None,
         figsize=(11.7, 8.3)):
     data = _get_values_inside_a_mask(main_file, mask_file)
