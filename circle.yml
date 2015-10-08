@@ -12,7 +12,7 @@ dependencies:
     - if [[ ! -d ~/examples/ds003_downsampled ]]; then wget "https://googledrive.com/host/0B2JWN60ZLkgkMEw4bW5VUUpSdFU/ds003_downsampled.tar"; mkdir -p ~/examples; tar xvf ds003_downsampled.tar -C ~/examples; fi
     - wget -O- http://neuro.debian.net/lists/precise.us-ca.full | sudo tee /etc/apt/sources.list.d/neurodebian.sources.list
     - sudo apt-key adv --recv-keys --keyserver hkp://pgp.mit.edu:80 0xA5D32F012649A5A9
-    - sudo apt-get update -y; sudo apt-get install -y fsl-core fsl-atlases xvfb tcsh libxp6 xfonts-base python-qt4 r-base-dev libmotif4 libmotif-dev motif-clients gsl-bin netpbm gnome-tweak-tool libjpeg62
+    - sudo apt-get update -y; sudo apt-get install -y fsl-core fsl-atlases xvfb tcsh libxp6 xfonts-base python-qt4 r-base-dev libmotif4 libmotif-dev motif-clients gsl-bin netpbm libjpeg62
 test:
   override:
     - echo "01" > inclusion_file && python scripts/qap_bids_data_sublist_generator.py --include inclusion_file ~/examples/ds003_downsampled/ ~/bids_subject_list.yml
