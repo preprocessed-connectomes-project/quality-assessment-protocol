@@ -15,9 +15,9 @@ dependencies:
 test:
   override:
     - echo "01" > inclusion_file && python scripts/qap_bids_data_sublist_generator.py --include inclusion_file ~/examples/ds003_downsampled/ ~/bids_subject_list.yml
-    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib . ~/fsl/etc/fslconf/fsl.sh && python scripts/qap_anatomical_spatial.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003.yml
-    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib . ~/fsl/etc/fslconf/fsl.sh && python scripts/qap_functional_spatial.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003.yml
-    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib . ~/fsl/etc/fslconf/fsl.sh && python scripts/qap_functional_temporal.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003.yml
+    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_anatomical_spatial.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003.yml
+    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_functional_spatial.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003.yml
+    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" && python scripts/qap_functional_temporal.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003.yml
 general:
   artifacts:
     - "/tmp/output"
