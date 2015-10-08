@@ -12,8 +12,10 @@ dependencies:
     - sudo apt-get update -y; sudo apt-get install -y fsl-core fsl-atlases afni
 test:
   override:
-    - python scripts/qap_anatomical_spatial.py --sublist configs/ds003_subject_list.yml configs/qap_config_ds003_spatial.yml
+    - python scripts/qap_bids_data_sublist_generator.py ~/examples/ds003_downsampled/ ~/bids_subject_list.yml
+    - python scripts/qap_anatomical_spatial.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003_spatial.yml
 general:
   artifacts:
-    - "doc/_build/html"
-    - "~/log.txt"
+    - "/tmp/output"
+    - "/tmp/workdir"
+    - ""~/bids_subject_list.yml"
