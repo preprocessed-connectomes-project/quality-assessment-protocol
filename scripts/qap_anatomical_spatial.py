@@ -6,6 +6,8 @@ def build_anatomical_spatial_workflow(resource_pool, config, subject_info, \
     # build pipeline for each subject, individually
 
     # ~ 29 minutes per subject with 1 core to ANTS
+    
+    print resource_pool
 
     import os
     import sys
@@ -304,7 +306,6 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
                         flat_sub_dict[sub_info_tuple].update(resource_dict)
 
 
-        
     with open(pipeline_config_yaml,"r") as f:
         config = yaml.load(f)
                         
@@ -344,22 +345,24 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
                     site = sites_dict[sub_info[0]]
                 else:
                     site = None
-                build_anatomical_spatial_workflow(flat_sub_dict[sub_info], config, sub_info, \
+                if 'anatomical_scan' in flat_sub_dict[sub_info].keys():
+                    build_anatomical_spatial_workflow(flat_sub_dict[sub_info], config, sub_info, \
                                                    run_name, site)
         else:
-            if len(sites_dict) > 0:
-    
-                procss = [Process(target=build_anatomical_spatial_workflow, \
-                                args=(flat_sub_dict[sub_info], config, sub_info, \
-                                          run_name, sites_dict[sub_info[0]])) \
-                                    for sub_info in flat_sub_dict.keys()]
-    
-            elif len(sites_dict) == 0:
-    
-                procss = [Process(target=build_anatomical_spatial_workflow, \
-                                args=(flat_sub_dict[sub_info], config, sub_info, \
-                                          run_name, None)) \
-                                    for sub_info in flat_sub_dict.keys()]
+            if 'anatomical_scan' in flat_sub_dict[sub_info].keys():
+                if len(sites_dict) > 0:
+        
+                    procss = [Process(target=build_anatomical_spatial_workflow, \
+                                    args=(flat_sub_dict[sub_info], config, sub_info, \
+                                              run_name, sites_dict[sub_info[0]])) \
+                                        for sub_info in flat_sub_dict.keys()]
+        
+                elif len(sites_dict) == 0:
+        
+                    procss = [Process(target=build_anatomical_spatial_workflow, \
+                                    args=(flat_sub_dict[sub_info], config, sub_info, \
+                                              run_name, None)) \
+                                        for sub_info in flat_sub_dict.keys()]
                                   
                                   
             pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
