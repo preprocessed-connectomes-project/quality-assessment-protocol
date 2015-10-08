@@ -13,7 +13,7 @@ dependencies:
 test:
   override:
     - python scripts/qap_bids_data_sublist_generator.py ~/examples/ds003_downsampled/ ~/bids_subject_list.yml
-    - python scripts/qap_anatomical_spatial.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003_spatial.yml
+    - . /etc/fsl/fsl.sh && . /etc/afni/afni.sh && python scripts/qap_anatomical_spatial.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003_spatial.yml
 general:
   artifacts:
     - "/tmp/output"
