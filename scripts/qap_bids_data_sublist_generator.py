@@ -8,6 +8,10 @@ def gather_bids_data(dataset_folder, yaml_outpath, subject_inclusion=None):
     sub_dict = {}
     inclusion_list = []
     
+    subject_ids = [x[4:] for x in next(os.walk(dataset_folder))[1] if x.startswith("sub-")]
+    
+    if not subject_ids:
+        raise Exception("This does not appear to be a BIDS dataset.")
 
     # create subject inclusion list
     if subject_inclusion != None:
@@ -16,10 +20,8 @@ def gather_bids_data(dataset_folder, yaml_outpath, subject_inclusion=None):
         # remove any /n's
         inclusion_list = map(lambda s: s.strip(), inclusion_list)
         
-    subject_ids = [x[4:] for x in next(os.walk(dataset_folder))[1] if x.startswith("sub-")]
+        subject_ids = set(subject_ids).intersection(inclusion_list)
     
-    if not subject_ids:
-        raise Exception("This does not appear to be a BIDS dataset.")
     
     for subject_id in subject_ids:
         #TODO: implement multisession support

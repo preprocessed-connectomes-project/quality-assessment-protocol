@@ -13,7 +13,7 @@ dependencies:
     - sudo apt-get update -y; sudo apt-get install -y fsl-core fsl-atlases afni xvfb
 test:
   override:
-    - python scripts/qap_bids_data_sublist_generator.py ~/examples/ds003_downsampled/ ~/bids_subject_list.yml
+    - echo "01" > inclusion_file && python scripts/qap_bids_data_sublist_generator.py --include inclusion_file ~/examples/ds003_downsampled/ ~/bids_subject_list.yml
     - . /etc/fsl/fsl.sh && . /etc/afni/afni.sh && python scripts/qap_anatomical_spatial.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003.yml
     - . /etc/fsl/fsl.sh && . /etc/afni/afni.sh && python scripts/qap_functional_spatial.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003.yml
     - . /etc/fsl/fsl.sh && . /etc/afni/afni.sh && python scripts/qap_functional_temporal.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003.yml
