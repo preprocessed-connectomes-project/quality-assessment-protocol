@@ -204,7 +204,10 @@ def build_functional_temporal_workflow(resource_pool, config, subject_info, \
                                                           ".dot"), \
                                                           simple_form=False)
 
-        workflow.run(plugin='MultiProc', plugin_args= \
+        if config["num_cores_per_subject"] == 1:
+            workflow.run(plugin='Linear')
+        else:
+            workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': config["num_cores_per_subject"]})
 
     else:
