@@ -18,4 +18,4 @@ general:
   artifacts:
     - "/tmp/output"
     - "/tmp/workdir"
-    - ""~/bids_subject_list.yml"
+    - "~/bids_subject_list.yml"
