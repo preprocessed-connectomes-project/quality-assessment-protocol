@@ -1,12 +1,12 @@
 dependencies:
   cache_directories:
-    - "~/examples/data"
+    - "~/examples/"
   override:
     - pip install --upgrade pip
     - pip install numpy
     - pip install -e .
     - pip install matplotlib sphinx ipython
-    - if [[ ! -d ~/examples/data ]]; then wget "https://googledrive.com/host/0B2JWN60ZLkgkMEw4bW5VUUpSdFU/ds003_downsampled.tar"; tar xvf ds003_downsampled.tar; mkdir ~/examples; mv ds003_downsampled ~/examples/; fi
+    - if [[ ! -d ~/examples/ds003_downsampled ]]; then wget "https://googledrive.com/host/0B2JWN60ZLkgkMEw4bW5VUUpSdFU/ds003_downsampled.tar"; mkdir -p ~/examples; tar xvf ds003_downsampled.tar -C ~/examples; fi
     - wget -O- http://neuro.debian.net/lists/trusty.us-nh.full | sudo tee /etc/apt/sources.list.d/neurodebian.sources.list
     - sudo apt-key adv --recv-keys --keyserver hkp://pgp.mit.edu:80 0xA5D32F012649A5A9
     - sudo apt-get update -y; sudo apt-get install -y fsl-core fsl-atlases afni
