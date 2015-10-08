@@ -8,9 +8,9 @@ working_directory: /tmp/workdir
 
 write_all_outputs: False
 
-template_brain_for_anat: /usr/local/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz
+template_brain_for_anat: /usr/share/fsl/5.0/data/standard/MNI152_T1_2mm_brain.nii.gz
 
-template_skull_for_anat: /usr/local/fsl/data/standard/MNI152_T1_2mm.nii.gz
+template_skull_for_anat: /usr/share/fsl/5.0/data/standard/MNI152_T1_2mm.nii.gz
 
 start_idx: 0
 
