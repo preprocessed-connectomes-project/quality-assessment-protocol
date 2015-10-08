@@ -192,8 +192,15 @@ def report_func_spatial(in_csv, sc_split=False, split_files=True,
                         out_file='func_spatial.pdf'):
     df = pd.read_csv(in_csv).fillna(0)
 
-    groups = [['dvars'], ['gcor'], ['mean_fd'],
-              ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]
+    groups = [['bg_size', 'fg_size'],
+              ['bg_mean', 'fg_mean'],
+              ['bg_std', 'fg_std'],
+              ['efc'],
+              ['fber'],
+              ['fwhm', 'fwhm_x', 'fwhm_y', 'fwhm_z'],
+              ['ghost_x'],
+              ['snr']]
+
     headers = [v for gnames in groups for v in gnames]
 
     sessions = pd.unique(df.session.ravel())
