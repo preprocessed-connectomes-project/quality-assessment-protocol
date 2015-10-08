@@ -342,92 +342,102 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
 
     if not cloudify:
         
-        if len(sites_dict) > 0:
-
-            procss = [Process(target=build_functional_spatial_workflow, \
-                            args=(flat_sub_dict[sub_info], config, sub_info, \
-                                      run_name, sites_dict[sub_info[0]])) \
-                                for sub_info in flat_sub_dict.keys()]
-
-        elif len(sites_dict) == 0:
-
-            procss = [Process(target=build_functional_spatial_workflow, \
-                            args=(flat_sub_dict[sub_info], config, sub_info, \
-                                      run_name, None)) \
-                                for sub_info in flat_sub_dict.keys()]
-                          
-                          
-        pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
-    
-        # Init job queue
-        job_queue = []
-
-        # If we're allocating more processes than are subjects, run them all
-        if len(flat_sub_dict) <= config["num_subjects_at_once"]:
-    
-            """
-            Stream all the subjects as sublist is
-            less than or equal to the number of 
-            subjects that need to run
-            """
-    
-            for p in procss:
-                p.start()
-                print >>pid,p.pid
-    
-        # Otherwise manage resources to run processes incrementally
-        else:
-    
-            """
-            Stream the subject workflows for preprocessing.
-            At Any time in the pipeline c.numSubjectsAtOnce
-            will run, unless the number remaining is less than
-            the value of the parameter stated above
-            """
-    
-            idx = 0
-    
-            while(idx < len(flat_sub_dict)):
-    
-                # If the job queue is empty and we haven't started indexing
-                if len(job_queue) == 0 and idx == 0:
-    
-                    # Init subject process index
-                    idc = idx
-    
-                    # Launch processes (one for each subject)
-                    for p in procss[idc: idc+config["num_subjects_at_once"]]:
-    
-                        p.start()
-                        print >>pid,p.pid
-                        job_queue.append(p)
-                        idx += 1
-    
-                # Otherwise, jobs are running - check them
+        #skip parallel machinery if we are running only one subject at once
+        if config["num_subjects_at_once"] == 1:
+            for sub_info in flat_sub_dict.keys():
+                if sites_dict:
+                    site = sites_dict[sub_info[0]]
                 else:
+                    site = None
+                build_functional_spatial_workflow(flat_sub_dict[sub_info], config, sub_info, \
+                                                  run_name, site)
+        else:
+            if len(sites_dict) > 0:
     
-                    # Check every job in the queue's status
-                    for job in job_queue:
+                procss = [Process(target=build_functional_spatial_workflow, \
+                                args=(flat_sub_dict[sub_info], config, sub_info, \
+                                          run_name, sites_dict[sub_info[0]])) \
+                                    for sub_info in flat_sub_dict.keys()]
     
-                        # If the job is not alive
-                        if not job.is_alive():
+            elif len(sites_dict) == 0:
     
-                            # Find job and delete it from queue
-                            print 'found dead job ', job
-                            loc = job_queue.index(job)
-                            del job_queue[loc]
+                procss = [Process(target=build_functional_spatial_workflow, \
+                                args=(flat_sub_dict[sub_info], config, sub_info, \
+                                          run_name, None)) \
+                                    for sub_info in flat_sub_dict.keys()]
+                              
+                              
+            pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
+        
+            # Init job queue
+            job_queue = []
     
-                            # ..and start the next available process (subject)
-                            procss[idx].start()
-    
-                            # Append this to job queue and increment index
-                            job_queue.append(procss[idx])
+            # If we're allocating more processes than are subjects, run them all
+            if len(flat_sub_dict) <= config["num_subjects_at_once"]:
+        
+                """
+                Stream all the subjects as sublist is
+                less than or equal to the number of 
+                subjects that need to run
+                """
+        
+                for p in procss:
+                    p.start()
+                    print >>pid,p.pid
+        
+            # Otherwise manage resources to run processes incrementally
+            else:
+        
+                """
+                Stream the subject workflows for preprocessing.
+                At Any time in the pipeline c.numSubjectsAtOnce
+                will run, unless the number remaining is less than
+                the value of the parameter stated above
+                """
+        
+                idx = 0
+        
+                while(idx < len(flat_sub_dict)):
+        
+                    # If the job queue is empty and we haven't started indexing
+                    if len(job_queue) == 0 and idx == 0:
+        
+                        # Init subject process index
+                        idc = idx
+        
+                        # Launch processes (one for each subject)
+                        for p in procss[idc: idc+config["num_subjects_at_once"]]:
+        
+                            p.start()
+                            print >>pid,p.pid
+                            job_queue.append(p)
                             idx += 1
-
-                    # Add sleep so while loop isn't consuming 100% of CPU
-                    time.sleep(2)
+        
+                    # Otherwise, jobs are running - check them
+                    else:
+        
+                        # Check every job in the queue's status
+                        for job in job_queue:
+        
+                            # If the job is not alive
+                            if not job.is_alive():
+        
+                                # Find job and delete it from queue
+                                print 'found dead job ', job
+                                loc = job_queue.index(job)
+                                del job_queue[loc]
+        
+                                # ..and start the next available process (subject)
+                                procss[idx].start()
+        
+                                # Append this to job queue and increment index
+                                job_queue.append(procss[idx])
+                                idx += 1
     
-        pid.close()
+                        # Add sleep so while loop isn't consuming 100% of CPU
+                        time.sleep(2)
+        
+            pid.close()
 
 
     else:
