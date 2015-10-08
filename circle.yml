@@ -3,6 +3,7 @@ dependencies:
     - "~/examples/data"
   override:
     - pip install --upgrade pip
+    - pip install numpy
     - pip install -e .
     - pip install matplotlib sphinx ipython
     - if [[ ! -d ~/examples/data ]]; then wget "https://googledrive.com/host/0B2JWN60ZLkgkMEw4bW5VUUpSdFU/ds003_downsampled.tar"; tar xvf ds003_downsampled.tar; mkdir ~/examples; mv ds003_downsampled ~/examples/; fi
