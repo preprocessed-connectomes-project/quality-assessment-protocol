@@ -61,7 +61,7 @@ def main():
 
     parser.add_argument("dataset_folder", type=str, \
                             help="full path to the directory holding the " \
-                                 "raw data, to the BIDS specification" \
+                                 "raw data, organized according to the BIDS specification" \
                                  "http://bids.neuroimaging.io")
 
     parser.add_argument("outfile_path", type=str, \
