@@ -4,6 +4,7 @@ dependencies:
   override:
     - pip install --upgrade pip
     - pip install numpy
+    - pip install http://github.com/chrisfilo/nipype/archive/fix/skullstrip_redirect_x.zip
     - pip install -e .
     - pip install matplotlib sphinx ipython
     - if [[ ! -d ~/examples/ds003_downsampled ]]; then wget "https://googledrive.com/host/0B2JWN60ZLkgkMEw4bW5VUUpSdFU/ds003_downsampled.tar"; mkdir -p ~/examples; tar xvf ds003_downsampled.tar -C ~/examples; fi
