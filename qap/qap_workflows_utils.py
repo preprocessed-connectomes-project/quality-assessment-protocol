@@ -82,13 +82,8 @@ def slice_head_mask(infile, transform, standard):
         coord_cmd = "std2imgcoord -img %s -std %s -xfm %s -vox %s" \
                     % (infile, standard, transform, inpoint)
 
-        try:
-
-            coord_out = commands.getoutput(coord_cmd)
-
-        except:
-
-            raise Exception
+        coord_out = commands.getoutput(coord_cmd)
+        print coord_out
 
 
         if "Could not" in coord_out:
