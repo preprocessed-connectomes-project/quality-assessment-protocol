@@ -9,11 +9,13 @@ dependencies:
     - if [[ ! -d ~/examples/ds003_downsampled ]]; then wget "https://googledrive.com/host/0B2JWN60ZLkgkMEw4bW5VUUpSdFU/ds003_downsampled.tar"; mkdir -p ~/examples; tar xvf ds003_downsampled.tar -C ~/examples; fi
     - wget -O- http://neuro.debian.net/lists/precise.us-ca.full | sudo tee /etc/apt/sources.list.d/neurodebian.sources.list
     - sudo apt-key adv --recv-keys --keyserver hkp://pgp.mit.edu:80 0xA5D32F012649A5A9
-    - sudo apt-get update -y; sudo apt-get install -y fsl-core fsl-atlases afni
+    - sudo apt-get update -y; sudo apt-get install -y fsl-core fsl-atlases afni xvfb
 test:
   override:
     - python scripts/qap_bids_data_sublist_generator.py ~/examples/ds003_downsampled/ ~/bids_subject_list.yml
-    - . /etc/fsl/fsl.sh && . /etc/afni/afni.sh && python scripts/qap_anatomical_spatial.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003_spatial.yml
+    - . /etc/fsl/fsl.sh && . /etc/afni/afni.sh && python scripts/qap_anatomical_spatial.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003.yml
+    - . /etc/fsl/fsl.sh && . /etc/afni/afni.sh && python scripts/qap_functional_spatial.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003.yml
+    - . /etc/fsl/fsl.sh && . /etc/afni/afni.sh && python scripts/qap_functional_temporal.py --sublist ~/bids_subject_list.yml configs/qap_config_ds003.yml
 general:
   artifacts:
     - "/tmp/output"
