@@ -48,7 +48,7 @@ def slice_head_mask(infile, transform, standard):
 
     import nibabel as nb
     import numpy as np
-    import commands
+    import subprocess
     
     import pkg_resources as p
 
@@ -82,14 +82,7 @@ def slice_head_mask(infile, transform, standard):
         coord_cmd = "std2imgcoord -img %s -std %s -xfm %s -vox %s" \
                     % (infile, standard, transform, inpoint)
 
-        try:
-
-            coord_out = commands.getoutput(coord_cmd)
-
-        except:
-
-            raise Exception
-
+        coord_out = subprocess.check_output(coord_cmd, shell=True)
 
         if "Could not" in coord_out:
 
