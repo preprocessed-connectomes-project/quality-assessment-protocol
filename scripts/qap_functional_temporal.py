@@ -184,9 +184,12 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
     import os.path as op
     import yaml
     from multiprocessing import Process
-
     import time
 
+    from nipype import logging
+    logger = logging.getLogger('workflow')
+    
+    
     if not cloudify:
 
         with open(subject_list, "r") as f:
@@ -272,68 +275,44 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
 
         # Init job queue
         job_queue = []
+        ns_atonce = config.get('num_subjects_at_once', 1)
 
-        # If we're allocating more processes than are subjects, run them all
-        if len(flat_sub_dict) <= config["num_subjects_at_once"]:
-            """
-            Stream all the subjects as sublist is
-            less than or equal to the number of
-            subjects that need to run
-            """
-            for p in procss:
-                p.start()
-                print >>pid, p.pid
+        # Stream the subject workflows for preprocessing.
+        # At Any time in the pipeline c.numSubjectsAtOnce
+        # will run, unless the number remaining is less than
+        # the value of the parameter stated above
 
-        # Otherwise manage resources to run processes incrementally
-        else:
-            """
-            Stream the subject workflows for preprocessing.
-            At Any time in the pipeline c.numSubjectsAtOnce
-            will run, unless the number remaining is less than
-            the value of the parameter stated above
-            """
-            idx = 0
-            while(idx < len(flat_sub_dict)):
+        idx = 0
+        nprocs = len(procss)
+        while idx < nprocs:
+            # Check every job in the queue's status
+            for job in job_queue:
+                # If the job is not alive
+                if not job.is_alive():
+                    # Find job and delete it from queue
+                    logger.info('found dead job: %s' % str(job))
+                    loc = job_queue.index(job)
+                    del job_queue[loc]
 
-                # If the job queue is empty and we haven't started indexing
-                if len(job_queue) == 0 and idx == 0:
+            # Check free slots after prunning jobs
+            slots = ns_atonce - len(job_queue)
 
-                    # Init subject process index
-                    idc = idx
+            if slots > 0:
+                idc = idx
+                for p in procss[idc:idc + slots]:
+                    # ..and start the next available process (subject)
+                    p.start()
+                    print >>pid, p.pid
+                    # Append this to job queue and increment index
+                    job_queue.append(p)
+                    idx += 1
 
-                    # Launch processes (one for each subject)
-                    for p in procss[idc: idc + config["num_subjects_at_once"]]:
+            # Add sleep so while loop isn't consuming 100% of CPU
+            time.sleep(2)
 
-                        p.start()
-                        print >>pid, p.pid
-                        job_queue.append(p)
-                        idx += 1
-
-                # Otherwise, jobs are running - check them
-                else:
-
-                    # Check every job in the queue's status
-                    for job in job_queue:
-
-                        # If the job is not alive
-                        if not job.is_alive():
-
-                            # Find job and delete it from queue
-                            print 'found dead job ', job
-                            loc = job_queue.index(job)
-                            del job_queue[loc]
-
-                            # ..and start the next available process (subject)
-                            procss[idx].start()
-
-                            # Append this to job queue and increment index
-                            job_queue.append(procss[idx])
-                            idx += 1
-
-                    # Add sleep so while loop isn't consuming 100% of CPU
-                    time.sleep(2)
 
         pid.close()
+
 
     else:
         # run on cloud
