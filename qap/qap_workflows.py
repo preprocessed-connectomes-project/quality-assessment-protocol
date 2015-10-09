@@ -9,6 +9,7 @@ def qap_mask_workflow(workflow, resource_pool, config):
 
     import nipype.interfaces.utility as util
     import nipype.interfaces.fsl.maths as fsl
+    from nipype.interfaces.fsl.base import Info
 
     from qap_workflows_utils import select_thresh, \
                                     slice_head_mask
@@ -19,6 +20,8 @@ def qap_mask_workflow(workflow, resource_pool, config):
   
     #check_input_resources(resource_pool, "anatomical_reorient")
     #check_input_resources(resource_pool, "ants_affine_xfm")
+    if "template_skull_for_anat" not in config:
+        config["template_skull_for_anat"] = Info.standard_image("MNI152_T1_2mm.nii.gz")
     check_config_settings(config, "template_skull_for_anat")
 
 
