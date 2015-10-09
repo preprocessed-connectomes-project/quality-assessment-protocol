@@ -146,7 +146,7 @@ def outlier_timepoints(func_file, mask_file, out_fraction=True):
     outliers: list
     """
     
-    import commands
+    import commands, re
     
     opts    = []
     if out_fraction:
@@ -159,14 +159,13 @@ def outlier_timepoints(func_file, mask_file, out_fraction=True):
     # check if should use -polort 2 (http://www.na-mic.org/Wiki/images/8/86/FBIRNSupplementalMaterial082005.pdf)
     # or -legendre to remove any trend
     cmd     = "3dToutcount %s" % str_opts
-    out     = commands.getoutput(cmd)
+    out     = commands.getoutput(cmd) 
     
     # Extract time-series in output
     lines   = out.splitlines()
-    ## remove general information
-    lines   = [ l for l in lines if l[:2] != "++" ]
-    ## string => floats
-    outliers= [ float(l.strip()) for l in lines ] # note: don't really need strip
+    
+    ## remove general information and warnings
+    outliers= [ float(l) for l in lines if re.match("[0-9]+$", l.strip()) ]
     
     return outliers
 
