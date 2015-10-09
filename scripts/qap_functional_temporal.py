@@ -156,11 +156,12 @@ def build_functional_temporal_workflow(
         workflow.write_graph(
             dotfilename=os.path.join(output_dir, run_name + ".dot"),
             simple_form=False)
-
-        workflow.run(
-            plugin='MultiProc',
-            plugin_args={'n_procs': config["num_cores_per_subject"]})
-
+        if config["num_cores_per_subject"] == 1:
+            workflow.run(plugin='Linear')
+        else:
+            workflow.run(
+                plugin='MultiProc',
+                plugin_args={'n_procs': config["num_cores_per_subject"]})
     else:
         print "\nEverything is already done for subject %s." % sub_id
 
@@ -258,65 +259,78 @@ def run(subject_list, config, cloudify=False):
     run_name = config['pipeline_config_yaml'].split("/")[-1].split(".")[0]
 
     if not cloudify:
-        if len(sites_dict) > 0:
-            procss = [Process(
-                target=build_functional_temporal_workflow,
-                args=(flat_sub_dict[sub_info], config, sub_info, run_name,
-                      [sub_info[0]]))
-                      for sub_info in flat_sub_dict.keys()]
+        # skip parallel machinery if we are running only one subject at once
+        if config["num_subjects_at_once"] == 1:
+            for sub_info in flat_sub_dict.keys():
+                if sites_dict:
+                    site = sites_dict[sub_info[0]]
+                else:
+                    site = None
+                if 'functional_scan' in flat_sub_dict[sub_info].keys():
+                    build_functional_temporal_workflow(
+                        flat_sub_dict[sub_info], config, sub_info,
+                        run_name, site)
+        else:
+            if 'functional_scan' in flat_sub_dict[sub_info].keys():
+                if len(sites_dict) > 0:
+                    procss = [Process(
+                        target=build_functional_temporal_workflow,
+                        args=(flat_sub_dict[sub_info], config, sub_info,
+                              run_name, [sub_info[0]]))
+                              for sub_info in flat_sub_dict.keys()]
 
-        elif len(sites_dict) == 0:
-            procss = [Process(
-                target=build_functional_temporal_workflow,
-                args=(flat_sub_dict[sub_info], config, sub_info, run_name,
-                      None))
-                      for sub_info in flat_sub_dict.keys()]
+                elif len(sites_dict) == 0:
+                    procss = [Process(
+                        target=build_functional_temporal_workflow,
+                        args=(flat_sub_dict[sub_info], config, sub_info,
+                              run_name, None))
+                              for sub_info in flat_sub_dict.keys()]
 
-        pid = open(os.path.join(output_dir, 'pid.txt'), 'w')
+                pid = open(os.path.join(output_dir, 'pid.txt'), 'w')
 
-        # Init job queue
-        job_queue = []
-        ns_atonce = config.get('num_subjects_at_once', 1)
+                # Init job queue
+                job_queue = []
+                ns_atonce = config.get('num_subjects_at_once', 1)
 
-        # Stream the subject workflows for preprocessing.
-        # At Any time in the pipeline c.numSubjectsAtOnce
-        # will run, unless the number remaining is less than
-        # the value of the parameter stated above
+                # Stream the subject workflows for preprocessing.
+                # At Any time in the pipeline c.numSubjectsAtOnce
+                # will run, unless the number remaining is less than
+                # the value of the parameter stated above
 
-        idx = 0
-        nprocs = len(procss)
-        while idx < nprocs:
-            # Check every job in the queue's status
-            for job in job_queue:
-                # If the job is not alive
-                if not job.is_alive():
-                    # Find job and delete it from queue
-                    logger.info('found dead job: %s' % str(job))
-                    loc = job_queue.index(job)
-                    del job_queue[loc]
+                idx = 0
+                nprocs = len(procss)
+                while idx < nprocs:
+                    # Check every job in the queue's status
+                    for job in job_queue:
+                        # If the job is not alive
+                        if not job.is_alive():
+                            # Find job and delete it from queue
+                            logger.info('found dead job: %s' % str(job))
+                            loc = job_queue.index(job)
+                            del job_queue[loc]
 
-            # Check free slots after prunning jobs
-            slots = ns_atonce - len(job_queue)
+                    # Check free slots after prunning jobs
+                    slots = ns_atonce - len(job_queue)
 
-            if slots > 0:
-                idc = idx
-                for p in procss[idc:idc + slots]:
-                    # ..and start the next available process (subject)
-                    p.start()
-                    print >>pid, p.pid
-                    # Append this to job queue and increment index
-                    job_queue.append(p)
-                    idx += 1
+                    if slots > 0:
+                        idc = idx
+                        for p in procss[idc:idc + slots]:
+                            # ..and start the next available process (subject)
+                            p.start()
+                            print >>pid, p.pid
+                            # Append this to job queue and increment index
+                            job_queue.append(p)
+                            idx += 1
 
-            # Add sleep so while loop isn't consuming 100% of CPU
-            time.sleep(2)
+                    # Add sleep so while loop isn't consuming 100% of CPU
+                    time.sleep(2)
 
-        pid.close()
+                pid.close()
 
-        # Join all processes if report must be written out
-        if write_report:
-            for p in procss:
-                p.join()
+                # Join all processes if report must be written out
+                if write_report:
+                    for p in procss:
+                        p.join()
     else:
         # run on cloud
         sub = subject_list.keys()[0]
@@ -330,8 +344,8 @@ def run(subject_list, config, cloudify=False):
         filesplit = filepath.split(config["bucket_prefix"])
         site_name = filesplit[1].split("/")[1]
 
-        build_functional_temporal_workflow(subject_list[sub], config, sub,
-                                           run_name, site_name)
+        build_functional_temporal_workflow(
+            subject_list[sub], config, sub, run_name, site_name)
 
     # PDF reporting
     if write_report:

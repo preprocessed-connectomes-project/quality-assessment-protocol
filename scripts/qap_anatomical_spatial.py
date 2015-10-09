@@ -12,6 +12,9 @@ def build_anatomical_spatial_workflow(
     # build pipeline for each subject, individually
 
     # ~ 29 minutes per subject with 1 core to ANTS
+
+    import os
+    import sys
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
@@ -158,10 +161,12 @@ def build_anatomical_spatial_workflow(
             dotfilename=os.path.join(output_dir, run_name + ".dot"),
             simple_form=False)
 
-        workflow.run(
-            plugin='MultiProc',
-            plugin_args={'n_procs': config["num_cores_per_subject"]})
-
+        if config["num_cores_per_subject"] == 1:
+            workflow.run(plugin='Linear')
+        else:
+            workflow.run(
+                plugin='MultiProc',
+                plugin_args={'n_procs': config["num_cores_per_subject"]})
     else:
         print "\nEverything is already done for subject %s." % sub_id
 
@@ -207,41 +212,29 @@ def run(subject_list, config, cloudify=False):
         sites_dict = {}
 
         for subid in subdict.keys():
-
             # sessions
             for session in subdict[subid].keys():
-
                 # resource files
                 for resource in subdict[subid][session].keys():
-
                     if type(subdict[subid][session][resource]) is dict:
                         # then this has sub-scans defined
-
                         for scan in subdict[subid][session][resource].keys():
-
                             filepath = subdict[subid][session][resource][scan]
-
                             resource_dict = {}
                             resource_dict[resource] = filepath
-
                             sub_info_tuple = (subid, session, scan)
 
                             if sub_info_tuple not in flat_sub_dict.keys():
                                 flat_sub_dict[sub_info_tuple] = {}
 
                             flat_sub_dict[sub_info_tuple].update(resource_dict)
-
                     elif resource == "site_name":
-
                         sites_dict[subid] = subdict[subid][session][resource]
 
                     else:
-
                         filepath = subdict[subid][session][resource]
-
                         resource_dict = {}
                         resource_dict[resource] = filepath
-
                         sub_info_tuple = (subid, session, None)
 
                         if sub_info_tuple not in flat_sub_dict.keys():
@@ -273,67 +266,79 @@ def run(subject_list, config, cloudify=False):
     run_name = config['pipeline_config_yaml'].split("/")[-1].split(".")[0]
 
     if not cloudify:
+        # skip parallel machinery if we are running only one subject at once
+        if config["num_subjects_at_once"] == 1:
+            for sub_info in flat_sub_dict.keys():
+                if sites_dict:
+                    site = sites_dict[sub_info[0]]
+                else:
+                    site = None
+                if 'anatomical_scan' in flat_sub_dict[sub_info].keys():
+                    build_anatomical_spatial_workflow(
+                        flat_sub_dict[sub_info], config, sub_info,
+                        run_name, site)
+        else:
+            if 'anatomical_scan' in flat_sub_dict[sub_info].keys():
+                if len(sites_dict) > 0:
+                    procss = [Process(
+                        target=build_anatomical_spatial_workflow,
+                        args=(flat_sub_dict[sub_info], config, sub_info,
+                              run_name, sites_dict[sub_info[0]]))
+                              for sub_info in flat_sub_dict.keys()]
 
-        if len(sites_dict) > 0:
-            procss = [Process(
-                target=build_anatomical_spatial_workflow,
-                args=(flat_sub_dict[sub_info], config, sub_info, run_name,
-                      sites_dict[sub_info[0]]))
-                      for sub_info in flat_sub_dict.keys()]
+                elif len(sites_dict) == 0:
+                    procss = [Process(
+                        target=build_anatomical_spatial_workflow,
+                        args=(flat_sub_dict[sub_info], config, sub_info,
+                              run_name, None))
+                              for sub_info in flat_sub_dict.keys()]
 
-        elif len(sites_dict) == 0:
-            procss = [Process(
-                target=build_anatomical_spatial_workflow,
-                args=(flat_sub_dict[sub_info], config, sub_info, run_name,
-                      None))
-                      for sub_info in flat_sub_dict.keys()]
+                pid = open(os.path.join(
+                    config["output_directory"], 'pid.txt'), 'w')
 
-        pid = open(os.path.join(config["output_directory"], 'pid.txt'), 'w')
+                # Init job queue
+                job_queue = []
+                ns_atonce = config.get('num_subjects_at_once', 1)
 
-        # Init job queue
-        job_queue = []
-        ns_atonce = config.get('num_subjects_at_once', 1)
+                # Stream the subject workflows for preprocessing.
+                # At Any time in the pipeline c.numSubjectsAtOnce
+                # will run, unless the number remaining is less than
+                # the value of the parameter stated above
 
-        # Stream the subject workflows for preprocessing.
-        # At Any time in the pipeline c.numSubjectsAtOnce
-        # will run, unless the number remaining is less than
-        # the value of the parameter stated above
+                idx = 0
+                nprocs = len(procss)
+                while idx < nprocs:
+                    # Check every job in the queue's status
+                    for job in job_queue:
+                        # If the job is not alive
+                        if not job.is_alive():
+                            # Find job and delete it from queue
+                            logger.info('found dead job: %s' % str(job))
+                            loc = job_queue.index(job)
+                            del job_queue[loc]
 
-        idx = 0
-        nprocs = len(procss)
-        while idx < nprocs:
-            # Check every job in the queue's status
-            for job in job_queue:
-                # If the job is not alive
-                if not job.is_alive():
-                    # Find job and delete it from queue
-                    logger.info('found dead job: %s' % str(job))
-                    loc = job_queue.index(job)
-                    del job_queue[loc]
+                    # Check free slots after prunning jobs
+                    slots = ns_atonce - len(job_queue)
 
-            # Check free slots after prunning jobs
-            slots = ns_atonce - len(job_queue)
+                    if slots > 0:
+                        idc = idx
+                        for p in procss[idc:idc + slots]:
+                            # ..and start the next available process (subject)
+                            p.start()
+                            print >>pid, p.pid
+                            # Append this to job queue and increment index
+                            job_queue.append(p)
+                            idx += 1
 
-            if slots > 0:
-                idc = idx
-                for p in procss[idc:idc + slots]:
-                    # ..and start the next available process (subject)
-                    p.start()
-                    print >>pid, p.pid
-                    # Append this to job queue and increment index
-                    job_queue.append(p)
-                    idx += 1
+                    # Add sleep so while loop isn't consuming 100% of CPU
+                    time.sleep(2)
+                pid.close()
 
-            # Add sleep so while loop isn't consuming 100% of CPU
-            time.sleep(2)
-        pid.close()
-
-        # Join all processes if report must be written out
-        if write_report:
-            for p in procss:
-                p.join()
+                # Join all processes if report must be written out
+                if write_report:
+                    for p in procss:
+                        p.join()
     else:
-
         # run on cloud
         sub = subject_list.keys()[0]
 
@@ -346,8 +351,8 @@ def run(subject_list, config, cloudify=False):
         filesplit = filepath.split(config["bucket_prefix"])
         site_name = filesplit[1].split("/")[1]
 
-        build_anatomical_spatial_workflow(subject_list[sub], config, sub,
-                                          run_name, site_name)
+        build_anatomical_spatial_workflow(
+            subject_list[sub], config, sub, run_name, site_name)
 
     # PDF reporting
     if write_report:
