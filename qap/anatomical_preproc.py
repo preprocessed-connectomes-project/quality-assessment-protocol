@@ -1,4 +1,3 @@
-
 base_test_dir = "/tdata/QAP/qc_test"
 
 
@@ -243,7 +242,10 @@ def flirt_anatomical_linear_registration(workflow, resource_pool, config):
     from workflow_utils import check_input_resources, \
                                check_config_settings
 
-
+    from nipype.interfaces.fsl.base import Info
+    
+    if "template_brain_for_anat" not in config:
+        config["template_brain_for_anat"] = Info.standard_image("MNI152_T1_2mm_brain.nii.gz")
     check_config_settings(config, "template_brain_for_anat")
 
 
@@ -356,6 +358,7 @@ def ants_anatomical_linear_registration(workflow, resource_pool, config):
 
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
+    
 
     import nipype.interfaces.utility as util
 
@@ -364,8 +367,10 @@ def ants_anatomical_linear_registration(workflow, resource_pool, config):
 
     from workflow_utils import check_input_resources, \
                                check_config_settings
-
-
+    from nipype.interfaces.fsl.base import Info
+    
+    if "template_brain_for_anat" not in config:
+        config["template_brain_for_anat"] = Info.standard_image("MNI152_T1_2mm_brain.nii.gz")
     check_config_settings(config, "template_brain_for_anat")
 
 

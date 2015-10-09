@@ -1,0 +1,15 @@
+num_cores_per_subject: 1
+
+num_subjects_at_once: 1
+
+output_directory: /tmp/output
+
+working_directory: /tmp/workdir
+
+write_all_outputs: False
+
+start_idx: 0
+
+stop_idx: None
+
+slice_timing_correction: False
