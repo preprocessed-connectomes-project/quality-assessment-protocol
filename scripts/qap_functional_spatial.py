@@ -70,8 +70,8 @@ def build_functional_spatial_workflow(
     logger.info("Configuration settings:\n" + str(config))
 
     # for QAP spreadsheet generation only
-    config = {'subject_id': sub_id, 'session_id': session_id,
-              'scan_id': scan_id, 'run_name': run_name}
+    config.update({'subject_id': sub_id, 'session_id': session_id,
+              'scan_id': scan_id, 'run_name': run_name})
 
     if site_name:
         config["site_name"] = site_name
