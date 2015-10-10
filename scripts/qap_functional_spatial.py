@@ -111,8 +111,8 @@ def build_functional_spatial_workflow(
     # start connecting the pipeline
     if "qap_functional_spatial" not in resource_pool.keys():
         from qap.qap_workflows import qap_functional_spatial_workflow
-        workflow, resource_pool = \
-            qap_functional_spatial_workflow(workflow, resource_pool, config)
+        workflow, resource_pool = qap_functional_spatial_workflow(
+            workflow, resource_pool, config)
 
     # set up the datasinks
     new_outputs = 0

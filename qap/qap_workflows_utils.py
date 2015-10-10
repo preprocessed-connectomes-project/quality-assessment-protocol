@@ -244,10 +244,6 @@ def qap_anatomical_spatial(anatomical_reorient, head_mask_path,
 
     # CNR
     qc['cnr'] = cnr(qc['gm_mean'], qc['wm_mean'], qc['bg_std'])
-
-    qc['anat_data'] = anatomical_reorient
-    qc['anat_mask'] = head_mask_path
-
     return qc
 
 
@@ -303,10 +299,6 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
     # SNR
     qc['snr'] = snr(qc['fg_mean'], qc['bg_std'])
-
-    qc['mean_epi'] = mean_epi
-    qc['mask'] = func_brain_mask
-
     return qc
 
 
@@ -353,9 +345,6 @@ def qap_functional_temporal(
         "session":   session_id,
         "scan":      scan_id,
         "dvars":     mean_dvars,
-        "fd_file":   fd_file,
-        "tsnr_file": tsnr_volume,
-        "mask_file": func_brain_mask,
         "m_tsnr":    np.median(tsnr_data[msk_data > 0]),
         "mean_fd":   mean_fd,
         'num_fd':    num_fd,
