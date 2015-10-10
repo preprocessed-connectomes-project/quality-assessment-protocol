@@ -26,7 +26,7 @@ class PlotMosaicInputSpec(BaseInterfaceInputSpec):
     title = traits.Str('Volume', desc='modality name to be prepended')
     subject = traits.Str(desc='Subject id')
     metadata = traits.List(traits.Str, desc='additional metadata')
-    figsize = traits.Tuple((11.69, 8.27), traits.Float, traits.Float,
+    figsize = traits.Tuple(traits.Float, traits.Float, value=(11.69, 8.27),
                            desc='Figure size')
     dpi = traits.Int(300, desc='Desired DPI of figure')
     out_file = File('mosaic.pdf', desc='output file name')

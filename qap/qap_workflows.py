@@ -203,9 +203,13 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
         output_names=['qc'], function=qap_anatomical_spatial),
         name='qap_anatomical_spatial')
 
-    out_csv = op.join(config['output_directory'], 'qap_anatomical_spatial.csv')
-    spatial_to_csv = pe.Node(
-        nam.AddCSVRow(in_file=out_csv), name='qap_anatomical_spatial_to_csv')
+    # Subject infos
+    spatial.inputs.subject_id = config["subject_id"]
+    spatial.inputs.session_id = config["session_id"]
+    spatial.inputs.scan_id = config["scan_id"]
+
+    if "site_name" in config.keys():
+        spatial.inputs.site_name = config["site_name"]
 
     if len(resource_pool["anatomical_reorient"]) == 2:
         node, out_file = resource_pool["anatomical_reorient"]
@@ -241,13 +245,33 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
         spatial.inputs.anatomical_csf_mask = \
             resource_pool["anatomical_csf_mask"]
 
-    # Subject infos
-    spatial.inputs.subject_id = config["subject_id"]
-    spatial.inputs.session_id = config["session_id"]
-    spatial.inputs.scan_id = config["scan_id"]
+    if config.get('write_report', False):
+        plot = pe.Node(PlotMosaic(), name='plot_mosaic')
+        plot.inputs.subject = config['subject_id']
 
-    if "site_name" in config.keys():
-        spatial.inputs.site_name = config["site_name"]
+        metadata = [config['session_id'], config['scan_id']]
+        if "site_name" in config.keys():
+            metadata.append(config["site_name"])
+
+        plot.inputs.metadata = metadata
+        plot.inputs.title = 'Anatomical reoriented'
+
+        if len(resource_pool["anatomical_reorient"]) == 2:
+            node, out_file = resource_pool["anatomical_reorient"]
+            workflow.connect(node, out_file, plot, 'in_file')
+        else:
+            plot.inputs.in_file = resource_pool["anatomical_reorient"]
+
+        if len(resource_pool["qap_head_mask"]) == 2:
+            node, out_file = resource_pool["qap_head_mask"]
+            workflow.connect(node, out_file, plot, 'in_mask')
+        else:
+            plot.inputs.in_mask = resource_pool["qap_head_mask"]
+        resource_pool["qap_mosaic"] = (plot, 'out_file')
+
+    out_csv = op.join(config['output_directory'], 'qap_anatomical_spatial.csv')
+    spatial_to_csv = pe.Node(
+        nam.AddCSVRow(in_file=out_csv), name='qap_anatomical_spatial_to_csv')
 
     workflow.connect(spatial, 'qc', spatial_to_csv, '_outputs')
     resource_pool["qap_anatomical_spatial"] = (spatial_to_csv, 'csv_file')
@@ -556,6 +580,26 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config,
     else:
         temporal.inputs.func_brain_mask = \
             resource_pool["functional_brain_mask"]
+
+    # Write mosaic
+    if config.get('write_report', False):
+        plot = pe.Node(PlotMosaic(), name='plot_mosaic')
+        plot.inputs.subject = config['subject_id']
+
+        metadata = [config['session_id'], config['scan_id']]
+        if "site_name" in config.keys():
+            metadata.append(config["site_name"])
+
+        plot.inputs.metadata = metadata
+        plot.inputs.title = 'tSNR volume'
+        workflow.connect(tsnr, 'tsnr_file', plot, 'in_file')
+
+        if len(resource_pool["functional_brain_mask"]) == 2:
+            node, out_file = resource_pool["functional_brain_mask"]
+            workflow.connect(node, out_file, plot, 'in_mask')
+        else:
+            plot.inputs.in_mask = resource_pool["functional_brain_mask"]
+        resource_pool["qap_mosaic"] = (plot, 'out_file')
 
     out_csv = op.join(
         config['output_directory'], 'qap_functional_temporal.csv')
