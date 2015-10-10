@@ -540,29 +540,6 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config,
     if "site_name" in config.keys():
         temporal.inputs.site_name = config["site_name"]
 
-    motion_ds = pe.Node(nio.DataSink(
-        base_directory=config['output_directory']), name='MotionDS')
-    motion_ds.inputs.subject_id = config["subject_id"]
-    motion_ds.inputs.session_id = config["session_id"]
-    motion_ds.inputs.scan_id = config["scan_id"]
-
-    if "site_name" in config.keys():
-        motion_ds.inputs.site_name = config["site_name"]
-
-    if "mcflirt_rel_rms" in resource_pool.keys():
-        motion_ds.inputs.coord_xfm_matrix = resource_pool["mcflirt_rel_rms"]
-
-    else:
-        if len(resource_pool["coordinate_transformation"]) == 2:
-            node, out_file = resource_pool["coordinate_transformation"]
-            workflow.connect(node, out_file, motion_ds, 'coord_xfm_matrix')
-        else:
-            motion_ds.inputs.coord_xfm_matrix = \
-                resource_pool["coordinate_transformation"]
-
-    workflow.connect(motion_ds, ('out_file', _getfirst),
-                     temporal, 'coord_xfm_matrix')
-
     if len(resource_pool["func_motion_correct"]) == 2:
         node, out_file = resource_pool["func_motion_correct"]
         workflow.connect(node, out_file, tsnr, 'in_file')
@@ -600,6 +577,21 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config,
         else:
             plot.inputs.in_mask = resource_pool["functional_brain_mask"]
         resource_pool["qap_mosaic"] = (plot, 'out_file')
+
+        fdplot = pe.Node(PlotFD(), name='plot_fd')
+        fdplot.inputs.subject = config['subject_id']
+        fdplot.inputs.metadata = metadata
+
+        if "mcflirt_rel_rms" in resource_pool.keys():
+            fdplot.inputs.in_file = resource_pool["mcflirt_rel_rms"]
+        else:
+            if len(resource_pool["coordinate_transformation"]) == 2:
+                node, out_file = resource_pool["coordinate_transformation"]
+                workflow.connect(node, out_file, fdplot, 'in_file')
+            else:
+                fdplot.inputs.in_file = resource_pool[
+                    "coordinate_transformation"]
+        resource_pool['qap_fd'] = (fdplot, 'out_file')
 
     out_csv = op.join(
         config['output_directory'], 'qap_functional_temporal.csv')
