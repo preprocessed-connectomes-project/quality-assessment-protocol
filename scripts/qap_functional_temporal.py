@@ -11,6 +11,7 @@ def build_functional_temporal_workflow(
     # (roughly 345 seconds)
 
     import os
+    import os.path as op
     import sys
 
     import nipype.interfaces.io as nio
@@ -27,7 +28,6 @@ def build_functional_temporal_workflow(
     from nipype import logging
 
     logger = logging.getLogger('workflow')
-
     sub_id = str(subject_info[0])
 
     if subject_info[1]:
@@ -41,13 +41,13 @@ def build_functional_temporal_workflow(
         scan_id = "scan_0"
 
     # define and create the output directory
-    output_dir = os.path.join(config["output_directory"], run_name,
-                              sub_id, session_id, scan_id)
+    output_dir = op.join(config["output_directory"], run_name,
+                         sub_id, session_id, scan_id)
 
     try:
         os.makedirs(output_dir)
     except:
-        if not os.path.isdir(output_dir):
+        if not op.isdir(output_dir):
             err = "[!] Output directory unable to be created.\n" \
                   "Path: %s\n\n" % output_dir
             raise Exception(err)
@@ -64,9 +64,7 @@ def build_functional_temporal_workflow(
     # take date+time stamp for run identification purposes
     unique_pipeline_id = strftime("%Y%m%d%H%M%S")
     pipeline_start_stamp = strftime("%Y-%m-%d_%H:%M:%S")
-
     pipeline_start_time = time.time()
-
     logger.info(
         ("%s\nContents of resource pool:\n%s\nConfiguration settings:\n%s\n") %
         (pipeline_start_stamp, str(resource_pool), str(config)))
@@ -79,25 +77,24 @@ def build_functional_temporal_workflow(
         config["site_name"] = site_name
 
     workflow = pe.Workflow(name=scan_id)
-    workflow.base_dir = os.path.join(config["working_directory"], sub_id,
-                                     session_id)
-
+    workflow.base_dir = op.join(config["working_directory"], sub_id,
+                                session_id)
     # set up crash directory
     workflow.config['execution'] = \
         {'crashdump_dir': config["output_directory"]}
 
     # update that resource pool with what's already in the output directory
     for resource in os.listdir(output_dir):
-        if (os.path.isdir(os.path.join(output_dir, resource)) and
+        if (op.isdir(op.join(output_dir, resource)) and
                 resource not in resource_pool.keys()):
-            resource_pool[resource] = glob.glob(os.path.join(output_dir,
-                                                             resource, "*"))[0]
+            resource_pool[resource] = glob.glob(op.join(output_dir,
+                                                        resource, "*"))[0]
 
     # resource pool check
     invalid_paths = []
 
     for resource in resource_pool.keys():
-        if not os.path.isfile(resource_pool[resource]):
+        if not op.isfile(resource_pool[resource]):
             invalid_paths.append((resource, resource_pool[resource]))
 
     if len(invalid_paths) > 0:
@@ -124,7 +121,6 @@ def build_functional_temporal_workflow(
 
     if config["write_all_outputs"]:
         for output in resource_pool.keys():
-
             # we use a check for len()==2 here to select those items in the
             # resource pool which are tuples of (node, node_output), instead
             # of the items which are straight paths to files
@@ -133,7 +129,6 @@ def build_functional_temporal_workflow(
             # outputs that have been created in this workflow because they
             # were not present in the subject list YML (the starting resource
             # pool) and had to be generated
-
             if len(resource_pool[output]) == 2:
                 ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
                 ds.inputs.base_directory = output_dir
@@ -154,7 +149,7 @@ def build_functional_temporal_workflow(
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
         workflow.write_graph(
-            dotfilename=os.path.join(output_dir, run_name + ".dot"),
+            dotfilename=op.join(output_dir, run_name + ".dot"),
             simple_form=False)
         if config["num_cores_per_subject"] == 1:
             workflow.run(plugin='Linear')
@@ -168,9 +163,8 @@ def build_functional_temporal_workflow(
     # Remove working directory when done
     if not config["write_all_outputs"]:
         try:
-            work_dir = os.path.join(workflow.base_dir, scan_id)
-
-            if os.path.exists(work_dir):
+            work_dir = op.join(workflow.base_dir, scan_id)
+            if op.exists(work_dir):
                 import shutil
                 shutil.rmtree(work_dir)
         except:
@@ -179,6 +173,9 @@ def build_functional_temporal_workflow(
 
     pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
     logger.info("Pipeline end time: %s" % pipeline_end_stamp)
+    pipeline_end_time = time.time()
+    logger.info("Elapsed time (minutes) since last start: %s"
+                % ((pipeline_end_time - pipeline_start_time) / 60))
     return workflow
 
 
@@ -188,12 +185,11 @@ def run(subject_list, config, cloudify=False):
     import yaml
     import time
     from multiprocessing import Process
-
     from nipype import logging
     logger = logging.getLogger('workflow')
 
     output_dir = config.get('output_directory', os.getcwd())
-    ns_atonce = config.get('num_subjects_at_once', 1)
+    ns_at_once = config.get('num_subjects_at_once', 1)
     write_report = config.get('write_report', False)
 
     with open(subject_list, "r") as f:
@@ -238,7 +234,7 @@ def run(subject_list, config, cloudify=False):
     try:
         os.makedirs(output_dir)
     except:
-        if not os.path.isdir(output_dir):
+        if not op.isdir(output_dir):
             err = "[!] Output directory unable to be created.\n" \
                   "Path: %s\n\n" % output_dir
             raise Exception(err)
@@ -248,7 +244,7 @@ def run(subject_list, config, cloudify=False):
     try:
         os.makedirs(config["working_directory"])
     except:
-        if not os.path.isdir(config["working_directory"]):
+        if not op.isdir(config["working_directory"]):
             err = "[!] Output directory unable to be created.\n" \
                   "Path: %s\n\n" % config["working_directory"]
             raise Exception(err)
@@ -258,9 +254,10 @@ def run(subject_list, config, cloudify=False):
     # get the pipeline config file name, use it as the run name
     run_name = config['pipeline_config_yaml'].split("/")[-1].split(".")[0]
 
+    ns_at_once = config.get('num_subjects_at_once', 1)
     if not cloudify:
         # skip parallel machinery if we are running only one subject at once
-        if config["num_subjects_at_once"] == 1:
+        if ns_at_once == 1:
             for sub_info in flat_sub_dict.keys():
                 if sites_dict:
                     site = sites_dict[sub_info[0]]
@@ -286,11 +283,10 @@ def run(subject_list, config, cloudify=False):
                               run_name, None))
                               for sub_info in flat_sub_dict.keys()]
 
-                pid = open(os.path.join(output_dir, 'pid.txt'), 'w')
+                pid = open(op.join(output_dir, 'pid.txt'), 'w')
 
                 # Init job queue
                 job_queue = []
-                ns_atonce = config.get('num_subjects_at_once', 1)
 
                 # Stream the subject workflows for preprocessing.
                 # At Any time in the pipeline c.numSubjectsAtOnce
@@ -310,7 +306,7 @@ def run(subject_list, config, cloudify=False):
                             del job_queue[loc]
 
                     # Check free slots after prunning jobs
-                    slots = ns_atonce - len(job_queue)
+                    slots = ns_at_once - len(job_queue)
 
                     if slots > 0:
                         idc = idx
@@ -321,7 +317,6 @@ def run(subject_list, config, cloudify=False):
                             # Append this to job queue and increment index
                             job_queue.append(p)
                             idx += 1
-
                     # Add sleep so while loop isn't consuming 100% of CPU
                     time.sleep(2)
 
@@ -368,15 +363,12 @@ def main():
     parser = argparse.ArgumentParser()
 
     group = parser.add_argument_group("Regular Use Inputs (non-cloud runs)")
-
     cloudgroup = parser.add_argument_group("AWS Cloud Inputs (only required "
                                            "for AWS Cloud runs)")
-
     req = parser.add_argument_group("Required Inputs")
 
     cloudgroup.add_argument('--subj_idx', type=int,
                             help='Subject index to run')
-
     cloudgroup.add_argument('--s3_dict_yml', type=str,
                             help='Path to YAML file containing S3 input '
                             'filepaths dictionary')
@@ -430,7 +422,6 @@ def main():
             config['write_report'] = True
 
         if args.subj_idx and args.s3_dict_yml:
-
             # ---- Cloud-ify! ----
             # Import packages
             from qap.cloud_utils import dl_subj_from_s3, upl_qap_output

@@ -10,10 +10,10 @@ def build_anatomical_spatial_workflow(
         resource_pool, config, subject_info, run_name, site_name=None):
 
     # build pipeline for each subject, individually
-
     # ~ 29 minutes per subject with 1 core to ANTS
 
     import os
+    import os.path as op
     import sys
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
@@ -26,7 +26,6 @@ def build_anatomical_spatial_workflow(
     from time import strftime
     from nipype import config as nyconfig
     from nipype import logging
-
     logger = logging.getLogger('workflow')
 
     sub_id = str(subject_info[0])
@@ -42,13 +41,13 @@ def build_anatomical_spatial_workflow(
         scan_id = "scan_0"
 
     # define and create the output directory
-    output_dir = os.path.join(config["output_directory"], run_name,
-                              sub_id, session_id, scan_id)
+    output_dir = op.join(config["output_directory"], run_name,
+                         sub_id, session_id, scan_id)
 
     try:
         os.makedirs(output_dir)
     except:
-        if not os.path.isdir(output_dir):
+        if not op.isdir(output_dir):
             err = "[!] Output directory unable to be created.\n" \
                   "Path: %s\n\n" % output_dir
             raise Exception(err)
@@ -84,8 +83,8 @@ def build_anatomical_spatial_workflow(
     #    str(config["num_ants_threads"])
 
     workflow = pe.Workflow(name=scan_id)
-    workflow.base_dir = os.path.join(config["working_directory"], sub_id,
-                                     session_id)
+    workflow.base_dir = op.join(config["working_directory"], sub_id,
+                                session_id)
 
     # set up crash directory
     workflow.config['execution'] = {
@@ -93,21 +92,22 @@ def build_anatomical_spatial_workflow(
 
     # update that resource pool with what's already in the output directory
     for resource in os.listdir(output_dir):
-        if (os.path.isdir(os.path.join(output_dir, resource)) and
-                resource not in resource_pool.keys()):
-            resource_pool[resource] = glob.glob(os.path.join(
-                output_dir, resource, "*"))[0]
+        if op.isdir(op.join(output_dir, resource)) and \
+                resource not in resource_pool.keys():
+
+            resource_pool[resource] = glob.glob(op.join(output_dir,
+                                                        resource, "*"))[0]
 
     # resource pool check
     invalid_paths = []
 
     for resource in resource_pool.keys():
-        if not os.path.isfile(resource_pool[resource]):
+        if not op.isfile(resource_pool[resource]):
             invalid_paths.append((resource, resource_pool[resource]))
 
     if len(invalid_paths) > 0:
-        err = ("\n\n[!] The paths provided in the subject list to the "
-               "following resources are not valid:\n")
+        err = "\n\n[!] The paths provided in the subject list to the " \
+              "following resources are not valid:\n"
 
         for path_tuple in invalid_paths:
             err = err + path_tuple[0] + ": " + path_tuple[1] + "\n"
@@ -147,7 +147,6 @@ def build_anatomical_spatial_workflow(
     else:
         # write out only the output CSV (default)
         output = "qap_anatomical_spatial"
-
         if len(resource_pool[output]) == 2:
             ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
             ds.inputs.base_directory = output_dir
@@ -158,7 +157,7 @@ def build_anatomical_spatial_workflow(
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
         workflow.write_graph(
-            dotfilename=os.path.join(output_dir, run_name + ".dot"),
+            dotfilename=op.join(output_dir, run_name + ".dot"),
             simple_form=False)
 
         if config["num_cores_per_subject"] == 1:
@@ -173,9 +172,8 @@ def build_anatomical_spatial_workflow(
     # Remove working directory when done
     if not config["write_all_outputs"]:
         try:
-            work_dir = os.path.join(workflow.base_dir, scan_id)
-
-            if os.path.exists(work_dir):
+            work_dir = op.join(workflow.base_dir, scan_id)
+            if op.exists(work_dir):
                 import shutil
                 shutil.rmtree(work_dir)
         except:
@@ -183,16 +181,16 @@ def build_anatomical_spatial_workflow(
             pass
 
     pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
+    logger.info("Pipeline end time: %s" % pipeline_end_stamp)
     pipeline_end_time = time.time()
-
     logger.info("Elapsed time (minutes) since last start: %s"
                 % ((pipeline_end_time - pipeline_start_time) / 60))
-    logger.info("Pipeline end time: %s" % pipeline_end_stamp)
     return workflow
 
 
 def run(subject_list, config, cloudify=False):
     import os
+    import os.path as op
     import yaml
     import time
     from multiprocessing import Process
@@ -245,7 +243,7 @@ def run(subject_list, config, cloudify=False):
     try:
         os.makedirs(config["output_directory"])
     except:
-        if not os.path.isdir(config["output_directory"]):
+        if not op.isdir(config["output_directory"]):
             err = ("[!] Output directory unable to be created.\n"
                    "Path: %s\n\n" % config["output_directory"])
             raise Exception(err)
@@ -255,19 +253,20 @@ def run(subject_list, config, cloudify=False):
     try:
         os.makedirs(config["working_directory"])
     except:
-        if not os.path.isdir(config["working_directory"]):
-            err = ("[!] Output directory unable to be created.\n"
-                   "Path: %s\n\n" % config["working_directory"])
+        if not op.isdir(config["working_directory"]):
+            err = "[!] Output directory unable to be created.\n" \
+                  "Path: %s\n\n" % config["working_directory"]
             raise Exception(err)
         else:
             pass
 
     # get the pipeline config file name, use it as the run name
     run_name = config['pipeline_config_yaml'].split("/")[-1].split(".")[0]
+    ns_at_once = config.get('num_subjects_at_once', 1)
 
     if not cloudify:
         # skip parallel machinery if we are running only one subject at once
-        if config["num_subjects_at_once"] == 1:
+        if ns_at_once == 1:
             for sub_info in flat_sub_dict.keys():
                 if sites_dict:
                     site = sites_dict[sub_info[0]]
@@ -293,12 +292,11 @@ def run(subject_list, config, cloudify=False):
                               run_name, None))
                               for sub_info in flat_sub_dict.keys()]
 
-                pid = open(os.path.join(
+                pid = open(op.join(
                     config["output_directory"], 'pid.txt'), 'w')
 
                 # Init job queue
                 job_queue = []
-                ns_atonce = config.get('num_subjects_at_once', 1)
 
                 # Stream the subject workflows for preprocessing.
                 # At Any time in the pipeline c.numSubjectsAtOnce
@@ -318,7 +316,7 @@ def run(subject_list, config, cloudify=False):
                             del job_queue[loc]
 
                     # Check free slots after prunning jobs
-                    slots = ns_atonce - len(job_queue)
+                    slots = ns_at_once - len(job_queue)
 
                     if slots > 0:
                         idc = idx
@@ -374,10 +372,8 @@ def main():
 
     parser = argparse.ArgumentParser()
     group = parser.add_argument_group("Regular Use Inputs (non-cloud runs)")
-
     cloudgroup = parser.add_argument_group("AWS Cloud Inputs (only required "
                                            "for AWS Cloud runs)")
-
     req = parser.add_argument_group("Required Inputs")
     cloudgroup.add_argument('--subj_idx', type=int,
                             help='Subject index to run')
@@ -432,7 +428,6 @@ def main():
             config['write_report'] = True
 
         if args.subj_idx and args.s3_dict_yml:
-
             # ---- Cloud-ify! ----
             # Import packages
             from qap.cloud_utils import dl_subj_from_s3, upl_qap_output
