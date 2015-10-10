@@ -173,6 +173,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
     import nipype.interfaces.utility as niu
     import nipype.algorithms.misc as nam
     from qap_workflows_utils import qap_anatomical_spatial
+    from qap.viz.interfaces import PlotMosaic
 
     if "qap_head_mask" not in resource_pool.keys():
 
@@ -502,6 +503,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config,
     import nipype.algorithms.misc as nam
 
     from qap_workflows_utils import qap_functional_temporal
+    from qap.viz.interfaces import PlotMosaic
 
     def _getfirst(inlist):
         if isinstance(inlist, list):
