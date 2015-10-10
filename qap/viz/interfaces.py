@@ -119,7 +119,7 @@ class PlotFD(BaseInterface):
         else:
             fig = plot_fd(self.inputs.in_file)
 
-        fig.savefig(self.inputs.out_file, dpi=self.inputs.dpi)
+        fig.savefig(self.inputs.out_file, dpi=float(self.inputs.dpi))
 
         return runtime
 
