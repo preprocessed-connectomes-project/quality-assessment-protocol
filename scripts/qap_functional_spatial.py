@@ -37,7 +37,8 @@ def build_functional_spatial_workflow(
     else:
         scan_id = "scan_0"
 
-    # define and create the output directory
+    # Read and apply general settings in config
+    keep_outputs = config.get('write_all_outputs', False)
     output_dir = op.join(config["output_directory"], run_name,
                          sub_id, session_id, scan_id)
 
@@ -116,10 +117,7 @@ def build_functional_spatial_workflow(
     # set up the datasinks
     new_outputs = 0
 
-    if "write_all_outputs" not in config.keys():
-        config["write_all_outputs"] = False
-
-    if config["write_all_outputs"]:
+    if keep_outputs:
         for output in resource_pool.keys():
             # we use a check for len()==2 here to select those items in the
             # resource pool which are tuples of (node, node_output), instead
@@ -162,7 +160,7 @@ def build_functional_spatial_workflow(
         print "\nEverything is already done for subject %s." % sub_id
 
     # Remove working directory when done
-    if not config["write_all_outputs"]:
+    if not keep_outputs:
         try:
             work_dir = op.join(workflow.base_dir, scan_id)
 
