@@ -23,12 +23,15 @@ class PlotMosaicInputSpec(BaseInterfaceInputSpec):
     in_file = File(exists=True, mandatory=True,
                    desc='File to be plotted')
     in_mask = File(exists=True, desc='Overlay mask')
-    title = traits.Str('Volume', desc='modality name to be prepended')
+    title = traits.Str('Volume', usedefault=True,
+                       desc='modality name to be prepended')
     subject = traits.Str(desc='Subject id')
     metadata = traits.List(traits.Str, desc='additional metadata')
-    figsize = traits.Tuple(traits.Float, traits.Float, desc='Figure size')
-    dpi = traits.Int(300, desc='Desired DPI of figure')
-    out_file = File('mosaic.pdf', desc='output file name')
+    figsize = traits.Tuple(
+        (11.69, 8.27), traits.Float, traits.Float, usedefault=True,
+        desc='Figure size')
+    dpi = traits.Int(300, usedefault=True, desc='Desired DPI of figure')
+    out_file = File('mosaic.pdf', usedefault=True, desc='output file name')
 
 
 class PlotMosaicOutputSpec(TraitedSpec):
@@ -80,12 +83,15 @@ class PlotMosaic(BaseInterface):
 class PlotFDInputSpec(BaseInterfaceInputSpec):
     in_file = File(exists=True, mandatory=True,
                    desc='File to be plotted')
-    title = traits.Str('FD', desc='modality name to be prepended')
+    title = traits.Str('FD', usedefault=True,
+                       desc='modality name to be prepended')
     subject = traits.Str(desc='Subject id')
     metadata = traits.List(traits.Str, desc='additional metadata')
-    figsize = traits.Tuple(traits.Float, traits.Float, desc='Figure size')
-    dpi = traits.Int(300, desc='Desired DPI of figure')
-    out_file = File('fd.pdf', desc='output file name')
+    figsize = traits.Tuple(
+        (8.27, 3.0), traits.Float, traits.Float, usedefault=True,
+        desc='Figure size')
+    dpi = traits.Int(300, usedefault=True, desc='Desired DPI of figure')
+    out_file = File('fd.pdf', usedefault=True, desc='output file name')
 
 
 class PlotFDOutputSpec(TraitedSpec):
