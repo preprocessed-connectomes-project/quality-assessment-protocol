@@ -116,26 +116,22 @@ def build_functional_temporal_workflow(
     # set up the datasinks
     new_outputs = 0
 
+    out_list = ['qap_functional_temporal']
+    if write_report:
+        out_list += ['qap_mosaic']
+
     if keep_outputs:
-        for output in resource_pool.keys():
-            # we use a check for len()==2 here to select those items in the
-            # resource pool which are tuples of (node, node_output), instead
-            # of the items which are straight paths to files
+        out_list = resource_pool.keys()
 
-            # resource pool items which are in the tuple format are the
-            # outputs that have been created in this workflow because they
-            # were not present in the subject list YML (the starting resource
-            # pool) and had to be generated
-            if len(resource_pool[output]) == 2:
-                ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
-                ds.inputs.base_directory = output_dir
-                node, out_file = resource_pool[output]
-                workflow.connect(node, out_file, ds, output)
-                new_outputs += 1
+    for output in out_list:
+        # we use a check for len()==2 here to select those items in the
+        # resource pool which are tuples of (node, node_output), instead
+        # of the items which are straight paths to files
 
-    else:
-        # write out only the output CSV (default)
-        output = "qap_functional_temporal"
+        # resource pool items which are in the tuple format are the
+        # outputs that have been created in this workflow because they
+        # were not present in the subject list YML (the starting resource
+        # pool) and had to be generated
         if len(resource_pool[output]) == 2:
             ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
             ds.inputs.base_directory = output_dir

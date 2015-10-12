@@ -80,7 +80,7 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
         # df[snames].plot(kind='box', ax=axes[-1])
 
         if subject is not None:
-            fig.suptitle(title + ' ' + subject)
+            fig.suptitle(title)
             out_file = subject + '.pdf'
             subdf = df.loc[df['subject'] == subject].copy()
             reps = len(subdf)
