@@ -27,43 +27,21 @@ def concat_pdf(in_files, out_file='concatenated.pdf'):
     return out_file
 
 
-def _write_report(df, groups, sc_split=False, condensed=True,
-                  split_files=True, out_file='report.pdf'):
+def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
+                  out_file='report.pdf'):
     headers = [v for gnames in groups for v in gnames]
     sessions = sorted(pd.unique(df.session.ravel()))
-    subject_list = pd.unique(df.subject.ravel())
 
-    rootreport = PdfPages(out_file)
-
-    for sub_id in subject_list:
-        if split_files:
-            tpl, _ = op.splitext(op.basename(out_file))
-            tpl = op.join(op.dirname(out_file), tpl) + '_%s.pdf'
-            report = PdfPages(tpl % sub_id)
-        else:
-            report = rootreport
-
-        for ss in sessions:
-            sesdf = df.copy().loc[df['session'] == ss]
-            subdf = sesdf.copy().loc[sesdf['subject'] == sub_id]
-            scans = pd.unique(subdf.scan.ravel())
-
-            if sc_split:
-                for sc in scans:
-                    subset = sesdf.loc[sesdf['scan'] == sc]
-                    if len(subset.index) > 1:
-                        subtitle = '(subject %s_%s_%s)' % (sub_id, ss, sc)
-                        if condensed:
-                            fig = plot_measures(
-                                sesdf, headers, subject=sub_id,
-                                title='QC measures ' + subtitle)
-                        else:
-                            fig = plot_all(sesdf, groups, subject=sub_id,
-                                           title='QC measures ' + subtitle)
-            else:
-                if len(sesdf.index) > 1:
-                    subtitle = '(subject %s_%s)' % (sub_id, ss)
-
+    report = PdfPages(out_file)
+    for ss in sessions:
+        sesdf = df.copy().loc[df['session'] == ss]
+        subdf = sesdf.copy().loc[sesdf['subject'] == sub_id]
+        scans = pd.unique(subdf.scan.ravel())
+        if sc_split:
+            for sc in scans:
+                subset = sesdf.loc[sesdf['scan'] == sc]
+                if len(subset.index) > 1:
+                    subtitle = '(subject %s_%s_%s)' % (sub_id, ss, sc)
                     if condensed:
                         fig = plot_measures(
                             sesdf, headers, subject=sub_id,
@@ -71,30 +49,42 @@ def _write_report(df, groups, sc_split=False, condensed=True,
                     else:
                         fig = plot_all(sesdf, groups, subject=sub_id,
                                        title='QC measures ' + subtitle)
-
                     report.savefig(fig, dpi=300)
                     fig.clf()
+        else:
+            if len(sesdf.index) > 1:
+                subtitle = '(subject %s_%s)' % (sub_id, ss)
+                if condensed:
+                    fig = plot_measures(
+                        sesdf, headers, subject=sub_id,
+                        title='QC measures ' + subtitle)
+                else:
+                    fig = plot_all(sesdf, groups, subject=sub_id,
+                                   title='QC measures ' + subtitle)
+                report.savefig(fig, dpi=300)
+                fig.clf()
 
-        if split_files:
-            report.close()
-            print 'Written report for subject %s' % sub_id
-
-    # Group plots
-    for ss in sessions:
-        sesdf = df.copy().loc[df['session'] == ss]
-
-        if len(sesdf.index) > 1:
-            if condensed:
-                fig = plot_all(sesdf, groups, title='QC measures ' + ss)
-            else:
-                fig = plot_measures(
-                    sesdf, headers, title='QC measures ' + ss)
-            rootreport.savefig(fig, dpi=300)
-            fig.clf()
-
-    rootreport.close()
+    report.close()
     plt.close()
+    print 'Written report file %s' % out_file
     return out_file
+
+
+def _write_all_reports(df, groups, sc_split=False, condensed=True,
+                       out_file='report.pdf'):
+
+    outlist = []
+    _write_report(
+        df, groups, sub_id=sub_id, sc_split=sc_split, condensed=condensed,
+        out_file=out_file)
+
+    for sub_id in subject_list:
+        tpl, _ = op.splitext(op.basename(out_file))
+        tpl = op.join(op.dirname(out_file), tpl) + '_%s.pdf'
+        outlist.append(_write_report(
+            df, groups, sub_id=sub_id, sc_split=sc_split, condensed=condensed,
+            out_file=tpl))
+    return out_file, outlist
 
 
 def report_anatomical(in_csv, sc_split=False, condensed=True,
@@ -111,7 +101,7 @@ def report_anatomical(in_csv, sc_split=False, condensed=True,
               ['fwhm', 'fwhm_x', 'fwhm_y', 'fwhm_z'],
               ['qi1'],
               ['snr']]
-    return _write_report(
+    return _write_all_reports(
         pd.read_csv(in_csv).fillna(0), groups, sc_split=sc_split,
         condensed=condensed, split_files=split_files, out_file=out_file)
 
@@ -120,7 +110,7 @@ def report_func_temporal(in_csv, sc_split=False, split_files=True,
                          condensed=True, out_file='func_temporal.pdf'):
     groups = [['dvars'], ['gcor'], ['m_tsnr'], ['mean_fd'],
               ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]
-    return _write_report(
+    return _write_all_reports(
         pd.read_csv(in_csv).fillna(0), groups, sc_split=sc_split,
         condensed=condensed, split_files=split_files, out_file=out_file)
 
@@ -135,8 +125,6 @@ def report_func_spatial(in_csv, sc_split=False, split_files=True,
               ['fwhm', 'fwhm_x', 'fwhm_y', 'fwhm_z'],
               ['ghost_x'],
               ['snr']]
-    return _write_report(
+    return _write_all_reports(
         pd.read_csv(in_csv).fillna(0), groups, sc_split=sc_split,
         condensed=condensed, split_files=split_files, out_file=out_file)
-)
-
