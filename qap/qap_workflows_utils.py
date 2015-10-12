@@ -310,8 +310,7 @@ def qap_functional_temporal(
     import nibabel as nb
     import numpy as np
 
-    from qap.temporal_qc import mean_dvars_wrapper, summarize_fd, \
-        mean_outlier_timepoints, \
+    from qap.temporal_qc import mean_dvars_wrapper, mean_outlier_timepoints, \
         mean_quality_timepoints, global_correlation
 
     # DVARS
