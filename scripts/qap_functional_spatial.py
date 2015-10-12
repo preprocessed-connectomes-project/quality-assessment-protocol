@@ -318,8 +318,8 @@ def run(subject_list, config, cloudify=False):
 
             logger.info('Writing PDF reports')
 
-            for sub_info in flat_sub_dict.keys():
-                print sub_info
+            for sub_info in infos:
+                print flat_sub_dict[sub_info]['qap_mosaic']
 
             in_csv = op.join(
                 config['output_directory'], 'qap_functional_spatial.csv')

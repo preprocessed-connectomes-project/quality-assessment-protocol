@@ -92,7 +92,7 @@ def _write_all_reports(df, groups, sc_split=False, condensed=True,
         tpl = op.join(op.dirname(out_file), tpl) + '_%s.pdf'
         outlist.append(_write_report(
             df, groups, sub_id=sub_id, sc_split=sc_split, condensed=condensed,
-            out_file=tpl))
+            out_file=tpl % sub_id))
     return out_file, outlist
 
 
