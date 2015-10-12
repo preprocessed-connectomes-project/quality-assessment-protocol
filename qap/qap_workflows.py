@@ -503,6 +503,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config,
     import nipype.algorithms.misc as nam
 
     from qap_workflows_utils import qap_functional_temporal
+    from temporal_qc import gen_fd_file
     from qap.viz.interfaces import PlotMosaic, PlotFD
 
     def _getfirst(inlist):
@@ -528,20 +529,33 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config,
         workflow, resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config)
 
-    tsnr = pe.Node(nam.TSNR(), name='compute_tsnr')
+    fd = pe.Node(niu.Function(
+        input_names=['in_file'], output_names=['out_file'],
+        function=gen_fd_file), name='generate_FD_file')
+
+    if 'mcflirt_rel_rms' in resource_pool.keys():
+        fd.inputs.in_file = resource_pool['mcflirt_rel_rms']
+    else:
+        if len(resource_pool['coordinate_transformation']) == 2:
+            node, out_file = resource_pool['coordinate_transformation']
+            workflow.connect(node, out_file, fd, 'in_file')
+        else:
+            fd.inputs.in_file = resource_pool['coordinate_transformation']
 
     temporal = pe.Node(niu.Function(
         input_names=['func_motion_correct', 'func_brain_mask', 'tsnr_volume',
-                     'coord_xfm_matrix', 'subject_id', 'session_id',
+                     'fd_file', 'subject_id', 'session_id',
                      'scan_id', 'site_name'], output_names=['qc'],
         function=qap_functional_temporal), name='qap_functional_temporal')
     temporal.inputs.subject_id = config['subject_id']
     temporal.inputs.session_id = config['session_id']
     temporal.inputs.scan_id = config['scan_id']
+    workflow.connect(fd, 'out_file', temporal, 'fd_file')
 
     if 'site_name' in config.keys():
         temporal.inputs.site_name = config['site_name']
 
+    tsnr = pe.Node(nam.TSNR(), name='compute_tsnr')
     if len(resource_pool['func_motion_correct']) == 2:
         node, out_file = resource_pool['func_motion_correct']
         workflow.connect(node, out_file, tsnr, 'in_file')
@@ -560,7 +574,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config,
         temporal.inputs.func_brain_mask = \
             resource_pool['functional_brain_mask']
 
-    # Write mosaic
+    # Write mosaic and FD plot
     if config.get('write_report', False):
         plot = pe.Node(PlotMosaic(), name='plot_mosaic')
         plot.inputs.subject = config['subject_id']
@@ -583,16 +597,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config,
         fdplot = pe.Node(PlotFD(), name='plot_fd')
         fdplot.inputs.subject = config['subject_id']
         fdplot.inputs.metadata = metadata
-
-        if 'mcflirt_rel_rms' in resource_pool.keys():
-            fdplot.inputs.in_file = resource_pool['mcflirt_rel_rms']
-        else:
-            if len(resource_pool['coordinate_transformation']) == 2:
-                node, out_file = resource_pool['coordinate_transformation']
-                workflow.connect(node, out_file, fdplot, 'in_file')
-            else:
-                fdplot.inputs.in_file = resource_pool[
-                    'coordinate_transformation']
+        workflow.connect(fd, 'out_file', fdplot, 'in_file')
         resource_pool['qap_fd'] = (fdplot, 'out_file')
 
     out_csv = op.join(

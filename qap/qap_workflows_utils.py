@@ -303,7 +303,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
 
 def qap_functional_temporal(
-        func_motion_correct, func_brain_mask, tsnr_volume, coord_xfm_matrix,
+        func_motion_correct, func_brain_mask, tsnr_volume, fd_file,
         subject_id, session_id, scan_id, site_name=None, motion_threshold=1.0):
 
     import sys
@@ -318,8 +318,13 @@ def qap_functional_temporal(
     mean_dvars = mean_dvars_wrapper(func_motion_correct, func_brain_mask)
 
     # Mean FD (Jenkinson)
-    (fd_file, mean_fd, num_fd, percent_fd) = summarize_fd(
-        coord_xfm_matrix, threshold=motion_threshold)
+    fd = np.loadtxt(fd_file)
+
+    # Calculate Outliers
+    # Number and Percent of frames (time points) where
+    # movement (FD) exceeded threshold
+    num_fd = np.float((fd > motion_threshold).sum())
+    percent_fd = (num_fd * 100) / (len(fd) + 1)
 
     # 3dTout
     mean_outlier = mean_outlier_timepoints(func_motion_correct,
@@ -346,7 +351,7 @@ def qap_functional_temporal(
         "scan":      scan_id,
         "dvars":     mean_dvars,
         "m_tsnr":    np.median(tsnr_data[msk_data > 0]),
-        "mean_fd":   mean_fd,
+        "mean_fd":   fd.mean(),
         'num_fd':    num_fd,
         'perc_fd':   percent_fd,
         "outlier":   mean_outlier,

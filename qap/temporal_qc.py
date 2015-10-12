@@ -85,41 +85,27 @@ def fd_jenkinson(in_file, out_file=None):
     return out_file
 
 
-def summarize_fd(in_file, fd_out_file=None, threshold=1.0):
+def gen_fd_file(in_file, out_file=None):
+    import os.path as op
+    import numpy as np
 
-    # Threshold is in terms of mm, i think?
-
-    # Run in temporary working directory
-    tmpdir = mkdtemp()
-    curdir = os.getcwd()
-    os.chdir(tmpdir)
+    if out_file is None:
+        fname, ext = op.splitext(op.basename(in_file))
+        if 'gz' in ext:
+            fname, ext2 = op.splitext(fname)
+            ext = ext2 + ext
+        out_name = op.abspath(fname + '_fdfile' + ext)
 
     # if in_file (coordinate_transformation) is actually the rel_mean output
     # of the MCFLIRT command, take the mean FD straight out
-    if "rel.rms" in in_file:
+    if 'rel.rms' in in_file:
         fd = np.loadtxt(in_file)
-        fd_file = in_file
-
     else:
-        # Compute FD
         fd_file = fd_jenkinson(in_file)
         fd = np.loadtxt(fd_file)
 
-    # Calculate Outliers
-    # Number and Percent of frames (time points) where
-    # movement (FD) exceeded threshold
-    num_fd = np.float((fd > threshold).sum())
-    percent_fd = (num_fd * 100) / (len(fd) + 1)
-
-    # Clean-Up
-    if "rel.rms" not in in_file:
-        if fd_out_file:
-            os.rename(fd_file, fd_out_file)
-
-    os.chdir(curdir)
-    shutil.rmtree(tmpdir)
-
-    return (fd_file, fd.mean(), num_fd, percent_fd)
+    np.savetxt(out_file, fd)
+    return out_file
 
 
 # 3dTout
