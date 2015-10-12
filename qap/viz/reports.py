@@ -92,7 +92,7 @@ def _write_all_reports(df, groups, sc_split=False, condensed=True,
 
 
 def report_anatomical(in_csv, sc_split=False, condensed=True,
-                      split_files=True, out_file='anatomical.pdf'):
+                      out_file='anatomical.pdf'):
     groups = [['bg_size', 'fg_size'],
               ['bg_mean', 'fg_mean'],
               ['bg_std', 'fg_std'],
@@ -107,20 +107,20 @@ def report_anatomical(in_csv, sc_split=False, condensed=True,
               ['snr']]
     return _write_all_reports(
         pd.read_csv(in_csv).fillna(0), groups, sc_split=sc_split,
-        condensed=condensed, split_files=split_files, out_file=out_file)
+        condensed=condensed, out_file=out_file)
 
 
-def report_func_temporal(in_csv, sc_split=False, split_files=True,
-                         condensed=True, out_file='func_temporal.pdf'):
+def report_func_temporal(in_csv, sc_split=False, condensed=True,
+                         out_file='func_temporal.pdf'):
     groups = [['dvars'], ['gcor'], ['m_tsnr'], ['mean_fd'],
               ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]
     return _write_all_reports(
         pd.read_csv(in_csv).fillna(0), groups, sc_split=sc_split,
-        condensed=condensed, split_files=split_files, out_file=out_file)
+        condensed=condensed, out_file=out_file)
 
 
-def report_func_spatial(in_csv, sc_split=False, split_files=True,
-                        condensed=False, out_file='func_spatial.pdf'):
+def report_func_spatial(in_csv, sc_split=False, condensed=False,
+                        out_file='func_spatial.pdf'):
     groups = [['bg_size', 'fg_size'],
               ['bg_mean', 'fg_mean'],
               ['bg_std', 'fg_std'],
@@ -131,4 +131,4 @@ def report_func_spatial(in_csv, sc_split=False, split_files=True,
               ['snr']]
     return _write_all_reports(
         pd.read_csv(in_csv).fillna(0), groups, sc_split=sc_split,
-        condensed=condensed, split_files=split_files, out_file=out_file)
+        condensed=condensed, out_file=out_file)
