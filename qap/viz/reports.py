@@ -17,6 +17,10 @@ from pyPdf import PdfFileWriter, PdfFileReader
 
 
 def concat_pdf(in_files, out_file='concatenated.pdf'):
+    """
+    Concatenate PDF list (http://stackoverflow.com/a/3444735)
+    """
+
     outpdf = PdfFileWriter()
 
     for in_file in in_files:
