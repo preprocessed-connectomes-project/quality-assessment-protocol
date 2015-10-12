@@ -11,7 +11,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 from .plotting import (plot_measures, plot_mosaic, plot_all,
                        plot_fd, plot_dist)
-from pyPdf import PdfFileWriter, PdfFileReader
+from PyPDF2 import PdfFileWriter, PdfFileReader
 
 # matplotlib.rc('figure', figsize=(11.69, 8.27))  # for DINA4 size
 
