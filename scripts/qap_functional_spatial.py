@@ -327,9 +327,24 @@ def run(subject_list, config, cloudify=False):
                 if write_report:
                     for p in procss:
                         p.join()
+
+        # PDF reporting
+        if write_report:
+            import os.path as op
+            import qap.viz.reports as qvr
+
+            logger.info('Writing PDF reports')
+
+            sub = subject_list.keys()[0]
+            print sub
+            in_csv = op.join(
+                config['output_directory'], 'qap_functional_spatial.csv')
+            out_file = op.join(
+                config['output_directory'], 'qap_functional_spatial.pdf')
+            qvr.report_func_spatial(in_csv, out_file=out_file)
     else:
-        # run on cloud
-        sub = subject_list.keys()[0]
+        for sub_info in flat_sub_dict.keys():
+            print sub_info
         # get the site name!
         for resource_path in subject_list[sub]:
             if ".nii" in resource_path:
@@ -341,18 +356,6 @@ def run(subject_list, config, cloudify=False):
 
         build_functional_spatial_workflow(
             subject_list[sub], config, sub, run_name, site_name)
-
-    # PDF reporting
-    if write_report:
-        import os.path as op
-        import qap.viz.reports as qvr
-
-        logger.info('Writing PDF reports')
-        in_csv = op.join(
-            config['output_directory'], 'qap_functional_spatial.csv')
-        out_file = op.join(
-            config['output_directory'], 'qap_functional_spatial.pdf')
-        qvr.report_func_spatial(in_csv, out_file=out_file)
 
 
 def main():

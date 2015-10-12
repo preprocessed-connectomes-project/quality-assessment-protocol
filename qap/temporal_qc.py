@@ -44,10 +44,7 @@ def fd_jenkinson(in_file, rmax=80., out_file=None):
 
     if out_file is None:
         fname, ext = op.splitext(op.basename(in_file))
-        if 'gz' in ext:
-            fname, ext2 = op.splitext(fname)
-            ext = ext2 + ext
-        out_name = op.abspath(fname + '_fdfile' + ext)
+        out_name = op.abspath('%s_fdfile%s' % (fname, ext))
 
     # if in_file (coordinate_transformation) is actually the rel_mean output
     # of the MCFLIRT command, forward that file
@@ -83,7 +80,10 @@ def fd_jenkinson(in_file, rmax=80., out_file=None):
 
         T_rb_prev = T_rb
 
-    np.savetxt(out_file, X)
+    print out_file
+    print X
+
+    np.savetxt(out_file, np.array(X))
     return out_file
 
 
