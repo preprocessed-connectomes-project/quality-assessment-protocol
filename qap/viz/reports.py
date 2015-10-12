@@ -105,7 +105,7 @@ def report_anatomical(in_csv, sc_split=False, condensed=True,
 
 
 def report_func_temporal(in_csv, sc_split=False, split_files=True,
-                         out_file='func_temporal.pdf', condensed=True):
+                         condensed=True, out_file='func_temporal.pdf'):
     groups = [['dvars'], ['gcor'], ['m_tsnr'], ['mean_fd'],
               ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]
     return _write_report(
@@ -114,7 +114,7 @@ def report_func_temporal(in_csv, sc_split=False, split_files=True,
 
 
 def report_func_spatial(in_csv, sc_split=False, split_files=True,
-                        out_file='func_spatial.pdf'):
+                        condensed=False, out_file='func_spatial.pdf'):
     groups = [['bg_size', 'fg_size'],
               ['bg_mean', 'fg_mean'],
               ['bg_std', 'fg_std'],

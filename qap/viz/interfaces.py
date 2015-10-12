@@ -107,10 +107,6 @@ class PlotFD(BaseInterface):
     output_spec = PlotFDOutputSpec
 
     def _run_interface(self, runtime):
-        mask = None
-        if isdefined(self.inputs.in_mask):
-            mask = self.inputs.in_mask
-
         title = self.inputs.title
         if isdefined(self.inputs.subject):
             title += ', subject %s' % self.inputs.subject
