@@ -35,20 +35,27 @@ def fd_jenkinson(in_file, out_file=None):
 
     import numpy as np
     import os
+    import os.path as op
+    from shutil import copyfile
     import sys
     import math
 
     if out_file is None:
-        bdir = os.path.dirname(in_file)
-        fname, ext = os.path.splitext(os.path.basename(in_file))
-        out_file = os.path.join(bdir, fname + '_FD_J' + ext)
+        fname, ext = op.splitext(op.basename(in_file))
+        if 'gz' in ext:
+            fname, ext2 = op.splitext(fname)
+            ext = ext2 + ext
+        out_name = op.abspath(fname + '_fdfile' + ext)
+
+    # if in_file (coordinate_transformation) is actually the rel_mean output
+    # of the MCFLIRT command, forward that file
+    if 'rel.rms' in in_file:
+        copyfile(in_file, out_file)
+        return out_file
 
     f = open(out_file, 'w')
-
     pm_ = np.genfromtxt(in_file)
-
     original_shape = pm_.shape
-
     pm = np.zeros((pm_.shape[0], pm_.shape[1] + 4))
     pm[:, :original_shape[1]] = pm_
     pm[:, original_shape[1]:] = [0.0, 0.0, 0.0, 1.0]
@@ -79,32 +86,8 @@ def fd_jenkinson(in_file, out_file=None):
             print >> f, '%.8f' % FD_J
 
         T_rb_prev = T_rb
-
     f.close()
 
-    return out_file
-
-
-def gen_fd_file(in_file, out_file=None):
-    import os.path as op
-    import numpy as np
-
-    if out_file is None:
-        fname, ext = op.splitext(op.basename(in_file))
-        if 'gz' in ext:
-            fname, ext2 = op.splitext(fname)
-            ext = ext2 + ext
-        out_name = op.abspath(fname + '_fdfile' + ext)
-
-    # if in_file (coordinate_transformation) is actually the rel_mean output
-    # of the MCFLIRT command, take the mean FD straight out
-    if 'rel.rms' in in_file:
-        fd = np.loadtxt(in_file)
-    else:
-        fd_file = fd_jenkinson(in_file)
-        fd = np.loadtxt(fd_file)
-
-    np.savetxt(out_file, fd)
     return out_file
 
 

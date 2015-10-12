@@ -503,7 +503,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config,
     import nipype.algorithms.misc as nam
 
     from qap_workflows_utils import qap_functional_temporal
-    from temporal_qc import gen_fd_file
+    from temporal_qc import fd_jenkinson
     from qap.viz.interfaces import PlotMosaic, PlotFD
 
     def _getfirst(inlist):
@@ -531,7 +531,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config,
 
     fd = pe.Node(niu.Function(
         input_names=['in_file'], output_names=['out_file'],
-        function=gen_fd_file), name='generate_FD_file')
+        function=fd_jenkinson), name='generate_FD_file')
 
     if 'mcflirt_rel_rms' in resource_pool.keys():
         fd.inputs.in_file = resource_pool['mcflirt_rel_rms']
