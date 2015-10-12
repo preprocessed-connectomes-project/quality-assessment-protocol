@@ -117,7 +117,7 @@ def build_functional_temporal_workflow(
     new_outputs = 0
 
     out_list = ['qap_functional_temporal']
-    if write_report:
+    if config.get('write_report', False):
         out_list += ['qap_mosaic']
 
     if keep_outputs:

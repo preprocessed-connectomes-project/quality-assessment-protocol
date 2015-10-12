@@ -125,7 +125,7 @@ def build_anatomical_spatial_workflow(
     new_outputs = 0
 
     out_list = ['qap_anatomical_spatial']
-    if write_report:
+    if config.get('write_report', False):
         out_list += ['qap_mosaic']
 
     if keep_outputs:
