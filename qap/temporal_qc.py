@@ -13,7 +13,7 @@ import shutil
 from dvars import mean_dvars_wrapper
 
 
-def fd_jenkinson(in_file, out_file=None):
+def fd_jenkinson(in_file, rmax=80., out_file=None):
     '''
     @ Krsna
     May 2013
@@ -28,6 +28,8 @@ def fd_jenkinson(in_file, out_file=None):
     Method to calculate Framewise Displacement (FD) calculations
     (Jenkinson et al., 2002)
     Parameters; in_file : string
+                rmax : float
+                The default radius (as in FSL) of a sphere represents the brain
     Returns; out_file : string
     NOTE: infile should have one 3dvolreg affine matrix in one row -
     NOT the motion parameters
@@ -53,29 +55,23 @@ def fd_jenkinson(in_file, out_file=None):
         copyfile(in_file, out_file)
         return out_file
 
-    f = open(out_file, 'w')
     pm_ = np.genfromtxt(in_file)
     original_shape = pm_.shape
     pm = np.zeros((pm_.shape[0], pm_.shape[1] + 4))
     pm[:, :original_shape[1]] = pm_
     pm[:, original_shape[1]:] = [0.0, 0.0, 0.0, 1.0]
 
-    flag = 0
-
-    # The default radius (as in FSL) of a sphere represents the brain
-    rmax = 80.0
-
     # rigid body transformation matrix
     T_rb_prev = np.matrix(np.eye(4))
 
+    flag = 0
+    X = [0]  # First timepoint
     for i in range(0, pm.shape[0]):
         # making use of the fact that the order of aff12 matrix is "row-by-row"
         T_rb = np.matrix(pm[i].reshape(4, 4))
 
         if flag == 0:
             flag = 1
-            # first timepoint
-            print >> f, 0
         else:
             M = np.dot(T_rb, T_rb_prev.I) - np.eye(4)
             A = M[0:3, 0:3]
@@ -83,11 +79,11 @@ def fd_jenkinson(in_file, out_file=None):
 
             FD_J = math.sqrt(
                 (rmax * rmax / 5) * np.trace(np.dot(A.T, A)) + np.dot(b.T, b))
-            print >> f, '%.8f' % FD_J
+            X.append(FD_J)
 
         T_rb_prev = T_rb
-    f.close()
 
+    np.savetxt(out_file, X)
     return out_file
 
 
