@@ -251,77 +251,73 @@ def run(subject_list, config, cloudify=False):
     ns_at_once = config.get('num_subjects_at_once', 1)
 
     if not cloudify:
+        # select only subjects with anatomical scan
+        infos = [s for s in flat_sub_dict.keys()
+                 if 'anatomical_scan' in flat_sub_dict[s].keys()]
+
         # skip parallel machinery if we are running only one subject at once
         if ns_at_once == 1:
-            for sub_info in flat_sub_dict.keys():
-                if sites_dict:
-                    site = sites_dict[sub_info[0]]
-                else:
-                    site = None
-                if 'anatomical_scan' in flat_sub_dict[sub_info].keys():
-                    build_anatomical_spatial_workflow(
-                        flat_sub_dict[sub_info], config, sub_info,
-                        run_name, site)
+            for sub_info in infos:
+                build_anatomical_spatial_workflow(
+                    flat_sub_dict[sub_info], config, sub_info,
+                    run_name, sites_dict.get(sub_info[0], None))
         else:
-            if 'anatomical_scan' in flat_sub_dict[sub_info].keys():
-                if len(sites_dict) > 0:
-                    procss = [Process(
-                        target=build_anatomical_spatial_workflow,
-                        args=(flat_sub_dict[sub_info], config, sub_info,
-                              run_name, sites_dict[sub_info[0]]))
-                              for sub_info in flat_sub_dict.keys()]
+            procss = [Process(
+                target=build_anatomical_spatial_workflow,
+                args=(flat_sub_dict[sub_info], config, sub_info,
+                      run_name, sites_dict.get(sub_info[0], None)))
+                      for sub_info in infos]
 
-                elif len(sites_dict) == 0:
-                    procss = [Process(
-                        target=build_anatomical_spatial_workflow,
-                        args=(flat_sub_dict[sub_info], config, sub_info,
-                              run_name, None))
-                              for sub_info in flat_sub_dict.keys()]
+            pid = open(op.join(
+                config["output_directory"], 'pid.txt'), 'w')
+            # Init job queue
+            job_queue = []
+            # Stream the subject workflows for preprocessing.
+            # At Any time in the pipeline c.numSubjectsAtOnce
+            # will run, unless the number remaining is less than
+            # the value of the parameter stated above
+            idx = 0
+            nprocs = len(procss)
+            while idx < nprocs:
+                # Check every job in the queue's status
+                for job in job_queue:
+                    # If the job is not alive
+                    if not job.is_alive():
+                        # Find job and delete it from queue
+                        logger.info('found dead job: %s' % str(job))
+                        loc = job_queue.index(job)
+                        del job_queue[loc]
+                # Check free slots after prunning jobs
+                slots = ns_at_once - len(job_queue)
+                if slots > 0:
+                    idc = idx
+                    for p in procss[idc:idc + slots]:
+                        # ..and start the next available process (subject)
+                        p.start()
+                        print >>pid, p.pid
+                        # Append this to job queue and increment index
+                        job_queue.append(p)
+                        idx += 1
+                # Add sleep so while loop isn't consuming 100% of CPU
+                time.sleep(2)
+            pid.close()
 
-                pid = open(op.join(
-                    config["output_directory"], 'pid.txt'), 'w')
+            # Join all processes if report must be written out
+            if write_report:
+                for p in procss:
+                    p.join()
 
-                # Init job queue
-                job_queue = []
+        # PDF reporting
+        if write_report:
+            import qap.viz.reports as qvr
 
-                # Stream the subject workflows for preprocessing.
-                # At Any time in the pipeline c.numSubjectsAtOnce
-                # will run, unless the number remaining is less than
-                # the value of the parameter stated above
+            logger.info('Writing PDF Reports')
+            in_csv = op.join(
+                config['output_directory'], 'qap_anatomical_spatial.csv')
+            out_file = op.join(
+                config['output_directory'], 'qap_anatomical.pdf')
 
-                idx = 0
-                nprocs = len(procss)
-                while idx < nprocs:
-                    # Check every job in the queue's status
-                    for job in job_queue:
-                        # If the job is not alive
-                        if not job.is_alive():
-                            # Find job and delete it from queue
-                            logger.info('found dead job: %s' % str(job))
-                            loc = job_queue.index(job)
-                            del job_queue[loc]
-
-                    # Check free slots after prunning jobs
-                    slots = ns_at_once - len(job_queue)
-
-                    if slots > 0:
-                        idc = idx
-                        for p in procss[idc:idc + slots]:
-                            # ..and start the next available process (subject)
-                            p.start()
-                            print >>pid, p.pid
-                            # Append this to job queue and increment index
-                            job_queue.append(p)
-                            idx += 1
-
-                    # Add sleep so while loop isn't consuming 100% of CPU
-                    time.sleep(2)
-                pid.close()
-
-                # Join all processes if report must be written out
-                if write_report:
-                    for p in procss:
-                        p.join()
+            qvr.report_anatomical(in_csv, out_file=out_file)
     else:
         # run on cloud
         sub = subject_list.keys()[0]
@@ -337,18 +333,6 @@ def run(subject_list, config, cloudify=False):
 
         build_anatomical_spatial_workflow(
             subject_list[sub], config, sub, run_name, site_name)
-
-    # PDF reporting
-    if write_report:
-        import qap.viz.reports as qvr
-
-        logger.info('Writing PDF Reports')
-        in_csv = op.join(
-            config['output_directory'], 'qap_anatomical_spatial.csv')
-        out_file = op.join(
-            config['output_directory'], 'qap_anatomical.pdf')
-
-        qvr.report_anatomical(in_csv, out_file=out_file)
 
 
 # Main routine

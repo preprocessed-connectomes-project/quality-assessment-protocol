@@ -248,77 +248,78 @@ def run(subject_list, config, cloudify=False):
     run_name = config['pipeline_config_yaml'].split("/")[-1].split(".")[0]
 
     ns_at_once = config.get('num_subjects_at_once', 1)
+
     if not cloudify:
+        # select only subjects with anatomical scan
+        infos = [s for s in flat_sub_dict.keys()
+                 if 'functional_scan' in flat_sub_dict[s].keys()]
+
         # skip parallel machinery if we are running only one subject at once
         if ns_at_once == 1:
-            for sub_info in flat_sub_dict.keys():
-                if sites_dict:
-                    site = sites_dict[sub_info[0]]
-                else:
-                    site = None
-                if 'functional_scan' in flat_sub_dict[sub_info].keys():
-                    build_functional_temporal_workflow(
-                        flat_sub_dict[sub_info], config, sub_info,
-                        run_name, site)
+            for sub_info in infos:
+                build_functional_temporal_workflow(
+                    flat_sub_dict[sub_info], config, sub_info,
+                    run_name, sites_dict.get(sub_info[0], None))
         else:
-            if 'functional_scan' in flat_sub_dict[sub_info].keys():
-                if len(sites_dict) > 0:
-                    procss = [Process(
-                        target=build_functional_temporal_workflow,
-                        args=(flat_sub_dict[sub_info], config, sub_info,
-                              run_name, [sub_info[0]]))
-                              for sub_info in flat_sub_dict.keys()]
+            procss = [Process(
+                target=build_functional_temporal_workflow,
+                args=(flat_sub_dict[sub_info], config, sub_info,
+                      run_name, sites_dict.get(sub_info[0], None)))
+                      for sub_info in infos]
 
-                elif len(sites_dict) == 0:
-                    procss = [Process(
-                        target=build_functional_temporal_workflow,
-                        args=(flat_sub_dict[sub_info], config, sub_info,
-                              run_name, None))
-                              for sub_info in flat_sub_dict.keys()]
+            pid = open(op.join(output_dir, 'pid.txt'), 'w')
 
-                pid = open(op.join(output_dir, 'pid.txt'), 'w')
+            # Init job queue
+            job_queue = []
+            # Stream the subject workflows for preprocessing.
+            # At Any time in the pipeline c.numSubjectsAtOnce
+            # will run, unless the number remaining is less than
+            # the value of the parameter stated above
+            idx = 0
+            nprocs = len(procss)
+            
+            while idx < nprocs:
+                # Check every job in the queue's status
+                for job in job_queue:
+                    # If the job is not alive
+                    if not job.is_alive():
+                        # Find job and delete it from queue
+                        logger.info('found dead job: %s' % str(job))
+                        loc = job_queue.index(job)
+                        del job_queue[loc]
+                # Check free slots after prunning jobs
+                slots = ns_at_once - len(job_queue)
+                if slots > 0:
+                    idc = idx
+                    for p in procss[idc:idc + slots]:
+                        # ..and start the next available process (subject)
+                        p.start()
+                        print >>pid, p.pid
+                        # Append this to job queue and increment index
+                        job_queue.append(p)
+                        idx += 1
+                # Add sleep so while loop isn't consuming 100% of CPU
+                time.sleep(2)
+            pid.close()
 
-                # Init job queue
-                job_queue = []
+            # Join all processes if report must be written out
+            if write_report:
+                for p in procss:
+                    p.join()
 
-                # Stream the subject workflows for preprocessing.
-                # At Any time in the pipeline c.numSubjectsAtOnce
-                # will run, unless the number remaining is less than
-                # the value of the parameter stated above
+        # PDF reporting
+        if write_report:
+            import os.path as op
+            import qap.viz.reports as qvr
+            logger.info('Writting PDF reports')
 
-                idx = 0
-                nprocs = len(procss)
-                while idx < nprocs:
-                    # Check every job in the queue's status
-                    for job in job_queue:
-                        # If the job is not alive
-                        if not job.is_alive():
-                            # Find job and delete it from queue
-                            logger.info('found dead job: %s' % str(job))
-                            loc = job_queue.index(job)
-                            del job_queue[loc]
+            in_csv = op.join(
+                config['output_directory'], 'qap_functional_temporal.csv')
+            out_file = op.join(
+                config['output_directory'], 'qap_functional_temporal.pdf')
 
-                    # Check free slots after prunning jobs
-                    slots = ns_at_once - len(job_queue)
+            qvr.report_func_temporal(in_csv, out_file=out_file)
 
-                    if slots > 0:
-                        idc = idx
-                        for p in procss[idc:idc + slots]:
-                            # ..and start the next available process (subject)
-                            p.start()
-                            print >>pid, p.pid
-                            # Append this to job queue and increment index
-                            job_queue.append(p)
-                            idx += 1
-                    # Add sleep so while loop isn't consuming 100% of CPU
-                    time.sleep(2)
-
-                pid.close()
-
-                # Join all processes if report must be written out
-                if write_report:
-                    for p in procss:
-                        p.join()
     else:
         # run on cloud
         sub = subject_list.keys()[0]
@@ -334,19 +335,6 @@ def run(subject_list, config, cloudify=False):
 
         build_functional_temporal_workflow(
             subject_list[sub], config, sub, run_name, site_name)
-
-    # PDF reporting
-    if write_report:
-        import os.path as op
-        import qap.viz.reports as qvr
-        logger.info('Writting PDF reports')
-
-        in_csv = op.join(
-            config['output_directory'], 'qap_functional_temporal.csv')
-        out_file = op.join(
-            config['output_directory'], 'qap_functional_temporal.pdf')
-
-        qvr.report_func_temporal(in_csv, out_file=out_file)
 
 
 def main():
