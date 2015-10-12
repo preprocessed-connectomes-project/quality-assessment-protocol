@@ -39,13 +39,15 @@ def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
     report = PdfPages(out_file)
     for ss in sessions:
         sesdf = df.copy().loc[df['session'] == ss]
-        subdf = sesdf.copy().loc[sesdf['subject'] == sub_id]
-        scans = pd.unique(subdf.scan.ravel())
+        scans = pd.unique(sesdf.scan.ravel())
         if sc_split:
             for sc in scans:
                 subset = sesdf.loc[sesdf['scan'] == sc]
                 if len(subset.index) > 1:
-                    subtitle = '(subject %s_%s_%s)' % (sub_id, ss, sc)
+                    if sub_id is None:
+                        subtitle = '(%s_%s)' % (ss, sc)
+                    else:
+                        subtitle = '(subject %s_%s_%s)' % (sub_id, ss, sc)
                     if condensed:
                         fig = plot_measures(
                             sesdf, headers, subject=sub_id,
@@ -57,7 +59,10 @@ def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
                     fig.clf()
         else:
             if len(sesdf.index) > 1:
-                subtitle = '(subject %s_%s)' % (sub_id, ss)
+                if sub_id is None:
+                    subtitle = '(%s)' % (ss)
+                else:
+                    subtitle = '(subject %s_%s)' % (sub_id, ss)
                 if condensed:
                     fig = plot_measures(
                         sesdf, headers, subject=sub_id,
@@ -79,9 +84,9 @@ def _write_all_reports(df, groups, sc_split=False, condensed=True,
 
     outlist = []
     _write_report(
-        df, groups, sub_id=sub_id, sc_split=sc_split, condensed=condensed,
-        out_file=out_file)
+        df, groups, sc_split=sc_split, condensed=condensed, out_file=out_file)
 
+    subject_list = sorted(pd.unique(df.subject.ravel()))
     for sub_id in subject_list:
         tpl, _ = op.splitext(op.basename(out_file))
         tpl = op.join(op.dirname(out_file), tpl) + '_%s.pdf'
