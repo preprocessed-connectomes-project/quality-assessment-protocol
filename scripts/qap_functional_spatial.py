@@ -256,13 +256,12 @@ def run(subject_list, config, cloudify=False):
     ns_at_once = config.get('num_subjects_at_once', 1)
 
     if not cloudify:
-        # select only subjects with anatomical scan
-        infos = [s for s in flat_sub_dict.keys()
-                 if 'functional_scan' in flat_sub_dict[s].keys()]
+        logger.info('There are %d subjects in the pool' %
+                    len(flat_sub_dict.keys()))
 
         # skip parallel machinery if we are running only one subject at once
         if ns_at_once == 1:
-            for sub_info in infos:
+            for sub_info in flat_sub_dict.keys():
                 build_functional_spatial_workflow(
                     flat_sub_dict[sub_info], config, sub_info,
                     run_name, sites_dict.get(sub_info[0], None))
@@ -271,7 +270,7 @@ def run(subject_list, config, cloudify=False):
                 target=build_functional_spatial_workflow,
                 args=(flat_sub_dict[sub_info], config, sub_info,
                       run_name, sites_dict.get(sub_info[0], None)))
-                      for sub_info in infos]
+                      for sub_info in flat_sub_dict.keys()]
 
             pid = open(op.join(
                 config["output_directory"], 'pid.txt'), 'w')
@@ -318,7 +317,7 @@ def run(subject_list, config, cloudify=False):
 
             logger.info('Writing PDF reports')
 
-            for sub_info in infos:
+            for sub_info in flat_sub_dict.keys():
                 print flat_sub_dict[sub_info]['qap_mosaic']
 
             in_csv = op.join(
