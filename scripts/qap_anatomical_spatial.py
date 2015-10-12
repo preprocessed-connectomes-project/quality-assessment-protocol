@@ -12,9 +12,6 @@ def build_anatomical_spatial_workflow(
     # build pipeline for each subject, individually
     # ~ 29 minutes per subject with 1 core to ANTS
 
-    import os
-    import os.path as op
-    import sys
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
@@ -182,8 +179,6 @@ def build_anatomical_spatial_workflow(
 
 
 def run(subject_list, config, cloudify=False):
-    import os
-    import os.path as op
     import yaml
     import time
     from multiprocessing import Process
@@ -345,11 +340,9 @@ def run(subject_list, config, cloudify=False):
 
     # PDF reporting
     if write_report:
-        logger.info('Writing PDF Reports')
-
-        import os.path as op
         import qap.viz.reports as qvr
 
+        logger.info('Writing PDF Reports')
         in_csv = op.join(
             config['output_directory'], 'qap_anatomical_spatial.csv')
         out_file = op.join(

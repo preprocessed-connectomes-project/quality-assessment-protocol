@@ -335,16 +335,15 @@ def run(subject_list, config, cloudify=False):
 
             logger.info('Writing PDF reports')
 
-            sub = subject_list.keys()[0]
-            print sub
+            for sub_info in flat_sub_dict.keys():
+                print sub_info
+
             in_csv = op.join(
                 config['output_directory'], 'qap_functional_spatial.csv')
             out_file = op.join(
                 config['output_directory'], 'qap_functional_spatial.pdf')
             qvr.report_func_spatial(in_csv, out_file=out_file)
     else:
-        for sub_info in flat_sub_dict.keys():
-            print sub_info
         # get the site name!
         for resource_path in subject_list[sub]:
             if ".nii" in resource_path:

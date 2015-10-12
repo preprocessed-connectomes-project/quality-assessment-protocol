@@ -11,8 +11,20 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 from .plotting import (plot_measures, plot_mosaic, plot_all,
                        plot_fd, plot_dist)
+from pyPdf import PdfFileWriter, PdfFileReader
 
 # matplotlib.rc('figure', figsize=(11.69, 8.27))  # for DINA4 size
+
+
+def concat_pdf(in_files, out_file='concatenated.pdf'):
+    outpdf = PdfFileWriter()
+
+    for in_file in in_files:
+        inpdf = PdfFileReader(file(in_file, 'rb'))
+        for p in range(inpdf.numPages):
+            outpdf.addPage(inpdf.getPage(p))
+    outpdf.write(file(out_file, 'wb'))
+    return out_file
 
 
 def _write_report(df, groups, sc_split=False, condensed=True,
@@ -126,3 +138,5 @@ def report_func_spatial(in_csv, sc_split=False, split_files=True,
     return _write_report(
         pd.read_csv(in_csv).fillna(0), groups, sc_split=sc_split,
         condensed=condensed, split_files=split_files, out_file=out_file)
+)
+
