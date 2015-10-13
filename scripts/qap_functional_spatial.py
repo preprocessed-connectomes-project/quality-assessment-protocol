@@ -312,16 +312,16 @@ def run(subject_list, config, cloudify=False):
 
         # PDF reporting
         if write_report:
-            import os.path as op
             import pandas as pd
             import qap.viz.reports as qvr
-
             logger.info('Writing PDF reports')
+
+            report_type = 'qap_functional_spatial'
             in_csv = op.join(
-                config['output_directory'], 'qap_functional_spatial.csv')
+                config['output_directory'], '%s.csv' % report_type)
 
             out_file = op.join(
-                config['output_directory'], 'qap_functional_spatial_%s.pdf')
+                config['output_directory'], report_type + '_%s.pdf')
 
             df = pd.DataFrame(flat_sub_dict.keys(),
                               columns=['subject', 'session', 'scan'])
@@ -356,9 +356,11 @@ def run(subject_list, config, cloudify=False):
                     config['output_directory'], config['run_name'],
                     subid, 'documentation.pdf')
 
-                qvr.get_documentation('qap_functional_spatial', doc)
+                qvr.get_documentation(report_type, doc)
 
                 qvr.concat_pdf(mosaics + [qc_ms, doc], out_file % sub_info[0])
+
+                logger.info('Written report of subject %s' % subid)
     else:
         # get the site name!
         for resource_path in subject_list[sub]:

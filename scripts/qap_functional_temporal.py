@@ -273,7 +273,7 @@ def run(subject_list, config, cloudify=False):
             # the value of the parameter stated above
             idx = 0
             nprocs = len(procss)
-            
+
             while idx < nprocs:
                 # Check every job in the queue's status
                 for job in job_queue:
@@ -305,16 +305,55 @@ def run(subject_list, config, cloudify=False):
 
         # PDF reporting
         if write_report:
-            import os.path as op
+            import pandas as pd
             import qap.viz.reports as qvr
-            logger.info('Writting PDF reports')
+            logger.info('Writing PDF reports')
 
+            report_type = 'qap_functional_temporal'
             in_csv = op.join(
-                config['output_directory'], 'qap_functional_temporal.csv')
-            out_file = op.join(
-                config['output_directory'], 'qap_functional_temporal.pdf')
+                config['output_directory'], '%s.csv' % report_type)
 
-            qvr.report_func_temporal(in_csv, out_file=out_file)
+            out_file = op.join(
+                config['output_directory'], report_type + '_%s.pdf')
+
+            df = pd.DataFrame(flat_sub_dict.keys(),
+                              columns=['subject', 'session', 'scan'])
+            df['subject'] = df['subject'].astype(str)
+            subject_list = sorted(pd.unique(df.subject.ravel()))
+
+            for subid in subject_list:
+                subdf = df.loc[df['subject'] == subid].copy()
+                sessions = sorted(pd.unique(subdf.session.ravel()))
+                mosaics = []
+                for sesid in sessions:
+                    sesdf = subdf.loc[subdf['session'] == sesid].copy()
+                    scans = sorted(pd.unique(sesdf.scan.ravel()))
+                    for scanid in scans:
+                        sub_info = (subid, sesid, scanid)
+
+                        sub_path = op.join(
+                            config['output_directory'], config['run_name'],
+                            '/'.join(sub_info))
+                        m = op.join(
+                            sub_path, 'qap_mosaic', 'mosaic.pdf')
+                        mosaics.append(m)
+
+                qc_ms = op.join(
+                    config['output_directory'], config['run_name'],
+                    subid, 'qc_measures.pdf')
+
+                qvr.report_func_temporal(
+                    in_csv, subject=subid, out_file=qc_ms)
+
+                doc = op.join(
+                    config['output_directory'], config['run_name'],
+                    subid, 'documentation.pdf')
+
+                qvr.get_documentation(report_type, doc)
+
+                qvr.concat_pdf(mosaics + [qc_ms, doc], out_file % sub_info[0])
+
+                logger.info('Written report of subject %s' % subid)
 
     else:
         # run on cloud

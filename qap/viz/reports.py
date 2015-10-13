@@ -26,8 +26,6 @@ def get_documentation(doc_type, out_file):
     with open(html_dir, 'r') as f:
         html = f.read()
 
-    print 'Loaded %s' % html_dir
-
     # convert HTML to PDF
     status = pisa.CreatePDF(html, dest=result)
     result.close()
