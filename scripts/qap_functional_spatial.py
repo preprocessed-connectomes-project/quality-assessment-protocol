@@ -352,7 +352,13 @@ def run(subject_list, config, cloudify=False):
                 qvr.report_func_spatial(
                     in_csv, subject=subid, out_file=qc_ms)
 
-                qvr.concat_pdf(mosaics + [qc_ms], out_file % sub_info[0])
+                doc = op.join(
+                    config['output_directory'], config['run_name'],
+                    subid, 'documentation.pdf')
+
+                qvr.get_documentation('qap_functional_spatial', doc)
+
+                qvr.concat_pdf(mosaics + [qc_ms, doc], out_file % sub_info[0])
     else:
         # get the site name!
         for resource_path in subject_list[sub]:

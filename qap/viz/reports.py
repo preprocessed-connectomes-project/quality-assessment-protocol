@@ -1,19 +1,39 @@
 #!/usr/bin/env python
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
+import os.path as op
+import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
 
-import os.path as op
-import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
 from .plotting import (plot_measures, plot_mosaic, plot_all,
                        plot_fd, plot_dist)
-from PyPDF2 import PdfFileWriter, PdfFileReader
 
 # matplotlib.rc('figure', figsize=(11.69, 8.27))  # for DINA4 size
+
+
+def get_documentation(doc_type, out_file):
+    from xhtml2pdf import pisa
+    # open output file for writing (truncated binary)
+    result = open(out_file, "w+b")
+
+    html_dir = op.abspath(
+        op.join(op.dirname(__file__), 'html', '%s.html' % doc_type))
+
+    with open(html_dir, 'r') as f:
+        html = f.read()
+
+    print 'Loaded %s' % html_dir
+
+    # convert HTML to PDF
+    status = pisa.CreatePDF(html, dest=result)
+    result.close()
+
+    # return True on success and False on errors
+    return status.err
 
 
 def _read_csv(in_csv):
@@ -26,7 +46,7 @@ def concat_pdf(in_files, out_file='concatenated.pdf'):
     """
     Concatenate PDF list (http://stackoverflow.com/a/3444735)
     """
-
+    from PyPDF2 import PdfFileWriter, PdfFileReader
     outpdf = PdfFileWriter()
 
     for in_file in in_files:
