@@ -36,6 +36,15 @@ def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
     headers = [v for gnames in groups for v in gnames]
     sessions = sorted(pd.unique(df.session.ravel()))
 
+    columns = df.columns.ravel()
+
+    for h in headers:
+        if h not in columns:
+            headers.remove(h)
+            for g in groups:
+                if h in g:
+                    g.remove(h)
+
     report = PdfPages(out_file)
     for ss in sessions:
         sesdf = df.copy().loc[df['session'] == ss]
@@ -132,7 +141,7 @@ def report_func_spatial(in_csv, sc_split=False, condensed=False,
               ['efc'],
               ['fber'],
               ['fwhm', 'fwhm_x', 'fwhm_y', 'fwhm_z'],
-              ['ghost_x'],
+              ['ghost_%s' % a for a in ['x', 'y', 'z']],
               ['snr']]
     return _write_all_reports(
         pd.read_csv(in_csv).fillna(0), groups, sc_split=sc_split,

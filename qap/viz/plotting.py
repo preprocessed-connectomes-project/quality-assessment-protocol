@@ -81,7 +81,6 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
 
         if subject is not None:
             fig.suptitle(title)
-            out_file = subject + '.pdf'
             subdf = df.loc[df['subject'] == subject].copy()
             reps = len(subdf)
             for j, s in enumerate(snames):
