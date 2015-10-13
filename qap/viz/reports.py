@@ -16,6 +16,12 @@ from PyPDF2 import PdfFileWriter, PdfFileReader
 # matplotlib.rc('figure', figsize=(11.69, 8.27))  # for DINA4 size
 
 
+def _read_csv(in_csv):
+    df = pd.read_csv(in_csv).fillna(0)
+    df['subject'] = df['subject'].astype(str)
+    return df
+
+
 def concat_pdf(in_files, out_file='concatenated.pdf'):
     """
     Concatenate PDF list (http://stackoverflow.com/a/3444735)
@@ -84,7 +90,7 @@ def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
 
     report.close()
     plt.close()
-    print 'Written report file %s' % out_file
+    # print 'Written report file %s' % out_file
     return out_file
 
 
@@ -105,8 +111,8 @@ def _write_all_reports(df, groups, sc_split=False, condensed=True,
     return out_file, outlist
 
 
-def report_anatomical(in_csv, sc_split=False, condensed=True,
-                      out_file='anatomical.pdf'):
+def all_anatomical(in_csv, sc_split=False, condensed=True,
+                   out_file='anatomical.pdf'):
     groups = [['bg_size', 'fg_size'],
               ['bg_mean', 'fg_mean'],
               ['bg_std', 'fg_std'],
@@ -120,21 +126,21 @@ def report_anatomical(in_csv, sc_split=False, condensed=True,
               ['qi1'],
               ['snr']]
     return _write_all_reports(
-        pd.read_csv(in_csv).fillna(0), groups, sc_split=sc_split,
+        _read_csv(in_csv), groups, sc_split=sc_split,
         condensed=condensed, out_file=out_file)
 
 
-def report_func_temporal(in_csv, sc_split=False, condensed=True,
-                         out_file='func_temporal.pdf'):
+def all_func_temporal(in_csv, sc_split=False, condensed=True,
+                      out_file='func_temporal.pdf'):
     groups = [['dvars'], ['gcor'], ['m_tsnr'], ['mean_fd'],
               ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]
     return _write_all_reports(
-        pd.read_csv(in_csv).fillna(0), groups, sc_split=sc_split,
+        _read_csv(in_csv), groups, sc_split=sc_split,
         condensed=condensed, out_file=out_file)
 
 
-def report_func_spatial(in_csv, sc_split=False, condensed=False,
-                        out_file='func_spatial.pdf'):
+def all_func_spatial(in_csv, sc_split=False, condensed=False,
+                     out_file='func_spatial.pdf'):
     groups = [['bg_size', 'fg_size'],
               ['bg_mean', 'fg_mean'],
               ['bg_std', 'fg_std'],
@@ -144,5 +150,49 @@ def report_func_spatial(in_csv, sc_split=False, condensed=False,
               ['ghost_%s' % a for a in ['x', 'y', 'z']],
               ['snr']]
     return _write_all_reports(
-        pd.read_csv(in_csv).fillna(0), groups, sc_split=sc_split,
+        _read_csv(in_csv), groups, sc_split=sc_split,
         condensed=condensed, out_file=out_file)
+
+
+def report_anatomical(in_csv, subject, sc_split=False, condensed=True,
+                      out_file='anatomical.pdf'):
+    groups = [['bg_size', 'fg_size'],
+              ['bg_mean', 'fg_mean'],
+              ['bg_std', 'fg_std'],
+              ['csf_size', 'gm_size', 'wm_size'],
+              ['csf_mean', 'gm_mean', 'wm_mean'],
+              ['csf_std', 'gm_std', 'wm_std'],
+              ['cnr'],
+              ['efc'],
+              ['fber'],
+              ['fwhm', 'fwhm_x', 'fwhm_y', 'fwhm_z'],
+              ['qi1'],
+              ['snr']]
+    return _write_report(
+        _read_csv(in_csv), groups, sub_id=subject,
+        sc_split=sc_split, condensed=condensed, out_file=out_file)
+
+
+def report_func_temporal(in_csv, subject, sc_split=False, condensed=True,
+                         out_file='func_temporal.pdf'):
+    groups = [['dvars'], ['gcor'], ['m_tsnr'], ['mean_fd'],
+              ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]
+    return _write_report(
+        _read_csv(in_csv), groups, sub_id=subject,
+        sc_split=sc_split, condensed=condensed, out_file=out_file)
+
+
+def report_func_spatial(in_csv, subject, sc_split=False, condensed=False,
+                        out_file='func_spatial.pdf'):
+    groups = [['bg_size', 'fg_size'],
+              ['bg_mean', 'fg_mean'],
+              ['bg_std', 'fg_std'],
+              ['efc'],
+              ['fber'],
+              ['fwhm', 'fwhm_x', 'fwhm_y', 'fwhm_z'],
+              ['ghost_%s' % a for a in ['x', 'y', 'z']],
+              ['snr']]
+    return _write_report(
+        _read_csv(in_csv), groups, sub_id=subject,
+        sc_split=sc_split, condensed=condensed, out_file=out_file)
+

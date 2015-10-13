@@ -313,18 +313,46 @@ def run(subject_list, config, cloudify=False):
         # PDF reporting
         if write_report:
             import os.path as op
+            import pandas as pd
             import qap.viz.reports as qvr
 
             logger.info('Writing PDF reports')
-
-            for sub_info in flat_sub_dict.keys():
-                print flat_sub_dict[sub_info]['qap_mosaic']
-
             in_csv = op.join(
                 config['output_directory'], 'qap_functional_spatial.csv')
+
             out_file = op.join(
-                config['output_directory'], 'qap_functional_spatial.pdf')
-            qvr.report_func_spatial(in_csv, out_file=out_file)
+                config['output_directory'], 'qap_functional_spatial_%s.pdf')
+
+            df = pd.DataFrame(flat_sub_dict.keys(),
+                              columns=['subject', 'session', 'scan'])
+            df['subject'] = df['subject'].astype(str)
+            subject_list = sorted(pd.unique(df.subject.ravel()))
+
+            for subid in subject_list:
+                subdf = df.loc[df['subject'] == subid].copy()
+                sessions = sorted(pd.unique(subdf.session.ravel()))
+                mosaics = []
+                for sesid in sessions:
+                    sesdf = subdf.loc[subdf['session'] == sesid].copy()
+                    scans = sorted(pd.unique(sesdf.scan.ravel()))
+                    for scanid in scans:
+                        sub_info = (subid, sesid, scanid)
+
+                        sub_path = op.join(
+                            config['output_directory'], config['run_name'],
+                            '/'.join(sub_info))
+                        m = op.join(
+                            sub_path, 'qap_mosaic', 'mosaic.pdf')
+                        mosaics.append(m)
+
+                qc_ms = op.join(
+                    config['output_directory'], config['run_name'],
+                    subid, 'qc_measures.pdf')
+
+                qvr.report_func_spatial(
+                    in_csv, subject=subid, out_file=qc_ms)
+
+                qvr.concat_pdf(mosaics + [qc_ms], out_file % sub_info[0])
     else:
         # get the site name!
         for resource_path in subject_list[sub]:
