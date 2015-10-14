@@ -21,6 +21,9 @@ test:
     - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_anatomical_spatial.py --sublist ~/bids_anat_list.yml configs/qap_config_ds003.yml
     - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_functional_spatial.py --sublist ~/bids_func_list.yml configs/qap_config_ds003.yml
     - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_functional_temporal.py --sublist ~/bids_func_list.yml configs/qap_config_ds003.yml
+    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_anatomical_spatial.py --sublist ~/bids_anat_list.yml configs/qap_config_ds003_ms.yml
+    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_functional_spatial.py --sublist ~/bids_func_list.yml configs/qap_config_ds003_ms.yml
+    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_functional_temporal.py --sublist ~/bids_func_list.yml configs/qap_config_ds003_ms.yml
 general:
   artifacts:
     - "/tmp/output"
