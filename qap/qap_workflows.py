@@ -263,12 +263,13 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
         else:
             plot.inputs.in_file = resource_pool['anatomical_reorient']
 
-        if len(resource_pool['qap_head_mask']) == 2:
-            node, out_file = resource_pool['qap_head_mask']
-            workflow.connect(node, out_file, plot, 'in_mask')
-        else:
-            plot.inputs.in_mask = resource_pool['qap_head_mask']
-        resource_pool['qap_mosaic'] = (plot, 'out_file')
+        # Enable this if we want masks
+        # if len(resource_pool['qap_head_mask']) == 2:
+        #     node, out_file = resource_pool['qap_head_mask']
+        #     workflow.connect(node, out_file, plot, 'in_mask')
+        # else:
+        #     plot.inputs.in_mask = resource_pool['qap_head_mask']
+        # resource_pool['qap_mosaic'] = (plot, 'out_file')
 
     out_csv = op.join(config['output_directory'], 'qap_anatomical_spatial.csv')
     spatial_to_csv = pe.Node(
@@ -416,11 +417,12 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config):
         else:
             plot.inputs.in_file = resource_pool['mean_functional']
 
-        if len(resource_pool['functional_brain_mask']) == 2:
-            node, out_file = resource_pool['functional_brain_mask']
-            workflow.connect(node, out_file, plot, 'in_mask')
-        else:
-            plot.inputs.in_mask = resource_pool['functional_brain_mask']
+        # Enable this if we want masks
+        # if len(resource_pool['functional_brain_mask']) == 2:
+        #     node, out_file = resource_pool['functional_brain_mask']
+        #     workflow.connect(node, out_file, plot, 'in_mask')
+        # else:
+        #     plot.inputs.in_mask = resource_pool['functional_brain_mask']
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
     out_csv = op.join(
@@ -586,11 +588,12 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
         plot.inputs.title = 'tSNR volume'
         workflow.connect(tsnr, 'tsnr_file', plot, 'in_file')
 
-        if len(resource_pool['functional_brain_mask']) == 2:
-            node, out_file = resource_pool['functional_brain_mask']
-            workflow.connect(node, out_file, plot, 'in_mask')
-        else:
-            plot.inputs.in_mask = resource_pool['functional_brain_mask']
+        # Enable this if we want masks
+        # if len(resource_pool['functional_brain_mask']) == 2:
+        #     node, out_file = resource_pool['functional_brain_mask']
+        #     workflow.connect(node, out_file, plot, 'in_mask')
+        # else:
+        #     plot.inputs.in_mask = resource_pool['functional_brain_mask']
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
         fdplot = pe.Node(PlotFD(), name='plot_fd')
