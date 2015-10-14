@@ -487,8 +487,7 @@ def run_single_qap_functional_spatial(
         return workflow, workflow.base_dir
 
 
-def qap_functional_temporal_workflow(workflow, resource_pool, config,
-                                     report=False):
+def qap_functional_temporal_workflow(workflow, resource_pool, config):
 
     # resource pool should have:
     #     functional_brain_mask

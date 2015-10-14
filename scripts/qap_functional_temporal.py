@@ -118,7 +118,7 @@ def build_functional_temporal_workflow(
 
     out_list = ['qap_functional_temporal']
     if config.get('write_report', False):
-        out_list += ['qap_mosaic']
+        out_list += ['qap_mosaic', 'qap_fd']
 
     if keep_outputs:
         out_list = resource_pool.keys()
@@ -324,7 +324,7 @@ def run(subject_list, config, cloudify=False):
             for subid in subject_list:
                 subdf = df.loc[df['subject'] == subid].copy()
                 sessions = sorted(pd.unique(subdf.session.ravel()))
-                mosaics = []
+                plots = []
                 for sesid in sessions:
                     sesdf = subdf.loc[subdf['session'] == sesid].copy()
                     scans = sorted(pd.unique(sesdf.scan.ravel()))
@@ -334,9 +334,10 @@ def run(subject_list, config, cloudify=False):
                         sub_path = op.join(
                             config['output_directory'], config['run_name'],
                             '/'.join(sub_info))
-                        m = op.join(
-                            sub_path, 'qap_mosaic', 'mosaic.pdf')
-                        mosaics.append(m)
+                        plots.append(op.join(
+                            sub_path, 'qap_mosaic', 'mosaic.pdf'))
+                        plots.append(op.join(
+                            sub_path, 'qap_fd', 'fd.pdf'))
 
                 qc_ms = op.join(
                     config['output_directory'], config['run_name'],
@@ -351,7 +352,9 @@ def run(subject_list, config, cloudify=False):
 
                 qvr.get_documentation(report_type, doc)
 
-                qvr.concat_pdf(mosaics + [qc_ms, doc], out_file % sub_info[0])
+                plots += [qc_ms, doc]
+                print plots
+                qvr.concat_pdf(plots, out_file % sub_info[0])
 
                 logger.info('Written report of subject %s' % subid)
 
