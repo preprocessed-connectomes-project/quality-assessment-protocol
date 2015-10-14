@@ -40,7 +40,13 @@ def plot_measures(df, measures, ncols=4, title='Group level report',
         plt.ticklabel_format(style='sci', axis='y', scilimits=(-1, 1))
 
         if subject is not None:
-            subdf = df.loc[df['subject'] == subject].copy()
+            subid = subject
+            try:
+                subid = int(subid)
+            except ValueError:
+                pass
+
+            subdf = df.loc[df['subject'] == subid].copy()
             sessions = np.atleast_1d(subdf[['session']]).reshape(-1).tolist()
 
             for ss in sessions:
@@ -80,9 +86,13 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
         # df[snames].plot(kind='box', ax=axes[-1])
 
         if subject is not None:
-            fig.suptitle(title)
-            subdf = df.loc[df['subject'] == subject].copy()
-            reps = len(subdf)
+            subid = subject
+            try:
+                subid = int(subid)
+            except ValueError:
+                pass
+
+            subdf = df.loc[df['subject'] == subid].copy()
             for j, s in enumerate(snames):
                 vals = np.atleast_1d(subdf[[s]]).reshape(-1).tolist()
 
@@ -96,6 +106,7 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
                 axes[-1].plot(pos, vals, markersize=9, linestyle='None',
                               color='w', marker='*', markeredgecolor='k')
 
+    fig.suptitle(title)
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
     plt.subplots_adjust(top=0.85)
     return fig
