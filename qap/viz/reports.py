@@ -97,12 +97,12 @@ def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
                 else:
                     subtitle = '(subject %s_%s)' % (sub_id, ss)
                 if condensed:
+                    fig = plot_all(sesdf, groups, subject=sub_id,
+                                   title='QC measures ' + subtitle)
+                else:
                     fig = plot_measures(
                         sesdf, headers, subject=sub_id,
                         title='QC measures ' + subtitle)
-                else:
-                    fig = plot_all(sesdf, groups, subject=sub_id,
-                                   title='QC measures ' + subtitle)
                 report.savefig(fig, dpi=300)
                 fig.clf()
 
