@@ -16,8 +16,8 @@ dependencies:
     - if [[ ! -d ~/examples/ds003_downsampled ]]; then wget "https://googledrive.com/host/0B2JWN60ZLkgkMEw4bW5VUUpSdFU/ds003_downsampled.tar"; mkdir -p ~/examples; tar xvf ds003_downsampled.tar -C ~/examples; fi
 test:
   override:
-    - echo "01" > inclusion_file && python scripts/qap_bids_data_sublist_generator.py -t functional --include inclusion_file ~/examples/ds003_downsampled/ ~/bids_func_list.yml
-    - echo "01" > inclusion_file && python scripts/qap_bids_data_sublist_generator.py -t anatomical --include inclusion_file ~/examples/ds003_downsampled/ ~/bids_anat_list.yml
+    - python scripts/qap_bids_data_sublist_generator.py -t functional ~/examples/ds003_downsampled/ ~/bids_func_list.yml
+    - python scripts/qap_bids_data_sublist_generator.py -t anatomical ~/examples/ds003_downsampled/ ~/bids_anat_list.yml
     - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_anatomical_spatial.py --sublist ~/bids_anat_list.yml configs/qap_config_ds003.yml
     - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_functional_spatial.py --sublist ~/bids_func_list.yml configs/qap_config_ds003.yml
     - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_functional_temporal.py --sublist ~/bids_func_list.yml configs/qap_config_ds003.yml
