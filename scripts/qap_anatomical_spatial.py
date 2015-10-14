@@ -332,21 +332,21 @@ def run(subject_list, config, cloudify=False):
                         sub_info = (subid, sesid, scanid)
 
                         sub_path = op.join(
-                            config['output_directory'], config['run_name'],
+                            config['output_directory'], run_name,
                             '/'.join(sub_info))
                         m = op.join(
                             sub_path, 'qap_mosaic', 'mosaic.pdf')
                         mosaics.append(m)
 
                 qc_ms = op.join(
-                    config['output_directory'], config['run_name'],
+                    config['output_directory'], run_name,
                     subid, 'qc_measures.pdf')
 
                 qvr.report_anatomical(
                     in_csv, subject=subid, out_file=qc_ms)
 
                 doc = op.join(
-                    config['output_directory'], config['run_name'],
+                    config['output_directory'], run_name,
                     subid, 'documentation.pdf')
 
                 qvr.get_documentation(report_type, doc)
