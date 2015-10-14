@@ -27,7 +27,8 @@ def get_documentation(doc_type, out_file):
         html = f.read()
 
     # convert HTML to PDF
-    status = pisa.CreatePDF(html, dest=result)
+    status = pisa.pisaDocument(StringIO.StringIO(html.encode("UTF-8")), result,
+                               encoding='UTF-8')
     result.close()
 
     # return True on success and False on errors
