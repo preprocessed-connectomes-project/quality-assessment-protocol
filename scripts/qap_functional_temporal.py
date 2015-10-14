@@ -327,7 +327,7 @@ def run(subject_list, config, cloudify=False):
             qvr.get_documentation(report_type, doc)
 
             # Generate group-wise report if N > 3
-            if len(subject_list > 3):
+            if len(subject_list) > 3:
                 qc_group = op.join(config['output_directory'], run_name,
                                    'qc_measures_group.pdf')
                 qvr.report_func_temporal(in_csv, out_file=qc_group)
