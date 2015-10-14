@@ -16,6 +16,7 @@ from .plotting import (plot_measures, plot_mosaic, plot_all,
 
 
 def get_documentation(doc_type, out_file):
+    import StringIO
     from xhtml2pdf import pisa
     # open output file for writing (truncated binary)
     result = open(out_file, "w+b")
