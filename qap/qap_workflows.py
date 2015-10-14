@@ -269,7 +269,8 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
         #     workflow.connect(node, out_file, plot, 'in_mask')
         # else:
         #     plot.inputs.in_mask = resource_pool['qap_head_mask']
-        # resource_pool['qap_mosaic'] = (plot, 'out_file')
+        
+        resource_pool['qap_mosaic'] = (plot, 'out_file')
 
     out_csv = op.join(config['output_directory'], 'qap_anatomical_spatial.csv')
     spatial_to_csv = pe.Node(
