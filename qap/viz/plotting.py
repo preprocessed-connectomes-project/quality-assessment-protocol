@@ -168,11 +168,10 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
         title += " (last modified: %s)" % time.ctime(
             op.getmtime(nifti_file))
     fig.suptitle(title, fontsize='10')
-
     return fig
 
 
-def plot_fd(fd_file, mean_fd_dist=None, figsize=(11.7, 8.3)):
+def plot_fd(fd_file, title='FD plot', mean_fd_dist=None, figsize=(11.7, 8.3)):
 
     fd_power = _calc_fd(fd_file)
 
@@ -182,7 +181,8 @@ def plot_fd(fd_file, mean_fd_dist=None, figsize=(11.7, 8.3)):
     if mean_fd_dist:
         grid = GridSpec(2, 4)
     else:
-        grid = GridSpec(1, 4)
+        grid = GridSpec(1, 2, width_ratios=[3, 1])
+        grid.update(hspace=1.0, right=0.95, left=0.1, bottom=0.2)
 
     ax = fig.add_subplot(grid[0, :-1])
     ax.plot(fd_power)
@@ -200,9 +200,10 @@ def plot_fd(fd_file, mean_fd_dist=None, figsize=(11.7, 8.3)):
         sns.distplot(mean_fd_dist, ax=ax)
         ax.set_xlabel("Mean Frame Displacement (over all subjects) [mm]")
         mean_fd = fd_power.mean()
-        label = r'$\bar{FD}$ = %g' % mean_fd
+        label = r'$\overline{\text{FD}}$ = %g' % mean_fd
         plot_vline(mean_fd, label, ax=ax)
 
+    fig.suptitle(title)
     return fig
 
 

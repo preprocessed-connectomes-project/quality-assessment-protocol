@@ -353,7 +353,6 @@ def run(subject_list, config, cloudify=False):
                 qvr.get_documentation(report_type, doc)
 
                 plots += [qc_ms, doc]
-                print plots
                 qvr.concat_pdf(plots, out_file % sub_info[0])
 
                 logger.info('Written report of subject %s' % subid)

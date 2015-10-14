@@ -117,6 +117,7 @@ class PlotFD(BaseInterface):
         if isdefined(self.inputs.figsize):
             fig = plot_fd(
                 self.inputs.in_file,
+                title=title,
                 figsize=self.inputs.figsize)
         else:
             fig = plot_fd(self.inputs.in_file)
