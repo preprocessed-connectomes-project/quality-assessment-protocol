@@ -328,6 +328,22 @@ def run(subject_list, config, cloudify=False):
             df['subject'] = df['subject'].astype(str)
             subject_list = sorted(pd.unique(df.subject.ravel()))
 
+            # Generate documentation page
+            doc = op.join(
+                config['output_directory'], run_name, 'documentation.pdf')
+            qvr.get_documentation(report_type, doc)
+
+            # Generate group-wise report if N > 3
+            if len(subject_list > 3):
+                qc_group = op.join(config['output_directory'], run_name,
+                                   'qc_measures_group.pdf')
+                qvr.report_func_spatial(in_csv, out_file=qc_group)
+                out_group_file = op.join(
+                    config['output_directory'],
+                    '%s_group.pdf' % report_type)
+                qvr.concat_pdf([qc_group, doc], out_group_file)
+                logger.info('Written group report, N=%d' % len(subject_list))
+
             for subid in subject_list:
                 subdf = df.loc[df['subject'] == subid].copy()
                 sessions = sorted(pd.unique(subdf.session.ravel()))
@@ -352,14 +368,7 @@ def run(subject_list, config, cloudify=False):
                 qvr.report_func_spatial(
                     in_csv, subject=subid, out_file=qc_ms)
 
-                doc = op.join(
-                    config['output_directory'], run_name,
-                    subid, 'documentation.pdf')
-
-                qvr.get_documentation(report_type, doc)
-
                 qvr.concat_pdf(mosaics + [qc_ms, doc], out_file % sub_info[0])
-
                 logger.info('Written report of subject %s' % subid)
     else:
         # get the site name!
