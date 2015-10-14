@@ -200,7 +200,7 @@ def report_func_temporal(in_csv, subject=None, sc_split=False, condensed=True,
         sc_split=sc_split, condensed=condensed, out_file=out_file)
 
 
-def report_func_spatial(in_csv, subject=None, sc_split=False, condensed=False,
+def report_func_spatial(in_csv, subject=None, sc_split=False, condensed=True,
                         out_file='func_spatial.pdf'):
     groups = [['bg_size', 'fg_size'],
               ['bg_mean', 'fg_mean'],
