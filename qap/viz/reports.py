@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
+
 import os.path as op
 import pandas as pd
 import matplotlib
@@ -16,6 +18,7 @@ from .plotting import (plot_measures, plot_mosaic, plot_all,
 
 
 def get_documentation(doc_type, out_file):
+    import codecs
     import StringIO
     from xhtml2pdf import pisa
     # open output file for writing (truncated binary)
@@ -24,12 +27,11 @@ def get_documentation(doc_type, out_file):
     html_dir = op.abspath(
         op.join(op.dirname(__file__), 'html', '%s.html' % doc_type))
 
-    with open(html_dir, 'r') as f:
+    with codecs.open(html_dir, mode='r', encoding='utf-8') as f:
         html = f.read()
 
     # convert HTML to PDF
-    status = pisa.pisaDocument(StringIO.StringIO(html.encode("UTF-8")), result,
-                               encoding='UTF-8')
+    status = pisa.pisaDocument(html, result, encoding='UTF-8')
     result.close()
 
     # return True on success and False on errors
