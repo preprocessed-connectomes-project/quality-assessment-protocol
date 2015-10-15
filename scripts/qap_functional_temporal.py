@@ -320,8 +320,10 @@ def run(subject_list, config, cloudify=False):
             # df = pd.DataFrame(flat_sub_dict.keys(),
             #                   columns=['subject', 'session', 'scan'])
             df = pd.read_csv(
-                in_csv, usecols=['subject', 'session', 'scan']).sort(
-                columns=['subject', 'session', 'scan'], dtype={'subject': str})
+                in_csv, usecols=['subject', 'session', 'scan'],
+                dtype={'subject': str}).sort(
+                columns=['subject', 'session', 'scan'])
+                
             subject_list = sorted(pd.unique(df.subject.ravel()))
 
             # Generate documentation page
