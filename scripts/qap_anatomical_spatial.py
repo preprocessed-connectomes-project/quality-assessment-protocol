@@ -316,8 +316,11 @@ def run(subject_list, config, cloudify=False):
             out_file = op.join(
                 config['output_directory'], report_type + '_%s.pdf')
 
-            df = pd.DataFrame(flat_sub_dict.keys(),
-                              columns=['subject', 'session', 'scan'])
+            # df = pd.DataFrame(flat_sub_dict.keys(),
+            #                   columns=['subject', 'session', 'scan'])
+            df = pd.read_csv(
+                in_csv, usecols=['subject', 'session', 'scan']).sort(
+                columns=['subject', 'session', 'scan'])
             df['subject'] = df['subject'].astype(str)
             subject_list = sorted(pd.unique(df.subject.ravel()))
 

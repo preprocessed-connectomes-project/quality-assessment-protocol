@@ -316,8 +316,12 @@ def run(subject_list, config, cloudify=False):
             out_file = op.join(
                 config['output_directory'], report_type + '_%s.pdf')
 
-            df = pd.DataFrame(flat_sub_dict.keys(),
-                              columns=['subject', 'session', 'scan'])
+            # df = pd.DataFrame(flat_sub_dict.keys(),
+            #                   columns=['subject', 'session', 'scan'])
+            df = pd.read_csv(
+                in_csv, usecols=['subject', 'session', 'scan']).sort(
+                columns=['subject', 'session', 'scan'])
+
             df['subject'] = df['subject'].astype(str)
             subject_list = sorted(pd.unique(df.subject.ravel()))
 
@@ -338,14 +342,14 @@ def run(subject_list, config, cloudify=False):
                 logger.info('Written group report, N=%d' % len(subject_list))
 
             for subid in subject_list:
-                subdf = df.loc[df['subject'] == subid].copy()
+                subdf = df.loc[df.subject == subid]
                 sessions = sorted(pd.unique(subdf.session.ravel()))
                 plots = []
                 for sesid in sessions:
-                    sesdf = subdf.loc[subdf['session'] == sesid].copy()
+                    sesdf = subdf.loc[subdf.session == sesid]
                     scans = sorted(pd.unique(sesdf.scan.ravel()))
                     for scanid in scans:
-                        sub_info = (subid, sesid, scanid)
+                        sub_info = [subid, sesid, scanid]
 
                         sub_path = op.join(
                             config['output_directory'], run_name,
