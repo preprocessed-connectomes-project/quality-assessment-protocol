@@ -37,11 +37,11 @@ def gather_bids_data(dataset_folder, yaml_outpath, subject_inclusion=None,
 
         anatomical_scans = sorted(glob(op.join(
             dataset_folder, subject_id, "anat",
-            "sub-%s_*T1w.nii.gz" % subject_id, )))
+            "%s_*T1w.nii.gz" % subject_id, )))
 
         functional_scans = sorted(glob(op.join(
             dataset_folder, subject_id, "func",
-            "sub-%s_*bold.nii.gz" % subject_id, )))
+            "%s_*bold.nii.gz" % subject_id, )))
 
         if anatomical_scans or functional_scans:
             sub_dict[subject_id] = {session_name: {}}
