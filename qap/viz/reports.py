@@ -39,8 +39,8 @@ def get_documentation(doc_type, out_file):
 
 
 def _read_csv(in_csv):
-    df = pd.read_csv(in_csv).fillna(0).sort(['subject', 'session'])
-    # df['subject'] = df['subject'].astype(str)
+    df = pd.read_csv(in_csv, dtype={'subject': str}).fillna(
+        0).drop_duplicates().sort(['subject', 'session'])
     return df
 
 

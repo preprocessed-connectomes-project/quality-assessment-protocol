@@ -331,8 +331,7 @@ def run(subject_list, config, cloudify=False):
             #                   columns=['subject', 'session', 'scan'])
             df = pd.read_csv(
                 in_csv, usecols=['subject', 'session', 'scan']).sort(
-                columns=['subject', 'session', 'scan'])
-            df['subject'] = df['subject'].astype(str)
+                columns=['subject', 'session', 'scan'], dtype={'subject': str})
             subject_list = sorted(pd.unique(df.subject.ravel()))
 
             # Generate documentation page
