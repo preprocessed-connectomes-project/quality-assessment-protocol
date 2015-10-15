@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 
 def build_functional_temporal_workflow(
         resource_pool, config, subject_info, run_name, site_name=None):
