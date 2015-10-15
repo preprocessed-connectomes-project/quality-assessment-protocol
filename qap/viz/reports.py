@@ -61,19 +61,20 @@ def concat_pdf(in_files, out_file='concatenated.pdf'):
 
 def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
                   out_file='report.pdf'):
-    headers = [v for gnames in groups for v in gnames]
-    sessions = sorted(pd.unique(df.session.ravel()))
-
     columns = df.columns.ravel()
-
-    for h in headers:
-        if h not in columns:
-            headers.remove(h)
-            for g in groups:
-                if h in g:
-                    g.remove(h)
+    headers = []
+    for g in groups:
+        rem = []
+        for h in g:
+            if h not in columns:
+                rem.append(h)
+            else:
+                headers.append(h)
+        for r in rem:
+            g.remove(r)
 
     report = PdfPages(out_file)
+    sessions = sorted(pd.unique(df.session.ravel()))
     for ss in sessions:
         sesdf = df.copy().loc[df['session'] == ss]
         scans = pd.unique(sesdf.scan.ravel())
