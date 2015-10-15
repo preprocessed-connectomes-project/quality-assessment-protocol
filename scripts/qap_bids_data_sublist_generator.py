@@ -11,7 +11,7 @@ def gather_bids_data(dataset_folder, yaml_outpath, subject_inclusion=None,
     sub_dict = {}
     inclusion_list = []
 
-    subject_ids = [x[4:] for x in next(os.walk(dataset_folder))[1] if x.startswith("sub-")]
+    subject_ids = [x for x in next(os.walk(dataset_folder))[1] if x.startswith("sub-")]
 
     if scan_type is None:
         scan_type = 'functional anatomical'
@@ -36,15 +36,15 @@ def gather_bids_data(dataset_folder, yaml_outpath, subject_inclusion=None,
         session_name = 'session_1'
 
         anatomical_scans = sorted(glob(op.join(
-            dataset_folder, "sub-%s" % subject_id, "anat",
+            dataset_folder, subject_id, "anat",
             "sub-%s_*T1w.nii.gz" % subject_id, )))
 
         functional_scans = sorted(glob(op.join(
-            dataset_folder, "sub-%s" % subject_id, "func",
+            dataset_folder, subject_id, "func",
             "sub-%s_*bold.nii.gz" % subject_id, )))
 
         if anatomical_scans or functional_scans:
-            sub_dict[subject_id] = {session_name:{}}
+            sub_dict[subject_id] = {session_name: {}}
             if anatomical_scans and get_anat:
                 sub_dict[subject_id][session_name]["anatomical_scan"] = {}
                 for i, anatomical_scan in enumerate(anatomical_scans):
@@ -54,7 +54,7 @@ def gather_bids_data(dataset_folder, yaml_outpath, subject_inclusion=None,
                 for i, anatomical_scan in enumerate(functional_scans):
                     sub_dict[subject_id][session_name]["functional_scan"]["func_%d"%(i+1)] = op.abspath(anatomical_scan)
 
-    with open(yaml_outpath,"wt") as f:
+    with open(yaml_outpath, "wt") as f:
         f.write(yaml.dump(sub_dict))
 
 
@@ -64,20 +64,18 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-
     parser.add_argument("dataset_folder", type=str, \
-                            help="full path to the directory holding the " \
-                                 "raw data, organized according to the BIDS specification" \
-                                 "http://bids.neuroimaging.io")
+                        help="full path to the directory holding the " \
+                             "raw data, organized according to the BIDS specification" \
+                             "http://bids.neuroimaging.io")
 
     parser.add_argument("outfile_path", type=str, \
-                            help="full path for the generated subject list")
+                        help="full path for the generated subject list")
 
-
-    parser.add_argument("--include", type=str, \
-                            help="text file containing subject IDs of the " \
-                                 "subjects you want to include - leave " \
-                                 "this out if you want to run all of them")
+    parser.add_argument("--include", type=str,
+                        help="text file containing subject IDs of the "
+                             "subjects you want to include - leave "
+                             "this out if you want to run all of them")
 
     parser.add_argument(
         '-t', '--type', type=str, choices=['functional', 'anatomical'],
@@ -90,8 +88,5 @@ def main():
                      args.type)
 
 
-
 if __name__ == "__main__":
     main()
-
-
