@@ -12,8 +12,8 @@ dependencies:
     - pip install xhtml2pdf
     - pip install -e .
     - if [[ ! -d ~/fsl ]]; then wget "http://fsl.fmrib.ox.ac.uk/fsldownloads/fsl-5.0.9-centos6_64.tar.gz"; tar zxvf fsl-5.0.9-centos6_64.tar.gz; mv fsl ~/fsl; fi
-    - if [[ ! -d ~/afni ]]; then wget "https://www.dropbox.com/s/n6lg2u7myl847fc/linux_openmp64.tar.gz"; tar zxvf linux_openmp_64.tgz; mv linux_openmp_64 ~/afni; fi
-#    - if [[ ! -d ~/afni ]]; then wget "http://afni.nimh.nih.gov/pub/dist/tgz/linux_openmp_64.tgz"; tar zxvf linux_openmp_64.tgz; mv linux_openmp_64 ~/afni; fi
+#    - if [[ ! -d ~/afni ]]; then wget "https://www.dropbox.com/s/n6lg2u7myl847fc/linux_openmp64.tar.gz"; tar zxvf linux_openmp_64.tgz; mv linux_openmp_64 ~/afni; fi
+    - if [[ ! -d ~/afni ]]; then wget "http://afni.nimh.nih.gov/pub/dist/tgz/linux_openmp_64.tgz"; tar zxvf linux_openmp_64.tgz; mv linux_openmp_64 ~/afni; fi
     - if [[ ! -d ~/examples/ds003_downsampled ]]; then wget "https://googledrive.com/host/0B2JWN60ZLkgkMEw4bW5VUUpSdFU/ds003_downsampled.tar"; mkdir -p ~/examples; tar xvf ds003_downsampled.tar -C ~/examples; fi
 test:
   override:
