@@ -16,7 +16,7 @@ test:
     - echo "sub-01" > inclusion_file && python scripts/qap_bids_data_sublist_generator.py -t functional --include inclusion_file ~/examples/ds003_downsampled/ ~/bids_func_sub-01.yml
     - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_functional_spatial.py --sublist ~/bids_func_sub-01.yml configs/qap_config_ds003.yml
     - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_functional_temporal.py --sublist ~/bids_func_sub-01.yml configs/qap_config_ds003.yml
-    - echo "sub-01" > inclusion_file && python scripts/qap_bids_data_sublist_generator.py -t functional --include inclusion_file ~/examples/ds003_downsampled/ ~/bids_anat_sub-01.yml
+    - echo "sub-01" > inclusion_file && python scripts/qap_bids_data_sublist_generator.py -t anatomical --include inclusion_file ~/examples/ds003_downsampled/ ~/bids_anat_sub-01.yml
     - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_anatomical_spatial.py --sublist ~/bids_anat_sub-01.yml configs/qap_config_ds003.yml
     # Second three tests on multiple subjects, two subjects at once (qap_config_ds003_ms.yml)
     # Anatomical spatial set to last, since it takes longer
