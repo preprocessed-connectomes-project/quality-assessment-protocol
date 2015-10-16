@@ -303,74 +303,6 @@ def run(subject_list, config, cloudify=False):
             if write_report:
                 for p in procss:
                     p.join()
-
-        # PDF reporting
-        if write_report:
-            import pandas as pd
-            import qap.viz.reports as qvr
-            logger.info('Writing PDF reports')
-
-            report_type = 'qap_functional_temporal'
-            in_csv = op.join(
-                config['output_directory'], '%s.csv' % report_type)
-
-            out_file = op.join(
-                config['output_directory'], report_type + '_%s.pdf')
-
-            # df = pd.DataFrame(flat_sub_dict.keys(),
-            #                   columns=['subject', 'session', 'scan'])
-            df = pd.read_csv(
-                in_csv, usecols=['subject', 'session', 'scan'],
-                dtype={'subject': str}).sort(
-                columns=['subject', 'session', 'scan'])
-                
-            subject_list = sorted(pd.unique(df.subject.ravel()))
-
-            # Generate documentation page
-            doc = op.join(
-                config['output_directory'], run_name, 'documentation.pdf')
-            qvr.get_documentation(report_type, doc)
-
-            # Generate group-wise report if N > 3
-            if len(subject_list) > 3:
-                qc_group = op.join(config['output_directory'], run_name,
-                                   'qc_measures_group.pdf')
-                qvr.report_func_temporal(in_csv, out_file=qc_group)
-                out_group_file = op.join(
-                    config['output_directory'],
-                    '%s_group.pdf' % report_type)
-                qvr.concat_pdf([qc_group, doc], out_group_file)
-                logger.info('Written group report, N=%d' % len(subject_list))
-
-            for subid in subject_list:
-                subdf = df.loc[df.subject == subid]
-                sessions = sorted(pd.unique(subdf.session.ravel()))
-                plots = []
-                for sesid in sessions:
-                    sesdf = subdf.loc[subdf.session == sesid]
-                    scans = sorted(pd.unique(sesdf.scan.ravel()))
-                    for scanid in scans:
-                        sub_info = [subid, sesid, scanid]
-
-                        sub_path = op.join(
-                            config['output_directory'], run_name,
-                            '/'.join(sub_info))
-                        plots.append(op.join(
-                            sub_path, 'qap_mosaic', 'mosaic.pdf'))
-                        plots.append(op.join(
-                            sub_path, 'qap_fd', 'fd.pdf'))
-
-                qc_ms = op.join(
-                    config['output_directory'], run_name,
-                    subid, 'qc_measures.pdf')
-
-                qvr.report_func_temporal(
-                    in_csv, subject=subid, out_file=qc_ms)
-
-                plots += [qc_ms, doc]
-                qvr.concat_pdf(plots, out_file % sub_info[0])
-                logger.info('Written report of subject %s' % subid)
-
     else:
         # run on cloud
         sub = subject_list.keys()[0]
@@ -386,6 +318,25 @@ def run(subject_list, config, cloudify=False):
 
         build_functional_temporal_workflow(
             subject_list[sub], config, sub, run_name, site_name)
+
+    # PDF reporting
+    if write_report:
+        from qap.viz.reports import workflow_report
+        logger.info('Writing PDF reports')
+        qap_type = 'qap_functional_temporal'
+        in_csv = op.join(config['output_directory'], '%s.csv' % qap_type)
+
+        reports = workflow_report(in_csv, qap_type, run_name,
+                                  out_dir=config['output_directory'])
+
+        for k, v in reports.iteritems():
+            if v['success']:
+                logger.info('Written report (%s) in %s' % (k, v['path']))
+            else:
+                logger.info('Report of %s failed: %s' % (k, v['msg']))
+
+        if len(reports) == 0:
+            logger.info('Reports were not generated')
 
 
 def main():

@@ -3,6 +3,8 @@
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 
+import sys
+import os
 import os.path as op
 import pandas as pd
 import matplotlib
@@ -15,6 +17,110 @@ from .plotting import (plot_measures, plot_mosaic, plot_all,
                        plot_fd, plot_dist)
 
 # matplotlib.rc('figure', figsize=(11.69, 8.27))  # for DINA4 size
+
+
+def workflow_report(in_csv, qap_type, run_name,
+                    out_dir=None, out_file=None):
+
+    if out_dir is None:
+        out_dir = os.getcwd()
+
+    if out_file is None:
+        out_file = op.join(
+            out_dir, qap_type + '_%s.pdf')
+
+    # Read csv file, sort and drop duplicates
+    df = pd.read_csv(
+        in_csv, usecols=['subject', 'session', 'scan'],
+        dtype={'subject': str}).sort(
+        columns=['subject', 'session', 'scan']).drop_duplicates()
+
+    subject_list = sorted(pd.unique(df.subject.ravel()))
+    result = {}
+
+    # Generate documentation page
+    doc = op.join(out_dir, run_name, 'documentation.pdf')
+
+    # Let documentation page fail
+    try:
+        get_documentation(qap_type, doc)
+    except:
+        doc = None
+
+    func = getattr(sys.modules[__name__], qap_type)
+
+    # Generate group-wise report if N > 3
+    if len(subject_list) > 3:
+        qc_group = op.join(out_dir, run_name, 'qc_measures_group.pdf')
+        pdf_group = []
+        try:
+            # Generate violinplots. If successfull, add documentation.
+            func(in_csv, out_file=qc_group)
+            pdf_group = [qc_group]
+            if doc is not None:
+                pdf_group.append(doc)
+        except Exception as e:
+            result['group'] = {'success': False, 'msg': e}
+            pass
+
+        if len(pdf_group) > 0:
+            out_group_file = op.join(out_dir, '%s_group.pdf' % qap_type)
+            try:
+                # Generate final report with collected pdfs in plots
+                concat_pdf(pdf_group, out_group_file)
+                result['group'] = {'success': True, 'path': out_group_file}
+            except Exception as e:
+                result['group'] = {'success': False, 'msg': e}
+                pass
+
+    # Generate individual reports for subjects
+    for subid in subject_list:
+
+        # Get subject-specific info
+        subdf = df.loc[df['subject'] == subid]
+        sessions = sorted(pd.unique(subdf.session.ravel()))
+        plots = []
+
+        # Re-build mosaic location
+        for sesid in sessions:
+            sesdf = subdf.loc[subdf['session'] == sesid]
+            scans = sorted(pd.unique(sesdf.scan.ravel()))
+
+            # Each scan has a volume and (optional) fd plot
+            for scanid in scans:
+                sub_info = [subid, sesid, scanid]
+                sub_path = op.join(out_dir, run_name, '/'.join(sub_info))
+                m = op.join(sub_path, 'qap_mosaic', 'mosaic.pdf')
+
+                if op.isfile(m):
+                    plots.append(m)
+
+                fd = op.join(sub_path, 'qap_fd', 'fd.pdf')
+                if 'functional_temporal' in qap_type and op.isfile(fd):
+                    plots.append(fd)
+
+        # Summary (violinplots) of QC measures
+        qc_ms = op.join(out_dir, run_name, subid, 'qc_measures.pdf')
+
+        try:
+            func(in_csv, subject=subid, out_file=qc_ms)
+            plots.append(qc_ms)
+        except:
+            pass
+
+        if len(plots) > 0:
+            if doc is not None:
+                plots.append(doc)
+
+            try:
+                # Generate final report with collected pdfs in plots
+                sub_path = out_file % subid
+                concat_pdf(plots, sub_path)
+                result[subid] = {'success': True, 'path': sub_path}
+            except Exception as e:
+                result[subid] = {'success': False, 'msg': e}
+                pass
+    return result
 
 
 def get_documentation(doc_type, out_file):
@@ -177,8 +283,9 @@ def all_func_spatial(in_csv, sc_split=False, condensed=False,
         condensed=condensed, out_file=out_file)
 
 
-def report_anatomical(in_csv, subject=None, sc_split=False, condensed=True,
-                      out_file='anatomical.pdf'):
+def qap_anatomical_spatial(
+        in_csv, subject=None, sc_split=False, condensed=True,
+        out_file='anatomical.pdf'):
     groups = [['bg_size', 'fg_size'],
               ['bg_mean', 'fg_mean'],
               ['bg_std', 'fg_std'],
@@ -196,8 +303,9 @@ def report_anatomical(in_csv, subject=None, sc_split=False, condensed=True,
         sc_split=sc_split, condensed=condensed, out_file=out_file)
 
 
-def report_func_temporal(in_csv, subject=None, sc_split=False, condensed=True,
-                         out_file='func_temporal.pdf'):
+def qap_functional_temporal(
+        in_csv, subject=None, sc_split=False, condensed=True,
+        out_file='func_temporal.pdf'):
     groups = [['dvars'], ['gcor'], ['m_tsnr'], ['mean_fd'],
               ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]
     return _write_report(
@@ -205,8 +313,9 @@ def report_func_temporal(in_csv, subject=None, sc_split=False, condensed=True,
         sc_split=sc_split, condensed=condensed, out_file=out_file)
 
 
-def report_func_spatial(in_csv, subject=None, sc_split=False, condensed=True,
-                        out_file='func_spatial.pdf'):
+def qap_functional_spatial(
+        in_csv, subject=None, sc_split=False, condensed=True,
+        out_file='func_spatial.pdf'):
     groups = [['bg_size', 'fg_size'],
               ['bg_mean', 'fg_mean'],
               ['bg_std', 'fg_std'],
@@ -218,4 +327,3 @@ def report_func_spatial(in_csv, subject=None, sc_split=False, condensed=True,
     return _write_report(
         _read_csv(in_csv), groups, sub_id=subject,
         sc_split=sc_split, condensed=condensed, out_file=out_file)
-
