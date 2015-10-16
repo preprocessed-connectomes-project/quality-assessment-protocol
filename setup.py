@@ -5,7 +5,7 @@ def main():
     from setuptools import setup
 
     setup(name='qap',
-          version='1.0.2',
+          version='1.0.4',
           description='A collection of three quality assessment pipelines ' \
                       'for anatomical MRI and functional MRI scans.',
           author='Cameron Craddock, Zarrar Shehzad, Steven Giavasis,' \
