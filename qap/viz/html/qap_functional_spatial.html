@@ -1,77 +1,49 @@
 <!DOCTYPE html>
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml">
 
-    <head>
-        <meta charset='utf-8' />
-        <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-        <meta name="description" content="Preprocessed Connectomes Project" />
-        <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
-	    <script src="javascripts/menu_script.js"></script>
-        <title>PCP Quality Assessment Protocol</title>
-    </head>
+<head>
+    <title>PCP Quality Assessment Protocol</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+</head>
 
-    <body>
-      
-        <div id="container">
+<body>
+<!-- HEADER -->
+<div id="header">
+    <h1 id="project_title">PCP Quality Assessment Protocol</h1>
+    <h2>QAP Functional Spatial Reports</h2>
+</div>
 
-        <!-- HEADER -->
-            <header>
-                <h1 id="project_title">PCP Quality Assessment Protocol</h1><br>
-  		        <div id='cssmenu'>
-  		            <ul>
-  		                <h2 id="func-spatial-reports"> QAP Functional Spatial Reports</h2>
-  		            </ul>
-  		        </div>
-            </header>
-            
-                <div id="main_content_wrap" class="outer">
-                    <section id="main_content" class="inner">
-                        
-<h3 id="mean-epi"> The Mean EPI Slice Mosaic</h3>
+<h3 id="mosaic">The Mean EPI Slice Mosaic</h3>
+<p>The image entitled "Mean EPI" Eg: </p>
+<pre><code>Mean EPI image (subject 1_session_1_scan_1)</code></pre>
+<p>is the rendering of the mean EPI image which is provided at the scan/individual level.
+This mean EPI was created by averaging the signal intensity values in each voxel over time.
+Hence, a 3-dimensional image was created from the 4-dimensional scan and was displayed as a slice mosaic.
+This image can be used to eyeball the quality of the overall signal in the scan, as it will be obvious if
+there were any problem areas where there was signal dropout resulting from a bad shim or other sources of
+signal distortion (such as tattoos which contain metallic or ferromagnetic compounds, or permanent makeup).</p>
 
-<p> The image entitled "Mean EPI" <pre><code> Eg: Mean EPI image (subject 1_session_1_scan_1) </code></pre><br> is the rendering of the mean EPI image which is provided at the scan/individual level. This mean EPI was created by averaging the signal intensity values in each voxel over time. Hence, a 3-dimensional image was created from the 4-dimensional scan and was displayed as a slice mosaic. This image can be used to eyeball the quality of the overall signal in the scan, as it will be obvious if there were any problem areas where there was signal dropout resulting from a bad shim or other sources of signal distortion (such as tattoos which contain metallic or ferromagnetic compounds, or permanent makeup). </p>
+<h3 id="metrics">The Spatial Metrics computed on the Functional Scan</h3>
 
-<h3 id="spatial-merics"> The Spatial Metrics computed on the Functional Scan</h3>
+<p>The metrics displayed in the Summary Report were computed using the</p>
+<pre><code> qap_functional_spatial.py </code></pre>
+<p>workflow and have been displayed as violin plots. The stars in these plots denote where the score for this particular scan falls in the distribution of all scores for scans that were included as inputs to the the functional-spatial workflow.</p>
 
-<p>The metrics displayed in the Summary Report were computed using the <pre><code> qap_functional_spatial.py </code></pre><br> workflow and have been displayed as violin plots. The stars in these plots denote where the score for this particular scan falls in the distribution of all scores for scans that were included as inputs to the the functional-spatial workflow. </p>
-<BR>
-<p>The metrics computed are as follows:<BR>
-	<BR>
-	[1] bg_size - Background mask size
-<BR>
-	<BR>
-	[2] fg_size - Foreground mask size
-	<BR>
-		<BR>
-	[3] bg_mean - Mean intensity of the background mask
-<BR>
-	<BR>
-	[4] fg_mean - Mean intensity of the foreground mask
-	<BR>
-		<BR>
-	[5] bg_std - Standard deviation of the background mask
-<BR>
-	<BR>
-	[6] fg_std - Standard deviation of the foreground mask
-	<BR>
-		<BR>
-	[7] efc - Entropy Focus Criterion
-<BR>
-	<BR>
-	[8] fber - Foreground to Background Energy Ratio
-	<BR>
-		<BR>
-	[9] fwhm - Full-width half maximum smoothness of the voxels averaged across the three coordinate axes, and also for each axis [x,y,x]
-<BR>
-	<BR>
-	[10] ghost_x - 
-<BR>
-	<BR>
-	[11] snr -  Signal to Noise Ratio
-	<BR>
-		<BR>
-			
-			
-<a href="http://preprocessed-connectomes-project.github.io/quality-assessment-protocol/#taxonomy-of-qa-measures" target="_blank" > All metrics are described in more detail in the “Taxonomy of QA Measures” section of the QAP documentation. Please refer to the QAP website for descriptions of these metrics. </a>	
-	
-</p>
+<p>The metrics computed are as follows:</p>
+<ol>
+	<li>bg_size - Background mask size</li>
+	<li>fg_size - Foreground mask size</li>
+	<li>bg_mean - Mean intensity of the background mask</li>
+	<li>fg_mean - Mean intensity of the foreground mask</li>
+	<li>bg_std - Standard deviation of the background mask</li>
+	<li>fg_std - Standard deviation of the foreground mask</li>
+	<li>efc - Entropy Focus Criterion</li>
+	<li>fber - Foreground to Background Energy Ratio</li>
+	<li>fwhm - Full-width half maximum smoothness of the voxels averaged across the three coordinate axes, and also for each axis [x,y,x]</li>
+	<li>ghost_x - </li>
+	<li>snr -  Signal to Noise Ratio</li>
+</ol>
+
+<p>All metrics are described in more detail in the 
+<a href="http://preprocessed-connectomes-project.github.io/quality-assessment-protocol/#taxonomy-of-qa-measures" target="_blank" >Taxonomy of QA Measures section</a> of the QAP documentation. Please refer to the QAP website for descriptions of these metrics.</p>
+</body>
