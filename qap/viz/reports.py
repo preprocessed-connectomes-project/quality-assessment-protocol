@@ -42,40 +42,28 @@ def workflow_report(in_csv, qap_type, run_name,
     doc = op.join(out_dir, run_name, 'documentation.pdf')
 
     # Let documentation page fail
-    try:
-        get_documentation(qap_type, doc)
-    except:
-        doc = None
-
+    get_documentation(qap_type, doc)
     func = getattr(sys.modules[__name__], qap_type)
 
     # Generate group-wise report if N > 3
     if len(subject_list) > 3:
         qc_group = op.join(out_dir, run_name, 'qc_measures_group.pdf')
         pdf_group = []
-        try:
-            # Generate violinplots. If successfull, add documentation.
-            func(in_csv, out_file=qc_group)
-            pdf_group = [qc_group]
-            if doc is not None:
-                pdf_group.append(doc)
-        except Exception as e:
-            result['group'] = {'success': False, 'msg': e}
-            pass
+
+        # Generate violinplots. If successfull, add documentation.
+        func(in_csv, out_file=qc_group)
+        pdf_group = [qc_group]
+        if doc is not None:
+            pdf_group.append(doc)
 
         if len(pdf_group) > 0:
             out_group_file = op.join(out_dir, '%s_group.pdf' % qap_type)
-            try:
-                # Generate final report with collected pdfs in plots
-                concat_pdf(pdf_group, out_group_file)
-                result['group'] = {'success': True, 'path': out_group_file}
-            except Exception as e:
-                result['group'] = {'success': False, 'msg': e}
-                pass
+            # Generate final report with collected pdfs in plots
+            concat_pdf(pdf_group, out_group_file)
+            result['group'] = {'success': True, 'path': out_group_file}
 
     # Generate individual reports for subjects
     for subid in subject_list:
-
         # Get subject-specific info
         subdf = df.loc[df['subject'] == subid]
         sessions = sorted(pd.unique(subdf.session.ravel()))
@@ -102,24 +90,17 @@ def workflow_report(in_csv, qap_type, run_name,
         # Summary (violinplots) of QC measures
         qc_ms = op.join(out_dir, run_name, subid, 'qc_measures.pdf')
 
-        try:
-            func(in_csv, subject=subid, out_file=qc_ms)
-            plots.append(qc_ms)
-        except:
-            pass
+        func(in_csv, subject=subid, out_file=qc_ms)
+        plots.append(qc_ms)
 
         if len(plots) > 0:
             if doc is not None:
                 plots.append(doc)
 
-            try:
-                # Generate final report with collected pdfs in plots
-                sub_path = out_file % subid
-                concat_pdf(plots, sub_path)
-                result[subid] = {'success': True, 'path': sub_path}
-            except Exception as e:
-                result[subid] = {'success': False, 'msg': e}
-                pass
+            # Generate final report with collected pdfs in plots
+            sub_path = out_file % subid
+            concat_pdf(plots, sub_path)
+            result[subid] = {'success': True, 'path': sub_path}
     return result
 
 
