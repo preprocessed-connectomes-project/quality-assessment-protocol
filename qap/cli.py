@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # @Date:   2015-10-16 12:52:35
 # @Last Modified by:   oesteban
-# @Last Modified time: 2015-10-16 14:53:09
+# @Last Modified time: 2015-10-16 15:05:27
 import os
 import os.path as op
 import time
@@ -157,7 +157,7 @@ class QAProtocolCLI:
         # skip parallel machinery if we are running only one subject at once
         if ns_at_once == 1:
             for sub_info in flat_sub_dict.keys():
-                build_functional_spatial_workflow(
+                _build_workflow(
                     flat_sub_dict[sub_info], self._config, sub_info,
                     run_name, sites_dict.get(sub_info[0], None))
         else:
