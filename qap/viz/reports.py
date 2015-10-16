@@ -30,10 +30,15 @@ def workflow_report(in_csv, qap_type, run_name,
             out_dir, qap_type + '_%s.pdf')
 
     # Read csv file, sort and drop duplicates
-    df = pd.read_csv(
-        in_csv, usecols=['subject', 'session', 'scan'],
-        dtype={'subject': str}).sort(
-        columns=['subject', 'session', 'scan']).drop_duplicates()
+    df = pd.read_csv(in_csv, dtype={'subject': str}).sort(
+        columns=['subject', 'session', 'scan'])
+
+    try:
+        df.drop_duplicates(['subject', 'session', 'scan'], keep='last',
+                           inplace=True)
+    except TypeError:
+        df.drop_duplicates(['subject', 'session', 'scan'], take_last=True,
+                           inplace=True)
 
     subject_list = sorted(pd.unique(df.subject.ravel()))
     result = {}
@@ -51,7 +56,7 @@ def workflow_report(in_csv, qap_type, run_name,
         pdf_group = []
 
         # Generate violinplots. If successfull, add documentation.
-        func(in_csv, out_file=qc_group)
+        func(df, out_file=qc_group)
         pdf_group = [qc_group]
         if doc is not None:
             pdf_group.append(doc)
@@ -90,7 +95,7 @@ def workflow_report(in_csv, qap_type, run_name,
         # Summary (violinplots) of QC measures
         qc_ms = op.join(out_dir, run_name, subid, 'qc_measures.pdf')
 
-        func(in_csv, subject=subid, out_file=qc_ms)
+        func(df, subject=subid, out_file=qc_ms)
         plots.append(qc_ms)
 
         if len(plots) > 0:
@@ -123,12 +128,6 @@ def get_documentation(doc_type, out_file):
 
     # return True on success and False on errors
     return status.err
-
-
-def _read_csv(in_csv):
-    df = pd.read_csv(in_csv, dtype={'subject': str}).fillna(
-        0).drop_duplicates().sort(['subject', 'session'])
-    return df
 
 
 def concat_pdf(in_files, out_file='concatenated.pdf'):
@@ -221,7 +220,7 @@ def _write_all_reports(df, groups, sc_split=False, condensed=True,
     return out_file, outlist
 
 
-def all_anatomical(in_csv, sc_split=False, condensed=True,
+def all_anatomical(df, sc_split=False, condensed=True,
                    out_file='anatomical.pdf'):
     groups = [['bg_size', 'fg_size'],
               ['bg_mean', 'fg_mean'],
@@ -236,20 +235,20 @@ def all_anatomical(in_csv, sc_split=False, condensed=True,
               ['qi1'],
               ['snr']]
     return _write_all_reports(
-        _read_csv(in_csv), groups, sc_split=sc_split,
+        df, groups, sc_split=sc_split,
         condensed=condensed, out_file=out_file)
 
 
-def all_func_temporal(in_csv, sc_split=False, condensed=True,
+def all_func_temporal(df, sc_split=False, condensed=True,
                       out_file='func_temporal.pdf'):
     groups = [['dvars'], ['gcor'], ['m_tsnr'], ['mean_fd'],
               ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]
     return _write_all_reports(
-        _read_csv(in_csv), groups, sc_split=sc_split,
+        df, groups, sc_split=sc_split,
         condensed=condensed, out_file=out_file)
 
 
-def all_func_spatial(in_csv, sc_split=False, condensed=False,
+def all_func_spatial(df, sc_split=False, condensed=False,
                      out_file='func_spatial.pdf'):
     groups = [['bg_size', 'fg_size'],
               ['bg_mean', 'fg_mean'],
@@ -260,12 +259,12 @@ def all_func_spatial(in_csv, sc_split=False, condensed=False,
               ['ghost_%s' % a for a in ['x', 'y', 'z']],
               ['snr']]
     return _write_all_reports(
-        _read_csv(in_csv), groups, sc_split=sc_split,
+        df, groups, sc_split=sc_split,
         condensed=condensed, out_file=out_file)
 
 
 def qap_anatomical_spatial(
-        in_csv, subject=None, sc_split=False, condensed=True,
+        df, subject=None, sc_split=False, condensed=True,
         out_file='anatomical.pdf'):
     groups = [['bg_size', 'fg_size'],
               ['bg_mean', 'fg_mean'],
@@ -280,22 +279,22 @@ def qap_anatomical_spatial(
               ['qi1'],
               ['snr']]
     return _write_report(
-        _read_csv(in_csv), groups, sub_id=subject,
-        sc_split=sc_split, condensed=condensed, out_file=out_file)
+        df, groups, sub_id=subject, sc_split=sc_split, condensed=condensed,
+        out_file=out_file)
 
 
 def qap_functional_temporal(
-        in_csv, subject=None, sc_split=False, condensed=True,
+        df, subject=None, sc_split=False, condensed=True,
         out_file='func_temporal.pdf'):
     groups = [['dvars'], ['gcor'], ['m_tsnr'], ['mean_fd'],
               ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]
     return _write_report(
-        _read_csv(in_csv), groups, sub_id=subject,
-        sc_split=sc_split, condensed=condensed, out_file=out_file)
+        df, groups, sub_id=subject, sc_split=sc_split, condensed=condensed,
+        out_file=out_file)
 
 
 def qap_functional_spatial(
-        in_csv, subject=None, sc_split=False, condensed=True,
+        df, subject=None, sc_split=False, condensed=True,
         out_file='func_spatial.pdf'):
     groups = [['bg_size', 'fg_size'],
               ['bg_mean', 'fg_mean'],
@@ -306,5 +305,5 @@ def qap_functional_spatial(
               ['ghost_%s' % a for a in ['x', 'y', 'z']],
               ['snr']]
     return _write_report(
-        _read_csv(in_csv), groups, sub_id=subject,
-        sc_split=sc_split, condensed=condensed, out_file=out_file)
+        df, groups, sub_id=subject, sc_split=sc_split, condensed=condensed,
+        out_file=out_file)
