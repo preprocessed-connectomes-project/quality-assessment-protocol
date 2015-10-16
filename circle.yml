@@ -29,4 +29,7 @@ general:
   artifacts:
     - "/tmp/output"
     - "/tmp/workdir"
-    - "~/bids_subject_list.yml"
+    - "~/bids_anat_sub-01.yml"
+    - "~/bids_func_sub-01.yml"
+    - "~/bids_anat_list.yml"
+    - "~/bids_func_list.yml"
