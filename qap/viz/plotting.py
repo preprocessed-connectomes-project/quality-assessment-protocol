@@ -46,7 +46,7 @@ def plot_measures(df, measures, ncols=4, title='Group level report',
             except ValueError:
                 pass
 
-            subdf = df.loc[df['subject'] == subid].copy()
+            subdf = df.loc[df['subject'] == subid]
             sessions = np.atleast_1d(subdf[['session']]).reshape(-1).tolist()
 
             for ss in sessions:
@@ -85,6 +85,7 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
         plt.ticklabel_format(style='sci', axis='y', scilimits=(-1, 1))
         # df[snames].plot(kind='box', ax=axes[-1])
 
+        # If we know the subject, place a star for each scan
         if subject is not None:
             subid = subject
             try:
@@ -92,19 +93,25 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
             except ValueError:
                 pass
 
-            subdf = df.loc[df['subject'] == subid].copy()
+            subdf = df.loc[df['subject'] == subid]
+            scans = sorted(pd.unique(subdf.scan.ravel()))
+            nstars = len(scans)
             for j, s in enumerate(snames):
-                vals = np.atleast_1d(subdf[[s]]).reshape(-1).tolist()
+                vals = []
+                for k, scid in enumerate(scans):
+                    val = subdf.loc[df.scan == scid, [s]].iloc[0, 0]
+                    vals.append(val)
 
-                if len(vals) == 0:
+                if len(vals) != nstars:
                     continue
 
                 pos = [j]
-                if len(vals) > 1:
-                    pos = np.array([j] * len(vals)) + 0.12 * \
-                        (np.arange(0.0, len(vals)) - 0.5 * len(vals))
-                axes[-1].plot(pos, vals, markersize=9, linestyle='None',
-                              color='w', marker='*', markeredgecolor='k')
+                if nstars > 1:
+                    pos = np.linspace(j-0.3, j+0.3, num=nstars)
+
+                axes[-1].plot(
+                    pos, vals, ms=9, mew=.8, linestyle='None',
+                    color='w', marker='*', markeredgecolor='k')
 
     fig.suptitle(title)
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
