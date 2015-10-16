@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset='utf-8' />
+        <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+        <meta name="description" content="Preprocessed Connectomes Project" />
+		<link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+	    <script src="http://code.jquery.com/jquery-latest.min.js" type="text/javascript"></script>
+        <script src="javascripts/menu_script.js"></script>
+        <title>PCP Quality Assessment Protocol</title>
+    </head>
+
+    <body>
+      
+        <div id="container">
+
+        <!-- HEADER -->
+            <header>
+                <h1 id="project_title">PCP Quality Assessment Protocol</h1><br>
+  		        <div id='cssmenu'>
+  		            <ul>
+  		                <h2 id="func-spatial-reports"> QAP Functional Temporal Reports</h2>
+  		            </ul>
+  		        </div>
+            </header>
+            
+                <div id="main_content_wrap" class="outer">
+                    <section id="main_content" class="inner">
+						
+<h3 id="mean-epi"> The tSNR Slice Mosaic</h3>
+
+<p> The image entitled "tSNR map" <pre><code> Eg: tSNR map (subject 1_session_1_scan_1) </code></pre><br> is the rending of the temporal signal to noise ratio information from the scan. The tSNR plot is similar to the mea EPI plot, in that both metrics reduce the 4-dimensional scan to a representative 3-dimensional volume that is then split and displayed as a stack of axial (horizontal) slices. In this case of the timeseries signal to noise ratio, the mean of each voxel's timeseries is also computed and is then divided by the timeseries standard deviation. Hence, the tSNR plot shows the voxels in which one would expect to have good signal with which to perform statistical analyses. Differences in tSNR are particularly important for comparing the results from region of interest (ROI) analyses, since any observed functional differences might actually be attributable to systematic differences in SNR across the regions being compared. <a href="http://practicalfmri.blogspot.com.es/2011/01/comparing-fmri-protocols.html" target="_blank" > You can learn more about the utility of tSNR plots for fMRI analyses here. </a> </p>
+
+<p> The image entitled "Framewise Displacement plot" <pre><code> Eg: Framewise Displacement plot (subject 1_session_1_scan_1) </code></pre><br> is the framewise displacement that occurred throughout the scan. This is a temporal motion quality assurance metric and tracks head motions over time, making it easy to determine whether or not the data potentially suffered from significant corruption due to motion. For instance, it is possible to detect if the participant's head was slowly sinking into the cushions in the head coil, or whether the participant was possibly restless or agitated, which would result in several postion changes or movement spikes. The framewise displacement is a frame-by-frame representation of the differences between the BOLD signal intensity value of the n and n+1 timepoints, the n+1 and n+2 timepoints, and so on. The report page for framewise displacement in the functional scan includes both this frame-by-frame plot, as well as a histogram that can be used to visually determine what proportion of timepoints exceeded some pre-set movement threshold (eg: 0.2 mm)</p>
+
+<h3 id="temporal-merics"> The Temporal Metrics computed on the Functional Scan</h3>
+
+<p>The metrics displayed in the Summary Reprt were computed using the <pre><code> qap_functional_temporal.py </code></pre><br> workflow and have been displayed as violin plots. The stars in these plots denote where the score for this particular scan falls in the distribution of all scores for scans that were included as inputs to the the functional-spatial workflow. </p>
+<BR>
+<p>The metrics computed are as follows:<BR>
+	<BR>
+	[1] dvars - Spatial standard deviation of the voxelwise temporal derivates 
+<BR>
+	<BR>
+	[2] gcor - Global Correlation
+	<BR>
+		<BR>
+	[3] mean_fd - Mean Fractional Displacement
+<BR>
+	<BR>
+	[4] num_fd - Number of volumes with FD greater than 0.2mm 
+	<BR>
+		<BR>
+	[5] perc_fd - Percent of volumes with FD greater than 0.2mm
+<BR>
+	<BR>
+	[6] outlier - Mean fraction of outliers per fMRI volume
+	<BR>
+		<BR>
+	[7] quality - Median Distance Index
+<BR>
+	<BR>
+			
+<a href="http://preprocessed-connectomes-project.github.io/quality-assessment-protocol/#taxonomy-of-qa-measures" target="_blank" > All metrics are described in more detail in the “Taxonomy of QA Measures” section of the QAP documentation. Please refer to the QAP website for descriptions of these metrics. </a>
+	
+	
+</p>
