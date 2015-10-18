@@ -65,7 +65,7 @@ def plot_measures(df, measures, ncols=4, title='Group level report',
 
 
 def plot_all(df, groups, subject=None, figsize=(11.69, 5),
-             title='Summary report', out_file='testplot.pdf'):
+             strip_nsubj=3, title='Summary report'):
     import matplotlib.gridspec as gridspec
     colnames = [v for gnames in groups for v in gnames]
     lengs = [len(el) for el in groups]
@@ -74,10 +74,26 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
     fig = plt.figure(figsize=figsize)
     gs = gridspec.GridSpec(1, len(groups), width_ratios=lengs)
 
+    subjects = sorted(pd.unique(df.subject.ravel()))
+    nsubj = len(subjects)
+    subid = subject
+    if subid is not None:
+        try:
+            subid = int(subid)
+        except ValueError:
+            pass
+
     axes = []
     for i, snames in enumerate(groups):
         axes.append(plt.subplot(gs[i]))
-        sns.violinplot(data=df[snames], ax=axes[-1])
+
+        if nsubj > strip_nsubj:
+            sns.violinplot(data=df[snames], ax=axes[-1])
+        else:
+            stdf = df.copy()
+            if subid is not None:
+                stdf = stdf.loc[stdf['subject'] != subid]
+            sns.stripplot(data=stdf[snames], ax=axes[-1], jitter=0.25)
 
         axes[-1].set_xticklabels(
             [el.get_text() for el in axes[-1].get_xticklabels()],
@@ -87,12 +103,6 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
 
         # If we know the subject, place a star for each scan
         if subject is not None:
-            subid = subject
-            try:
-                subid = int(subid)
-            except ValueError:
-                pass
-
             subdf = df.loc[df['subject'] == subid]
             scans = sorted(pd.unique(subdf.scan.ravel()))
             nstars = len(scans)
@@ -111,7 +121,8 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
 
                 axes[-1].plot(
                     pos, vals, ms=9, mew=.8, linestyle='None',
-                    color='w', marker='*', markeredgecolor='k')
+                    color='w', marker='*', markeredgecolor='k',
+                    zorder=10)
 
     fig.suptitle(title)
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
