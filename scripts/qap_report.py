@@ -7,7 +7,8 @@
 
 if __name__ == "__main__":
     import argparse
-    import qap.viz.reports as qvr
+    import os.path as op
+    from qap.viz.reports import workflow_report
 
     parser = argparse.ArgumentParser()
     req = parser.add_argument_group("Required Inputs")
@@ -16,27 +17,18 @@ if __name__ == "__main__":
 
     req.add_argument(
         '-m', '--qap_mode', type=str, help='report type',
-        choices=['anatomical', 'functional-temporal', 'functional-spatial'])
+        choices=['qap_anatomical_spatial', 'qap_functional_temporal',
+                 'qap_functional_spatial'], required=True)
 
     args = parser.parse_args()
 
-    csv_file = args.input_csv
-    qap_mode = args.qap_mode
+    in_csv = args.input_csv
+    out_dir = op.dirname(in_csv)
+    qap_type = args.qap_mode
 
-    # infer report type from filename
-    if qap_mode is None:
-        qap_mode = 'anatomical'
-        if 'func' in csv_file:
-            qap_mode = 'functional-spatial' if 'spat' in csv_file else \
-                'functional-temporal'
+    reports = workflow_report(in_csv, qap_type, run_name,
+                              out_dir=out_dir)
 
-    if 'anatomical' in qap_mode:
-        out_file = qvr.report_anatomical(csv_file)
-    elif 'functional-temporal' in qap_mode:
-        out_file = qvr.report_func_temporal(csv_file)
-    elif 'functional-spatial' in qap_mode:
-        out_file = qvr.report_func_spatial(csv_file)
-    else:
-        raise RuntimeError('Report type is unknown')
-
-    print 'Written output file: ', out_file
+    for k, v in reports.iteritems():
+        if v['success']:
+            logger.info('Written report (%s) in %s' % (k, v['path']))

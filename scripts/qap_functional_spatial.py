@@ -340,11 +340,6 @@ def run(subject_list, config, cloudify=False):
         for k, v in reports.iteritems():
             if v['success']:
                 logger.info('Written report (%s) in %s' % (k, v['path']))
-            else:
-                logger.info('Report of %s failed: %s' % (k, v['msg']))
-
-        if len(reports) == 0:
-            logger.info('Reports were not generated')
 
 
 def main():
