@@ -65,7 +65,7 @@ def plot_measures(df, measures, ncols=4, title='Group level report',
 
 
 def plot_all(df, groups, subject=None, figsize=(11.69, 5),
-             strip_nsubj=3, title='Summary report'):
+             strip_nsubj=10, title='Summary report'):
     import matplotlib.gridspec as gridspec
     colnames = [v for gnames in groups for v in gnames]
     lengs = [len(el) for el in groups]
