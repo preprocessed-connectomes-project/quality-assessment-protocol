@@ -2,9 +2,9 @@ num_cores_per_subject: 1
 
 num_subjects_at_once: 2
 
-output_directory: /tmp/output
+output_directory: /tmp/output_ms
 
-working_directory: /tmp/workdir
+working_directory: /tmp/workdir_ms
 
 write_all_outputs: False
 
