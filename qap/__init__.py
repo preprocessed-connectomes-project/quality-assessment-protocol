@@ -1,3 +1,4 @@
+from cli import QAProtocolCLI
 
 # pcp_qap package
 
@@ -5,7 +6,8 @@
 #       workflows
 
 #__all__ = ['qclib', 'workflows']
-'''                                           
+'''
+from cli import QAProtocolCLI
 from anatomical_preproc import run_anatomical_reorient, \
                                run_anatomical_skullstrip, \
                                run_segmentation_workflow
@@ -13,7 +15,7 @@ from anatomical_preproc import run_anatomical_reorient, \
 from functional_preproc import run_func_motion_correct, \
                                run_functional_brain_mask, \
                                run_mean_functional
-                               
+
 
 __all__ = ['dl_subj_from_s3', \
            'upl_qap_output', \
@@ -71,5 +73,5 @@ __all__ = ['dl_subj_from_s3', \
            'qap_temporal_workflow', \
            'check_input_resources', \
            'check_config_settings']
-           
+
 '''
