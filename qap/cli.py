@@ -40,6 +40,11 @@ class QAProtocolCLI:
         req.add_argument(
             "config", type=str, help="filepath to pipeline configuration YAML")
 
+        # Write PDF reports
+        group.add_argument(
+            "--with-reports", action='store_true', default=False,
+            help="Write a summary report in PDF format.")
+
         args = parser.parse_args()
 
         # checks
@@ -103,6 +108,12 @@ class QAProtocolCLI:
 
         self._config['pipeline_config_yaml'] = args.config
         self._config['qap_type'] = parser.prog[4:-3]
+
+        if 'write_report' not in config:
+            config['write_report'] = False
+
+        if args.with_reports:
+            config['write_report'] = True
 
     def _run_here(self, run_name):
         ns_at_once = self._config.get('num_subjects_at_once', 1)
@@ -225,6 +236,7 @@ class QAProtocolCLI:
         subject_list = self._sub_dict
         cloudify = self._cloudify
         ns_at_once = config.get('num_subjects_at_once', 1)
+        write_report = config.get('write_report', False)
 
         # Create output directory
         try:
@@ -253,6 +265,20 @@ class QAProtocolCLI:
             self._run_here(run_name)
         else:
             self._run_cloud(run_name)
+
+        # PDF reporting
+        if write_report:
+            from qap.viz.reports import workflow_report
+            logger.info('Writing PDF reports')
+            qap_type = 'qap_' + config['qap_type']
+            in_csv = op.join(config['output_directory'], '%s.csv' % qap_type)
+
+            reports = workflow_report(in_csv, qap_type, run_name,
+                                      out_dir=config['output_directory'])
+
+            for k, v in reports.iteritems():
+                if v['success']:
+                    logger.info('Written report (%s) in %s' % (k, v['path']))
 
 
 def _build_workflow(
@@ -373,9 +399,16 @@ def _build_workflow(
     new_outputs = 0
 
     out_list = ['qap_' + qap_type]
-
     if keep_outputs:
         out_list = resource_pool.keys()
+
+    # Save reports to out_dir if necessary
+    if config.get('write_report', False):
+        out_list += ['qap_mosaic']
+
+        # The functional temporal also has an FD plot
+        if 'functional_temporal' in qap_type:
+            out_list += ['qap_fd']
 
     for output in out_list:
         # we use a check for len()==2 here to select those items in the
