@@ -54,7 +54,7 @@ QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas.   If you
 Once the pre-requisites have been satisfied, you can install the QAP package itself:
 
     git clone https://github.com/preprocessed-connectomes-project/quality-assessment-protocol.git qap
-    cd /qap
+    cd qap
     python setup.py install
 
 ## Taxonomy of QA Measures
