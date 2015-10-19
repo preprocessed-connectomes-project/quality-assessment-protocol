@@ -22,10 +22,9 @@ def main():
                                 'test_data/workflow_reference/*/*',
                                 'test_data/*/*/*/*/*']},
           scripts=glob("scripts/*"),
-          install_requires=["scipy", "nipype", "nibabel", "nitime", "pyyaml", "pandas"],
+          install_requires=["scipy", "nipype", "nibabel", "nitime", "pyyaml",
+                            "pandas", "seaborn", "pyPdf2", "xhtml2pdf"],
           zip_safe=False)
-
-
 
 if __name__ == "__main__":
 
