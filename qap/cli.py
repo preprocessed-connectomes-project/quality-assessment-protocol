@@ -109,11 +109,11 @@ class QAProtocolCLI:
         self._config['pipeline_config_yaml'] = args.config
         self._config['qap_type'] = parser.prog[4:-3]
 
-        if 'write_report' not in config:
-            config['write_report'] = False
+        if 'write_report' not in self._config:
+            self._config['write_report'] = False
 
         if args.with_reports:
-            config['write_report'] = True
+            self._config['write_report'] = True
 
     def _run_here(self, run_name):
         ns_at_once = self._config.get('num_subjects_at_once', 1)
