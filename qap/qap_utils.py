@@ -10,7 +10,7 @@ def load_image(image_file):
     outputs
         dat: the image data in Nibabel format
     '''
-   
+
     img = nib.load(image_file)
     dat = img.get_data()
 
@@ -18,21 +18,25 @@ def load_image(image_file):
     if np.issubdtype(dat.dtype, float):
 
         dat = dat.astype('float32')
-        
+
         # Check for negative values
         if (dat < 0).any():
             print "found negative values, setting to zero (see file: %s)" % image_file
             dat[dat<0] = 0
-    
+
     elif np.issubdtype(dat.dtype, int):
 
         dat = dat.astype('int32')
-    
+
+    elif np.issubdtype(dat.dtype, np.uint8):
+
+        dat = dat.astype(np.uint8)
+
     else:
 
         msg = "Error: Unknown datatype %s" % dat.dtype
         raise Exception(msg)
-    
+
     return dat
 
 
@@ -54,14 +58,14 @@ def load_mask(mask_file, ref_file):
     mask_img = nib.load(mask_file)
     mask_dat = mask_img.get_data()
     ref_img = nib.load(ref_file)
-    
+
     # Check that the specified mask is binary.
     mask_vals   = np.unique(mask_dat)
     if (mask_vals.size != 2) or not (mask_vals == [0, 1]).all():
         err = "Error: Mask is not binary, has %i unique val(s) of %s " \
               "(see file %s)" % (mask_vals.size, mask_vals, mask_file)
         raise Exception(err)
-    
+
     # Verify that the mask and anatomical images have the same dimensions.
     if ref_img.shape != mask_img.shape:
         err = "Error: Mask and anatomical image are different dimensions " \
@@ -73,5 +77,5 @@ def load_mask(mask_file, ref_file):
         err = "Error: Mask and anatomical image are not in the same space " \
               "for %s vs %s" % (mask_file, ref_file)
         raise Exception(err)
-    
+
     return mask_dat
