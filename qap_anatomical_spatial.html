@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset='utf-8' />
+        <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+        <meta name="description" content="Preprocessed Connectomes Project" />
+        <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+	    <script src="http://code.jquery.com/jquery-latest.min.js" type="text/javascript"></script>
+        <script src="javascripts/menu_script.js"></script>
+        <title>PCP Quality Assessment Protocol</title>
+    </head>
+
+    <body>
+      
+        <div id="container">
+
+        <!-- HEADER -->
+            <header>
+                <h1 id="project_title">PCP Quality Assessment Protocol</h1><br>
+  		        <div id='cssmenu'>
+  		            <ul>
+  		                <h2 id="func-spatial-reports"> QAP Anatomical Spatial Reports</h2>
+  		            </ul>
+  		        </div>
+            </header>
+            
+                <div id="main_content_wrap" class="outer">
+                    <section id="main_content" class="inner">
+                        
+
+<h3 id="spatial-merics"> The Spatial Metrics computed on the Anatomical Scan</h3>
+
+<p>The metrics displayed in the Summary Report <pre><code> Eg: qap_anat_S6086STG </code></pre><br>were computed using the <pre><code> qap_anatomical_spatial.py </code></pre><br> workflow and have been displayed as violin plots. The stars in these plots denote where the score for the scans for this participant fall in the distribution of all scores for scans that were included as inputs to the the functional-spatial workflow. If there are several scans per session for this individual, then the stars will be displayed adjacent to each other in the violin plot </p>
+<BR>
+<p>The metrics computed are as follows:<BR>
+	<BR>
+	[1] bg_size - Background mask size
+<BR>
+	<BR>
+	[2] fg_size - Foreground mask size
+	<BR>
+		<BR>
+	[3] bg_mean - Mean intensity of the background mask
+<BR>
+	<BR>
+	[4] fg_mean - Mean intensity of the foreground mask
+	<BR>
+		<BR>
+	[5] bg_std - Standard deviation of the background mask
+<BR>
+	<BR>
+	[6] fg_std - Standard deviation of the foreground mask
+	<BR>
+		<BR>
+	[7] csf_size - Cerebrospinal fluid mask size
+<BR>
+	<BR>
+	[8] gm_size - Grey matter mask size
+	<BR>
+		<BR>		
+	[9] wm_size - White matter mask size
+<BR>
+	<BR>
+	[10] csf_mean - Mean intensity of the CSF mask
+	<BR>
+		<BR>		
+	[11] gm_mean - Mean intensity of the grey matter mask
+<BR>
+	<BR>
+	[12] wm_mean - Mean intensity of the white matter mask
+	<BR>
+		<BR>
+	[13] csf_std - Standard deviation of the CSF mask
+<BR>
+	<BR>
+	[14] gm_std - Standard deviation of the  grey matter mask
+	<BR>
+		<BR>
+	[15] wm_std - Standard deviation of the white matter mask
+<BR>
+	<BR>		
+	[16] cnr - Contrast to Noise Ratio 
+	<BR>
+		<BR>
+	[17] efc - Entropy Focus Criterion
+<BR>
+	<BR>
+	[18] fber - Foreground to Background Energy Ratio
+	<BR>
+		<BR>
+	[19] fwhm - Full-width half maximum smoothness of the voxels averaged across the three coordinate axes, and also for each axis [x,y,x]
+<BR>
+	<BR>
+	[20] Qi1 - Artifact Detection
+<BR>
+	<BR>
+	[21] snr -  Signal to Noise Ratio
+	<BR>
+		<BR>
+			
+			
+<a href="http://preprocessed-connectomes-project.github.io/quality-assessment-protocol/#taxonomy-of-qa-measures" target="_blank" > All metrics are described in more detail in the “Taxonomy of QA Measures” section of the QAP documentation. Please refer to the QAP website for descriptions of these metrics. </a>	
+	
+</p>
