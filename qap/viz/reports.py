@@ -19,7 +19,7 @@ from .plotting import (plot_measures, plot_mosaic, plot_all,
 # matplotlib.rc('figure', figsize=(11.69, 8.27))  # for DINA4 size
 
 
-def workflow_report(in_csv, qap_type, run_name,
+def workflow_report(in_csv, qap_type, run_name, res_dict,
                     out_dir=None, out_file=None):
 
     if out_dir is None:
@@ -50,25 +50,29 @@ def workflow_report(in_csv, qap_type, run_name,
     get_documentation(qap_type, doc)
     func = getattr(sys.modules[__name__], qap_type)
 
-    # Generate group-wise report if N > 3
-    if len(subject_list) > 3:
-        qc_group = op.join(out_dir, run_name, 'qc_measures_group.pdf')
-        pdf_group = []
+    # Generate group report
+    qc_group = op.join(out_dir, run_name, 'qc_measures_group.pdf')
+    pdf_group = []
+    # Generate violinplots. If successfull, add documentation.
+    func(df, out_file=qc_group)
+    pdf_group = [qc_group]
 
-        # Generate violinplots. If successfull, add documentation.
-        func(df, out_file=qc_group)
-        pdf_group = [qc_group]
-        if doc is not None:
-            pdf_group.append(doc)
+    if doc is not None:
+        pdf_group.append(doc)
+    if len(pdf_group) > 0:
+        out_group_file = op.join(out_dir, '%s_group.pdf' % qap_type)
+        # Generate final report with collected pdfs in plots
+        concat_pdf(pdf_group, out_group_file)
+        result['group'] = {'success': True, 'path': out_group_file}
 
-        if len(pdf_group) > 0:
-            out_group_file = op.join(out_dir, '%s_group.pdf' % qap_type)
-            # Generate final report with collected pdfs in plots
-            concat_pdf(pdf_group, out_group_file)
-            result['group'] = {'success': True, 'path': out_group_file}
-
+    failed = [s['id'] for s in res_dict if 'failed' in s['status']]
     # Generate individual reports for subjects
     for subid in subject_list:
+        # If subject failed, skip report
+        if subid in failed:
+            print 'Subject %s will not be reported' % subid
+            continue
+
         # Get subject-specific info
         subdf = df.loc[df['subject'] == subid]
         sessions = sorted(pd.unique(subdf.session.ravel()))

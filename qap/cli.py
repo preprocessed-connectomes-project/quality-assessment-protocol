@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # @Date:   2015-10-16 12:52:35
 # @Last Modified by:   oesteban
-# @Last Modified time: 2015-10-22 11:13:05
+# @Last Modified time: 2015-10-22 11:54:57
 import os
 import os.path as op
 import time
@@ -252,7 +252,7 @@ class QAProtocolCLI:
             qap_type = 'qap_' + config['qap_type']
             in_csv = op.join(config['output_directory'], '%s.csv' % qap_type)
 
-            reports = workflow_report(in_csv, qap_type, run_name,
+            reports = workflow_report(in_csv, qap_type, run_name, results,
                                       out_dir=config['output_directory'])
 
             for k, v in reports.iteritems():
