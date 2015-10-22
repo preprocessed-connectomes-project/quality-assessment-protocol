@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # @Date:   2015-10-16 12:52:35
-# @Last Modified by:   oesteban
-# @Last Modified time: 2015-10-22 11:54:57
+# @Last Modified by:   Oscar Esteban
+# @Last Modified time: 2015-10-22 12:16:13
 import os
 import os.path as op
 import time
@@ -427,7 +427,7 @@ def _run_workflow(args):
             # ... however this is run inside a pool.map: do not raise Execption
 
     else:
-        rt.update({'status': 'cached'})
+        rt['status'] = 'cached'
         logger.info("\nEverything is already done for subject %s." % sub_id)
 
     # Remove working directory when done
