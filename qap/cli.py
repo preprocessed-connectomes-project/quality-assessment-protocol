@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # @Date:   2015-10-16 12:52:35
-# @Last Modified by:   oesteban
-# @Last Modified time: 2015-10-16 15:05:27
+# @Last Modified by:   Oscar Esteban
+# @Last Modified time: 2015-10-22 12:16:13
 import os
 import os.path as op
 import time
@@ -15,7 +15,7 @@ logger = logging.getLogger('workflow')
 
 class QAProtocolCLI:
     """
-    This class and the associated _build_workflow function implement what
+    This class and the associated _run_workflow function implement what
     the former scripts (qap_anatomical_spatial.py, etc.) contained
     """
 
@@ -165,53 +165,29 @@ class QAProtocolCLI:
         logger.info('There are %d subjects in the pool' %
                     len(flat_sub_dict.keys()))
 
+        # Stack workflow args
+        wfargs = [(flat_sub_dict[sub_info], self._config, sub_info,
+                  run_name, sites_dict.get(sub_info[0], None))
+                  for sub_info in flat_sub_dict.keys()]
+
+        results = []
+
         # skip parallel machinery if we are running only one subject at once
         if ns_at_once == 1:
-            for sub_info in flat_sub_dict.keys():
-                _build_workflow(
-                    flat_sub_dict[sub_info], self._config, sub_info,
-                    run_name, sites_dict.get(sub_info[0], None))
+            for a in wfargs:
+                results.append(_run_workflow(a))
         else:
-            from multiprocessing import Process
-            procss = [Process(
-                target=_build_workflow,
-                args=(flat_sub_dict[sub_info], self._config, sub_info,
-                      run_name, sites_dict.get(sub_info[0], None)))
-                      for sub_info in flat_sub_dict.keys()]
-            pid = open(op.join(
-                self._config["output_directory"], 'pid.txt'), 'w')
-            # Init job queue
+            from multiprocessing import Pool
 
-            job_queue = []
-            # Stream the subject workflows for preprocessing.
-            # At Any time in the pipeline c.numSubjectsAtOnce
-            # will run, unless the number remaining is less than
-            # the value of the parameter stated above
-            idx = 0
-            nprocs = len(procss)
-            while idx < nprocs:
-                # Check every job in the queue's status
-                for job in job_queue:
-                    # If the job is not alive
-                    if not job.is_alive():
-                        # Find job and delete it from queue
-                        logger.info('found dead job: %s' % str(job))
-                        loc = job_queue.index(job)
-                        del job_queue[loc]
-                # Check free slots after prunning jobs
-                slots = ns_at_once - len(job_queue)
-                if slots > 0:
-                    idc = idx
-                    for p in procss[idc:idc + slots]:
-                        # ..and start the next available process
-                        p.start()
-                        print >>pid, p.pid
-                        # Append this to job queue and increment index
-                        job_queue.append(p)
-                        idx += 1
-                # Add sleep so while loop isn't consuming 100% of CPU
-                time.sleep(2)
-            pid.close()
+            try:
+                pool = Pool(processes=ns_at_once, masktasksperchild=50)
+            except TypeError:  # Make python <2.7 compatible
+                pool = Pool(processes=ns_at_once)
+
+            results = pool.map(_run_workflow, wfargs)
+            pool.close()
+            pool.terminate()
+        return results
 
     def _run_cloud(self, run_name):
         from cloud_utils import upl_qap_output
@@ -224,11 +200,12 @@ class QAProtocolCLI:
         filesplit = filepath.split(self._config["bucket_prefix"])
         site_name = filesplit[1].split("/")[1]
 
-        _build_workflow(
+        rt = _run_workflow(
             subject_list[sub], self._config, sub, run_name, site_name)
 
         # upload results
         upl_qap_output(self._config)
+        return rt
 
     def run(self):
         # Get configurations and settings
@@ -261,10 +238,12 @@ class QAProtocolCLI:
                 pass
 
         run_name = config['pipeline_config_yaml'].split("/")[-1].split(".")[0]
+
+        results = None
         if not cloudify:
-            self._run_here(run_name)
+            results = self._run_here(run_name)
         else:
-            self._run_cloud(run_name)
+            results = self._run_cloud(run_name)
 
         # PDF reporting
         if write_report:
@@ -273,7 +252,7 @@ class QAProtocolCLI:
             qap_type = 'qap_' + config['qap_type']
             in_csv = op.join(config['output_directory'], '%s.csv' % qap_type)
 
-            reports = workflow_report(in_csv, qap_type, run_name,
+            reports = workflow_report(in_csv, qap_type, run_name, results,
                                       out_dir=config['output_directory'])
 
             for k, v in reports.iteritems():
@@ -281,8 +260,7 @@ class QAProtocolCLI:
                     logger.info('Written report (%s) in %s' % (k, v['path']))
 
 
-def _build_workflow(
-        resource_pool, config, subject_info, run_name, site_name=None):
+def _run_workflow(args):
 
     # build pipeline for each subject, individually
     # ~ 5 min 20 sec per subject
@@ -304,6 +282,7 @@ def _build_workflow(
     from time import strftime
     from nipype import config as nyconfig
 
+    resource_pool, config, subject_info, run_name, site_name = args
     sub_id = str(subject_info[0])
 
     qap_type = config['qap_type']
@@ -426,20 +405,30 @@ def _build_workflow(
             workflow.connect(node, out_file, ds, output)
             new_outputs += 1
 
+    rt = {'id': sub_id, 'session': session_id, 'scan': scan_id,
+          'status': 'started'}
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
         workflow.write_graph(
             dotfilename=op.join(output_dir, run_name + ".dot"),
             simple_form=False)
-        if config["num_cores_per_subject"] == 1:
-            workflow.run(plugin='Linear')
-        else:
-            workflow.run(
-                plugin='MultiProc',
-                plugin_args={'n_procs': config["num_cores_per_subject"]})
+
+        nc_per_subject = config.get('num_cores_per_subject', 1)
+        runargs = {'plugin': 'Linear', 'plugin_args': {}}
+        if nc_per_subject > 1:
+            runargs['plugin'] = 'MultiProc',
+            runargs['plugin_args'] = {'n_procs': nc_per_subject}
+
+        try:
+            workflow.run(**runargs)
+            rt['status'] = 'finished'
+        except Exception as e:  # TODO We should be more specific here ...
+            rt.update({'status': 'failed', 'msg': e.msg})
+            # ... however this is run inside a pool.map: do not raise Execption
 
     else:
-        print "\nEverything is already done for subject %s." % sub_id
+        rt['status'] = 'cached'
+        logger.info("\nEverything is already done for subject %s." % sub_id)
 
     # Remove working directory when done
     if not keep_outputs:
@@ -450,7 +439,7 @@ def _build_workflow(
                 import shutil
                 shutil.rmtree(work_dir)
         except:
-            print "Couldn\'t remove the working directory!"
+            logger.warn("Couldn\'t remove the working directory!")
             pass
 
     pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
@@ -458,4 +447,4 @@ def _build_workflow(
     logger.info("Elapsed time (minutes) since last start: %s"
                 % ((pipeline_end_time - pipeline_start_time) / 60))
     logger.info("Pipeline end time: %s" % pipeline_end_stamp)
-    return workflow
+    return rt

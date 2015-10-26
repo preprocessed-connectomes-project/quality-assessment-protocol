@@ -19,8 +19,9 @@ from .plotting import (plot_measures, plot_mosaic, plot_all,
 # matplotlib.rc('figure', figsize=(11.69, 8.27))  # for DINA4 size
 
 
-def workflow_report(in_csv, qap_type, run_name,
+def workflow_report(in_csv, qap_type, run_name, res_dict,
                     out_dir=None, out_file=None):
+    import datetime
 
     if out_dir is None:
         out_dir = os.getcwd()
@@ -42,30 +43,42 @@ def workflow_report(in_csv, qap_type, run_name,
 
     subject_list = sorted(pd.unique(df.subject.ravel()))
     result = {}
+    func = getattr(sys.modules[__name__], qap_type)
+
+    # Identify failed subjects
+    failed = ['%s (%s_%s)' % (s['id'], s['session'], s['scan'])
+              for s in res_dict if 'failed' in s['status']]
+
+    pdf_group = []
+
+    # Generate summary page
+    out_sum = op.join(out_dir, run_name, 'summary_group.pdf')
+    summary_cover(
+        (qap_type,
+         datetime.datetime.now().strftime("%Y-%m-%d, %H:%M"),
+         ", ".join(failed) if len(failed) > 0 else "none"),
+        is_group=True, out_file=out_sum)
+    pdf_group.append(out_sum)
+
+    # Generate group report
+    qc_group = op.join(out_dir, run_name, 'qc_measures_group.pdf')
+    # Generate violinplots. If successfull, add documentation.
+    func(df, out_file=qc_group)
+    pdf_group.append(qc_group)
 
     # Generate documentation page
     doc = op.join(out_dir, run_name, 'documentation.pdf')
 
     # Let documentation page fail
     get_documentation(qap_type, doc)
-    func = getattr(sys.modules[__name__], qap_type)
+    if doc is not None:
+        pdf_group.append(doc)
 
-    # Generate group-wise report if N > 3
-    if len(subject_list) > 3:
-        qc_group = op.join(out_dir, run_name, 'qc_measures_group.pdf')
-        pdf_group = []
-
-        # Generate violinplots. If successfull, add documentation.
-        func(df, out_file=qc_group)
-        pdf_group = [qc_group]
-        if doc is not None:
-            pdf_group.append(doc)
-
-        if len(pdf_group) > 0:
-            out_group_file = op.join(out_dir, '%s_group.pdf' % qap_type)
-            # Generate final report with collected pdfs in plots
-            concat_pdf(pdf_group, out_group_file)
-            result['group'] = {'success': True, 'path': out_group_file}
+    if len(pdf_group) > 0:
+        out_group_file = op.join(out_dir, '%s_group.pdf' % qap_type)
+        # Generate final report with collected pdfs in plots
+        concat_pdf(pdf_group, out_group_file)
+        result['group'] = {'success': True, 'path': out_group_file}
 
     # Generate individual reports for subjects
     for subid in subject_list:
@@ -73,7 +86,7 @@ def workflow_report(in_csv, qap_type, run_name,
         subdf = df.loc[df['subject'] == subid]
         sessions = sorted(pd.unique(subdf.session.ravel()))
         plots = []
-
+        sess_scans = []
         # Re-build mosaic location
         for sesid in sessions:
             sesdf = subdf.loc[subdf['session'] == sesid]
@@ -91,6 +104,22 @@ def workflow_report(in_csv, qap_type, run_name,
                 fd = op.join(sub_path, 'qap_fd', 'fd.pdf')
                 if 'functional_temporal' in qap_type and op.isfile(fd):
                     plots.append(fd)
+
+            sess_scans.append('%s (%s)' % (sesid, ', '.join(scans)))
+
+        failed = ['%s (%s)' % (s['session'], s['scan'])
+                  for s in res_dict if 'failed' in s['status'] and
+                  subid in s['id']]
+
+        # Summary cover
+        out_sum = op.join(out_dir, run_name, 'summary_%s.pdf' % subid)
+        summary_cover(
+            (subid, subid, qap_type,
+             datetime.datetime.now().strftime("%Y-%m-%d, %H:%M"),
+             ", ".join(sess_scans),
+             ",".join(failed) if len(failed) > 0 else "none"),
+            out_file=out_sum)
+        plots.insert(0, out_sum)
 
         # Summary (violinplots) of QC measures
         qc_ms = op.join(out_dir, run_name, subid, 'qc_measures.pdf')
@@ -124,6 +153,29 @@ def get_documentation(doc_type, out_file):
 
     # convert HTML to PDF
     status = pisa.pisaDocument(html, result, encoding='UTF-8')
+    result.close()
+
+    # return True on success and False on errors
+    return status.err
+
+
+def summary_cover(data, is_group=False, out_file=None):
+    import codecs
+    import StringIO
+    from xhtml2pdf import pisa
+    # open output file for writing (truncated binary)
+    result = open(out_file, "w+b")
+
+    html_file = 'cover_group.html' if is_group else 'cover_subj.html'
+
+    html_dir = op.abspath(
+        op.join(op.dirname(__file__), 'html', html_file))
+
+    with codecs.open(html_dir, mode='r', encoding='utf-8') as f:
+        html = f.read()
+
+    # convert HTML to PDF
+    status = pisa.pisaDocument(html % data, result, encoding='UTF-8')
     result.close()
 
     # return True on success and False on errors
