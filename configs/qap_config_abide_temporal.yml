@@ -13,3 +13,5 @@ start_idx: 0
 stop_idx: None
 
 slice_timing_correction: True
+
+write_report: False
