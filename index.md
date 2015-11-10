@@ -44,15 +44,9 @@ If you are using a Debian-based Linux distribution, you can use `apt-get` by fir
     apt-get update
     apt-get install -y fsl-5.0-complete afni
 
-### Python Dependencies
+### Python Dependencies and QAP
 
-QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas.   If you have `pip`, you may install these by typing in the command below:
-
-    pip install numpy scipy && pip install nipype nibabel nitime pyyaml pandas
-
-### QAP
-
-Once the pre-requisites have been satisfied, you can install the QAP package itself:
+QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run.  If you have `pip`, you may install all of these and QAP itself by typing in the command below:
 
     pip install qap
 
