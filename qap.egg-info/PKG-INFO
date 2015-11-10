@@ -1,0 +1,11 @@
+Metadata-Version: 1.1
+Name: qap
+Version: 1.0.4
+Summary: A collection of three quality assessment pipelines for anatomical MRI and functional MRI scans.
+Home-page: https://github.com/preprocessed-connectomes-project/quality-assessment-protocol
+Author: Cameron Craddock, Zarrar Shehzad, Steven Giavasis,Daniel Clark
+Author-email: cameron.craddock@childmind.org
+License: UNKNOWN
+Download-URL: https://github.com/preprocessed-connectomes-project/quality-assessment-protocol/tarball/1.0.2
+Description: UNKNOWN
+Platform: UNKNOWN
