@@ -4,8 +4,9 @@ def main():
     from glob import glob
     from setuptools import setup
 
+    exec(open('qap/version.py').read())
     setup(name='qap',
-          version='1.0.4',
+          version=__version__,
           description='A collection of three quality assessment pipelines ' \
                       'for anatomical MRI and functional MRI scans.',
           author='Cameron Craddock, Zarrar Shehzad, Steven Giavasis,' \

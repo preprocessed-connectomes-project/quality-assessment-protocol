@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, creds_path):
 

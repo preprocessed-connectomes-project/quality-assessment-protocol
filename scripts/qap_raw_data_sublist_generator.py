@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 def gather_raw_data(site_folder, yaml_outpath, scan_type, \
                         include_sites=False, subject_inclusion=None):

@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 
 def run(cpac_outdir, outfile_name, qap_type, session_format):
 

@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 # this script takes in all of the generated QAP numbers from the QAP pipeline
 # output directory you provide it and aggregates them into one CSV file
 

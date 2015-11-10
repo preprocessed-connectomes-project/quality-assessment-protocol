@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 
 def gather_bids_data(dataset_folder, yaml_outpath, subject_inclusion=None,
                      scan_type=None):

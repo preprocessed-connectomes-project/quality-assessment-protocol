@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 
 def download_outputs(path_prefix, creds_path, bucket_name, qap_type, \
                           download_to):
