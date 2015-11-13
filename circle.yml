@@ -1,9 +1,10 @@
-#dependencies:
+dependencies:
 #  cache_directories:
 #    - "~/examples/"
 #    - "~/afni/"
 #    - "~/fsl/"
-#  override:
+  override:
+    - gem install jekyll
 #    - pip install --upgrade pip
 #    - pip install numpy
 #    - pip install -e .

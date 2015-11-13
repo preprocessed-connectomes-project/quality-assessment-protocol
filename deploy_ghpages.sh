@@ -3,8 +3,7 @@ cd ./docs
 jekyll build
 mv ./_site ~/site
 #cd ~ && git clone -b gh-pages ${CIRCLE_PROJECT_REPONAME} currentsite
-echo git clone -b gh-pages_test ${CIRCLE_PROJECT_REPONAME} currentsite
-cd ~ && git clone -b gh-pages_test ${CIRCLE_PROJECT_REPONAME} currentsite
+cd ~ && git clone -b gh-pages_test https://github.com/preprocessed-connectomes-project/quality-assessment-protocol.git currentsite
 mv ~/site/* ~/currentsite && cd ~/currentsite
 git add -A
 git commit -m "Automatic documentation update for build "${CIRCLE_SHA1}
