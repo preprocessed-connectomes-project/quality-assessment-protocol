@@ -25,6 +25,13 @@ test:
     - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_functional_temporal.py --sublist ~/bids_func_list.yml configs/qap_config_ds003_ms.yml
     - python scripts/qap_bids_data_sublist_generator.py -t anatomical ~/examples/ds003_downsampled/ ~/bids_anat_list.yml
     - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_anatomical_spatial.py --sublist ~/bids_anat_list.yml configs/qap_config_ds003_ms.yml
+
+deployment:
+  documentation:
+    branch: circle_docs_build
+    commands:
+      ./deploy_ghpages.sh
+
 general:
   artifacts:
     - "/tmp/output"
