@@ -9,6 +9,7 @@ dependencies:
 #    - "~/fsl/"
   pre:
     - gem install jekyll -v 2.5.3
+# override:
 #    - pip install --upgrade pip
 #    - pip install numpy
 #    - pip install -e .
