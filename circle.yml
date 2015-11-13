@@ -30,7 +30,7 @@ deployment:
   documentation:
     branch: circle_docs_build
     commands:
-      ./deploy_ghpages.sh
+      - ./deploy_ghpages.sh
 
 general:
   artifacts:
