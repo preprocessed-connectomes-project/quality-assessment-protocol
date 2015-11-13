@@ -1,6 +1,6 @@
 machine:
   ruby:
-    version: rbx-2.2.6
+    version: 2.2.1
 
 dependencies:
 #  cache_directories:
@@ -9,6 +9,7 @@ dependencies:
 #    - "~/fsl/"
   override:
     - gem install jekyll
+    - gem install redcloth
 #    - pip install --upgrade pip
 #    - pip install numpy
 #    - pip install -e .
