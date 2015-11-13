@@ -8,8 +8,7 @@ dependencies:
 #    - "~/afni/"
 #    - "~/fsl/"
   override:
-    - gem install jekyll
-    - gem install RedCloth
+    - gem install jekyll -v 2.5.3
 #    - pip install --upgrade pip
 #    - pip install numpy
 #    - pip install -e .
