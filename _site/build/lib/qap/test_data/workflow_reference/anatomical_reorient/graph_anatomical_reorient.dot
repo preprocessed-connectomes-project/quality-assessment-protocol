@@ -1,8 +1,0 @@
-digraph anatomical_reorient_workflow{
-  label="anatomical_reorient_workflow";
-  anatomical_reorient_workflow_anat_deoblique[label="anat_deoblique.Refit.afni"];
-  anatomical_reorient_workflow_anat_reorient[label="anat_reorient.Resample.afni"];
-  anatomical_reorient_workflow_datasink_anatomical_reorient[label="datasink_anatomical_reorient.DataSink.io"];
-  anatomical_reorient_workflow_anat_deoblique -> anatomical_reorient_workflow_anat_reorient;
-  anatomical_reorient_workflow_anat_reorient -> anatomical_reorient_workflow_datasink_anatomical_reorient;
-}

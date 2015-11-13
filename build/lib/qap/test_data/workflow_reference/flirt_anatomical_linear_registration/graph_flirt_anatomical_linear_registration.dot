@@ -1,6 +1,0 @@
-digraph flirt_anatomical_linear_registration_workflow{
-  label="flirt_anatomical_linear_registration_workflow";
-  flirt_anatomical_linear_registration_workflow_calc_flirt_warp[label="calc_flirt_warp.FLIRT.fsl"];
-  flirt_anatomical_linear_registration_workflow_datasink_flirt_anatomical_linear_registration[label="datasink_flirt_anatomical_linear_registration.DataSink.io"];
-  flirt_anatomical_linear_registration_workflow_calc_flirt_warp -> flirt_anatomical_linear_registration_workflow_datasink_flirt_anatomical_linear_registration;
-}
