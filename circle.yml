@@ -9,7 +9,7 @@ dependencies:
     - "~/fsl/"
   pre:
     - gem install jekyll
-    - gem install redcloth
+    - gem install RedCloth-4.2.9
   override:
     - pip install --upgrade pip
     - pip install numpy
