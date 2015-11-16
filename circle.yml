@@ -59,6 +59,7 @@ deployment:
   documentation:
     branch: circle_docs_build
     commands:
+      - cd ./docs && jekyll build
       - ./deploy_ghpages.sh
 
 #general:
