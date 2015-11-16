@@ -14,6 +14,7 @@ dependencies:
     - gem install json -v 1.8.1
     - gem install minitest -v 5.3.4
     - gem install thread_safe -v 0.3.4
+    - gem install tzinfo -v 1.2.1
   override:
     - pip install --upgrade pip
     - pip install numpy
