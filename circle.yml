@@ -17,6 +17,7 @@ dependencies:
     - gem install tzinfo -v 1.2.1
     - gem install activesupport -v 4.1.1
     - gem install blankslate -v 2.1.2.4
+    - gem install fast-stemmer -v 1.0.2
   override:
     - pip install --upgrade pip
     - pip install numpy
