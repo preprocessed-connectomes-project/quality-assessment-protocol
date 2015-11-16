@@ -20,6 +20,7 @@ dependencies:
     - gem install fast-stemmer -v 1.0.2
     - gem install classifier -v 1.3.4
     - gem install highline -v 1.6.21
+    - gem install commander -v 4.1.6
   override:
     - pip install --upgrade pip
     - pip install numpy
