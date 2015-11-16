@@ -22,6 +22,7 @@ dependencies:
     - gem install highline -v 1.6.21
     - gem install commander -v 4.1.6
     - gem install ffi -v 1.9.3
+    - gem install gemoji -v 1.5.0
   override:
     - pip install --upgrade pip
     - pip install numpy
