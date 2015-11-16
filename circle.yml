@@ -9,30 +9,29 @@ dependencies:
     - "~/fsl/"
   pre:
     - gem install jekyll
-    - gem install bundler 
-#    - gem install RedCloth
-#    - gem install i18n -v 0.6.9
-#    - gem install json -v 1.8.1
-#    - gem install minitest -v 5.3.4
-#    - gem install thread_safe -v 0.3.4
-#    - gem install tzinfo -v 1.2.1
-#    - gem install activesupport -v 4.1.1
-#    - gem install blankslate -v 2.1.2.4
-#    - gem install fast-stemmer -v 1.0.2
-#    - gem install classifier -v 1.3.4
-#    - gem install highline -v 1.6.21
-#    - gem install commander -v 4.1.6
-#    - gem install ffi -v 1.9.3
-#    - gem install gemoji -v 1.5.0
-#    - gem install liquid -v 2.5.5
-#    - gem install rb-fsevent -v 0.9.4
-#    - gem install rb-inotify -v 0.9.4
-#    - gem install rb-kqueue -v 0.2.3
-#    - gem install listen -v 1.3.1
-#    - gem install maruku -v 0.7.0
-#    - gem install posix-spawn -v 0.3.8
-#    - gem install yajl-ruby -v 1.1.0
-#    - gem install pygments -v 0.5.4
+    - gem install RedCloth
+    - gem install i18n -v 0.6.9
+    - gem install json -v 1.8.1
+    - gem install minitest -v 5.3.4
+    - gem install thread_safe -v 0.3.4
+    - gem install tzinfo -v 1.2.1
+    - gem install activesupport -v 4.1.1
+    - gem install blankslate -v 2.1.2.4
+    - gem install fast-stemmer -v 1.0.2
+    - gem install classifier -v 1.3.4
+    - gem install highline -v 1.6.21
+    - gem install commander -v 4.1.6
+    - gem install ffi -v 1.9.3
+    - gem install gemoji -v 1.5.0
+    - gem install liquid -v 2.5.5
+    - gem install rb-fsevent -v 0.9.4
+    - gem install rb-inotify -v 0.9.4
+    - gem install rb-kqueue -v 0.2.3
+    - gem install listen -v 1.3.1
+    - gem install maruku -v 0.7.0
+    - gem install posix-spawn -v 0.3.8
+    - gem install yajl-ruby -v 1.1.0
+    - gem install pygments -v 0.5.4
   override:
     - pip install --upgrade pip
     - pip install numpy
