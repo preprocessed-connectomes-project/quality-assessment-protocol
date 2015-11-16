@@ -10,6 +10,7 @@ dependencies:
   pre:
     - gem install jekyll
     - gem install RedCloth
+    - gem install i18n 
   override:
     - pip install --upgrade pip
     - pip install numpy
