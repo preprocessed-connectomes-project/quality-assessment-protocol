@@ -31,7 +31,7 @@ dependencies:
     - gem install maruku -v 0.7.0
     - gem install posix-spawn -v 0.3.8
     - gem install yajl-ruby -v 1.1.0
-    - gem install pygments -v 0.5.4
+    - gem install pygments.rb -v 0.5.4
   override:
     - pip install --upgrade pip
     - pip install numpy
