@@ -16,6 +16,7 @@ dependencies:
     - gem install thread_safe -v 0.3.4
     - gem install tzinfo -v 1.2.1
     - gem install activesupport -v 4.1.1
+    - gem install blankslate -v 2.1.2.4
   override:
     - pip install --upgrade pip
     - pip install numpy
