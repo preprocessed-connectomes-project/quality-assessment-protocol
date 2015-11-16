@@ -1,4 +1,5 @@
 #! /bin/bash
+ls -l $HOME/.ssh
 #cd ./docs
 #jekyll build
 #mv ./_site ~/site
