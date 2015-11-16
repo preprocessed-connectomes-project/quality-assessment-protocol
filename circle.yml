@@ -26,6 +26,7 @@ dependencies:
     - gem install liquid -v 2.5.5
     - gem install rb-fsevent -v 0.9.4
     - gem install rb-inotify -v 0.9.4
+    - gem install rb-kqueue -v 0.2.3
   override:
     - pip install --upgrade pip
     - pip install numpy
