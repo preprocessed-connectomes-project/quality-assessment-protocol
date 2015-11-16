@@ -1,14 +1,14 @@
-#machine:
-#  ruby:
-#    version: 2.2.1
+machine:
+  ruby:
+    version: 2.2.1
 
 dependencies:
   cache_directories:
     - "~/examples/"
     - "~/afni/"
     - "~/fsl/"
-#  pre:
-#    - gem install jekyll -v 2.5.3
+  pre:
+    - gem install jekyll -v 2.5.3
   override:
     - pip install --upgrade pip
     - pip install numpy
