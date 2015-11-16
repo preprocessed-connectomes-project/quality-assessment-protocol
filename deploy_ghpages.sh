@@ -5,7 +5,8 @@
 #cd ~ && git clone -b gh-pages ${CIRCLE_PROJECT_REPONAME} currentsite
 cd ~ && git clone -b gh-pages_test https://github.com/preprocessed-connectomes-project/quality-assessment-protocol.git currentsite
 #mv ~/site/* ~/currentsite && cd ~/currentsite
-git touch ~/currentsite/${CIRCLE_SHA1}
+cd ~/currensite
+touch ${CIRCLE_SHA1}
 git add -A
 git commit -m "Automatic documentation update for build "${CIRCLE_SHA1}
 git push
