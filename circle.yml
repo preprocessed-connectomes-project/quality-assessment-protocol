@@ -21,6 +21,7 @@ dependencies:
     - gem install classifier -v 1.3.4
     - gem install highline -v 1.6.21
     - gem install commander -v 4.1.6
+    - gem install ffi -v 1.9.3
   override:
     - pip install --upgrade pip
     - pip install numpy
