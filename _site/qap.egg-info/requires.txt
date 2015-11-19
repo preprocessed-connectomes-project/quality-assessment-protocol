@@ -1,9 +1,0 @@
-scipy
-nipype
-nibabel
-nitime
-pyyaml
-pandas
-seaborn
-pyPdf2
-xhtml2pdf

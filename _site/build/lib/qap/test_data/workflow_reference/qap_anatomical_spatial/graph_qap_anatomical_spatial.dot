@@ -1,8 +1,0 @@
-digraph qap_anatomical_spatial_workflow{
-  label="qap_anatomical_spatial_workflow";
-  qap_anatomical_spatial_workflow_qap_anatomical_spatial[label="qap_anatomical_spatial.Function.utility"];
-  qap_anatomical_spatial_workflow_qap_anatomical_spatial_to_csv[label="qap_anatomical_spatial_to_csv.Function.utility"];
-  qap_anatomical_spatial_workflow_datasink_qap_anatomical_spatial[label="datasink_qap_anatomical_spatial.DataSink.io"];
-  qap_anatomical_spatial_workflow_qap_anatomical_spatial -> qap_anatomical_spatial_workflow_qap_anatomical_spatial_to_csv;
-  qap_anatomical_spatial_workflow_qap_anatomical_spatial_to_csv -> qap_anatomical_spatial_workflow_datasink_qap_anatomical_spatial;
-}

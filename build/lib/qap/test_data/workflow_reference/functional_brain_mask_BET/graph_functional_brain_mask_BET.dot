@@ -1,8 +1,0 @@
-digraph functional_brain_mask_workflow{
-  label="functional_brain_mask_workflow";
-  functional_brain_mask_workflow_func_get_brain_mask_BET[label="func_get_brain_mask_BET.BET.fsl"];
-  functional_brain_mask_workflow_erode_one_voxel[label="erode_one_voxel.ErodeImage.fsl"];
-  functional_brain_mask_workflow_datasink_functional_brain_mask[label="datasink_functional_brain_mask.DataSink.io"];
-  functional_brain_mask_workflow_func_get_brain_mask_BET -> functional_brain_mask_workflow_erode_one_voxel;
-  functional_brain_mask_workflow_erode_one_voxel -> functional_brain_mask_workflow_datasink_functional_brain_mask;
-}
