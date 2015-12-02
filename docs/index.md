@@ -37,12 +37,14 @@ QAP requires AFNI and FSL to run. Links to installation instructions for AFNI an
 * [AFNI Installation](http://afni.nimh.nih.gov/pub/dist/HOWTO/howto/ht00_inst/html)
 * [FSL Installation](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation)
 
-If you are using a Debian-based Linux distribution, you can use `apt-get` by first adding Neurodebian to the apt repository list and then installing the Neurodebian FSL and AFNI packages:
+If you are using a Debian-based Linux distribution, you can use `apt-get` to install FSL by first adding Neurodebian to the apt repository list:
 
     wget -O- http://neuro.debian.net/lists/$(lsb_release -cs).us-nh.full | tee /etc/apt/sources.list.d/neurodebian.sources.list
     apt-key adv --recv-keys --keyserver pgp.mit.edu 2649A5A9
     apt-get update
-    apt-get install -y fsl-5.0-complete afni
+    apt-get install -y fsl-5.0-complete 
+
+We do not recommend using Neurodebian's AFNI binary, as we have encountered difficulty using QAP with this binary.
 
 ### Python Dependencies and QAP
 
