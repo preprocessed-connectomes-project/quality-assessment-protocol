@@ -1,0 +1,11 @@
+  
+# .travis.yml
+
+script: bundle exec rake travis
+
+env:
+  - secure: "ldxWJXz2Z0hhjYETZ7qW0R3IBvBHCE5ZNLS4CYawEQKCGBPneePA8o5/evw8K8Ra3yQI3Ba/XmRZlPQ3aHxW+GReb7yb/HDhe+9obUKikBXvDXErUKQm/2G0PrhXm518uBxaChfQBj2psq9FjnbrHX6ZcVU7L2JhoQfedOOFt9Q="
+
+branches:
+  only:
+    - master
