@@ -78,13 +78,15 @@
   <li><a href="http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation">FSL Installation</a></li>
 </ul>
 
-<p>If you are using a Debian-based Linux distribution, you can use <code>apt-get</code> by first adding Neurodebian to the apt repository list and then installing the Neurodebian FSL and AFNI packages:</p>
+<p>If you are using a Debian-based Linux distribution, you can use <code>apt-get</code> to install FSL by first adding Neurodebian to the apt repository list:</p>
 
 <pre><code>wget -O- http://neuro.debian.net/lists/$(lsb_release -cs).us-nh.full | tee /etc/apt/sources.list.d/neurodebian.sources.list
 apt-key adv --recv-keys --keyserver pgp.mit.edu 2649A5A9
 apt-get update
-apt-get install -y fsl-5.0-complete afni
+apt-get install -y fsl-5.0-complete 
 </code></pre>
+
+<p>We do not recommend using Neurodebian’s AFNI binary, as we have encountered difficulty using QAP with this binary.</p>
 
 <h3 id="python-dependencies-and-qap">Python Dependencies and QAP</h3>
 
