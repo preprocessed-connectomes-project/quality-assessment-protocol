@@ -247,6 +247,18 @@ class QAProtocolCLI:
         else:
             results = self._run_cloud(run_name)
 
+        # Report errors
+        formatted = []
+        for r in results:
+            formatted.append('subject_id=%s, session=%s, scan=%s' %
+                             (r['id'], r['session'], r['scan']))
+            formatted.append('Traceback:')
+            formatted.append('%s\n\n' % r['traceback'])
+
+        with open(op.join(config["output_directory"], 'workflows.err'),
+                  'w+') as f:
+            f.write('\n'.join(formatted))
+
         # PDF reporting
         if write_report:
             from qap.viz.reports import workflow_report
