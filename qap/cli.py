@@ -425,10 +425,13 @@ def _run_workflow(args):
             workflow.run(**runargs)
             rt['status'] = 'finished'
         except Exception as e:
-            etype, evalue, etrace = sys.exc_info()
-            rt.update({'status': 'failed', 'msg': '%s' % e,
-                       'traceback': format_exception(etype, evalue, etrace)})
             # ... however this is run inside a pool.map: do not raise Exception
+            etype, evalue, etrace = sys.exc_info()
+            tb = format_exception(etype, evalue, etrace)
+            rt.update({'status': 'failed', 'msg': '%s' % e, 'traceback': tb})
+            logger.warn('An error occured processing subject %s. Runtime dict:'
+                        ' %s\nTraceback:\n%s' % (rt['id'], rt,
+                                                 rt['traceback']))
 
     else:
         rt['status'] = 'cached'
