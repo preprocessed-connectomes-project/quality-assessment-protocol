@@ -423,7 +423,7 @@ def _run_workflow(args):
             workflow.run(**runargs)
             rt['status'] = 'finished'
         except Exception as e:  # TODO We should be more specific here ...
-            rt.update({'status': 'failed', 'msg': e.msg})
+            rt.update({'status': 'failed', 'msg': e})
             # ... however this is run inside a pool.map: do not raise Execption
 
     else:
