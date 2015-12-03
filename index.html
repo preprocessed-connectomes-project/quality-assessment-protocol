@@ -90,7 +90,13 @@ apt-get install -y fsl-5.0-complete
 
 <h3 id="python-dependencies-and-qap">Python Dependencies and QAP</h3>
 
-<p>QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run.  If you have <code>pip</code>, you may install all of these and QAP itself by typing in the command below:</p>
+<p>QAP depends on some visualization packages, which in turn require that some additional <a href="http://pillow.readthedocs.org/en/3.0.x/installation.html#external-libraries">system-level dependencies</a> be installed.  Under Ubuntu, you can install these system-level dependencies by typing:</p>
+
+<pre><code>sudo apt-get build-dep python-imaging
+sudo apt-get install libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev
+</code></pre>
+
+<p>In addtion to the visualization packges above, QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run. If you have <code>pip</code>, you may install all of these, the visualization packages, and QAP itself by typing in the command below:</p>
 
 <pre><code>pip install qap
 </code></pre>
