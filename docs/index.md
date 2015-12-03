@@ -48,7 +48,12 @@ We do not recommend using Neurodebian's AFNI binary, as we have encountered diff
 
 ### Python Dependencies and QAP
 
-QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run.  If you have `pip`, you may install all of these and QAP itself by typing in the command below:
+QAP depends on some visualization packages, which in turn require that some additional [system-level dependencies](http://pillow.readthedocs.org/en/3.0.x/installation.html#external-libraries) be installed.  Under Ubuntu, you can install these system-level dependencies by typing:
+
+    sudo apt-get build-dep python-imaging
+    sudo apt-get install libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev
+
+In addtion to the visualization packges above, QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run. If you have `pip`, you may install all of these, the visualization packages, and QAP itself by typing in the command below:
 
     pip install qap
 
