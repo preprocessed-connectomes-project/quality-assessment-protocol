@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # @Date:   2015-10-16 12:52:35
-# @Last Modified by:   Oscar Esteban
-# @Last Modified time: 2015-10-22 12:16:13
+# @Last Modified by:   oesteban
+# @Last Modified time: 2015-12-03 18:11:55
 import os
 import os.path as op
 import sys
@@ -250,14 +250,16 @@ class QAProtocolCLI:
         # Report errors
         formatted = []
         for r in results:
-            formatted.append('subject_id=%s, session=%s, scan=%s' %
-                             (r['id'], r['session'], r['scan']))
-            formatted.append('Traceback:')
-            formatted.append('%s\n\n' % r['traceback'])
+            if 'traceback' in r.keys():
+                formatted.append('subject_id=%s, session=%s, scan=%s' %
+                                 (r['id'], r['session'], r['scan']))
+                formatted.append('Traceback:')
+                formatted += r['traceback'] + ['\n']
 
-        with open(op.join(config["output_directory"], 'workflows.err'),
-                  'w+') as f:
-            f.write('\n'.join(formatted))
+        if formatted:
+            with open(op.join(config["output_directory"], 'workflows.err'),
+                      'w+') as f:
+                f.write('\n'.join(formatted))
 
         # PDF reporting
         if write_report:
