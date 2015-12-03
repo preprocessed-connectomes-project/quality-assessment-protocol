@@ -5,6 +5,8 @@
 # @Last Modified time: 2015-10-22 12:16:13
 import os
 import os.path as op
+import sys
+from traceback import format_exception
 import time
 import argparse
 import yaml
@@ -422,9 +424,11 @@ def _run_workflow(args):
         try:
             workflow.run(**runargs)
             rt['status'] = 'finished'
-        except Exception as e:  # TODO We should be more specific here ...
-            rt.update({'status': 'failed', 'msg': e.msg})
-            # ... however this is run inside a pool.map: do not raise Execption
+        except Exception as e:
+            etype, evalue, etrace = sys.exc_info()
+            rt.update({'status': 'failed', 'msg': '%s' % e,
+                       'traceback': format_exception(etype, evalue, etrace)})
+            # ... however this is run inside a pool.map: do not raise Exception
 
     else:
         rt['status'] = 'cached'
