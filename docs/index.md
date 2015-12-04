@@ -21,6 +21,7 @@ For more information, please see our recent [resting-state poster and associated
 * [Running the QAP Pipelines on AWS Cloud Instances](#running-the-qap-pipelines-on-aws-amazon-cloud-instances)
 * [Merging Outputs](#merging-outputs)
 * [Generating Reports](#generating-reports) 
+* [The QAP Team](#the-qap-team) 
 * [References](#references)
 
 ## Installing the QAP Package
@@ -334,6 +335,20 @@ For example, if you wanted to obtain functional spatial measures from an S3 buck
     qap_download_output_from_S3.py subjects/outputs /home/wintermute/Documents/aws-keys.csv the_big_run func_spatial /home/wintermute/qap_outputs
 
 With the above commands, the outputs will be stored in a directory named `qap_outputs` in the user *wintermute*'s home folder.  As with the pipeline commands from earlier, more information on this command's usage can be obtained by running it with the *-h* flag.  
+
+## The QAP Team
+
+### Primary Development
+Cameron Craddock (Team Lead)
+Steven Giavasis (Developer)
+Daniel Clark (Developer)
+Zarrar Shezhad (Developer)
+John Pellman (User Support and Documentation)
+
+### Other Contributors
+Chris Filo Gorgolewski
+Craig Moodie
+Oscar Esteban
 
 ## References
 
