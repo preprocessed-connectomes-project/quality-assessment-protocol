@@ -339,15 +339,23 @@ With the above commands, the outputs will be stored in a directory named `qap_ou
 ## The QAP Team
 
 ### Primary Development
+
 Cameron Craddock (Team Lead)
+
 Steven Giavasis (Developer)
+
 Daniel Clark (Developer)
+
 Zarrar Shezhad (Developer)
+
 John Pellman (User Support and Documentation)
 
 ### Other Contributors
+
 Chris Filo Gorgolewski
+
 Craig Moodie
+
 Oscar Esteban
 
 ## References
