@@ -378,16 +378,16 @@ def _run_workflow(args):
     new_outputs = 0
 
     out_list = ['qap_' + qap_type]
-    if keep_outputs:
-        out_list = resource_pool.keys()
 
     # Save reports to out_dir if necessary
     if config.get('write_report', False):
         out_list += ['qap_mosaic']
-
         # The functional temporal also has an FD plot
         if 'functional_temporal' in qap_type:
             out_list += ['qap_fd']
+
+    if keep_outputs:
+        out_list = resource_pool.keys()
 
     for output in out_list:
         # we use a check for len()==2 here to select those items in the
