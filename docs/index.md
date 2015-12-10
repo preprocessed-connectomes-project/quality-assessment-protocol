@@ -21,6 +21,7 @@ For more information, please see our recent [resting-state poster and associated
 * [Running the QAP Pipelines on AWS Cloud Instances](#running-the-qap-pipelines-on-aws-amazon-cloud-instances)
 * [Merging Outputs](#merging-outputs)
 * [Generating Reports](#generating-reports) 
+* [The QAP Team](#the-qap-team) 
 * [References](#references)
 
 ## Installing the QAP Package
@@ -37,16 +38,23 @@ QAP requires AFNI and FSL to run. Links to installation instructions for AFNI an
 * [AFNI Installation](http://afni.nimh.nih.gov/pub/dist/HOWTO/howto/ht00_inst/html)
 * [FSL Installation](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation)
 
-If you are using a Debian-based Linux distribution, you can use `apt-get` by first adding Neurodebian to the apt repository list and then installing the Neurodebian FSL and AFNI packages:
+If you are using a Debian-based Linux distribution, you can use `apt-get` to install FSL by first adding Neurodebian to the apt repository list:
 
     wget -O- http://neuro.debian.net/lists/$(lsb_release -cs).us-nh.full | tee /etc/apt/sources.list.d/neurodebian.sources.list
     apt-key adv --recv-keys --keyserver pgp.mit.edu 2649A5A9
     apt-get update
-    apt-get install -y fsl-5.0-complete afni
+    apt-get install -y fsl-5.0-complete 
+
+We do not recommend using Neurodebian's AFNI binary, as we have encountered difficulty using QAP with this binary.
 
 ### Python Dependencies and QAP
 
-QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run.  If you have `pip`, you may install all of these and QAP itself by typing in the command below:
+QAP depends on some visualization packages, which in turn require that some additional [system-level dependencies](http://pillow.readthedocs.org/en/3.0.x/installation.html#external-libraries) be installed.  Under Ubuntu, you can install these system-level dependencies by typing:
+
+    sudo apt-get build-dep python-imaging
+    sudo apt-get install libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev
+
+In addtion to the visualization packges above, QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run. If you have `pip`, you may install all of these, the visualization packages, and QAP itself by typing in the command below:
 
     pip install qap
 
@@ -327,6 +335,28 @@ For example, if you wanted to obtain functional spatial measures from an S3 buck
     qap_download_output_from_S3.py subjects/outputs /home/wintermute/Documents/aws-keys.csv the_big_run func_spatial /home/wintermute/qap_outputs
 
 With the above commands, the outputs will be stored in a directory named `qap_outputs` in the user *wintermute*'s home folder.  As with the pipeline commands from earlier, more information on this command's usage can be obtained by running it with the *-h* flag.  
+
+## The QAP Team
+
+### Primary Development
+
+Cameron Craddock (Team Lead)
+
+Steven Giavasis (Developer)
+
+Daniel Clark (Developer)
+
+Zarrar Shezhad (Developer)
+
+John Pellman (User Support and Documentation)
+
+### Other Contributors
+
+Chris Filo Gorgolewski
+
+Craig Moodie
+
+Oscar Esteban
 
 ## References
 

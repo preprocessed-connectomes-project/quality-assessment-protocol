@@ -446,7 +446,6 @@ def _run_workflow(args):
             logger.warn('An error occured processing subject %s. Runtime dict:'
                         ' %s\nTraceback:\n%s' % (rt['id'], rt,
                                                  rt['traceback']))
-
     else:
         rt['status'] = 'cached'
         logger.info("\nEverything is already done for subject %s." % sub_id)
