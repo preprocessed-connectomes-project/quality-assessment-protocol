@@ -171,7 +171,7 @@ Note that *anatomical_scan* is the label for the type of resource (in this case,
 
 Alternatively, if you have already preprocessed some or all of your raw data, you can provide these pre-existing files as inputs directly to the QAP pipelines via your subject list manually.  The QAP pipelines will then use these files and skip any pre-processing steps involved in creating them, saving time and allowing you to use your own method of processing your data.  If these files were processed using the [C-PAC](http://fcp-indi.github.io/docs/user/index.html) software package, there is a script named *qap_cpac_output_sublist_generator.py* which will create a subject list YAML file pointing to these already generated files.  Note that this script will only work for C-PAC runs where FSL is used.  Its usage is as follows:
 
-    qap_cpac_output_sublist_generator.py {absolute path to the C-PAC output directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'} {the session format- can be '1','2', or '3', whose corresponding formats are described in more detail below}
+    qap_cpac_output_sublist_generator.py {absolute path to the C-PAC output pipeline directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'} {the session format- can be '1','2', or '3', whose corresponding formats are described in more detail below}
 
 The values for the session format argument can either be:
 
@@ -179,9 +179,9 @@ The values for the session format argument can either be:
     2 - For output organized in the form: /output/pipeline/subject_id/output/
     3 - For output organized in the form: /output/pipeline/subject_session/output/
 
-For example, if C-PAC results were stored in */home/wintermute/output/pipeline_FLIRT/80386_session_1*, you wanted to run anatomical measures, and you wanted to store the subject list in *subj_list.yml*, you would invoke:
+For example, if C-PAC results were stored in participant directories of the form */home/wintermute/output/pipeline_FLIRT/80386_session_1*, you wanted to run anatomical measures, and you wanted to store the subject list in *subj_list.yml*, you would invoke:
 
-    qap_cpac_output_sublist_generator.py /home/wintermute/output/pipeline_FLIRT/80386_session_1 /home/wintermute/qap_analysis/subj_list.yml anat 3
+    qap_cpac_output_sublist_generator.py /home/wintermute/output/pipeline_FLIRT /home/wintermute/qap_analysis/subj_list.yml anat 3
 
 Below is a list of intermediary files used in the steps leading to the final QAP measures calculations. If you already have some of these processed for your data, they can be included in the subject list with the label on the left. For example, if you've already deobliqued, reoriented and skull-stripped your anatomical scans, you would list them in your subject list YAML file like so:
 
