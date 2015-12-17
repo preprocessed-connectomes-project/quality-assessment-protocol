@@ -74,7 +74,6 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
     check_input_resources(resource_pool, "functional_scan")
     check_config_settings(config, "start_idx")
     check_config_settings(config, "stop_idx")
-    check_config_settings(config, "slice_timing_correction")
 
 
     func_get_idx = pe.Node(util.Function(input_names=['in_files', 
@@ -99,20 +98,13 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
 
 
     workflow.connect(func_get_idx, 'startidx',
-                    func_drop_trs, 'start_idx')
+                     func_drop_trs, 'start_idx')
 
     workflow.connect(func_get_idx, 'stopidx',
-                    func_drop_trs, 'stop_idx')
+                     func_drop_trs, 'stop_idx')
     
     #workflow.connect(func_drop_trs, 'out_file',
     #                outputNode, 'drop_tr')
-    
-    
-    func_slice_timing_correction = pe.Node(interface=preprocess.TShift(),
-                                           name='func_slice_time_correction')
-
-    func_slice_timing_correction.inputs.outputtype = 'NIFTI_GZ'
-    
 
     func_deoblique = pe.Node(interface=preprocess.Refit(),
                             name='func_deoblique')
@@ -120,19 +112,8 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
     func_deoblique.inputs.deoblique = True
     
     
-    if config["slice_timing_correction"] == True:
-
-        workflow.connect(func_drop_trs, 'out_file',
-                        func_slice_timing_correction,'in_file')
-       
-        workflow.connect(func_slice_timing_correction, 'out_file',
-                        func_deoblique, 'in_file')
-        
-
-    else:
-
-        workflow.connect(func_drop_trs, 'out_file',
-                        func_deoblique, 'in_file')
+    workflow.connect(func_drop_trs, 'out_file',
+                     func_deoblique, 'in_file')
     
 
 
@@ -151,10 +132,21 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
                             name='func_get_mean_RPI')
     func_get_mean_RPI.inputs.options = '-mean'
     func_get_mean_RPI.inputs.outputtype = 'NIFTI_GZ'
-
     
     workflow.connect(func_reorient, 'out_file',
                     func_get_mean_RPI, 'in_file')
+
+
+    # get the first volume of the time series
+    get_func_volume = pe.Node(interface=preprocess.Calc(),
+                              name='get_func_volume')
+         
+    get_func_volume.inputs.expr = 'a'
+    get_func_volume.inputs.single_idx = 0
+    get_func_volume.inputs.outputtype = 'NIFTI_GZ'
+
+    workflow.connect(func_drop_trs, 'out_file',
+                         get_func_volume, 'in_file_a')
         
 
     # calculate motion parameters
@@ -169,10 +161,12 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
     workflow.connect(func_reorient, 'out_file',
                      func_motion_correct, 'in_file')
 
-    workflow.connect(func_get_mean_RPI, 'out_file',
+    #workflow.connect(func_get_mean_RPI, 'out_file',
+    workflow.connect(get_func_volume, 'out_file',
                      func_motion_correct, 'basefile')
 
 
+    '''
     func_get_mean_motion = func_get_mean_RPI.clone('func_get_mean_motion')
 
     workflow.connect(func_motion_correct, 'out_file',
@@ -188,19 +182,19 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
 
     workflow.connect(func_get_mean_motion, 'out_file',
                      func_motion_correct_A, 'basefile')
+    '''
 
 
-    resource_pool["func_motion_correct"] = (func_motion_correct_A, 'out_file')
+    resource_pool["func_motion_correct"] = (func_motion_correct, 'out_file')
     resource_pool["coordinate_transformation"] = \
-        (func_motion_correct_A, 'oned_matrix_save')
+        (func_motion_correct, 'oned_matrix_save')
 
 
     return workflow, resource_pool
 
 
 
-def run_func_motion_correct(functional_scan, start_idx, stop_idx,
-                                slice_timing_correction=False, run=True):
+def run_func_motion_correct(functional_scan, start_idx, stop_idx, run=True):
 
     # stand-alone runner for functional motion correct workflow
 
@@ -227,7 +221,7 @@ def run_func_motion_correct(functional_scan, start_idx, stop_idx,
 
     config["start_idx"] = start_idx
     config["stop_idx"] = stop_idx
-    config["slice_timing_correction"] = slice_timing_correction
+    #config["slice_timing_correction"] = slice_timing_correction
     
     workflow, resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config)

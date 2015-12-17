@@ -13,28 +13,34 @@ def select_thresh(input_skull):
     max_limit = int(avg * 3)
 
     # get the voxel intensity bins
-    cmd_in = "3dHist -input %s -nbin 10 -max %d -showhist" % \
-             (input_skull, max_limit)
+    cmd_in = "3dhistog -nbin 10 -max %d %s" % (max_limit, input_skull)
 
     cmd_out = commands.getoutput(cmd_in)
 
-    os.system("rm HistOut.niml.hist")
+    #os.system("rm HistOut.niml.hist")
 
     bins = {}
 
-    for line in cmd_out.split("\n"):
+    val_lines = cmd_out.split("\n")[-10:]
 
-        if "*" in line and not line.startswith("*"):
+    for line in val_lines:
 
-            vox_bin = line.replace(" ", "").split(":")[0]
+        line = line.split(" ")
 
-            voxel_value = int(float(vox_bin.split(",")[0]))
+        for i in range(0,line.count("")):
+            line.remove("")
 
-            bins[int(vox_bin.split(",")[1])] = voxel_value
+        freq = line[1]
+        voxel_value = line[0]
+
+        bins[int(freq)] = voxel_value
+
 
     thresh_out = bins[min(bins.keys())]
 
+
     return thresh_out
+
 
 
 def slice_head_mask(infile, transform, standard):
@@ -326,8 +332,7 @@ def qap_functional_temporal(
     percent_fd = (num_fd * 100) / (len(fd) + 1)
 
     # 3dTout
-    mean_outlier = mean_outlier_timepoints(func_motion_correct,
-                                           func_brain_mask)
+    mean_outlier = mean_outlier_timepoints(func_motion_correct)
 
     # 3dTqual
     mean_quality = mean_quality_timepoints(func_motion_correct)

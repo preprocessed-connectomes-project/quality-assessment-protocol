@@ -85,7 +85,7 @@ def fd_jenkinson(in_file, rmax=80., out_file=None):
 
 
 # 3dTout
-def outlier_timepoints(func_file, mask_file, out_fraction=True):
+def outlier_timepoints(func_file, out_fraction=True):
     """
     Calculates the number of 'outliers' in a 4D functional dataset,
     at each time-point.
@@ -113,7 +113,7 @@ def outlier_timepoints(func_file, mask_file, out_fraction=True):
     opts = []
     if out_fraction:
         opts.append("-fraction")
-    opts.append("-mask %s" % mask_file)
+    #opts.append("-mask %s" % mask_file)
     opts.append(func_file)
     str_opts = " ".join(opts)
 
@@ -139,7 +139,7 @@ def mean_outlier_timepoints(*args, **kwrds):
 
 
 # 3dTqual
-def quality_timepoints(func_file, automask=True):
+def quality_timepoints(func_file):
     """
     Calculates a 'quality index' for each timepoint in the 4D functional
     dataset. Low values are good and indicate that the timepoint is not very
@@ -149,8 +149,6 @@ def quality_timepoints(func_file, automask=True):
     import subprocess
 
     opts = []
-    if automask:
-        opts.append("-automask")
     opts.append(func_file)
     str_opts = " ".join(opts)
 
