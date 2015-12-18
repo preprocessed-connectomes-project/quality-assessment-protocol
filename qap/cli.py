@@ -416,7 +416,7 @@ def _run_workflow(args):
         nc_per_subject = config.get('num_cores_per_subject', 1)
         runargs = {'plugin': 'Linear', 'plugin_args': {}}
         if nc_per_subject > 1:
-            runargs['plugin'] = 'MultiProc',
+            runargs['plugin'] = 'MultiProc'
             runargs['plugin_args'] = {'n_procs': nc_per_subject}
 
         try:
