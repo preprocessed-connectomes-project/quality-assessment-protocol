@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # @Date:   2015-10-16 12:52:35
-# @Last Modified by:   Oscar Esteban
-# @Last Modified time: 2015-10-22 12:16:13
+# @Last Modified by:   oesteban
+# @Last Modified time: 2015-12-03 18:11:55
 import os
 import os.path as op
+import sys
+from traceback import format_exception
 import time
 import argparse
 import yaml
@@ -245,6 +247,20 @@ class QAProtocolCLI:
         else:
             results = self._run_cloud(run_name)
 
+        # Report errors
+        formatted = []
+        for r in results:
+            if 'traceback' in r.keys():
+                formatted.append('subject_id=%s, session=%s, scan=%s' %
+                                 (r['id'], r['session'], r['scan']))
+                formatted.append('Traceback:')
+                formatted += r['traceback'] + ['\n']
+
+        if formatted:
+            with open(op.join(config["output_directory"], 'workflows.err'),
+                      'w+') as f:
+                f.write('\n'.join(formatted))
+
         # PDF reporting
         if write_report:
             from qap.viz.reports import workflow_report
@@ -422,10 +438,14 @@ def _run_workflow(args):
         try:
             workflow.run(**runargs)
             rt['status'] = 'finished'
-        except Exception as e:  # TODO We should be more specific here ...
-            rt.update({'status': 'failed', 'msg': e})
-            # ... however this is run inside a pool.map: do not raise Execption
-
+        except Exception as e:
+            # ... however this is run inside a pool.map: do not raise Exception
+            etype, evalue, etrace = sys.exc_info()
+            tb = format_exception(etype, evalue, etrace)
+            rt.update({'status': 'failed', 'msg': '%s' % e, 'traceback': tb})
+            logger.warn('An error occured processing subject %s. Runtime dict:'
+                        ' %s\nTraceback:\n%s' % (rt['id'], rt,
+                                                 rt['traceback']))
     else:
         rt['status'] = 'cached'
         logger.info("\nEverything is already done for subject %s." % sub_id)
