@@ -2,6 +2,22 @@
 test_sub_dir = "test_data/1019436/session_1"
 
 
+def test_calculate_percent_outliers():
+
+    from qap.temporal_qc import calculate_percent_outliers
+
+    dataset = [1,1,2,3,27,34,45,49,54,55,67,294,345,352,356,593,632,675,763,\
+        764,825,866,2954,4634,4856,5934,29954]
+
+    percent_outliers, IQR = calculate_percent_outliers(dataset)
+
+    out_tuple = (percent_outliers, IQR)
+
+
+    assert out_tuple == (0.18518518518518517, 747.5)
+
+
+
 def test_fd_jenkinson():
 
     import os
@@ -161,6 +177,7 @@ def test_global_correlation():
 
 def run_all_tests_temporal_qc():
 
+    test_calculate_percent_outliers()
     test_fd_jenkinson()
     test_summarize_fd()
     test_summarize_fd_threshold_01()

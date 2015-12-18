@@ -1,42 +1,12 @@
 
 
-def select_thresh(input_skull):
+def run_3dClipLevel(input_skull):
 
-    import os
     import commands
 
-    avg_in = "3dmaskave %s" % input_skull
+    cmd = "3dClipLevel %s" % input_skull
 
-    avg_out = commands.getoutput(avg_in)
-
-    avg = int(float(avg_out.split("\n")[-1].split(" ")[0]))
-    max_limit = int(avg * 3)
-
-    # get the voxel intensity bins
-    cmd_in = "3dhistog -nbin 10 -max %d %s" % (max_limit, input_skull)
-
-    cmd_out = commands.getoutput(cmd_in)
-
-    #os.system("rm HistOut.niml.hist")
-
-    bins = {}
-
-    val_lines = cmd_out.split("\n")[-10:]
-
-    for line in val_lines:
-
-        line = line.split(" ")
-
-        for i in range(0,line.count("")):
-            line.remove("")
-
-        freq = line[1]
-        voxel_value = line[0]
-
-        bins[int(freq)] = voxel_value
-
-
-    thresh_out = bins[min(bins.keys())]
+    thresh_out = int(float((commands.getoutput(cmd).split("\n")[1])))
 
 
     return thresh_out
@@ -179,6 +149,7 @@ def slice_head_mask(infile, transform, standard):
     return outfile_path
 
 
+
 def qap_anatomical_spatial(anatomical_reorient, head_mask_path,
                            anatomical_gm_mask, anatomical_wm_mask,
                            anatomical_csf_mask, subject_id, session_id,
@@ -253,6 +224,7 @@ def qap_anatomical_spatial(anatomical_reorient, head_mask_path,
     return qc
 
 
+
 def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
                            session_id, scan_id, site_name=None,
                            out_vox=True):
@@ -308,6 +280,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
     return qc
 
 
+
 def qap_functional_temporal(
         func_motion_correct, func_brain_mask, tsnr_volume, fd_file,
         subject_id, session_id, scan_id, site_name=None, motion_threshold=1.0):
@@ -317,7 +290,8 @@ def qap_functional_temporal(
     import numpy as np
 
     from qap.temporal_qc import mean_dvars_wrapper, mean_outlier_timepoints, \
-        mean_quality_timepoints, global_correlation
+        mean_quality_timepoints, global_correlation, \
+        calculate_percent_outliers
 
     # DVARS
     mean_dvars = mean_dvars_wrapper(func_motion_correct, func_brain_mask)
@@ -325,17 +299,20 @@ def qap_functional_temporal(
     # Mean FD (Jenkinson)
     fd = np.loadtxt(fd_file)
 
+    meanfd_outliers, meanfd_iqr = calculate_percent_outliers(fd)
+
     # Calculate Outliers
     # Number and Percent of frames (time points) where
     # movement (FD) exceeded threshold
-    num_fd = np.float((fd > motion_threshold).sum())
-    percent_fd = (num_fd * 100) / (len(fd) + 1)
+    #num_fd = np.float((fd > motion_threshold).sum())
+    #percent_fd = (num_fd * 100) / (len(fd) + 1)
 
     # 3dTout
     mean_outlier = mean_outlier_timepoints(func_motion_correct)
 
     # 3dTqual
-    mean_quality = mean_quality_timepoints(func_motion_correct)
+    mean_quality, qual_perc_out, qual_IQR = \
+        mean_quality_timepoints(func_motion_correct)
 
     # new thing
     gcor = global_correlation(func_motion_correct, func_brain_mask)
@@ -355,11 +332,13 @@ def qap_functional_temporal(
         "scan":      scan_id,
         "dvars":     mean_dvars,
         "m_tsnr":    np.median(tsnr_data[msk_data > 0]),
-        "mean_fd":   fd.mean(),
-        'num_fd':    num_fd,
-        'perc_fd':   percent_fd,
+        "Mean FD":   fd.mean(),
+        "Mean FD percent outliers": meanfd_outliers,
+        "Mean FD IQR": meanfd_iqr,
         "outlier":   mean_outlier,
-        "quality":   mean_quality,
+        "Quality":   mean_quality,
+        "Quality percent outliers": qual_perc_out,
+        "Quality IQR": qual_IQR,
         "gcor":      gcor
     }
 

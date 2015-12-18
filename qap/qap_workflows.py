@@ -17,11 +17,9 @@ def qap_mask_workflow(workflow, resource_pool, config):
     import nipype.interfaces.fsl.maths as fsl
     from nipype.interfaces.fsl.base import Info
 
-    from qap_workflows_utils import select_thresh, \
-        slice_head_mask
+    from qap_workflows_utils import run_3dClipLevel, slice_head_mask
 
-    from workflow_utils import check_input_resources, \
-        check_config_settings
+    from workflow_utils import check_input_resources, check_config_settings
 
     # check_input_resources(resource_pool, 'anatomical_reorient')
     # check_input_resources(resource_pool, 'ants_affine_xfm')
@@ -48,7 +46,7 @@ def qap_mask_workflow(workflow, resource_pool, config):
 
     select_thresh = pe.Node(niu.Function(
         input_names=['input_skull'], output_names=['thresh_out'],
-        function=select_thresh), name='qap_headmask_select_thresh',
+        function=run_3dClipLevel), name='qap_headmask_3dClipLevel',
         iterfield=['input_skull'])
 
     mask_skull = pe.Node(

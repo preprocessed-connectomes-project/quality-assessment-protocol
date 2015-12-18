@@ -13,6 +13,32 @@ import shutil
 from dvars import mean_dvars_wrapper
 
 
+def calculate_percent_outliers(values_list):
+
+    import numpy as np
+
+    # calculate the IQR
+    sorted_values = sorted(values_list)
+
+    third_qr, first_qr = np.percentile(sorted_values, [75, 25])
+    IQR = third_qr - first_qr
+
+    # calculate percent outliers
+    third_qr_threshold = third_qr + (1.5 * IQR)
+    first_qr_threshold = first_qr - (1.5 * IQR)
+
+    high_outliers = [val for val in sorted_values if val > third_qr_threshold]
+    low_outliers = [val for val in sorted_values if val < first_qr_threshold]
+
+    total_outliers = high_outliers + low_outliers
+
+    percent_outliers = float(len(total_outliers)) / float(len(sorted_values))
+
+
+    return percent_outliers, IQR
+
+
+
 def fd_jenkinson(in_file, rmax=80., out_file=None):
     '''
     @ Krsna
@@ -84,8 +110,9 @@ def fd_jenkinson(in_file, rmax=80., out_file=None):
     return out_file
 
 
-# 3dTout
+
 def outlier_timepoints(func_file, out_fraction=True):
+
     """
     Calculates the number of 'outliers' in a 4D functional dataset,
     at each time-point.
@@ -109,6 +136,7 @@ def outlier_timepoints(func_file, out_fraction=True):
 
     import commands
     import re
+    import numpy as np
 
     opts = []
     if out_fraction:
@@ -129,7 +157,9 @@ def outlier_timepoints(func_file, out_fraction=True):
     # remove general information and warnings
     outliers = [float(l) for l in lines if re.match("[0-9]+$", l.strip())]
 
+
     return outliers
+
 
 
 def mean_outlier_timepoints(*args, **kwrds):
@@ -138,8 +168,9 @@ def mean_outlier_timepoints(*args, **kwrds):
     return mean_outliers
 
 
-# 3dTqual
+
 def quality_timepoints(func_file):
+
     """
     Calculates a 'quality index' for each timepoint in the 4D functional
     dataset. Low values are good and indicate that the timepoint is not very
@@ -158,24 +189,27 @@ def quality_timepoints(func_file):
                          stderr=subprocess.PIPE)
     out, err = p.communicate()
 
-    #import code
-    # code.interact(local=locals())
-
     # Extract time-series in output
     lines = out.splitlines()
     # remove general information
     lines = [l for l in lines if l[:2] != "++"]
     # string => floats
-    outliers = [float(l.strip())
+    quality = [float(l.strip())
                 for l in lines]  # note: don't really need strip
 
-    return outliers
+    # get percent outliers and IQR
+    percent_outliers, IQR = calculate_percent_outliers(quality)
+
+
+    return quality, percent_outliers, IQR
+
 
 
 def mean_quality_timepoints(*args, **kwrds):
-    qualities = quality_timepoints(*args, **kwrds)
+    qualities, percent_outliers, IQR = quality_timepoints(*args, **kwrds)
     mean_qualities = np.mean(qualities)
-    return mean_qualities
+    return mean_qualities, percent_outliers, IQR
+
 
 
 def global_correlation(func_motion, func_mask):
