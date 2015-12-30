@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Date:   2015-10-16 12:52:35
-# @Last Modified by:   Oscar Esteban
-# @Last Modified time: 2015-10-22 12:16:13
+# emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
+# vi: set ft=python sts=4 ts=4 sw=4 et:
+
 import os
 import os.path as op
 import time
@@ -108,9 +108,6 @@ class QAProtocolCLI:
 
         self._config['pipeline_config_yaml'] = args.config
         self._config['qap_type'] = parser.prog[4:-3]
-
-        if 'write_report' not in self._config:
-            self._config['write_report'] = False
 
         if args.with_reports:
             self._config['write_report'] = True
@@ -409,9 +406,10 @@ def _run_workflow(args):
           'status': 'started'}
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
-        workflow.write_graph(
-            dotfilename=op.join(output_dir, run_name + ".dot"),
-            simple_form=False)
+        if config.get('write_graph', False):
+            workflow.write_graph(
+                dotfilename=op.join(output_dir, run_name + ".dot"),
+                simple_form=False)
 
         nc_per_subject = config.get('num_cores_per_subject', 1)
         runargs = {'plugin': 'Linear', 'plugin_args': {}}
