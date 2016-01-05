@@ -190,7 +190,7 @@ def test_qap_functional_temporal():
 
 def run_all_tests_qap_workflows_utils():
 
-    test_select_thresh()
+    test_run_3dClipLevel()
     test_slice_head_mask()
     test_qap_anatomical_spatial()
     test_qap_functional_spatial()

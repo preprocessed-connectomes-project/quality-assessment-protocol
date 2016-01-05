@@ -308,7 +308,8 @@ def qap_functional_temporal(
     #percent_fd = (num_fd * 100) / (len(fd) + 1)
 
     # 3dTout
-    mean_outlier = mean_outlier_timepoints(func_motion_correct)
+    mean_outlier, outlier_perc_out, outlier_IQR = \
+        mean_outlier_timepoints(func_motion_correct)
 
     # 3dTqual
     mean_quality, qual_perc_out, qual_IQR = \
@@ -332,10 +333,12 @@ def qap_functional_temporal(
         "scan":      scan_id,
         "dvars":     mean_dvars,
         "m_tsnr":    np.median(tsnr_data[msk_data > 0]),
-        "Mean FD":   fd.mean(),
-        "Mean FD percent outliers": meanfd_outliers,
-        "Mean FD IQR": meanfd_iqr,
-        "outlier":   mean_outlier,
+        "FD (Mean)":   fd.mean(),
+        "FD percent outliers": meanfd_outliers,
+        "FD IQR": meanfd_iqr,
+        "Num Outliers (Mean)": mean_outlier,
+        "Num Outliers percent outliers": outlier_perc_out,
+        "Num Outliers IQR": outlier_IQR,
         "Quality":   mean_quality,
         "Quality percent outliers": qual_perc_out,
         "Quality IQR": qual_IQR,

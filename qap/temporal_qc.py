@@ -163,9 +163,15 @@ def outlier_timepoints(func_file, out_fraction=True):
 
 
 def mean_outlier_timepoints(*args, **kwrds):
+
     outliers = outlier_timepoints(*args, **kwrds)
+    
+    # calculate the outliers of the outliers! AAHH!
+    percent_outliers, IQR = calculate_percent_outliers(outliers)
+
     mean_outliers = np.mean(outliers)
-    return mean_outliers
+    
+    return mean_outliers, percent_outliers, IQR
 
 
 
