@@ -13,26 +13,58 @@ import shutil
 from dvars import mean_dvars_wrapper
 
 
+def pass_floats(output_string):
+
+    # for parsing AFNI output strings
+
+    lines = output_string.splitlines()
+
+    values_list = []
+
+    for l in lines:
+
+        try:
+            val = float(l)
+            values_list.append(val)
+        except:
+            pass
+
+
+    return values_list
+
+
+
 def calculate_percent_outliers(values_list):
 
-    import numpy as np
+    try:
 
-    # calculate the IQR
-    sorted_values = sorted(values_list)
+        import numpy as np
 
-    third_qr, first_qr = np.percentile(sorted_values, [75, 25])
-    IQR = third_qr - first_qr
+        # calculate the IQR
+        sorted_values = sorted(values_list)
 
-    # calculate percent outliers
-    third_qr_threshold = third_qr + (1.5 * IQR)
-    first_qr_threshold = first_qr - (1.5 * IQR)
+        third_qr, first_qr = np.percentile(sorted_values, [75, 25])
+        IQR = third_qr - first_qr
 
-    high_outliers = [val for val in sorted_values if val > third_qr_threshold]
-    low_outliers = [val for val in sorted_values if val < first_qr_threshold]
+        # calculate percent outliers
+        third_qr_threshold = third_qr + (1.5 * IQR)
+        first_qr_threshold = first_qr - (1.5 * IQR)
 
-    total_outliers = high_outliers + low_outliers
+        high_outliers = \
+            [val for val in sorted_values if val > third_qr_threshold]
+        low_outliers = \
+            [val for val in sorted_values if val < first_qr_threshold]
 
-    percent_outliers = float(len(total_outliers)) / float(len(sorted_values))
+        total_outliers = high_outliers + low_outliers
+
+        percent_outliers = \
+            float(len(total_outliers)) / float(len(sorted_values))
+
+    except Exception as e:
+
+        err = "\n\nLocals:\n%s\n\nError: %s\n\n" % (locals(), e)
+
+        raise Exception(err)
 
 
     return percent_outliers, IQR
@@ -152,10 +184,11 @@ def outlier_timepoints(func_file, out_fraction=True):
     out = commands.getoutput(cmd)
 
     # Extract time-series in output
-    lines = out.splitlines()
+    #lines = out.splitlines()
 
     # remove general information and warnings
-    outliers = [float(l) for l in lines if re.match("[0-9]+$", l.strip())]
+    #outliers = [float(l) for l in lines if re.match("[0-9]+$", l.strip())]
+    outliers = pass_floats(out)
 
 
     return outliers
@@ -165,7 +198,7 @@ def outlier_timepoints(func_file, out_fraction=True):
 def mean_outlier_timepoints(*args, **kwrds):
 
     outliers = outlier_timepoints(*args, **kwrds)
-    
+
     # calculate the outliers of the outliers! AAHH!
     percent_outliers, IQR = calculate_percent_outliers(outliers)
 
@@ -196,12 +229,14 @@ def quality_timepoints(func_file):
     out, err = p.communicate()
 
     # Extract time-series in output
-    lines = out.splitlines()
+    #lines = out.splitlines()
     # remove general information
-    lines = [l for l in lines if l[:2] != "++"]
+    #lines = [l for l in lines if l[:2] != "++"]
     # string => floats
-    quality = [float(l.strip())
-                for l in lines]  # note: don't really need strip
+    #quality = [float(l.strip())
+    #            for l in lines]  # note: don't really need strip
+
+    quality = pass_floats(out)
 
     # get percent outliers and IQR
     percent_outliers, IQR = calculate_percent_outliers(quality)

@@ -328,21 +328,21 @@ def qap_functional_temporal(
 
     # Compile
     qc = {
-        "subject":   subject_id,
-        "session":   session_id,
-        "scan":      scan_id,
-        "dvars":     mean_dvars,
+        "Participant":   subject_id,
+        "Session":   session_id,
+        "Series":      scan_id,
+        "Std. DVARS":     mean_dvars,
         "m_tsnr":    np.median(tsnr_data[msk_data > 0]),
         "FD (Mean)":   fd.mean(),
         "FD percent outliers": meanfd_outliers,
         "FD IQR": meanfd_iqr,
-        "Num Outliers (Mean)": mean_outlier,
-        "Num Outliers percent outliers": outlier_perc_out,
-        "Num Outliers IQR": outlier_IQR,
+        "Outliers Values (Mean)": mean_outlier,
+        "Outliers Values percent outliers": outlier_perc_out,
+        "Outliers Values IQR": outlier_IQR,
         "Quality":   mean_quality,
         "Quality percent outliers": qual_perc_out,
         "Quality IQR": qual_IQR,
-        "gcor":      gcor
+        "GCOR":      gcor
     }
 
     if site_name:
