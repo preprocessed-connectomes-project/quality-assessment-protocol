@@ -174,60 +174,56 @@ def qap_anatomical_spatial(anatomical_reorient, head_mask_path,
     # Initialize QC
     qc = dict()
 
-    qc['subject'] = subject_id
+    qc['Participant'] = subject_id
 
-    qc['session'] = session_id
+    qc['Session'] = session_id
 
-    qc['scan'] = scan_id
+    qc['Series'] = scan_id
 
     if site_name:
-        qc['site'] = site_name
+        qc['Site'] = site_name
 
     # FBER
-    qc['fber'] = fber(anat_data, fg_mask)
+    qc['FBER'] = fber(anat_data, fg_mask)
 
     # EFC
-    qc['efc'] = efc(anat_data)
+    qc['EFC'] = efc(anat_data)
 
     # Artifact
-    qc['qi1'], _ = artifacts(anat_data, fg_mask, calculate_qi2=False)
+    qc['Qi1'], _ = artifacts(anat_data, fg_mask, calculate_qi2=False)
 
     # Smoothness in voxels
     tmp = fwhm(anatomical_reorient, head_mask_path, out_vox=out_vox)
-    qc['fwhm_x'], qc['fwhm_y'], qc['fwhm_z'], qc['fwhm'] = tmp
+    qc['FWHM_x'], qc['FWHM_y'], qc['FWHM_z'], qc['FWHM'] = tmp
 
     # Summary Measures
-    qc['fg_mean'], qc['fg_std'], qc[
-        'fg_size'] = summary_mask(anat_data, fg_mask)
-    qc['bg_mean'], qc['bg_std'], qc[
-        'bg_size'] = summary_mask(anat_data, bg_mask)
+    fg_mean, fg_std, fg_size = summary_mask(anat_data, fg_mask)
+    bg_mean, bg_std, bg_size = summary_mask(anat_data, bg_mask)
 
-    qc['gm_mean'], qc['gm_std'], qc['gm_size'] = (None, None, None)
-    qc['wm_mean'], qc['wm_std'], qc['wm_size'] = (None, None, None)
-    qc['csf_mean'], qc['csf_std'], qc['csf_size'] = (None, None, None)
-    qc['cnr'] = None
-    qc['snr'] = None
+    gm_mean, gm_std, gm_size = (None, None, None)
+    wm_mean, wm_std, wm_size = (None, None, None)
+    csf_mean, csf_std, csf_size = (None, None, None)
+    qc['CNR'] = None
+    qc['SNR'] = None
 
     # More Summary Measures
-    qc['gm_mean'], qc['gm_std'], qc[
-        'gm_size'] = summary_mask(anat_data, gm_mask)
-    qc['wm_mean'], qc['wm_std'], qc[
-        'wm_size'] = summary_mask(anat_data, wm_mask)
-    qc['csf_mean'], qc['csf_std'], qc[
-        'csf_size'] = summary_mask(anat_data, csf_mask)
+    gm_mean, gm_std, gm_size = summary_mask(anat_data, gm_mask)
+    wm_mean, wm_std, wm_size = summary_mask(anat_data, wm_mask)
+    csf_mean, csf_std, csf_size = summary_mask(anat_data, csf_mask)
 
     # SNR
-    qc['snr'] = snr(qc['fg_mean'], qc['bg_std'])
+    qc['SNR'] = snr(fg_mean, bg_std)
 
     # CNR
-    qc['cnr'] = cnr(qc['gm_mean'], qc['wm_mean'], qc['bg_std'])
+    qc['CNR'] = cnr(gm_mean, wm_mean, bg_std)
+
+
     return qc
 
 
 
 def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
-                           session_id, scan_id, site_name=None,
-                           out_vox=True):
+                           session_id, scan_id, site_name=None, out_vox=True):
 
     import os
     import sys
@@ -242,48 +238,49 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
     bg_mask = 1 - fg_mask
 
     # Initialize QC
-    qc = dict(subject=subject_id, session=session_id, scan=scan_id)
+    qc = dict(Participant=subject_id, Session=session_id, Series=scan_id)
 
     if site_name:
-        qc['site'] = site_name
+        qc['Site'] = site_name
 
     # FBER
-    qc['fber'] = fber(anat_data, fg_mask)
+    qc['FBER'] = fber(anat_data, fg_mask)
 
     # EFC
-    qc['efc'] = efc(anat_data)
+    qc['EFC'] = efc(anat_data)
 
     # Smoothness in voxels
     tmp = fwhm(mean_epi, func_brain_mask, out_vox=out_vox)
-    qc['fwhm_x'], qc['fwhm_y'], qc['fwhm_z'], qc['fwhm'] = tmp
+    qc['FWHM_x'], qc['FWHM_y'], qc['FWHM_z'], qc['FWHM'] = tmp
 
     # Ghosting
     if (direction == "all"):
-        qc['ghost_x'] = ghost_direction(anat_data, fg_mask, "x")
-        qc['ghost_y'] = ghost_direction(anat_data, fg_mask, "y")
-        qc['ghost_z'] = ghost_direction(anat_data, fg_mask, "z")
+        qc['Ghost_x'] = ghost_direction(anat_data, fg_mask, "x")
+        qc['Ghost_y'] = ghost_direction(anat_data, fg_mask, "y")
+        qc['Ghost_z'] = ghost_direction(anat_data, fg_mask, "z")
 
     else:
-        qc['ghost_%s' % direction] = ghost_direction(anat_data, fg_mask,
+        qc['Ghost_%s' % direction] = ghost_direction(anat_data, fg_mask,
                                                      direction)
 
     # Summary Measures
-    qc['fg_mean'], qc['fg_std'], qc[
-        'fg_size'] = summary_mask(anat_data, fg_mask)
-    qc['bg_mean'], qc['bg_std'], qc[
-        'bg_size'] = summary_mask(anat_data, bg_mask)
+    fg_mean, fg_std, fg_size = summary_mask(anat_data, fg_mask)
+    bg_mean, bg_std, bg_size = summary_mask(anat_data, bg_mask)
 
-    qc['snr'] = None
+    qc['SNR'] = None
 
     # SNR
-    qc['snr'] = snr(qc['fg_mean'], qc['bg_std'])
+    qc['SNR'] = snr(fg_mean, bg_std)
+
+
     return qc
 
 
 
 def qap_functional_temporal(
         func_motion_correct, func_brain_mask, tsnr_volume, fd_file,
-        subject_id, session_id, scan_id, site_name=None, motion_threshold=1.0):
+        subject_id, session_id, scan_id, site_name=None, 
+        motion_threshold=1.0):
 
     import sys
     import nibabel as nb
@@ -346,6 +343,7 @@ def qap_functional_temporal(
     }
 
     if site_name:
-        qc['site'] = site_name
+        qc['Site'] = site_name
+
 
     return qc
