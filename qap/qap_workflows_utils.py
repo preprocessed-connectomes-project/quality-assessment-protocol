@@ -312,16 +312,8 @@ def qap_functional_temporal(
     mean_quality, qual_perc_out, qual_IQR = \
         mean_quality_timepoints(func_motion_correct)
 
-    # new thing
+    # GCOR
     gcor = global_correlation(func_motion_correct, func_brain_mask)
-
-    # tSNR
-    tsnr_data = nb.load(tsnr_volume).get_data()
-    msk_data = np.ones_like(tsnr_data)
-    try:
-        msk_data = nb.load(func_brain_mask).get_data()
-    except:
-        pass
 
     # Compile
     qc = {
@@ -329,7 +321,6 @@ def qap_functional_temporal(
         "Session":   session_id,
         "Series":      scan_id,
         "Std. DVARS":     mean_dvars,
-        "m_tsnr":    np.median(tsnr_data[msk_data > 0]),
         "FD (Mean)":   fd.mean(),
         "FD percent outliers": meanfd_outliers,
         "FD IQR": meanfd_iqr,
