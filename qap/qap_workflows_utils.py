@@ -278,7 +278,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
 
 def qap_functional_temporal(
-        func_motion_correct, func_brain_mask, tsnr_volume, fd_file,
+        func_timeseries, func_brain_mask, tsnr_volume, fd_file,
         subject_id, session_id, scan_id, site_name=None, 
         motion_threshold=1.0):
 
@@ -291,7 +291,7 @@ def qap_functional_temporal(
         calculate_percent_outliers
 
     # DVARS
-    mean_dvars = mean_dvars_wrapper(func_motion_correct, func_brain_mask)
+    mean_dvars = mean_dvars_wrapper(func_timeseries, func_brain_mask)
 
     # Mean FD (Jenkinson)
     fd = np.loadtxt(fd_file)
@@ -306,14 +306,14 @@ def qap_functional_temporal(
 
     # 3dTout
     mean_outlier, outlier_perc_out, outlier_IQR = \
-        mean_outlier_timepoints(func_motion_correct)
+        mean_outlier_timepoints(func_timeseries)
 
     # 3dTqual
     mean_quality, qual_perc_out, qual_IQR = \
-        mean_quality_timepoints(func_motion_correct)
+        mean_quality_timepoints(func_timeseries)
 
     # GCOR
-    gcor = global_correlation(func_motion_correct, func_brain_mask)
+    gcor = global_correlation(func_timeseries, func_brain_mask)
 
     # Compile
     qc = {

@@ -543,7 +543,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
             fd.inputs.in_file = resource_pool['coordinate_transformation']
 
     temporal = pe.Node(niu.Function(
-        input_names=['func_motion_correct', 'func_brain_mask', 'tsnr_volume',
+        input_names=['func_timeseries', 'func_brain_mask', 'tsnr_volume',
                      'fd_file', 'subject_id', 'session_id',
                      'scan_id', 'site_name'], output_names=['qc'],
         function=qap_functional_temporal), name='qap_functional_temporal')
@@ -556,16 +556,16 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
         temporal.inputs.site_name = config['site_name']
 
     tsnr = pe.Node(nam.TSNR(), name='compute_tsnr')
-    if len(resource_pool['func_motion_correct']) == 2:
-        node, out_file = resource_pool['func_motion_correct']
+    if len(resource_pool['func_reorient']) == 2:
+        node, out_file = resource_pool['func_reorient']
         workflow.connect(node, out_file, tsnr, 'in_file')
-        workflow.connect(node, out_file, temporal, 'func_motion_correct')
+        workflow.connect(node, out_file, temporal, 'func_timeseries')
     else:
         from workflow_utils import check_input_resources
-        check_input_resources(resource_pool, 'func_motion_correct')
-        input_file = resource_pool['func_motion_correct']
+        check_input_resources(resource_pool, 'func_reorient')
+        input_file = resource_pool['func_reorient']
         tsnr.inputs.in_file = input_file
-        temporal.inputs.func_motion_correct = input_file
+        temporal.inputs.func_timeseries = input_file
 
     if len(resource_pool['functional_brain_mask']) == 2:
         node, out_file = resource_pool['functional_brain_mask']
