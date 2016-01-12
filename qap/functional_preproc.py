@@ -220,7 +220,11 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
     func_get_mean_RPI.inputs.options = '-mean'
     func_get_mean_RPI.inputs.outputtype = 'NIFTI_GZ'
     
-    func_get_mean_RPI.inputs.in_file = resource_pool["func_reorient"]
+    if len(resource_pool["func_reorient"]) == 2:
+        node, out_file = resource_pool["func_reorient"]
+        workflow.connect(node, out_file, func_get_mean_RPI, 'in_file')
+    else:
+        func_get_mean_RPI.inputs.in_file = resource_pool["func_reorient"]
 
 
     # get the first volume of the time series
@@ -231,7 +235,11 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
     get_func_volume.inputs.single_idx = 0
     get_func_volume.inputs.outputtype = 'NIFTI_GZ'
 
-    get_func_volume.inputs.in_file_a = resource_pool["func_reorient"]
+    if len(resource_pool["func_reorient"]) == 2:
+        node, out_file = resource_pool["func_reorient"]
+        workflow.connect(node, out_file, get_func_volume, 'in_file_a')
+    else:
+        get_func_volume.inputs.in_file_a = resource_pool["func_reorient"]
         
 
     # calculate motion parameters
@@ -243,7 +251,11 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
     func_motion_correct.inputs.outputtype = 'NIFTI_GZ'
 
     
-    func_motion_correct.inputs.in_file = resource_pool["func_reorient"]
+    if len(resource_pool["func_reorient"]) == 2:
+        node, out_file = resource_pool["func_reorient"]
+        workflow.connect(node, out_file, func_motion_correct, 'in_file')
+    else:
+        func_motion_correct.inputs.in_file = resource_pool["func_reorient"]
 
     #workflow.connect(func_get_mean_RPI, 'out_file',
     workflow.connect(get_func_volume, 'out_file',
