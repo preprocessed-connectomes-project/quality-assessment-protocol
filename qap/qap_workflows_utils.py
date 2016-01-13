@@ -278,7 +278,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
 
 def qap_functional_temporal(
-        func_timeseries, func_brain_mask, tsnr_volume, fd_file,
+        func_timeseries, func_brain_mask, fd_file,
         subject_id, session_id, scan_id, site_name=None, 
         motion_threshold=1.0):
 
