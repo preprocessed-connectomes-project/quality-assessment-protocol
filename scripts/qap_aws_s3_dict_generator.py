@@ -145,13 +145,14 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, creds_pa
     # Filter for anat/rest
     if img_type == 'anat':
         subkey_type = 'anatomical_scan'
-    elif img_type == 'rest':
+    elif img_type == 'func':
         subkey_type = 'functional_scan'
 
 
     # Build S3-subjects to download
     for bk in bucket.objects.filter(Prefix=bucket_prefix):
         s3_list.append(str(bk.key))
+
 
     # Build dictionary of filepaths
     for sfile in s3_list:
@@ -164,13 +165,17 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, creds_pa
 
         scan_id = ssplit[-2]
 
-        if img_type in scan_id:
-             
+        filename = ssplit[-1]
+
+        if ((img_type == "anat") and ("anat" in scan_id or \
+            "mprage" in filename)) or ((img_type == "func") and \
+                ("rest" in scan_id or "func" in scan_id)):
+        
+            resource_dict = {}
+            resource_dict[subkey_type] = sfile
+
             # this ONLY handles raw data inputs, not CPAC-generated outputs!
             if not s3_dict.has_key((sub_id, session_id, scan_id)):
-
-                resource_dict = {}
-                resource_dict[subkey_type] = sfile
 
                 s3_dict[(sub_id, session_id, scan_id)] = {}
                 s3_dict[(sub_id, session_id, scan_id)].update(resource_dict)
@@ -192,8 +197,15 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, creds_pa
     dict_len = len(s3_dict)            
            
     # write yaml file
-    with open(yaml_outpath,"wt") as f:
-        f.write(yaml.dump(s3_dict))
+    try:
+        with open(yaml_outpath,"wt") as f:
+            f.write(yaml.dump(s3_dict))
+    except:
+        err = "\n\n[!] Error writing YAML file output.\n1. Do you have " \
+              "write permissions for the output path provided?\n2. Did you " \
+              "provide a full path for the output path? Example: /home/data" \
+              "/sublist.yml\n\nOutput path provided: %s\n\n" % yaml_outpath
+        raise Exception(err)
         
     
     if os.path.isfile(yaml_outpath):
