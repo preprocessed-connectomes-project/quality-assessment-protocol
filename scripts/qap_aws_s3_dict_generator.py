@@ -132,7 +132,8 @@ def return_bucket(creds_path, bucket_name):
     return bucket
 
 
-def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, creds_path):
+def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
+                        creds_path, series_list=None):
 
     import os
     import yaml
@@ -154,6 +155,19 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, creds_pa
         s3_list.append(str(bk.key))
 
 
+    # Read in series_list, if it is provided
+    if series_list:
+        try:
+            series_list = os.path.abspath(series_list)
+            with open(series_list,"r") as f:
+                series = f.readlines()
+            series = [i.rstrip("\n") for i in series]
+        except:
+            err = "\n\nCould not successfully read the series list.\n%s" \
+                  % series_list
+            raise Exception(err)
+
+
     # Build dictionary of filepaths
     for sfile in s3_list:
 
@@ -163,26 +177,32 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, creds_pa
 
         session_id = ssplit[-3]
 
-        scan_id = ssplit[-2]
+        scan_type = ssplit[-2]
 
         filename = ssplit[-1]
 
-        if ((img_type == "anat") and ("anat" in scan_id or \
-            "mprage" in filename)) or ((img_type == "func") and \
-                ("rest" in scan_id or "func" in scan_id)):
+        if (img_type == scan_type) and ("nii" in filename):
         
             resource_dict = {}
             resource_dict[subkey_type] = sfile
 
-            # this ONLY handles raw data inputs, not CPAC-generated outputs!
-            if not s3_dict.has_key((sub_id, session_id, scan_id)):
+            if series_list:
+                selected = 0
+                for series_name in series:
+                    if series_name in filename:
+                        selected = 1
+                if selected == 0:
+                    continue
 
-                s3_dict[(sub_id, session_id, scan_id)] = {}
-                s3_dict[(sub_id, session_id, scan_id)].update(resource_dict)
+            # this ONLY handles raw data inputs, not CPAC-generated outputs!
+            if not s3_dict.has_key((sub_id, session_id, filename)):
+
+                s3_dict[(sub_id, session_id, filename)] = {}
+                s3_dict[(sub_id, session_id, filename)].update(resource_dict)
 
             else:
 
-                s3_dict[(sub_id, session_id, scan_id)].update(resource_dict)         
+                s3_dict[(sub_id, session_id, filename)].update(resource_dict)    
 
         else:
 
@@ -244,13 +264,18 @@ def main():
     parser.add_argument("outfile_path", type=str, \
                             help="the full filepath for the S3 subject " \
                                  "YAML dictionary this script will create")
+
+    parser.add_argument("--series_list", type=str, \
+                            help="filepath to a text file containing the " \
+                                 "names of series you want included, one " \
+                                 "on each line")
  
     args = parser.parse_args()
 
 
     # run it!
     pull_S3_sublist(args.outfile_path, args.scan_type, args.bucket_name, \
-                        args.bucket_prefix, args.creds_path)
+                        args.bucket_prefix, args.creds_path, args.series_list)
 
 
 
