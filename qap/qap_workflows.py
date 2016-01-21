@@ -172,12 +172,12 @@ def add_header_to_qap_dict(in_file, qap_dict=None):
                    "data_type", "qform_code", "sform_code"]
 
     for info_label in info_labels:
-        qap_dict[info_label] = img.header[info_label]
+        qap_dict[info_label] = str(img.header[info_label])
 
-    qap_dict["pix_dimx"] = img.header['pixdim'][1]
-    qap_dict["pix_dimy"] = img.header['pixdim'][2]
-    qap_dict["pix_dimz"] = img.header['pixdim'][3]
-    qap_dict["tr"] = img.header['pixdim'][4]
+    qap_dict["pix_dimx"] = str(img.header['pixdim'][1])
+    qap_dict["pix_dimy"] = str(img.header['pixdim'][2])
+    qap_dict["pix_dimz"] = str(img.header['pixdim'][3])
+    qap_dict["tr"] = str(img.header['pixdim'][4])
     qap_dict["extensions"] = len(img.header.extensions.get_codes())
 
 
@@ -187,6 +187,7 @@ def add_header_to_qap_dict(in_file, qap_dict=None):
 
 def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
                                     report=False):
+
     # resource pool should have:
     #     anatomical_reorient
     #     qap_head_mask
@@ -670,7 +671,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
                              input_names=['in_file', 'qap_dict'],
                              output_names=['qap_dict'],
                              function=add_header_to_qap_dict),
-                     name="add_header_to_functional_temporal_csv")
+                             name="add_header_to_functional_temporal_csv")
 
     if len(resource_pool['func_reorient']) == 2:
         node, out_file = resource_pool['func_reorient']
@@ -683,10 +684,9 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
     temporal_to_csv = pe.Node(
         nam.AddCSVRow(in_file=out_csv), name='qap_functional_temporal_to_csv')
 
-    
     workflow.connect(temporal, 'qc', add_header, 'qap_dict')
     workflow.connect(add_header, 'qap_dict', temporal_to_csv, '_outputs')
-    
+
     resource_pool['qap_functional_temporal'] = (temporal_to_csv, 'csv_file')
 
 
@@ -694,7 +694,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
 
 
 
-def run_single_qap_functional_temporal(func_motion, functional_brain_mask,
+def run_single_qap_functional_temporal(func_reorient, functional_brain_mask,
                                        subject_id, session_id, scan_id,
                                        site_name=None, mcflirt_rel_rms=None,
                                        coordinate_transformation=None,
@@ -723,7 +723,7 @@ def run_single_qap_functional_temporal(func_motion, functional_brain_mask,
     config = {}
     num_cores_per_subject = 1
 
-    resource_pool['func_motion_correct'] = func_motion
+    resource_pool['func_reorient'] = func_reorient
     resource_pool['functional_brain_mask'] = functional_brain_mask
 
     if mcflirt_rel_rms:

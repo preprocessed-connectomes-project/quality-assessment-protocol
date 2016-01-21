@@ -19,6 +19,7 @@ def main():
           license='',
           packages=['qap', 'qap.viz'],
           package_data={'qap': ['inpoint*.txt',
+                                'viz/html/*.html',
                                 'test_data/*.nii.gz',
                                 'test_data/workflow_reference/*/*',
                                 'test_data/*/*/*/*/*']},
