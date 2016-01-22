@@ -186,22 +186,26 @@ class QAProtocolCLI:
             pool.terminate()
         return results
 
-    def _run_cloud(self, run_name):
+    def _run_cloud(self, run_name, subject_list):
         from cloud_utils import upl_qap_output
         # get the site name!
-        for resource_path in subject_list[sub]:
-            if ".nii" in resource_path:
-                filepath = resource_path
-                break
 
-        filesplit = filepath.split(self._config["bucket_prefix"])
-        site_name = filesplit[1].split("/")[1]
+        for sub in subject_list.keys():
 
-        rt = _run_workflow(
-            subject_list[sub], self._config, sub, run_name, site_name)
+            for resource_path in subject_list[sub]:
+                if ".nii" in resource_path:
+                    filepath = resource_path
+                    break
+
+            filesplit = filepath.split(self._config["bucket_prefix"])
+            site_name = filesplit[1].split("/")[1]
+
+            rt = _run_workflow(
+                subject_list[sub], self._config, sub, run_name, site_name)
 
         # upload results
         upl_qap_output(self._config)
+
         return rt
 
     def run(self):
@@ -242,9 +246,9 @@ class QAProtocolCLI:
             if not cloudify:
                 results = self._run_here(run_name)
             else:
-                results = self._run_cloud(run_name)
+                results = self._run_cloud(run_name, subject_list)
         except Exception as e:
-            raise Exception("\n\n%s\n\n%s\n\n" % (e, globals()))
+            raise Exception("\n\n%s\n\n%s\n\n" % (e, locals()))
 
         # PDF reporting
         if write_report:
