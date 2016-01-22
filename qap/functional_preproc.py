@@ -51,7 +51,7 @@ def get_idx(in_files, stop_idx=None, start_idx=None):
 
 
 
-def func_motion_correct_workflow(workflow, resource_pool, config):
+def func_preproc_workflow(workflow, resource_pool, config):
 
     # resource pool should have:
     #     functional_scan
@@ -74,7 +74,6 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
     check_input_resources(resource_pool, "functional_scan")
     check_config_settings(config, "start_idx")
     check_config_settings(config, "stop_idx")
-    check_config_settings(config, "slice_timing_correction")
 
 
     func_get_idx = pe.Node(util.Function(input_names=['in_files', 
@@ -99,19 +98,10 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
 
 
     workflow.connect(func_get_idx, 'startidx',
-                    func_drop_trs, 'start_idx')
+                     func_drop_trs, 'start_idx')
 
     workflow.connect(func_get_idx, 'stopidx',
-                    func_drop_trs, 'stop_idx')
-    
-    #workflow.connect(func_drop_trs, 'out_file',
-    #                outputNode, 'drop_tr')
-    
-    
-    func_slice_timing_correction = pe.Node(interface=preprocess.TShift(),
-                                           name='func_slice_time_correction')
-
-    func_slice_timing_correction.inputs.outputtype = 'NIFTI_GZ'
+                     func_drop_trs, 'stop_idx')
     
 
     func_deoblique = pe.Node(interface=preprocess.Refit(),
@@ -120,20 +110,8 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
     func_deoblique.inputs.deoblique = True
     
     
-    if config["slice_timing_correction"] == True:
-
-        workflow.connect(func_drop_trs, 'out_file',
-                        func_slice_timing_correction,'in_file')
-       
-        workflow.connect(func_slice_timing_correction, 'out_file',
-                        func_deoblique, 'in_file')
-        
-
-    else:
-
-        workflow.connect(func_drop_trs, 'out_file',
-                        func_deoblique, 'in_file')
-    
+    workflow.connect(func_drop_trs, 'out_file',
+                     func_deoblique, 'in_file')
 
 
     func_reorient = pe.Node(interface=preprocess.Resample(),
@@ -144,17 +122,124 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
 
     workflow.connect(func_deoblique, 'out_file',
                     func_reorient, 'in_file')
+
+    resource_pool["func_reorient"] = (func_reorient, 'out_file')
+
+
+    return workflow, resource_pool
+
+
+
+def run_func_preproc(functional_scan, start_idx, stop_idx, run=True):
+
+    # stand-alone runner for functional preproc workflow
+
+    import os
+    import sys
+    import glob
+
+    import nipype.interfaces.io as nio
+    import nipype.pipeline.engine as pe
+
+    workflow = pe.Workflow(name='func_preproc_workflow')
+
+    current_dir = os.getcwd()
+    workflow_dir = os.path.join(current_dir, "func_preproc")
+
+    workflow.base_dir = workflow_dir
+
+
+    resource_pool = {}
+    config = {}
+    num_cores_per_subject = 1
+
+    resource_pool["functional_scan"] = functional_scan
+
+    config["start_idx"] = start_idx
+    config["stop_idx"] = stop_idx
+
     
+    workflow, resource_pool = \
+            func_preproc_workflow(workflow, resource_pool, config)
+
+
+    ds = pe.Node(nio.DataSink(), name='datasink_func_motion_correct')
+    ds.inputs.base_directory = workflow_dir
+    
+    node, out_file = resource_pool["func_reorient"]
+
+    workflow.connect(node, out_file, ds, 'func_reorient')
+
+
+    if run == True:
+
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
+
+        outpath = glob.glob(os.path.join(workflow_dir, "func_reorient",\
+                                         "*"))[0]
+
+        return outpath
+        
+    else:
+    
+        return workflow, workflow.base_dir
+    
+
+
+def func_motion_correct_workflow(workflow, resource_pool, config):
+
+    # resource pool should have:
+    #     func_reorient
+
+    import os
+    import sys
+
+    import nipype.interfaces.io as nio
+    import nipype.pipeline.engine as pe
+
+    import nipype.interfaces.utility as util
+    import nipype.interfaces.fsl.maths as fsl
+
+    from nipype.interfaces.afni import preprocess
+
+    from workflow_utils import check_input_resources, \
+                               check_config_settings
+
+
+    if "func_reorient" not in resource_pool.keys():
+
+        from functional_preproc import func_preproc_workflow
+
+        workflow, resource_pool = \
+            func_preproc_workflow(workflow, resource_pool, config)
 
     
     func_get_mean_RPI = pe.Node(interface=preprocess.TStat(),
                             name='func_get_mean_RPI')
     func_get_mean_RPI.inputs.options = '-mean'
     func_get_mean_RPI.inputs.outputtype = 'NIFTI_GZ'
-
     
-    workflow.connect(func_reorient, 'out_file',
-                    func_get_mean_RPI, 'in_file')
+    if len(resource_pool["func_reorient"]) == 2:
+        node, out_file = resource_pool["func_reorient"]
+        workflow.connect(node, out_file, func_get_mean_RPI, 'in_file')
+    else:
+        func_get_mean_RPI.inputs.in_file = resource_pool["func_reorient"]
+
+
+    # get the first volume of the time series
+    get_func_volume = pe.Node(interface=preprocess.Calc(),
+                              name='get_func_volume')
+         
+    get_func_volume.inputs.expr = 'a'
+    get_func_volume.inputs.single_idx = 0
+    get_func_volume.inputs.outputtype = 'NIFTI_GZ'
+
+    if len(resource_pool["func_reorient"]) == 2:
+        node, out_file = resource_pool["func_reorient"]
+        workflow.connect(node, out_file, get_func_volume, 'in_file_a')
+    else:
+        get_func_volume.inputs.in_file_a = resource_pool["func_reorient"]
         
 
     # calculate motion parameters
@@ -166,41 +251,27 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
     func_motion_correct.inputs.outputtype = 'NIFTI_GZ'
 
     
-    workflow.connect(func_reorient, 'out_file',
-                     func_motion_correct, 'in_file')
+    if len(resource_pool["func_reorient"]) == 2:
+        node, out_file = resource_pool["func_reorient"]
+        workflow.connect(node, out_file, func_motion_correct, 'in_file')
+    else:
+        func_motion_correct.inputs.in_file = resource_pool["func_reorient"]
 
-    workflow.connect(func_get_mean_RPI, 'out_file',
+    #workflow.connect(func_get_mean_RPI, 'out_file',
+    workflow.connect(get_func_volume, 'out_file',
                      func_motion_correct, 'basefile')
 
 
-    func_get_mean_motion = func_get_mean_RPI.clone('func_get_mean_motion')
-
-    workflow.connect(func_motion_correct, 'out_file',
-                     func_get_mean_motion, 'in_file')
-    
-    
-    
-    func_motion_correct_A = func_motion_correct.clone('func_motion_correct_A')
-    func_motion_correct_A.inputs.md1d_file = 'max_displacement.1D'
-    
-    workflow.connect(func_reorient, 'out_file',
-                     func_motion_correct_A, 'in_file')
-
-    workflow.connect(func_get_mean_motion, 'out_file',
-                     func_motion_correct_A, 'basefile')
-
-
-    resource_pool["func_motion_correct"] = (func_motion_correct_A, 'out_file')
+    resource_pool["func_motion_correct"] = (func_motion_correct, 'out_file')
     resource_pool["coordinate_transformation"] = \
-        (func_motion_correct_A, 'oned_matrix_save')
+        (func_motion_correct, 'oned_matrix_save')
 
 
     return workflow, resource_pool
 
 
 
-def run_func_motion_correct(functional_scan, start_idx, stop_idx,
-                                slice_timing_correction=False, run=True):
+def run_func_motion_correct(func_reorient, run=True):
 
     # stand-alone runner for functional motion correct workflow
 
@@ -223,11 +294,8 @@ def run_func_motion_correct(functional_scan, start_idx, stop_idx,
     config = {}
     num_cores_per_subject = 1
 
-    resource_pool["functional_scan"] = functional_scan
+    resource_pool["func_reorient"] = func_reorient
 
-    config["start_idx"] = start_idx
-    config["stop_idx"] = stop_idx
-    config["slice_timing_correction"] = slice_timing_correction
     
     workflow, resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config)

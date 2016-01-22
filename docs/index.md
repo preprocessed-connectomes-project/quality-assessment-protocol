@@ -21,7 +21,6 @@ For more information, please see our recent [resting-state poster and associated
 * [Running the QAP Pipelines on AWS Cloud Instances](#running-the-qap-pipelines-on-aws-amazon-cloud-instances)
 * [Merging Outputs](#merging-outputs)
 * [Generating Reports](#generating-reports) 
-* [The QAP Team](#the-qap-team) 
 * [References](#references)
 
 ## Installing the QAP Package
@@ -38,23 +37,16 @@ QAP requires AFNI and FSL to run. Links to installation instructions for AFNI an
 * [AFNI Installation](http://afni.nimh.nih.gov/pub/dist/HOWTO/howto/ht00_inst/html)
 * [FSL Installation](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation)
 
-If you are using a Debian-based Linux distribution, you can use `apt-get` to install FSL by first adding Neurodebian to the apt repository list:
+If you are using a Debian-based Linux distribution, you can use `apt-get` by first adding Neurodebian to the apt repository list and then installing the Neurodebian FSL and AFNI packages:
 
     wget -O- http://neuro.debian.net/lists/$(lsb_release -cs).us-nh.full | tee /etc/apt/sources.list.d/neurodebian.sources.list
     apt-key adv --recv-keys --keyserver pgp.mit.edu 2649A5A9
     apt-get update
-    apt-get install -y fsl-5.0-complete 
-
-We do not recommend using Neurodebian's AFNI binary, as we have encountered difficulty using QAP with this binary.
+    apt-get install -y fsl-5.0-complete afni
 
 ### Python Dependencies and QAP
 
-QAP depends on some visualization packages, which in turn require that some additional [system-level dependencies](http://pillow.readthedocs.org/en/3.0.x/installation.html#external-libraries) be installed.  Under Ubuntu, you can install these system-level dependencies by typing:
-
-    sudo apt-get build-dep python-imaging
-    sudo apt-get install libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev
-
-In addtion to the visualization packges above, QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run. If you have `pip`, you may install all of these, the visualization packages, and QAP itself by typing in the command below:
+QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run.  If you have `pip`, you may install all of these and QAP itself by typing in the command below:
 
     pip install qap
 
@@ -124,7 +116,6 @@ Templates for these files are provided in the [`/configs` folder](https://github
 * **working_directory**: The directory to store intermediary processing files in.
 * **write_all_outputs**: A boolean option to determine whether or not all files used in the process of calculating the QAP measures will be saved to the output directory or not.  If *True*, all outputs will be saved.  If *False*, only the csv file containing the measures will be saved.
 * **write_report**: A boolean option to determine whether or not to generate report plots and a group measure CSV ([see below](#generating-reports)).  If *True*, plots and a CSV will be produced; if *False*, QAP will not produce reports.
-* **write_graph**: A boolean option to determine whether or not to write a representation of the graph that corresponds to the workflow that will be applied to each of the subjects. If *True*, it uses the *write_graph()* function of nipype Workflows to save the corresponding graph in dot format.
 
 ### Anatomical pipelines
 
@@ -172,7 +163,7 @@ Note that *anatomical_scan* is the label for the type of resource (in this case,
 
 Alternatively, if you have already preprocessed some or all of your raw data, you can provide these pre-existing files as inputs directly to the QAP pipelines via your subject list manually.  The QAP pipelines will then use these files and skip any pre-processing steps involved in creating them, saving time and allowing you to use your own method of processing your data.  If these files were processed using the [C-PAC](http://fcp-indi.github.io/docs/user/index.html) software package, there is a script named *qap_cpac_output_sublist_generator.py* which will create a subject list YAML file pointing to these already generated files.  Note that this script will only work for C-PAC runs where FSL is used.  Its usage is as follows:
 
-    qap_cpac_output_sublist_generator.py {absolute path to the C-PAC output pipeline directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'} {the session format- can be '1','2', or '3', whose corresponding formats are described in more detail below}
+    qap_cpac_output_sublist_generator.py {absolute path to the C-PAC output directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'} {the session format- can be '1','2', or '3', whose corresponding formats are described in more detail below}
 
 The values for the session format argument can either be:
 
@@ -180,9 +171,9 @@ The values for the session format argument can either be:
     2 - For output organized in the form: /output/pipeline/subject_id/output/
     3 - For output organized in the form: /output/pipeline/subject_session/output/
 
-For example, if C-PAC results were stored in participant directories of the form */home/wintermute/output/pipeline_FLIRT/80386_session_1*, you wanted to run anatomical measures, and you wanted to store the subject list in *subj_list.yml*, you would invoke:
+For example, if C-PAC results were stored in */home/wintermute/output/pipeline_FLIRT/80386_session_1*, you wanted to run anatomical measures, and you wanted to store the subject list in *subj_list.yml*, you would invoke:
 
-    qap_cpac_output_sublist_generator.py /home/wintermute/output/pipeline_FLIRT /home/wintermute/qap_analysis/subj_list.yml anat 3
+    qap_cpac_output_sublist_generator.py /home/wintermute/output/pipeline_FLIRT/80386_session_1 /home/wintermute/qap_analysis/subj_list.yml anat 3
 
 Below is a list of intermediary files used in the steps leading to the final QAP measures calculations. If you already have some of these processed for your data, they can be included in the subject list with the label on the left. For example, if you've already deobliqued, reoriented and skull-stripped your anatomical scans, you would list them in your subject list YAML file like so:
 
@@ -336,28 +327,6 @@ For example, if you wanted to obtain functional spatial measures from an S3 buck
     qap_download_output_from_S3.py subjects/outputs /home/wintermute/Documents/aws-keys.csv the_big_run func_spatial /home/wintermute/qap_outputs
 
 With the above commands, the outputs will be stored in a directory named `qap_outputs` in the user *wintermute*'s home folder.  As with the pipeline commands from earlier, more information on this command's usage can be obtained by running it with the *-h* flag.  
-
-## The QAP Team
-
-### Primary Development
-
-Cameron Craddock (Team Lead)
-
-Steven Giavasis (Developer)
-
-Daniel Clark (Developer)
-
-Zarrar Shezhad (Developer)
-
-John Pellman (User Support and Documentation)
-
-### Other Contributors
-
-Chris Filo Gorgolewski
-
-Craig Moodie
-
-Oscar Esteban
 
 ## References
 

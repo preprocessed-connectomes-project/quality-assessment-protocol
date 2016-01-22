@@ -2,6 +2,22 @@
 test_sub_dir = "test_data/1019436/session_1"
 
 
+def test_calculate_percent_outliers():
+
+    from qap.temporal_qc import calculate_percent_outliers
+
+    dataset = [1,1,2,3,27,34,45,49,54,55,67,294,345,352,356,593,632,675,763,\
+        764,825,866,2954,4634,4856,5934,29954]
+
+    percent_outliers, IQR = calculate_percent_outliers(dataset)
+
+    out_tuple = (percent_outliers, IQR)
+
+
+    assert out_tuple == (0.18518518518518517, 747.5)
+
+
+
 def test_fd_jenkinson():
 
     import os
@@ -89,18 +105,12 @@ def test_outlier_timepoints():
                                       "rest_calc_tshift_resample_" \
                                       "volreg.nii.gz"))
                                   
-    func_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "rest_1", \
-                                    "functional_brain_mask", \
-                                    "rest_calc_tshift_resample_volreg" \
-                                    "_mask.nii.gz"))
-
     ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                   "rest_1", \
                                   "outlier_timepoints", \
                                   "outlier_timepoints_ref_out.p"))
                                     
-    out_list = outlier_timepoints(func_motion, func_mask)
+    out_list = outlier_timepoints(func_motion)
 
     with open(ref_out, "r") as f:
         ref_list = pickle.load(f)
@@ -139,35 +149,6 @@ def test_quality_timepoints():
 
 
 
-def test_quality_timepoints_no_automask():
-
-    import os
-    import pickle
-    import pkg_resources as p
-    
-    from qap.temporal_qc import quality_timepoints
-
-    func_motion = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                      "rest_1", \
-                                      "func_motion_correct", \
-                                      "rest_calc_tshift_resample_" \
-                                      "volreg.nii.gz"))
-
-    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                  "rest_1", \
-                                  "quality_timepoints", \
-                                  "quality_timepoints_nomask_output.p"))
-                                    
-    out_list = quality_timepoints(func_motion, False)
-
-    with open(ref_out, "r") as f:
-        ref_list = pickle.load(f)
-        
-    
-    assert out_list == ref_list
-
-
-
 def test_global_correlation():
 
     import os
@@ -196,6 +177,7 @@ def test_global_correlation():
 
 def run_all_tests_temporal_qc():
 
+    test_calculate_percent_outliers()
     test_fd_jenkinson()
     test_summarize_fd()
     test_summarize_fd_threshold_01()

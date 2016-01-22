@@ -144,8 +144,9 @@ def dl_subj_from_s3(subj_idx, cfg_file, s3_dict_yaml):
         s3_dl.append(s3_path)
         sub_dict[s3_key] = s3_path.replace(bucket_prefix, local_prefix)
 
-    aws_utils.s3_download(bucket, s3_dl, local_prefix=local_prefix, \
-                              bucket_prefix=bucket_prefix)
+    local_dl = [s.replace(bucket_prefix, local_prefix) for s in s3_dl]
+
+    aws_utils.s3_download(bucket, (s3_dl,local_dl))
 
     sub_dict = {subj_key : sub_dict}
 

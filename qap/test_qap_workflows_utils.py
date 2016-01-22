@@ -3,22 +3,22 @@
 test_sub_dir = "test_data/1019436/session_1"
 
 
-def test_select_thresh():
+def test_run_3dClipLevel():
 
     import os
     import pkg_resources as p
     
-    from qap.qap_workflows_utils import select_thresh
+    from qap.qap_workflows_utils import run_3dClipLevel
     
     input_skull = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                       "anat_1", \
                                       "anatomical_reorient", \
                                       "mprage_resample.nii.gz"))
 
-    thresh_out = select_thresh(input_skull)
+    thresh_out = run_3dClipLevel(input_skull)
 
 
-    assert thresh_out == 206
+    assert thresh_out == 250
 
 
 
@@ -190,7 +190,7 @@ def test_qap_functional_temporal():
 
 def run_all_tests_qap_workflows_utils():
 
-    test_select_thresh()
+    test_run_3dClipLevel()
     test_slice_head_mask()
     test_qap_anatomical_spatial()
     test_qap_functional_spatial()
