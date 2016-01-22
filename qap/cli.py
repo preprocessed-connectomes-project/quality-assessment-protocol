@@ -192,10 +192,11 @@ class QAProtocolCLI:
 
         for sub in subject_list.keys():
 
-            for resource_path in subject_list[sub]:
-                if ".nii" in resource_path:
-                    filepath = resource_path
-                    break
+            for resource in subject_list[sub].keys():
+                for resource_path in subject_list[sub][resource]:
+                    if ".nii" in resource_path:
+                        filepath = resource_path
+                        break
 
             filesplit = filepath.split(self._config["bucket_prefix"])
             site_name = filesplit[1].split("/")[1]
