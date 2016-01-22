@@ -3,7 +3,7 @@
 def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, creds_path):
 
     import os
-    from CPAC.AWS import fetch_creds
+    from indi_awsutils import fetch_creds
     import yaml
 
     s3_list = []
