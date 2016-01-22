@@ -261,6 +261,9 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
 
     import time
     
+
+    sites_dict ={}
+    
     
     if not cloudify:
 
@@ -268,7 +271,6 @@ def run(subject_list, pipeline_config_yaml, cloudify=False):
             subdict = yaml.load(f)
 
         flat_sub_dict = {}
-        sites_dict = {}
 
         for subid in subdict.keys():
 
@@ -551,4 +553,3 @@ if __name__ == "__main__":
     main()
 
 
-   
