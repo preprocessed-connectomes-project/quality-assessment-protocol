@@ -237,10 +237,14 @@ class QAProtocolCLI:
         run_name = config['pipeline_config_yaml'].split("/")[-1].split(".")[0]
 
         results = None
-        if not cloudify:
-            results = self._run_here(run_name)
-        else:
-            results = self._run_cloud(run_name)
+
+        try:
+            if not cloudify:
+                results = self._run_here(run_name)
+            else:
+                results = self._run_cloud(run_name)
+        except Exception as e:
+            raise Exception("\n\n%s\n\n%s\n\n" % (e, globals()))
 
         # PDF reporting
         if write_report:
