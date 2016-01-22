@@ -278,7 +278,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
 
 def qap_functional_temporal(
-        func_timeseries, func_brain_mask, tsnr_volume, fd_file,
+        func_timeseries, func_brain_mask, fd_file,
         subject_id, session_id, scan_id, site_name=None, 
         motion_threshold=1.0):
 
@@ -291,18 +291,14 @@ def qap_functional_temporal(
         calculate_percent_outliers
 
     # DVARS
-    mean_dvars = mean_dvars_wrapper(func_timeseries, func_brain_mask)
+    mean_dvars, dvars = mean_dvars_wrapper(func_timeseries, func_brain_mask)
+
+    dvars_outliers, dvars_IQR = calculate_percent_outliers(dvars)
 
     # Mean FD (Jenkinson)
     fd = np.loadtxt(fd_file)
 
-    meanfd_outliers, meanfd_iqr = calculate_percent_outliers(fd)
-
-    # Calculate Outliers
-    # Number and Percent of frames (time points) where
-    # movement (FD) exceeded threshold
-    #num_fd = np.float((fd > motion_threshold).sum())
-    #percent_fd = (num_fd * 100) / (len(fd) + 1)
+    meanfd_outliers, meanfd_IQR = calculate_percent_outliers(fd)
 
     # 3dTout
     mean_outlier, outlier_perc_out, outlier_IQR = \
@@ -320,10 +316,12 @@ def qap_functional_temporal(
         "Participant":   subject_id,
         "Session":   session_id,
         "Series":      scan_id,
-        "Std. DVARS":     mean_dvars,
+        "Std. DVARS (Mean)":     mean_dvars,
+        "Std. DVARS percent outliers": dvars_outliers,
+        "Std. DVARs IQR": dvars_IQR,
         "FD (Mean)":   fd.mean(),
         "FD percent outliers": meanfd_outliers,
-        "FD IQR": meanfd_iqr,
+        "FD IQR": meanfd_IQR,
         "Fraction of Outliers (Mean)": mean_outlier,
         "Fraction of Outliers percent outliers": outlier_perc_out,
         "Fraction of Outliers IQR": outlier_IQR,

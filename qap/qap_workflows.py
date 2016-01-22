@@ -104,6 +104,7 @@ def qap_mask_workflow(workflow, resource_pool, config):
     return workflow, resource_pool
 
 
+
 def run_qap_mask(anatomical_reorient, flirt_affine_xfm, template_skull,
                  run=True):
 
@@ -154,8 +155,39 @@ def run_qap_mask(anatomical_reorient, flirt_affine_xfm, template_skull,
         return workflow, workflow.base_dir
 
 
+
+def add_header_to_qap_dict(in_file, qap_dict=None):
+
+    import nibabel
+    img = nibabel.load(in_file)
+
+    if not qap_dict:
+        qap_dict = {}
+
+    info_labels = ["descrip", "db_name", "bitpix", "slice_start", \
+                   "scl_slope", "scl_inter", "slice_end", "slice_duration", \
+                   "toffset", "quatern_b", "quatern_c", "quatern_d", \
+                   "qoffset_x", "qoffset_y", "qoffset_z", "srow_x", "srow_y",\
+                   "srow_z", "aux_file", "intent_name", "slice_code", \
+                   "data_type", "qform_code", "sform_code"]
+
+    for info_label in info_labels:
+        qap_dict[info_label] = str(img.header[info_label])
+
+    qap_dict["pix_dimx"] = str(img.header['pixdim'][1])
+    qap_dict["pix_dimy"] = str(img.header['pixdim'][2])
+    qap_dict["pix_dimz"] = str(img.header['pixdim'][3])
+    qap_dict["tr"] = str(img.header['pixdim'][4])
+    qap_dict["extensions"] = len(img.header.extensions.get_codes())
+
+
+    return qap_dict
+
+
+
 def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
                                     report=False):
+
     # resource pool should have:
     #     anatomical_reorient
     #     qap_head_mask
@@ -190,9 +222,12 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
             segmentation_workflow(workflow, resource_pool, config)
 
     if 'anatomical_reorient' not in resource_pool.keys():
+        
         from anatomical_preproc import anatomical_reorient_workflow
+
         workflow, resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config)
+
 
     spatial = pe.Node(niu.Function(
         input_names=['anatomical_reorient', 'head_mask_path',
@@ -270,13 +305,29 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
         
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
+    add_header = pe.Node(niu.Function(
+                             input_names=['in_file', 'qap_dict'],
+                             output_names=['qap_dict'],
+                             function=add_header_to_qap_dict),
+                     name="add_header_to_anatomical_spatial_csv")
+
+    if len(resource_pool['anatomical_reorient']) == 2:
+        node, out_file = resource_pool['anatomical_reorient']
+        workflow.connect(node, out_file, add_header, 'in_file')
+    else:
+        add_header.inputs.in_file = resource_pool['anatomical_reorient']
+
     out_csv = op.join(config['output_directory'], 'qap_anatomical_spatial.csv')
     spatial_to_csv = pe.Node(
         nam.AddCSVRow(in_file=out_csv), name='qap_anatomical_spatial_to_csv')
 
-    workflow.connect(spatial, 'qc', spatial_to_csv, '_outputs')
+    workflow.connect(spatial, 'qc', add_header, 'qap_dict')
+    workflow.connect(add_header, 'qap_dict', spatial_to_csv, '_outputs')
     resource_pool['qap_anatomical_spatial'] = (spatial_to_csv, 'csv_file')
+
+
     return workflow, resource_pool
+
 
 
 def run_single_qap_anatomical_spatial(
@@ -335,6 +386,7 @@ def run_single_qap_anatomical_spatial(
 
     else:
         return workflow, workflow.base_dir
+
 
 
 def qap_functional_spatial_workflow(workflow, resource_pool, config):
@@ -424,14 +476,30 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config):
         #     plot.inputs.in_mask = resource_pool['functional_brain_mask']
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
+    add_header = pe.Node(niu.Function(
+                             input_names=['in_file', 'qap_dict'],
+                             output_names=['qap_dict'],
+                             function=add_header_to_qap_dict),
+                     name="add_header_to_functional_spatial_csv")
+
+    if len(resource_pool['mean_functional']) == 2:
+        node, out_file = resource_pool['mean_functional']
+        workflow.connect(node, out_file, add_header, 'in_file')
+    else:
+        add_header.inputs.in_file = resource_pool['mean_functional']
+
     out_csv = op.join(
         config['output_directory'], 'qap_functional_spatial.csv')
     spatial_epi_to_csv = pe.Node(
         nam.AddCSVRow(in_file=out_csv), name='qap_functional_spatial_to_csv')
-    workflow.connect(spatial_epi, 'qc', spatial_epi_to_csv, '_outputs')
+
+    workflow.connect(spatial_epi, 'qc', add_header, 'qap_dict')
+    workflow.connect(add_header, 'qap_dict', spatial_epi_to_csv, '_outputs')
+    
     resource_pool['qap_functional_spatial'] = (spatial_epi_to_csv, 'csv_file')
 
     return workflow, resource_pool
+
 
 
 def run_single_qap_functional_spatial(
@@ -486,6 +554,7 @@ def run_single_qap_functional_spatial(
 
     else:
         return workflow, workflow.base_dir
+
 
 
 def qap_functional_temporal_workflow(workflow, resource_pool, config):
@@ -543,7 +612,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
             fd.inputs.in_file = resource_pool['coordinate_transformation']
 
     temporal = pe.Node(niu.Function(
-        input_names=['func_timeseries', 'func_brain_mask', 'tsnr_volume',
+        input_names=['func_timeseries', 'func_brain_mask',
                      'fd_file', 'subject_id', 'session_id',
                      'scan_id', 'site_name'], output_names=['qc'],
         function=qap_functional_temporal), name='qap_functional_temporal')
@@ -555,16 +624,13 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
     if 'site_name' in config.keys():
         temporal.inputs.site_name = config['site_name']
 
-    tsnr = pe.Node(nam.TSNR(), name='compute_tsnr')
     if len(resource_pool['func_reorient']) == 2:
         node, out_file = resource_pool['func_reorient']
-        workflow.connect(node, out_file, tsnr, 'in_file')
         workflow.connect(node, out_file, temporal, 'func_timeseries')
     else:
         from workflow_utils import check_input_resources
         check_input_resources(resource_pool, 'func_reorient')
         input_file = resource_pool['func_reorient']
-        tsnr.inputs.in_file = input_file
         temporal.inputs.func_timeseries = input_file
 
     if len(resource_pool['functional_brain_mask']) == 2:
@@ -576,16 +642,16 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
 
     # Write mosaic and FD plot
     if config.get('write_report', False):
-        plot = pe.Node(PlotMosaic(), name='plot_mosaic')
-        plot.inputs.subject = config['subject_id']
+        #plot = pe.Node(PlotMosaic(), name='plot_mosaic')
+        #plot.inputs.subject = config['subject_id']
 
         metadata = [config['session_id'], config['scan_id']]
         if 'site_name' in config.keys():
             metadata.append(config['site_name'])
 
-        plot.inputs.metadata = metadata
-        plot.inputs.title = 'tSNR volume'
-        workflow.connect(tsnr, 'tsnr_file', plot, 'in_file')
+        #plot.inputs.metadata = metadata
+        #plot.inputs.title = 'tSNR volume'
+        #workflow.connect(tsnr, 'tsnr_file', plot, 'in_file')
 
         # Enable this if we want masks
         # if len(resource_pool['functional_brain_mask']) == 2:
@@ -593,7 +659,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
         #     workflow.connect(node, out_file, plot, 'in_mask')
         # else:
         #     plot.inputs.in_mask = resource_pool['functional_brain_mask']
-        resource_pool['qap_mosaic'] = (plot, 'out_file')
+        #resource_pool['qap_mosaic'] = (plot, 'out_file')
 
         fdplot = pe.Node(PlotFD(), name='plot_fd')
         fdplot.inputs.subject = config['subject_id']
@@ -601,18 +667,34 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config):
         workflow.connect(fd, 'out_file', fdplot, 'in_file')
         resource_pool['qap_fd'] = (fdplot, 'out_file')
 
+    add_header = pe.Node(niu.Function(
+                             input_names=['in_file', 'qap_dict'],
+                             output_names=['qap_dict'],
+                             function=add_header_to_qap_dict),
+                             name="add_header_to_functional_temporal_csv")
+
+    if len(resource_pool['func_reorient']) == 2:
+        node, out_file = resource_pool['func_reorient']
+        workflow.connect(node, out_file, add_header, 'in_file')
+    else:
+        add_header.inputs.in_file = resource_pool['func_reorient']
+
     out_csv = op.join(
         config['output_directory'], 'qap_functional_temporal.csv')
     temporal_to_csv = pe.Node(
         nam.AddCSVRow(in_file=out_csv), name='qap_functional_temporal_to_csv')
 
-    workflow.connect(tsnr, 'tsnr_file', temporal, 'tsnr_volume')
-    workflow.connect(temporal, 'qc', temporal_to_csv, '_outputs')
+    workflow.connect(temporal, 'qc', add_header, 'qap_dict')
+    workflow.connect(add_header, 'qap_dict', temporal_to_csv, '_outputs')
+
     resource_pool['qap_functional_temporal'] = (temporal_to_csv, 'csv_file')
+
+
     return workflow, resource_pool
 
 
-def run_single_qap_functional_temporal(func_motion, functional_brain_mask,
+
+def run_single_qap_functional_temporal(func_reorient, functional_brain_mask,
                                        subject_id, session_id, scan_id,
                                        site_name=None, mcflirt_rel_rms=None,
                                        coordinate_transformation=None,
@@ -641,7 +723,7 @@ def run_single_qap_functional_temporal(func_motion, functional_brain_mask,
     config = {}
     num_cores_per_subject = 1
 
-    resource_pool['func_motion_correct'] = func_motion
+    resource_pool['func_reorient'] = func_reorient
     resource_pool['functional_brain_mask'] = functional_brain_mask
 
     if mcflirt_rel_rms:

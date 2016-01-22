@@ -136,7 +136,7 @@ def mean_dvars_wrapper(func_file, mask_file, dvars_out_file=None):
     if dvars_out_file:
         np.savetxt(dvars_out_file, dvars, fmt='%.12f')
     mean_d  = calc_mean_dvars(dvars)
-    return mean_d[0]
+    return mean_d[0], dvars
 
 
 
