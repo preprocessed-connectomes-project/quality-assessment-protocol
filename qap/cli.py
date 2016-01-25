@@ -187,21 +187,22 @@ class QAProtocolCLI:
         return results
 
     def _run_cloud(self, run_name, subject_list):
+
         from cloud_utils import upl_qap_output
         # get the site name!
 
-        for sub in subject_list.keys():
+        sub = subject_list.keys()[0]
 
-            for resource_path in subject_list[sub].values():
-                if ".nii" in resource_path:
-                    filepath = resource_path
-                    break
+        for resource_path in subject_list[sub].values():
+            if ".nii" in resource_path:
+                filepath = resource_path
+                break
 
-            filesplit = filepath.split(self._config["bucket_prefix"])
-            site_name = filesplit[1].split("/")[1]
+        filesplit = filepath.split(self._config["bucket_prefix"])
+        site_name = filesplit[1].split("/")[1]
 
-            rt = _run_workflow(
-                subject_list[sub], self._config, sub, run_name, site_name)
+        rt = _run_workflow(
+            subject_list[sub], self._config, sub, run_name, site_name)
 
         # upload results
         upl_qap_output(self._config)
