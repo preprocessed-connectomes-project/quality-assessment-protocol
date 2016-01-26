@@ -49,12 +49,12 @@ def gather_raw_data(site_folder, yaml_outpath, scan_type, \
                     except:
 
                         err = "\n\n[!] Could not parse the data directory " \
-                              "structure. Is it in the correct format?\n\n" \
-                              "Your directory structure:\n%s\n\nIt should " \
+                              "structure for this file - is it in the " \
+                              "correct format?\nFile path:\n%s\n\nIt should "\
                               "be something like this:\n/site_folder/subject"\
                               "_id/session_id/scan_id/file.nii.gz\n\n" \
                               % second_half
-                        raise Exception(err)
+                        print err
 
                 else:
 
@@ -67,12 +67,12 @@ def gather_raw_data(site_folder, yaml_outpath, scan_type, \
                     except:
                         
                         err = "\n\n[!] Could not parse the data directory " \
-                              "structure. Is it in the correct format?\n\n" \
-                              "Your directory structure:\n%s\n\nIt should " \
-                              "be something like this:\n/subject_id" \
-                              "/session_id/scan_id/file.nii.gz\n\n" \
+                              "structure for this file - is it in the " \
+                              "correct format?\nFile path:\n%s\n\nIt should "\
+                              "be something like this:\n/site_folder/subject"\
+                              "_id/session_id/scan_id/file.nii.gz\n\n" \
                               % second_half
-                        raise Exception(err)
+                        print err
 
 
                 if subject_inclusion == None:
