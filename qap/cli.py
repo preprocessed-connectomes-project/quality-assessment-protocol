@@ -198,12 +198,15 @@ class QAProtocolCLI:
                 filepath = resource_path
                 break
 
-        filesplit = filepath.split(self._config["bucket_prefix"])
-        site_name = filesplit[1].split("/")[1]
-
+	try:
+       	    filesplit = filepath.split(self._config["bucket_prefix"])
+            site_name = filesplit[1].split("/")[1]
+	
+	except:
+	    site_name = "site"
         rt = _run_workflow(
-            subject_list[sub], self._config, sub, run_name, site_name)
-
+            [subject_list[sub], self._config, sub, run_name, site_name])
+	
         # upload results
         upl_qap_output(self._config)
 
