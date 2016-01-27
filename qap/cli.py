@@ -266,7 +266,7 @@ class QAProtocolCLI:
                     logger.info('Written report (%s) in %s' % (k, v['path']))
 
 
-def _run_workflow(args):
+def _run_workflow(*args):
 
     # build pipeline for each subject, individually
     # ~ 5 min 20 sec per subject
@@ -331,6 +331,7 @@ def _run_workflow(args):
 
     pipeline_start_time = time.time()
 
+    logger.info("QAP version %s\n" % qap.__version__)
     logger.info("Pipeline start time: %s" % pipeline_start_stamp)
     logger.info("Contents of resource pool:\n" + str(resource_pool))
     logger.info("Configuration settings:\n" + str(config))
