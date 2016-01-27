@@ -292,17 +292,34 @@ def _run_workflow(*args):
     from nipype import config as nyconfig
 
     resource_pool, config, subject_info, run_name, site_name = args
-    sub_id = str(subject_info[0])
 
     qap_type = config['qap_type']
 
+
+    sub_id = str(subject_info[0])
+    # for nipype
+    if "-" in sub_id:
+        sub_id = sub_id.replace("-","_")
+    if "." in scan_id:
+        sub_id = sub_id.replace(".","_")
+
     if subject_info[1]:
         session_id = subject_info[1]
+        # for nipype
+        if "-" in session_id:
+            session_id = session_id.replace("-","_")
+        if "." in scan_id:
+            session_id = session_id.replace(".","_")
     else:
         session_id = "session_0"
 
     if subject_info[2]:
         scan_id = subject_info[2]
+        # for nipype
+        if "-" in scan_id:
+            scan_id = scan_id.replace("-","_")
+        if "." in scan_id:
+            scan_id = scan_id.replace(".","_")
     else:
         scan_id = "scan_0"
 
