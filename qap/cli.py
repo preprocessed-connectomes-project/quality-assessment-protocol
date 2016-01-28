@@ -205,7 +205,7 @@ class QAProtocolCLI:
 	except:
 	    site_name = "site"
         rt = _run_workflow(
-            [subject_list[sub], self._config, sub, run_name, site_name])
+            subject_list[sub], self._config, sub, run_name, site_name)
 	
         # upload results
         upl_qap_output(self._config)
