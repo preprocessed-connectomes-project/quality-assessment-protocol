@@ -205,7 +205,7 @@ class QAProtocolCLI:
 	except:
 	    site_name = "site"
         rt = _run_workflow(
-            subject_list[sub], self._config, sub, run_name, site_name)
+            (subject_list[sub], self._config, sub, run_name, site_name))
 	
         # upload results
         upl_qap_output(self._config)
@@ -246,13 +246,13 @@ class QAProtocolCLI:
 
         results = None
 
-        try:
-            if not cloudify:
-                results = self._run_here(run_name)
-            else:
-                results = self._run_cloud(run_name, subject_list)
-        except Exception as e:
-            raise Exception("\n\n%s\n\n%s\n\n" % (e, locals()))
+        #try:
+        if not cloudify:
+            results = self._run_here(run_name)
+        else:
+            results = self._run_cloud(run_name, subject_list)
+        #except Exception as e:
+        #    raise Exception("\n\n%s\n\n%s\n\n" % (e, locals()))
 
         # PDF reporting
         if write_report:
@@ -269,7 +269,7 @@ class QAProtocolCLI:
                     logger.info('Written report (%s) in %s' % (k, v['path']))
 
 
-def _run_workflow(*args):
+def _run_workflow(data_package):
 
     # build pipeline for each subject, individually
     # ~ 5 min 20 sec per subject
@@ -285,13 +285,19 @@ def _run_workflow(*args):
     import nipype.interfaces.utility as util
     import nipype.interfaces.fsl.maths as fsl
 
+    import qap
+
     import glob
 
     import time
     from time import strftime
     from nipype import config as nyconfig
 
-    resource_pool, config, subject_info, run_name, site_name = args
+    resource_pool = data_package[0]
+    config = data_package[1]
+    subject_info = data_package[2]
+    run_name = data_package[3]
+    site_name = data_package[4]
 
     qap_type = config['qap_type']
 
@@ -300,7 +306,7 @@ def _run_workflow(*args):
     # for nipype
     if "-" in sub_id:
         sub_id = sub_id.replace("-","_")
-    if "." in scan_id:
+    if "." in sub_id:
         sub_id = sub_id.replace(".","_")
 
     if subject_info[1]:
@@ -308,7 +314,7 @@ def _run_workflow(*args):
         # for nipype
         if "-" in session_id:
             session_id = session_id.replace("-","_")
-        if "." in scan_id:
+        if "." in session_id:
             session_id = session_id.replace(".","_")
     else:
         session_id = "session_0"
@@ -351,7 +357,7 @@ def _run_workflow(*args):
 
     pipeline_start_time = time.time()
 
-    logger.info("QAP version %s\n" % qap.__version__)
+    logger.info("QAP version %s" % qap.__version__)
     logger.info("Pipeline start time: %s" % pipeline_start_stamp)
     logger.info("Contents of resource pool:\n" + str(resource_pool))
     logger.info("Configuration settings:\n" + str(config))
@@ -434,6 +440,7 @@ def _run_workflow(*args):
 
     rt = {'id': sub_id, 'session': session_id, 'scan': scan_id,
           'status': 'started'}
+
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
         if config.get('write_graph', False):
@@ -444,15 +451,15 @@ def _run_workflow(*args):
         nc_per_subject = config.get('num_cores_per_subject', 1)
         runargs = {'plugin': 'Linear', 'plugin_args': {}}
         if nc_per_subject > 1:
-            runargs['plugin'] = 'MultiProc',
+            runargs['plugin'] = 'MultiProc'
             runargs['plugin_args'] = {'n_procs': nc_per_subject}
 
-        try:
-            workflow.run(**runargs)
-            rt['status'] = 'finished'
-        except Exception as e:  # TODO We should be more specific here ...
-            rt.update({'status': 'failed', 'msg': e})
-            # ... however this is run inside a pool.map: do not raise Execption
+        #try:
+        workflow.run(**runargs)
+        rt['status'] = 'finished'
+        #except Exception as e:  # TODO We should be more specific here ...
+        #    rt.update({'status': 'failed', 'msg': e})
+        #    # ... however this is run inside a pool.map: do not raise Execption
 
     else:
         rt['status'] = 'cached'

@@ -165,12 +165,12 @@ def upl_qap_output(cfg_file):
     import yaml
 
     # Load config file
-    with open(cfg_file,'r') as f:
+    with open(cfg_file["pipeline_config_yaml"],'r') as f:
         cfg_dict = yaml.load(f)
 
     # Init variables
     bucket_name = cfg_dict["bucket_name"]
-    bucket_out_prefix = cfg_dict["bucket_out_prefix"]
+    bucket_out_prefix = cfg_dict["bucket_prefix"]
     creds_path = cfg_dict["creds_path"]
     
     bucket = fetch_creds.return_bucket(creds_path, bucket_name)
