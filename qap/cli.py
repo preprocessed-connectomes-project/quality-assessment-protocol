@@ -454,12 +454,12 @@ def _run_workflow(data_package):
             runargs['plugin'] = 'MultiProc'
             runargs['plugin_args'] = {'n_procs': nc_per_subject}
 
-        #try:
-        workflow.run(**runargs)
-        rt['status'] = 'finished'
-        #except Exception as e:  # TODO We should be more specific here ...
-        #    rt.update({'status': 'failed', 'msg': e})
-        #    # ... however this is run inside a pool.map: do not raise Execption
+        try:
+            workflow.run(**runargs)
+            rt['status'] = 'finished'
+        except Exception as e:  # TODO We should be more specific here ...
+            rt.update({'status': 'failed', 'msg': e})
+            # ... however this is run inside a pool.map: do not raise Exception
 
     else:
         rt['status'] = 'cached'
