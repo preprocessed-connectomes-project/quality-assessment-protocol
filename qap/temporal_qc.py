@@ -36,9 +36,10 @@ def pass_floats(output_string):
 
 def calculate_percent_outliers(values_list):
 
-    try:
+    import numpy as np
+    from workflow_utils import raise_smart_exception
 
-        import numpy as np
+    try:
 
         # calculate the IQR
         sorted_values = sorted(values_list)
@@ -60,11 +61,9 @@ def calculate_percent_outliers(values_list):
         percent_outliers = \
             float(len(total_outliers)) / float(len(sorted_values))
 
-    except Exception as e:
-
-        err = "\n\nLocals:\n%s\n\nError: %s\n\n" % (locals(), e)
-
-        raise Exception(err)
+    except:
+        
+        raise_smart_exception(locals())
 
 
     return percent_outliers, IQR
@@ -99,6 +98,7 @@ def fd_jenkinson(in_file, rmax=80., out_file=None):
     from shutil import copyfile
     import sys
     import math
+    from workflow_utils import raise_smart_exception
 
     if out_file is None:
         fname, ext = op.splitext(op.basename(in_file))
@@ -110,7 +110,11 @@ def fd_jenkinson(in_file, rmax=80., out_file=None):
         copyfile(in_file, out_file)
         return out_file
 
-    pm_ = np.genfromtxt(in_file)
+    try:
+        pm_ = np.genfromtxt(in_file)
+    except:
+        raise_smart_exception(locals())
+
     original_shape = pm_.shape
     pm = np.zeros((pm_.shape[0], pm_.shape[1] + 4))
     pm[:, :original_shape[1]] = pm_
@@ -138,7 +142,12 @@ def fd_jenkinson(in_file, rmax=80., out_file=None):
 
         T_rb_prev = T_rb
 
-    np.savetxt(out_file, np.array(X))
+    try:
+        np.savetxt(out_file, np.array(X))
+    except:
+        raise_smart_exception(locals())
+
+
     return out_file
 
 
@@ -169,6 +178,7 @@ def outlier_timepoints(func_file, out_fraction=True):
     import commands
     import re
     import numpy as np
+    from workflow_utils import raise_smart_exception
 
     opts = []
     if out_fraction:
@@ -181,7 +191,13 @@ def outlier_timepoints(func_file, out_fraction=True):
     # check if should use -polort 2 (http://www.na-mic.org/Wiki/images/8/86/FBIRNSupplementalMaterial082005.pdf)
     # or -legendre to remove any trend
     cmd = "3dToutcount %s" % str_opts
-    out = commands.getoutput(cmd)
+
+    try:
+        out = commands.getoutput(cmd)
+    except:
+        err = "[!] QAP says: Something went wrong with running AFNI's " \
+              "3dToutcount."
+        raise_smart_exception(locals(),err)
 
     # Extract time-series in output
     #lines = out.splitlines()
@@ -217,16 +233,23 @@ def quality_timepoints(func_file):
     """
 
     import subprocess
+    from workflow_utils import raise_smart_exception
 
     opts = []
     opts.append(func_file)
     str_opts = " ".join(opts)
 
     cmd = "3dTqual %s" % str_opts
-    p = subprocess.Popen(cmd.split(" "),
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
-    out, err = p.communicate()
+
+    try:
+        p = subprocess.Popen(cmd.split(" "),
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        out, err = p.communicate()
+    except:
+        err = "[!] QAP says: Something went wrong with running AFNI's " \
+              "3dTqual."
+        raise_smart_exception(locals(),err)
 
     # Extract time-series in output
     #lines = out.splitlines()
