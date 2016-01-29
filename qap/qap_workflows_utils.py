@@ -3,10 +3,18 @@
 def run_3dClipLevel(input_skull):
 
     import commands
+    from workflow_utils import raise_smart_exception
 
     cmd = "3dClipLevel %s" % input_skull
 
-    thresh_out = int(float((commands.getoutput(cmd).split("\n")[1])))
+    try:
+        out_string = commands.getoutput(cmd)
+        out_string = out_string.split("\n")[1]
+        thresh_out = int(float(out_string))
+    except:
+        msg = "[!] QAP says: Something went wrong with running AFNI's " \
+              "3dClipLevel."
+        raise_smart_exception(locals(),msg)
 
 
     return thresh_out
@@ -22,6 +30,8 @@ def slice_head_mask(infile, transform, standard):
     import numpy as np
     import subprocess
     import pkg_resources as p
+
+    from workflow_utils import raise_smart_exception
 
     # get file info
     infile_img = nb.load(infile)
@@ -50,7 +60,13 @@ def slice_head_mask(infile, transform, standard):
         coord_cmd = "std2imgcoord -img %s -std %s -xfm %s -vox %s" \
                     % (infile, standard, transform, inpoint)
 
-        coord_out = subprocess.check_output(coord_cmd, shell=True)
+        try:
+            coord_out = subprocess.check_output(coord_cmd, shell=True)
+        except:
+            msg = "[!] QAP says: Something went wrong with running " \
+                  "std2imgcoord."
+            raise_smart_exception(locals(),msg)
+
 
         if "Could not" in coord_out:
             raise Exception(coord_out)
@@ -144,7 +160,11 @@ def slice_head_mask(infile, transform, standard):
     outfile_name = infile_filename + "_slice_mask.nii.gz"
     outfile_path = os.path.join(os.getcwd(), outfile_name)
 
-    nb.save(new_mask_img, outfile_path)
+    try:
+        nb.save(new_mask_img, outfile_path)
+    except:
+        raise_smart_exception(locals())
+        
 
     return outfile_path
 

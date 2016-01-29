@@ -183,10 +183,10 @@ def upl_qap_output(cfg_file):
         if files:
             upl_files.extend([os.path.join(root, fil) for fil in files])
 
-    # Using CPAC AWS utils
+    # Using INDI AWS utils
     s3_upl_files = [ufile.replace(output_dir, bucket_out_prefix) \
                    for ufile in upl_files]
-    aws_utils.s3_upload(bucket, upl_files, s3_upl_files)
 
+    aws_utils.s3_upload(bucket, upl_files, s3_upl_files)
 
 
