@@ -66,11 +66,9 @@ def run_anatomical_reorient(anatomical_scan, run=True):
     workflow_dir = os.path.join(current_dir, "anatomical_reorient")
     workflow.base_dir = workflow_dir
 
-
     resource_pool = {}
     config = {}
     num_cores_per_subject = 1
-
 
     resource_pool["anatomical_scan"] = anatomical_scan
     
