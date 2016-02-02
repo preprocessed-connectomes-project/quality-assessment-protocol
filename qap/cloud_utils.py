@@ -187,6 +187,6 @@ def upl_qap_output(cfg_file):
     s3_upl_files = [ufile.replace(output_dir, bucket_out_prefix) \
                    for ufile in upl_files]
 
-    aws_utils.s3_upload(bucket, upl_files, s3_upl_files)
+    aws_utils.s3_upload(bucket, (upl_files, s3_upl_files))
 
 
