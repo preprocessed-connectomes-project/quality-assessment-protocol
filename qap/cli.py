@@ -207,8 +207,13 @@ class QAProtocolCLI:
         rt = _run_workflow(
             (subject_list[sub], self._config, sub, run_name, site_name))
 	
+        # make uploading results to S3 bucket the default if not specified
+        if "upload_to_s3" not in self._config.keys():
+            self._config["upload_to_s3"] = True
+
         # upload results
-        upl_qap_output(self._config)
+        if self._config["upload_to_s3"]:
+            upl_qap_output(self._config)
 
         return rt
 
