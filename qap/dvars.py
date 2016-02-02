@@ -23,18 +23,25 @@ def remove_zero_variance_voxels(func_timeseries, mask):
 
 def load(func_file, mask_file, check4d=True):
 
-    func_img    = nib.load(func_file)
-    mask_img    = nib.load(mask_file)
+    import nibabel as nib
+    from workflow_utils import raise_smart_exception
+
+    try:
+        func_img    = nib.load(func_file)
+        mask_img    = nib.load(mask_file)
+    except:
+        raise_smart_exception(locals())
 
     mask        = mask_img.get_data()
     func        = func_img.get_data().astype(np.float)
 
     if check4d and len(func.shape) != 4:
-        raise Exception("Input functional %s should be 4-dimensional" % func_file)
+        err = "Input functional %s should be 4-dimensional" % func_file
+        raise_smart_exception(locals(),err)
 
     mask_var_filtered = remove_zero_variance_voxels(func, mask)
 
-    func        = func[mask_var_filtered.nonzero()].T # will have ntpts x nvoxs
+    func  = func[mask_var_filtered.nonzero()].T # will have ntpts x nvoxs
     
     
     return func
@@ -93,6 +100,9 @@ def ar1(func, method=ar_nitime):
 
 
 def calc_dvars(func, output_all=False, interp="fraction"):
+
+    from workflow_utils import raise_smart_exception
+
     # Robust standard deviation
     func_sd     = robust_stdev(func, interp)
     
@@ -116,9 +126,15 @@ def calc_dvars(func, output_all=False, interp="fraction"):
     dvars_vx_stdz = diff_vx_stdz.std(1, ddof=1)
     
     if output_all:
-        out = np.vstack((dvars_stdz, dvars_plain, dvars_vx_stdz))
+        try:
+            out = np.vstack((dvars_stdz, dvars_plain, dvars_vx_stdz))
+        except:
+            raise_smart_exception(locals())
     else:
-        out = dvars_stdz.reshape(len(dvars_stdz), 1)
+        try:
+            out = dvars_stdz.reshape(len(dvars_stdz), 1)
+        except:
+            raise_smart_exception(locals())
     
     return out
 
@@ -131,10 +147,16 @@ def calc_mean_dvars(dvars):
 
 
 def mean_dvars_wrapper(func_file, mask_file, dvars_out_file=None):
+
+    from workflow_utils import raise_smart_exception
+
     func    = load(func_file, mask_file)
     dvars   = calc_dvars(func)
     if dvars_out_file:
-        np.savetxt(dvars_out_file, dvars, fmt='%.12f')
+        try:
+            np.savetxt(dvars_out_file, dvars, fmt='%.12f')
+        else:
+            raise_smart_exception(locals())
     mean_d  = calc_mean_dvars(dvars)
     return mean_d[0], dvars
 
