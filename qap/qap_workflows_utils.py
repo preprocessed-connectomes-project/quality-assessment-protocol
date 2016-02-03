@@ -9,7 +9,7 @@ def run_3dClipLevel(input_skull):
 
     try:
         out_string = commands.getoutput(cmd)
-        out_string = out_string.split("\n")[1]
+        out_string = out_string.split("\n")[-1]
         thresh_out = int(float(out_string))
     except:
         msg = "[!] QAP says: Something went wrong with running AFNI's " \
@@ -164,7 +164,7 @@ def slice_head_mask(infile, transform, standard):
         nb.save(new_mask_img, outfile_path)
     except:
         raise_smart_exception(locals())
-        
+
 
     return outfile_path
 

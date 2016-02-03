@@ -209,7 +209,7 @@ class QAProtocolCLI:
 	
         # make uploading results to S3 bucket the default if not specified
         if "upload_to_s3" not in self._config.keys():
-            self._config["upload_to_s3"] = True
+            self._config["upload_to_s3"] = False
 
         # upload results
         if self._config["upload_to_s3"]:
