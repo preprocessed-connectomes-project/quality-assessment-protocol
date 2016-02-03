@@ -2,15 +2,14 @@
 
 def run_3dClipLevel(input_skull):
 
-    import commands
-    from workflow_utils import raise_smart_exception
-
-    cmd = "3dClipLevel %s" % input_skull
+    import subprocess
+    from qap.workflow_utils import raise_smart_exception
 
     try:
-        out_string = commands.getoutput(cmd)
-        out_string = out_string.split("\n")[-1]
-        thresh_out = int(float(out_string))
+        out_val = subprocess.check_output(("3dClipLevel",input_skull))
+        if "\n" in out_val:
+            out_val = out_val.replace("\n","")
+        thresh_out = int(float(out_val))
     except:
         msg = "[!] QAP says: Something went wrong with running AFNI's " \
               "3dClipLevel."
@@ -31,7 +30,7 @@ def slice_head_mask(infile, transform, standard):
     import subprocess
     import pkg_resources as p
 
-    from workflow_utils import raise_smart_exception
+    from qap.workflow_utils import raise_smart_exception
 
     # get file info
     infile_img = nb.load(infile)
@@ -57,19 +56,21 @@ def slice_head_mask(infile, transform, standard):
 
     for inpoint in inpoint_files:
 
-        coord_cmd = "std2imgcoord -img %s -std %s -xfm %s -vox %s" \
-                    % (infile, standard, transform, inpoint)
+        coord_cmd = ("std2imgcoord", "-img", infile, "-std", standard, \
+            "-xfm", transform, "-vox", inpoint)
 
         try:
-            coord_out = subprocess.check_output(coord_cmd, shell=True)
+            coord_out = subprocess.check_output(coord_cmd)
         except:
             msg = "[!] QAP says: Something went wrong with running " \
                   "std2imgcoord."
             raise_smart_exception(locals(),msg)
 
-
         if "Could not" in coord_out:
             raise Exception(coord_out)
+
+        if "\n" in coord_out:
+            coord_out = coord_out.replace("\n","")
 
         coords.append(coord_out)
 

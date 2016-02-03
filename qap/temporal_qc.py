@@ -98,7 +98,7 @@ def fd_jenkinson(in_file, rmax=80., out_file=None):
     from shutil import copyfile
     import sys
     import math
-    from workflow_utils import raise_smart_exception
+    from qap.workflow_utils import raise_smart_exception
 
     if out_file is None:
         fname, ext = op.splitext(op.basename(in_file))
