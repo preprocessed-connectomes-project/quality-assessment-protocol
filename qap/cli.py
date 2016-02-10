@@ -167,24 +167,12 @@ class QAProtocolCLI:
                   run_name, sites_dict.get(sub_info[0], None))
                   for sub_info in flat_sub_dict.keys()]
 
-        results = []
+        results = _run_workflow(wfargs)
 
-        # skip parallel machinery if we are running only one subject at once
-        if ns_at_once == 1:
-            for a in wfargs:
-                results.append(_run_workflow(a))
-        else:
-            from multiprocessing import Pool
 
-            try:
-                pool = Pool(processes=ns_at_once, masktasksperchild=50)
-            except TypeError:  # Make python <2.7 compatible
-                pool = Pool(processes=ns_at_once)
-
-            results = pool.map(_run_workflow, wfargs)
-            pool.close()
-            pool.terminate()
         return results
+
+
 
     def _run_cloud(self, run_name, subject_list):
 
@@ -382,6 +370,7 @@ def _run_workflow(data_package):
     workflow.config['execution'] = \
         {'crashdump_dir': config["output_directory"]}
 
+
     # update that resource pool with what's already in the output directory
     for resource in os.listdir(output_dir):
         if (op.isdir(op.join(output_dir, resource)) and
@@ -405,6 +394,17 @@ def _run_workflow(data_package):
 
         err = err + "\n\n"
         raise Exception(err)
+
+
+    # create the one node all participants will start from
+    starter_node = pe.Node(niu.Function(input_names=['input_data'], 
+                                        output_names=['resource_pool'], 
+                                        function=pass_input_data),
+                           name='starter_node')
+
+    # send this resource pool to the starter node
+    starter_node.inputs.input_data = resource_pool
+
 
     # start connecting the pipeline
     if 'qap_' + qap_type not in resource_pool.keys():
@@ -453,11 +453,10 @@ def _run_workflow(data_package):
                 dotfilename=op.join(output_dir, run_name + ".dot"),
                 simple_form=False)
 
-        nc_per_subject = config.get('num_cores_per_subject', 1)
         runargs = {'plugin': 'Linear', 'plugin_args': {}}
         if nc_per_subject > 1:
             runargs['plugin'] = 'MultiProc'
-            runargs['plugin_args'] = {'n_procs': nc_per_subject}
+            runargs['plugin_args'] = {'n_procs': num_subjects_at_once}
 
         try:
             workflow.run(**runargs)

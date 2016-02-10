@@ -159,7 +159,16 @@ def run_qap_mask(anatomical_reorient, flirt_affine_xfm, template_skull,
 def add_header_to_qap_dict(in_file, qap_dict=None):
 
     import nibabel
-    img = nibabel.load(in_file)
+    from qap.workflow_utils import raise_smart_exception
+
+    try:
+        img = nibabel.load(in_file)
+        img_header = img.header
+    except:
+        err = "You may not have an up-to-date installation of the Python " \
+              "Nibabel package.\nYour Nibabel version: %s" % \
+              str(nb.__version__)
+        raise_smart_exception(locals(),err)
 
     if not qap_dict:
         qap_dict = {}
@@ -171,14 +180,30 @@ def add_header_to_qap_dict(in_file, qap_dict=None):
                    "srow_z", "aux_file", "intent_name", "slice_code", \
                    "data_type", "qform_code", "sform_code"]
 
-    for info_label in info_labels:
-        qap_dict[info_label] = str(img.header[info_label])
 
-    qap_dict["pix_dimx"] = str(img.header['pixdim'][1])
-    qap_dict["pix_dimy"] = str(img.header['pixdim'][2])
-    qap_dict["pix_dimz"] = str(img.header['pixdim'][3])
-    qap_dict["tr"] = str(img.header['pixdim'][4])
-    qap_dict["extensions"] = len(img.header.extensions.get_codes())
+    for info_label in info_labels:
+        try:
+            qap_dict[info_label] = str(img_header[info_label])
+        except:
+            print "\n\n%s field not in NIFTI header of %s\n\n" % \
+                  (info_label, in_file)
+            pass
+
+    try:
+        pixdim = img_header['pixdim']
+        qap_dict["pix_dimx"] = str(pixdim[1])
+        qap_dict["pix_dimy"] = str(pixdim[2])
+        qap_dict["pix_dimz"] = str(pixdim[3])
+        qap_dict["tr"] = str(pixdim[4])
+    except:
+        print "\n\npix_dim/TR fields not in NIFTI header of %s\n\n" % in_file
+        pass
+
+    try:
+        qap_dict["extensions"] = len(img.header.extensions.get_codes())
+    except:
+        print "\n\nExtensions not in NIFTI header of %s\n\n" % in_file
+        pass
 
 
     return qap_dict
