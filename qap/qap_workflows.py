@@ -5,7 +5,7 @@
 import os.path as op
 
 
-def qap_mask_workflow(workflow, resource_pool, config):
+def qap_mask_workflow(workflow, resource_pool, config, name=None):
 
     import os
     import sys
@@ -20,6 +20,9 @@ def qap_mask_workflow(workflow, resource_pool, config):
     from qap_workflows_utils import run_3dClipLevel, slice_head_mask
 
     from workflow_utils import check_input_resources, check_config_settings
+
+    if not name:
+        name = "0"
 
     # check_input_resources(resource_pool, 'anatomical_reorient')
     # check_input_resources(resource_pool, 'ants_affine_xfm')
@@ -46,27 +49,28 @@ def qap_mask_workflow(workflow, resource_pool, config):
 
     select_thresh = pe.Node(niu.Function(
         input_names=['input_skull'], output_names=['thresh_out'],
-        function=run_3dClipLevel), name='qap_headmask_3dClipLevel',
+        function=run_3dClipLevel), name='qap_headmask_3dClipLevel_%s' % name,
         iterfield=['input_skull'])
 
     mask_skull = pe.Node(
-        fsl.Threshold(args='-bin'), name='qap_headmask_thresh')
+        fsl.Threshold(args='-bin'), name='qap_headmask_thresh_%s' % name)
 
     dilate_node = pe.Node(
         fsl.MathsCommand(args='-dilM -dilM -dilM -dilM -dilM -dilM'),
-        name='qap_headmask_dilate')
+        name='qap_headmask_dilate_%s' % name)
 
     erode_node = pe.Node(
         fsl.MathsCommand(args='-eroF -eroF -eroF -eroF -eroF -eroF'),
-        name='qap_headmask_erode')
+        name='qap_headmask_erode_%s' % name)
 
     slice_head_mask = pe.Node(niu.Function(
         input_names=['infile', 'transform', 'standard'],
         output_names=['outfile_path'], function=slice_head_mask),
-        name='qap_headmask_slice_head_mask')
+        name='qap_headmask_slice_head_mask_%s' % name)
 
     combine_masks = pe.Node(fsl.BinaryMaths(
-        operation='add', args='-bin'), name='qap_headmask_combine_masks')
+        operation='add', args='-bin'), 
+        name='qap_headmask_combine_masks_%s' % name)
 
     if len(resource_pool['anatomical_reorient']) == 2:
         node, out_file = resource_pool['anatomical_reorient']
@@ -258,7 +262,8 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
         input_names=['anatomical_reorient', 'head_mask_path',
                      'anatomical_gm_mask', 'anatomical_wm_mask',
                      'anatomical_csf_mask', 'subject_id',
-                     'session_id', 'scan_id', 'site_name'],
+                     'session_id', 'scan_id', 'site_name',
+                     'starter'],
         output_names=['qc'], function=qap_anatomical_spatial),
         name='qap_anatomical_spatial')
 
@@ -267,8 +272,11 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config,
     spatial.inputs.session_id = config['session_id']
     spatial.inputs.scan_id = config['scan_id']
 
-    if 'site_name' in config.keys():
-        spatial.inputs.site_name = config['site_name']
+    node, out_file = resource_pool['starter']
+    workflow.connect(node, out_file, spatial, 'starter')
+
+    if 'site_name' in resource_pool.keys():
+        spatial.inputs.site_name = resource_pool['site_name']
 
     if len(resource_pool['anatomical_reorient']) == 2:
         node, out_file = resource_pool['anatomical_reorient']

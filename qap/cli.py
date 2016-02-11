@@ -152,22 +152,28 @@ class QAProtocolCLI:
 
                         flat_sub_dict[sub_info_tuple].update(resource_dict)
 
-            # in case some subjects have site names and others don't
-            if len(sites_dict.keys()) > 0:
-                for subid in subdict.keys():
-                    if subid not in sites_dict.keys():
-                        sites_dict[subid] = None
+        # in case some subjects have site names and others don't
+        if len(sites_dict.keys()) > 0:
+            for subid in subdict.keys():
+                if subid not in sites_dict.keys():
+                    sites_dict[subid] = None
+
+        # integrate site information into flat_sub_dict
+        #     it was separate in the first place to circumvent the fact that
+        #     even though site_name doesn't get keyed with scan names, that
+        #     doesn't necessarily mean scan names haven't been specified for
+        #     that participant
+        for sub_info_tuple in flat_sub_dict.keys():
+            site_info = {}
+            site_info["site_name"] = sites_dict[sub_info_tuple[0]]
+            flat_sub_dict[sub_info_tuple].update(site_info)
 
         # Start the magic
         logger.info('There are %d subjects in the pool' %
                     len(flat_sub_dict.keys()))
 
-        # Stack workflow args
-        wfargs = [(flat_sub_dict[sub_info], self._config, sub_info,
-                  run_name, sites_dict.get(sub_info[0], None))
-                  for sub_info in flat_sub_dict.keys()]
-
-        results = _run_workflow(wfargs)
+        results = _run_workflow(flat_sub_dict, flat_sub_dict.keys(), \
+                                    self._config, run_name)
 
 
         return results
@@ -189,11 +195,11 @@ class QAProtocolCLI:
         try:
             filesplit = filepath.split(self._config["bucket_prefix"])
             site_name = filesplit[1].split("/")[1]
+            subject_list[sub]["site_name"] = site_name
         except:
-            site_name = "site"
+            pass
 
-        rt = _run_workflow(
-            (subject_list[sub], self._config, sub, run_name, site_name))
+        rt = _run_workflow(subject_list, sub, self._config, run_name)
 	
         # make uploading results to S3 bucket the default if not specified
         if "upload_to_s3" not in self._config.keys():
@@ -262,7 +268,13 @@ class QAProtocolCLI:
                     logger.info('Written report (%s) in %s' % (k, v['path']))
 
 
-def _run_workflow(data_package):
+
+def starter_node_func(starter):
+    return starter
+
+
+
+def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
 
     # build pipeline for each subject, individually
     # ~ 5 min 20 sec per subject
@@ -274,6 +286,7 @@ def _run_workflow(data_package):
 
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
+    import nipype.interfaces.utility as niu
 
     import nipype.interfaces.utility as util
     import nipype.interfaces.fsl.maths as fsl
@@ -286,58 +299,24 @@ def _run_workflow(data_package):
     from time import strftime
     from nipype import config as nyconfig
 
-    resource_pool = data_package[0]
-    config = data_package[1]
-    subject_info = data_package[2]
-    run_name = data_package[3]
-    site_name = data_package[4]
 
     qap_type = config['qap_type']
 
-
-    sub_id = str(subject_info[0])
-    # for nipype
-    if "-" in sub_id:
-        sub_id = sub_id.replace("-","_")
-    if "." in sub_id:
-        sub_id = sub_id.replace(".","_")
-
-    if subject_info[1]:
-        session_id = subject_info[1]
-        # for nipype
-        if "-" in session_id:
-            session_id = session_id.replace("-","_")
-        if "." in session_id:
-            session_id = session_id.replace(".","_")
-    else:
-        session_id = "session_0"
-
-    if subject_info[2]:
-        scan_id = subject_info[2]
-        # for nipype
-        if "-" in scan_id:
-            scan_id = scan_id.replace("-","_")
-        if "." in scan_id:
-            scan_id = scan_id.replace(".","_")
-    else:
-        scan_id = "scan_0"
-
     # Read and apply general settings in config
     keep_outputs = config.get('write_all_outputs', False)
-    output_dir = op.join(config["output_directory"], run_name,
-                         sub_id, session_id, scan_id)
+
+    log_dir = op.join(config["output_directory"], run_name)
 
     try:
-        os.makedirs(output_dir)
+        os.makedirs(log_dir)
     except:
-        if not op.isdir(output_dir):
+        if not op.isdir(log_dir):
             err = "[!] Output directory unable to be created.\n" \
-                  "Path: %s\n\n" % output_dir
+                    "Path: %s\n\n" % log_dir
             raise Exception(err)
         else:
             pass
 
-    log_dir = output_dir
 
     # set up logging
     nyconfig.update_config(
@@ -352,105 +331,166 @@ def _run_workflow(data_package):
 
     logger.info("QAP version %s" % qap.__version__)
     logger.info("Pipeline start time: %s" % pipeline_start_stamp)
-    logger.info("Contents of resource pool:\n" + str(resource_pool))
-    logger.info("Configuration settings:\n" + str(config))
 
-    # for QAP spreadsheet generation only
-    config.update({"subject_id": sub_id, "session_id": session_id,
-                   "scan_id": scan_id, "run_name": run_name})
 
-    if site_name:
-        config["site_name"] = site_name
-
-    workflow = pe.Workflow(name=scan_id)
-    workflow.base_dir = op.join(config["working_directory"], sub_id,
-                                session_id)
+    workflow = pe.Workflow(name=run_name)
 
     # set up crash directory
     workflow.config['execution'] = \
         {'crashdump_dir': config["output_directory"]}
 
-
-    # update that resource pool with what's already in the output directory
-    for resource in os.listdir(output_dir):
-        if (op.isdir(op.join(output_dir, resource)) and
-                resource not in resource_pool.keys()):
-            resource_pool[resource] = glob.glob(op.join(output_dir,
-                                                        resource, "*"))[0]
-
-    # resource pool check
-    invalid_paths = []
-
-    for resource in resource_pool.keys():
-        if not op.isfile(resource_pool[resource]):
-            invalid_paths.append((resource, resource_pool[resource]))
-
-    if len(invalid_paths) > 0:
-        err = "\n\n[!] The paths provided in the subject list to the " \
-              "following resources are not valid:\n"
-
-        for path_tuple in invalid_paths:
-            err = err + path_tuple[0] + ": " + path_tuple[1] + "\n"
-
-        err = err + "\n\n"
-        raise Exception(err)
-
-
     # create the one node all participants will start from
-    starter_node = pe.Node(niu.Function(input_names=['input_data'], 
-                                        output_names=['resource_pool'], 
-                                        function=pass_input_data),
+    starter_node = pe.Node(niu.Function(input_names=['starter'], 
+                                        output_names=['starter'], 
+                                        function=starter_node_func),
                            name='starter_node')
 
-    # send this resource pool to the starter node
-    starter_node.inputs.input_data = resource_pool
+    # set a dummy variable
+    starter_node.inputs.starter = ""
 
 
-    # start connecting the pipeline
-    if 'qap_' + qap_type not in resource_pool.keys():
-        from qap import qap_workflows as qw
-        wf_builder = getattr(qw, 'qap_' + qap_type + '_workflow')
-        workflow, resource_pool = wf_builder(workflow, resource_pool, config)
-
-    # set up the datasinks
     new_outputs = 0
 
-    out_list = ['qap_' + qap_type]
-    if keep_outputs:
-        out_list = resource_pool.keys()
+    for sub_info in sub_info_list:
 
-    # Save reports to out_dir if necessary
-    if config.get('write_report', False):
-        out_list += ['qap_mosaic']
+        resource_pool = resource_pool_list[sub_info]
 
-        # The functional temporal also has an FD plot
-        if 'functional_temporal' in qap_type:
-            out_list += ['qap_fd']
+        # resource pool check
 
-    for output in out_list:
-        # we use a check for len()==2 here to select those items in the
-        # resource pool which are tuples of (node, node_output), instead
-        # of the items which are straight paths to files
+        invalid_paths = []
 
-        # resource pool items which are in the tuple format are the
-        # outputs that have been created in this workflow because they
-        # were not present in the subject list YML (the starting resource
-        # pool) and had to be generated
-        if len(resource_pool[output]) == 2:
-            ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
-            ds.inputs.base_directory = output_dir
-            node, out_file = resource_pool[output]
-            workflow.connect(node, out_file, ds, output)
-            new_outputs += 1
+        for resource in resource_pool.keys():
+            if not op.isfile(resource_pool[resource]) and \
+                resource != "site_name":
+                invalid_paths.append((resource, resource_pool[resource]))
 
-    rt = {'id': sub_id, 'session': session_id, 'scan': scan_id,
-          'status': 'started'}
+        if len(invalid_paths) > 0:
+            err = "\n\n[!] The paths provided in the subject list to the " \
+                  "following resources are not valid:\n"
+
+            for path_tuple in invalid_paths:
+                err = err + path_tuple[0] + ": " + path_tuple[1] + "\n"
+
+            err = err + "\n\n"
+            raise Exception(err)
+
+
+        resource_pool["starter"] = (starter_node, 'starter')
+
+        # process subject info
+
+        sub_id = str(sub_info[0])
+        # for nipype
+        if "-" in sub_id:
+            sub_id = sub_id.replace("-","_")
+        if "." in sub_id:
+            sub_id = sub_id.replace(".","_")
+
+        if sub_info[1]:
+            session_id = sub_info[1]
+            # for nipype
+            if "-" in session_id:
+                session_id = session_id.replace("-","_")
+            if "." in session_id:
+                session_id = session_id.replace(".","_")
+        else:
+            session_id = "session_0"
+
+        if sub_info[2]:
+            scan_id = sub_info[2]
+            # for nipype
+            if "-" in scan_id:
+                scan_id = scan_id.replace("-","_")
+            if "." in scan_id:
+                scan_id = scan_id.replace(".","_")
+        else:
+            scan_id = "scan_0"
+
+
+        # set output directory
+
+        output_dir = op.join(config["output_directory"], run_name,
+                             sub_id, session_id, scan_id)
+
+        try:
+            os.makedirs(output_dir)
+        except:
+            if not op.isdir(output_dir):
+                err = "[!] Output directory unable to be created.\n" \
+                      "Path: %s\n\n" % output_dir
+                raise Exception(err)
+            else:
+                pass
+
+
+        # individual workflow and logger setup
+
+        logger.info("Contents of resource pool:\n" + str(resource_pool))
+        logger.info("Configuration settings:\n" + str(config))
+
+        # for QAP spreadsheet generation only
+        config.update({"subject_id": sub_id, "session_id": session_id,
+                       "scan_id": scan_id, "run_name": run_name})
+
+        workflow.base_dir = op.join(config["working_directory"], sub_id,
+                                session_id)
+
+
+        # update that resource pool with what's already in the output directory
+
+        for resource in os.listdir(output_dir):
+            if (op.isdir(op.join(output_dir, resource)) and
+                    resource not in resource_pool.keys()):
+                resource_pool[resource] = glob.glob(op.join(output_dir,
+                                                            resource, "*"))[0]
+
+
+        # start connecting the pipeline
+        if 'qap_' + qap_type not in resource_pool.keys():
+            from qap import qap_workflows as qw
+            wf_builder = getattr(qw, 'qap_' + qap_type + '_workflow')
+            workflow, resource_pool = wf_builder(workflow, resource_pool, config)
+
+
+        # set up the datasinks
+
+        out_list = ['qap_' + qap_type]
+        if keep_outputs:
+            out_list = resource_pool.keys()
+
+        # Save reports to out_dir if necessary
+        if config.get('write_report', False):
+            out_list += ['qap_mosaic']
+
+            # The functional temporal also has an FD plot
+            if 'functional_temporal' in qap_type:
+                out_list += ['qap_fd']
+
+        for output in out_list:
+            # we use a check for len()==2 here to select those items in the
+            # resource pool which are tuples of (node, node_output), instead
+            # of the items which are straight paths to files
+
+            # resource pool items which are in the tuple format are the
+            # outputs that have been created in this workflow because they
+            # were not present in the subject list YML (the starting resource
+            # pool) and had to be generated
+            if len(resource_pool[output]) == 2:
+                ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
+                ds.inputs.base_directory = output_dir
+                node, out_file = resource_pool[output]
+                workflow.connect(node, out_file, ds, output)
+                new_outputs += 1
+
+        rt = {'id': sub_id, 'session': session_id, 'scan': scan_id,
+              'status': 'started'}
+
 
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
         if config.get('write_graph', False):
             workflow.write_graph(
-                dotfilename=op.join(output_dir, run_name + ".dot"),
+                dotfilename=op.join(config["output_directory"], run_name + ".dot"),
                 simple_form=False)
 
         runargs = {'plugin': 'Linear', 'plugin_args': {}}
