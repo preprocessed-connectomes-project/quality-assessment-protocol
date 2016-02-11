@@ -305,6 +305,8 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
     # Read and apply general settings in config
     keep_outputs = config.get('write_all_outputs', False)
 
+    num_subjects_at_once = config.get('num_subjects_at_once',1)
+
     log_dir = op.join(config["output_directory"], run_name)
 
     try:
@@ -334,6 +336,8 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
 
 
     workflow = pe.Workflow(name=run_name)
+
+    workflow.base_dir = op.join(config["working_directory"])
 
     # set up crash directory
     workflow.config['execution'] = \
@@ -407,6 +411,9 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
             scan_id = "scan_0"
 
 
+        name = "_" + sub_id + "_" + session_id + "_" + scan_id
+
+
         # set output directory
 
         output_dir = op.join(config["output_directory"], run_name,
@@ -432,9 +439,6 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
         config.update({"subject_id": sub_id, "session_id": session_id,
                        "scan_id": scan_id, "run_name": run_name})
 
-        workflow.base_dir = op.join(config["working_directory"], sub_id,
-                                session_id)
-
 
         # update that resource pool with what's already in the output directory
 
@@ -449,7 +453,7 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
         if 'qap_' + qap_type not in resource_pool.keys():
             from qap import qap_workflows as qw
             wf_builder = getattr(qw, 'qap_' + qap_type + '_workflow')
-            workflow, resource_pool = wf_builder(workflow, resource_pool, config)
+            workflow, resource_pool = wf_builder(workflow, resource_pool, config, name)
 
 
         # set up the datasinks
@@ -476,7 +480,7 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
             # were not present in the subject list YML (the starting resource
             # pool) and had to be generated
             if len(resource_pool[output]) == 2:
-                ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
+                ds = pe.Node(nio.DataSink(), name='datasink_%s%s' % (output,name))
                 ds.inputs.base_directory = output_dir
                 node, out_file = resource_pool[output]
                 workflow.connect(node, out_file, ds, output)
@@ -494,7 +498,7 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
                 simple_form=False)
 
         runargs = {'plugin': 'Linear', 'plugin_args': {}}
-        if nc_per_subject > 1:
+        if num_subjects_at_once > 1:
             runargs['plugin'] = 'MultiProc'
             runargs['plugin_args'] = {'n_procs': num_subjects_at_once}
 

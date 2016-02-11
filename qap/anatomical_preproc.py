@@ -1,7 +1,7 @@
 base_test_dir = "/tdata/QAP/qc_test"
 
 
-def anatomical_reorient_workflow(workflow, resource_pool, config):
+def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
     #     anatomical_scan
@@ -24,14 +24,14 @@ def anatomical_reorient_workflow(workflow, resource_pool, config):
 
 
     anat_deoblique = pe.Node(interface=preprocess.Refit(),
-                                name='anat_deoblique')
+                                name='anat_deoblique%s' % name)
 
     anat_deoblique.inputs.in_file = resource_pool["anatomical_scan"]
     anat_deoblique.inputs.deoblique = True
 
 
     anat_reorient = pe.Node(interface=preprocess.Resample(),
-                            name='anat_reorient')
+                            name='anat_reorient%s' % name)
 
     anat_reorient.inputs.orientation = 'RPI'
     anat_reorient.inputs.outputtype = 'NIFTI_GZ'
@@ -100,7 +100,7 @@ def run_anatomical_reorient(anatomical_scan, run=True):
 
 
 
-def anatomical_skullstrip_workflow(workflow, resource_pool, config):
+def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
     #     anatomical_reorient
@@ -121,20 +121,20 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config):
         from anatomical_preproc import anatomical_reorient_workflow
 
         workflow, resource_pool = \
-            anatomical_reorient_workflow(workflow, resource_pool, config)
+            anatomical_reorient_workflow(workflow, resource_pool, config, name)
 
 
     #check_input_resources(resource_pool, "anatomical_reorient")
 
 
     anat_skullstrip = pe.Node(interface=preprocess.SkullStrip(),
-                              name='anat_skullstrip')
+                              name='anat_skullstrip%s' % name)
     
     anat_skullstrip.inputs.outputtype = 'NIFTI_GZ'
     
 
     anat_skullstrip_orig_vol = pe.Node(interface=preprocess.Calc(),
-                                       name='anat_skullstrip_orig_vol')
+                                       name='anat_skullstrip_orig_vol%s' % name)
 
     anat_skullstrip_orig_vol.inputs.expr = 'a*step(b)'
     anat_skullstrip_orig_vol.inputs.outputtype = 'NIFTI_GZ'
@@ -222,7 +222,7 @@ def run_anatomical_skullstrip(anatomical_reorient, run=True):
 
 
 
-def flirt_anatomical_linear_registration(workflow, resource_pool, config):
+def flirt_anatomical_linear_registration(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
     #     anatomical_brain
@@ -252,12 +252,12 @@ def flirt_anatomical_linear_registration(workflow, resource_pool, config):
         from anatomical_preproc import anatomical_skullstrip_workflow
 
         workflow, resource_pool = \
-            anatomical_skullstrip_workflow(workflow, resource_pool, config)
+            anatomical_skullstrip_workflow(workflow, resource_pool, config, name)
 
 
     #check_input_resources(resource_pool, "anatomical_brain")
 
-    calc_flirt_warp = pe.Node(interface=fsl.FLIRT(), name='calc_flirt_warp')
+    calc_flirt_warp = pe.Node(interface=fsl.FLIRT(), name='calc_flirt_warp%s' % name)
 
     calc_flirt_warp.inputs.cost = 'corratio'
 
@@ -513,7 +513,7 @@ def run_ants_anatomical_linear_registration(anatomical_brain, \
 
 
 
-def segmentation_workflow(workflow, resource_pool, config):
+def segmentation_workflow(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
     #     anatomical_brain
@@ -539,10 +539,10 @@ def segmentation_workflow(workflow, resource_pool, config):
         from anatomical_preproc import anatomical_skullstrip_workflow
 
         workflow, resource_pool = \
-            anatomical_skullstrip_workflow(workflow, resource_pool, config)
+            anatomical_skullstrip_workflow(workflow, resource_pool, config, name)
 
 
-    segment = pe.Node(interface=fsl.FAST(), name='segmentation')
+    segment = pe.Node(interface=fsl.FAST(), name='segmentation%s' % name)
 
     segment.inputs.img_type = 1
     segment.inputs.segments = True
@@ -568,7 +568,7 @@ def segmentation_workflow(workflow, resource_pool, config):
                                         'seg_type'],
                            output_names=['filename'],
                            function=pick_seg_type),
-                           name='pick_%s' % seg)
+                           name='pick_%s%s' % (seg,name))
 
         pick_seg.inputs.seg_type = seg
         

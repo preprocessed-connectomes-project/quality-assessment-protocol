@@ -51,7 +51,7 @@ def get_idx(in_files, stop_idx=None, start_idx=None):
 
 
 
-def func_preproc_workflow(workflow, resource_pool, config):
+def func_preproc_workflow(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
     #     functional_scan
@@ -82,7 +82,7 @@ def func_preproc_workflow(workflow, resource_pool, config):
                                          output_names=['stopidx', 
                                                        'startidx'],
                                          function=get_idx),
-                                         name='func_get_idx')
+                                         name='func_get_idx%s' % name)
 
     func_get_idx.inputs.in_files = resource_pool["functional_scan"]
     func_get_idx.inputs.start_idx = config["start_idx"]
@@ -90,7 +90,7 @@ def func_preproc_workflow(workflow, resource_pool, config):
     
     
     func_drop_trs = pe.Node(interface=preprocess.Calc(),
-                           name='func_drop_trs')
+                           name='func_drop_trs%s' % name)
 
     func_drop_trs.inputs.in_file_a = resource_pool["functional_scan"]
     func_drop_trs.inputs.expr = 'a'
@@ -105,7 +105,7 @@ def func_preproc_workflow(workflow, resource_pool, config):
     
 
     func_deoblique = pe.Node(interface=preprocess.Refit(),
-                            name='func_deoblique')
+                            name='func_deoblique%s' % name)
 
     func_deoblique.inputs.deoblique = True
     
@@ -115,7 +115,7 @@ def func_preproc_workflow(workflow, resource_pool, config):
 
 
     func_reorient = pe.Node(interface=preprocess.Resample(),
-                               name='func_reorient')
+                               name='func_reorient%s' % name)
     func_reorient.inputs.orientation = 'RPI'
     func_reorient.inputs.outputtype = 'NIFTI_GZ'
 
@@ -187,7 +187,7 @@ def run_func_preproc(functional_scan, start_idx, stop_idx, run=True):
     
 
 
-def func_motion_correct_workflow(workflow, resource_pool, config):
+def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
     #     func_reorient
@@ -212,11 +212,11 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
         from functional_preproc import func_preproc_workflow
 
         workflow, resource_pool = \
-            func_preproc_workflow(workflow, resource_pool, config)
+            func_preproc_workflow(workflow, resource_pool, config, name)
 
     
     func_get_mean_RPI = pe.Node(interface=preprocess.TStat(),
-                            name='func_get_mean_RPI')
+                            name='func_get_mean_RPI%s' % name)
     func_get_mean_RPI.inputs.options = '-mean'
     func_get_mean_RPI.inputs.outputtype = 'NIFTI_GZ'
     
@@ -229,7 +229,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
 
     # get the first volume of the time series
     get_func_volume = pe.Node(interface=preprocess.Calc(),
-                              name='get_func_volume')
+                              name='get_func_volume%s' % name)
          
     get_func_volume.inputs.expr = 'a'
     get_func_volume.inputs.single_idx = 0
@@ -244,7 +244,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
 
     # calculate motion parameters
     func_motion_correct = pe.Node(interface=preprocess.Volreg(),
-                             name='func_motion_correct')
+                             name='func_motion_correct%s' % name)
 
     func_motion_correct.inputs.args = '-Fourier -twopass'
     func_motion_correct.inputs.zpad = 4
@@ -333,7 +333,7 @@ def run_func_motion_correct(func_reorient, run=True):
 
 
 
-def functional_brain_mask_workflow(workflow, resource_pool, config):
+def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
     #     func_motion_correct
@@ -361,26 +361,26 @@ def functional_brain_mask_workflow(workflow, resource_pool, config):
         from functional_preproc import func_motion_correct_workflow
 
         workflow, resource_pool = \
-            func_motion_correct_workflow(workflow, resource_pool, config)
+            func_motion_correct_workflow(workflow, resource_pool, config, name)
 
   
     if config["use_bet"] == False:
 
         func_get_brain_mask = pe.Node(interface=preprocess.Automask(),
-                                      name='func_get_brain_mask')
+                                      name='func_get_brain_mask%s' % name)
 
         func_get_brain_mask.inputs.outputtype = 'NIFTI_GZ'
 
     else:
 
         func_get_brain_mask = pe.Node(interface=fsl.BET(),
-                                      name='func_get_brain_mask_BET')
+                                      name='func_get_brain_mask_BET%s' % name)
 
         func_get_brain_mask.inputs.mask = True
         func_get_brain_mask.inputs.functional = True
 
         erode_one_voxel = pe.Node(interface=fsl.ErodeImage(),
-                                  name='erode_one_voxel')
+                                  name='erode_one_voxel%s' % name)
 
         erode_one_voxel.inputs.kernel_shape = 'box'
         erode_one_voxel.inputs.kernel_size = 1.0
@@ -469,7 +469,7 @@ def run_functional_brain_mask(func_motion_correct, use_bet=False, run=True):
 
 
 
-def mean_functional_workflow(workflow, resource_pool, config):
+def mean_functional_workflow(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
     #     func_motion_correct
@@ -499,11 +499,11 @@ def mean_functional_workflow(workflow, resource_pool, config):
         from functional_preproc import func_motion_correct_workflow
 
         workflow, resource_pool = \
-            func_motion_correct_workflow(workflow, resource_pool, config)
+            func_motion_correct_workflow(workflow, resource_pool, config, name)
             
    
     func_mean_skullstrip = pe.Node(interface=preprocess.TStat(),
-                           name='func_mean_skullstrip')
+                           name='func_mean_skullstrip%s' % name)
 
     func_mean_skullstrip.inputs.options = '-mean'
     func_mean_skullstrip.inputs.outputtype = 'NIFTI_GZ'
