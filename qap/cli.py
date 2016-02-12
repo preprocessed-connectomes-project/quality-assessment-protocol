@@ -170,15 +170,15 @@ class QAProtocolCLI:
                 if subid not in sites_dict.keys():
                     sites_dict[subid] = None
 
-        # integrate site information into flat_sub_dict
-        #     it was separate in the first place to circumvent the fact that
-        #     even though site_name doesn't get keyed with scan names, that
-        #     doesn't necessarily mean scan names haven't been specified for
-        #     that participant
-        for sub_info_tuple in flat_sub_dict.keys():
-            site_info = {}
-            site_info["site_name"] = sites_dict[sub_info_tuple[0]]
-            flat_sub_dict[sub_info_tuple].update(site_info)
+            # integrate site information into flat_sub_dict
+            #     it was separate in the first place to circumvent the fact that
+            #     even though site_name doesn't get keyed with scan names, that
+            #     doesn't necessarily mean scan names haven't been specified for
+            #     that participant
+            for sub_info_tuple in flat_sub_dict.keys():
+                site_info = {}
+                site_info["site_name"] = sites_dict[sub_info_tuple[0]]
+                flat_sub_dict[sub_info_tuple].update(site_info)
 
         # Start the magic
         logger.info('There are %d subjects in the pool' %
@@ -204,7 +204,7 @@ class QAProtocolCLI:
 
         # Stack workflow args
         wfargs = [(data_bundle, data_bundle.keys(), self._config, run_name,
-                   self.runargs) for data_bundle in bundles]
+                  self.runargs) for data_bundle in bundles]
 
         results = []
 
@@ -348,8 +348,7 @@ def starter_node_func(starter):
 
 
 
-def _run_workflow(resource_pool_list, sub_info_list, config, run_name,
-                      runargs=None):
+def _run_workflow(args):
 
     # build pipeline for each subject, individually
     # ~ 5 min 20 sec per subject
@@ -374,6 +373,8 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name,
     from time import strftime
     from nipype import config as nyconfig
 
+    # unpack args
+    resource_pool_list, sub_info_list, config, run_name, runargs = args
 
     qap_type = config['qap_type']
 
@@ -552,7 +553,7 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name,
             # outputs that have been created in this workflow because they
             # were not present in the subject list YML (the starting resource
             # pool) and had to be generated
-            if len(resource_pool[output]) == 2:
+            if (len(resource_pool[output]) == 2) and (output != "starter"):
                 ds = pe.Node(nio.DataSink(), name='datasink_%s%s' \
                     % (output,name))
                 ds.inputs.base_directory = output_dir
