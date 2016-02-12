@@ -14,6 +14,7 @@ logger = logging.getLogger('workflow')
 
 
 class QAProtocolCLI:
+
     """
     This class and the associated _run_workflow function implement what
     the former scripts (qap_anatomical_spatial.py, etc.) contained
@@ -112,8 +113,19 @@ class QAProtocolCLI:
         if args.with_reports:
             self._config['write_report'] = True
 
+        if "num_subjects_at_once" not in self._config.keys():
+            self._config["num_subjects_at_once"] = 1
+
+        if "num_threads" not in self._config.keys():
+            self._config["num_threads"] = 1
+
+
+
     def _run_here(self, run_name):
+
         ns_at_once = self._config.get('num_subjects_at_once', 1)
+        num_threads = int(self._config["num_threads"])
+
         with open(self._sub_dict, "r") as f:
             subdict = yaml.load(f)
 
@@ -172,8 +184,45 @@ class QAProtocolCLI:
         logger.info('There are %d subjects in the pool' %
                     len(flat_sub_dict.keys()))
 
-        results = _run_workflow(flat_sub_dict, flat_sub_dict.keys(), \
-                                    self._config, run_name)
+
+        # Create bundles
+        i = 0
+        bundles = []
+
+        if len(flat_sub_dict) < ns_at_once:
+            bundles.append(flat_sub_dict)
+        else:
+            for sub_info_tuple in flat_sub_dict.keys():
+                if i == 0:
+                    new_bundle = {}
+                new_bundle[sub_info_tuple] = flat_sub_dict[sub_info_tuple]
+                i += 1
+                if i == ns_at_once:
+                    bundles.append(new_bundle)
+                    i = 0
+
+
+        # Stack workflow args
+        wfargs = [(data_bundle, data_bundle.keys(), self._config, run_name,
+                   self.runargs) for data_bundle in bundles]
+
+        results = []
+
+        # skip parallel machinery if we are running only one bundle at once
+        if num_threads == 1:
+            for a in wfargs:
+                results.append(_run_workflow(a))
+        else:
+            from multiprocessing import Pool
+
+            try:
+                pool = Pool(processes=num_threads, masktasksperchild=50)
+            except TypeError:  # Make python <2.7 compatible
+                pool = Pool(processes=num_threads)
+
+            results = pool.map(_run_workflow, wfargs)
+            pool.close()
+            pool.terminate()
 
 
         return results
@@ -183,7 +232,6 @@ class QAProtocolCLI:
     def _run_cloud(self, run_name, subject_list):
 
         from cloud_utils import upl_qap_output
-        # get the site name!
 
         sub = subject_list.keys()[0]
 
@@ -199,9 +247,10 @@ class QAProtocolCLI:
         except:
             pass
 
-        rt = _run_workflow(subject_list, sub, self._config, run_name)
+        rt = _run_workflow(subject_list, sub, self._config, run_name, \
+                               self.runargs)
 	
-        # make uploading results to S3 bucket the default if not specified
+        # make not uploading results to S3 bucket the default if not specified
         if "upload_to_s3" not in self._config.keys():
             self._config["upload_to_s3"] = False
 
@@ -211,13 +260,30 @@ class QAProtocolCLI:
 
         return rt
 
+
+
     def run(self):
+
+        from qap.workflow_utils import raise_smart_exception
+
         # Get configurations and settings
         config = self._config
         subject_list = self._sub_dict
         cloudify = self._cloudify
         ns_at_once = config.get('num_subjects_at_once', 1)
         write_report = config.get('write_report', False)
+
+        if "platform" in config.keys():
+            platforms = ["SGE","PBS","SLURM","CondorDAGMan"]
+            platform = str(config["platform"])
+            if platform not in platforms:
+                msg = "The platform %s provided in the pipeline " \
+                      "configuration file is not one of the valid choices. " \
+                      "It must be one of the following:\n%s" \
+                      % (platform,str(platforms))
+                raise_smart_exception(locals(),msg)
+        else:
+            platform = None
 
         # Create output directory
         try:
@@ -245,13 +311,21 @@ class QAProtocolCLI:
 
         results = None
 
-        #try:
+
+        # settle run arguments (plugins)
+        self.runargs = {'plugin': 'Linear', 'plugin_args': {}}
+        if platform:
+            self.runargs['plugin'] = platform
+        elif ns_at_once > 1:
+            self.runargs['plugin'] = 'MultiProc'
+            self.runargs['plugin_args'] = {'n_procs': ns_at_once}
+
+
         if not cloudify:
             results = self._run_here(run_name)
         else:
             results = self._run_cloud(run_name, subject_list)
-        #except Exception as e:
-        #    raise Exception("\n\n%s\n\n%s\n\n" % (e, locals()))
+
 
         # PDF reporting
         if write_report:
@@ -274,7 +348,8 @@ def starter_node_func(starter):
 
 
 
-def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
+def _run_workflow(resource_pool_list, sub_info_list, config, run_name,
+                      runargs=None):
 
     # build pipeline for each subject, individually
     # ~ 5 min 20 sec per subject
@@ -301,6 +376,7 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
 
 
     qap_type = config['qap_type']
+
 
     # Read and apply general settings in config
     keep_outputs = config.get('write_all_outputs', False)
@@ -382,7 +458,6 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
         resource_pool["starter"] = (starter_node, 'starter')
 
         # process subject info
-
         sub_id = str(sub_info[0])
         # for nipype
         if "-" in sub_id:
@@ -415,7 +490,6 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
 
 
         # set output directory
-
         output_dir = op.join(config["output_directory"], run_name,
                              sub_id, session_id, scan_id)
 
@@ -431,7 +505,6 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
 
 
         # individual workflow and logger setup
-
         logger.info("Contents of resource pool:\n" + str(resource_pool))
         logger.info("Configuration settings:\n" + str(config))
 
@@ -441,7 +514,6 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
 
 
         # update that resource pool with what's already in the output directory
-
         for resource in os.listdir(output_dir):
             if (op.isdir(op.join(output_dir, resource)) and
                     resource not in resource_pool.keys()):
@@ -453,7 +525,8 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
         if 'qap_' + qap_type not in resource_pool.keys():
             from qap import qap_workflows as qw
             wf_builder = getattr(qw, 'qap_' + qap_type + '_workflow')
-            workflow, resource_pool = wf_builder(workflow, resource_pool, config, name)
+            workflow, resource_pool = wf_builder(workflow, resource_pool, \
+                                                 config, name)
 
 
         # set up the datasinks
@@ -480,7 +553,8 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
             # were not present in the subject list YML (the starting resource
             # pool) and had to be generated
             if len(resource_pool[output]) == 2:
-                ds = pe.Node(nio.DataSink(), name='datasink_%s%s' % (output,name))
+                ds = pe.Node(nio.DataSink(), name='datasink_%s%s' \
+                    % (output,name))
                 ds.inputs.base_directory = output_dir
                 node, out_file = resource_pool[output]
                 workflow.connect(node, out_file, ds, output)
@@ -494,14 +568,9 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
     if new_outputs > 0:
         if config.get('write_graph', False):
             workflow.write_graph(
-                dotfilename=op.join(config["output_directory"], run_name + ".dot"),
+                dotfilename=op.join(config["output_directory"], \
+                                    run_name + ".dot"),
                 simple_form=False)
-
-        runargs = {'plugin': 'Linear', 'plugin_args': {}}
-        if num_subjects_at_once > 1:
-            runargs['plugin'] = 'MultiProc'
-            runargs['plugin_args'] = {'n_procs': num_subjects_at_once}
-
         try:
             workflow.run(**runargs)
             rt['status'] = 'finished'
@@ -530,4 +599,6 @@ def _run_workflow(resource_pool_list, sub_info_list, config, run_name):
     logger.info("Elapsed time (minutes) since last start: %s"
                 % ((pipeline_end_time - pipeline_start_time) / 60))
     logger.info("Pipeline end time: %s" % pipeline_end_stamp)
+
+
     return rt
