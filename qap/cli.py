@@ -123,11 +123,18 @@ class QAProtocolCLI:
 
     def _run_here(self, run_name):
 
+        from qap.workflow_utils import raise_smart_exception
+
         ns_at_once = self._config.get('num_subjects_at_once', 1)
         num_threads = int(self._config["num_threads"])
 
         with open(self._sub_dict, "r") as f:
             subdict = yaml.load(f)
+
+        if len(subdict) == 0:
+            msg = "The participant list provided is either empty or could " \
+                  "not be read properly!"
+            raise_smart_exception(locals(),msg)
 
         flat_sub_dict = {}
         sites_dict = {}
@@ -163,6 +170,11 @@ class QAProtocolCLI:
                             flat_sub_dict[sub_info_tuple] = {}
 
                         flat_sub_dict[sub_info_tuple].update(resource_dict)
+
+        if len(flat_sub_dict) == 0:
+            # this error message meant more for devs than user
+            msg = "The participant dictionary is empty."
+            raise_smart_exception(locals(),msg)
 
         # in case some subjects have site names and others don't
         if len(sites_dict.keys()) > 0:
@@ -200,6 +212,10 @@ class QAProtocolCLI:
                 if i == ns_at_once:
                     bundles.append(new_bundle)
                     i = 0
+
+        if len(bundles) == 0:
+            msg = "No bundles created."
+            raise_smart_exception(locals(),msg)
 
 
         # Stack workflow args
