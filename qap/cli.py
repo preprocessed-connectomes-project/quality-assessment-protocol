@@ -88,10 +88,15 @@ class QAProtocolCLI:
             # Import packages
             from cloud_utils import dl_subj_from_s3, upl_qap_output
             # Download and build a one-subject dictionary from S3
-            self._sub_dict = dl_subj_from_s3(
-                args.subj_idx, args.config, args.s3_dict_yml)
 
-            if not self._sub_dict:
+            self._sub_dict = {}
+
+            for idx in range(1,args.subj_idx+1):
+                single_sub_dict = dl_subj_from_s3(
+                    idx, args.config, args.s3_dict_yml)
+                self._sub_dict.update(single_sub_dict)
+
+            if len(self._sub_dict) == 0:
                 err = "\n[!] Subject dictionary was not successfully " \
                       "downloaded from the S3 bucket!\n"
                 raise RuntimeError(err)
@@ -249,7 +254,7 @@ class QAProtocolCLI:
 
         from cloud_utils import upl_qap_output
 
-        sub = subject_list.keys()[0]
+        #sub = subject_list.keys()[0]
 
         for resource_path in subject_list[sub].values():
             if ".nii" in resource_path:
@@ -263,8 +268,8 @@ class QAProtocolCLI:
         except:
             pass
 
-        rt = _run_workflow(subject_list, sub, self._config, run_name, \
-                               self.runargs)
+        rt = _run_workflow(subject_list, subject_list.keys(), self._config, \
+                               run_name, self.runargs)
 	
         # make not uploading results to S3 bucket the default if not specified
         if "upload_to_s3" not in self._config.keys():
