@@ -256,18 +256,22 @@ class QAProtocolCLI:
 
         #sub = subject_list.keys()[0]
 
-        for resource_path in subject_list[sub].values():
-            if ".nii" in resource_path:
-                filepath = resource_path
-                break
-
         try:
-            filesplit = filepath.split(self._config["bucket_prefix"])
-            site_name = filesplit[1].split("/")[1]
-            subject_list[sub]["site_name"] = site_name
+
+            for sub in subject_list.keys():
+                for resource_path in subject_list[sub].values():
+                    if ".nii" in resource_path:
+                        filepath = resource_path
+                        break
+
+                filesplit = filepath.split(self._config["bucket_prefix"])
+                site_name = filesplit[1].split("/")[1]
+                subject_list[sub]["site_name"] = site_name
+
         except:
             pass
 
+        # let's go!
         rt = _run_workflow(subject_list, subject_list.keys(), self._config, \
                                run_name, self.runargs)
 	
