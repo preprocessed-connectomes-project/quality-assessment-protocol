@@ -272,8 +272,8 @@ class QAProtocolCLI:
             pass
 
         # let's go!
-        rt = _run_workflow(subject_list, subject_list.keys(), self._config, \
-                               run_name, self.runargs)
+        rt = _run_workflow((subject_list, subject_list.keys(), self._config, \
+                               run_name, self.runargs))
 	
         # make not uploading results to S3 bucket the default if not specified
         if "upload_to_s3" not in self._config.keys():
