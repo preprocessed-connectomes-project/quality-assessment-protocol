@@ -222,6 +222,59 @@ def run_anatomical_skullstrip(anatomical_reorient, run=True):
 
 
 
+def afni_anatomical_linear_registration(workflow, resource_pool, \
+    config, name="_"):
+
+    # resource pool should have:
+    #     anatomical_brain
+
+    import os
+    import sys
+
+    import nipype.interfaces.io as nio
+    import nipype.pipeline.engine as pe
+
+    import nipype.interfaces.afni as afni
+
+    from workflow_utils import check_input_resources, \
+                               check_config_settings
+
+    check_config_settings(config, "template_brain_for_anat")
+
+    if "anatomical_brain" not in resource_pool.keys():
+
+        from anatomical_preproc import anatomical_skullstrip_workflow
+
+        workflow, resource_pool = \
+            anatomical_skullstrip_workflow(workflow, resource_pool, config, name)
+
+    calc_3dallineate_warp = pe.Node(interface=afni.Allineate(),
+                                    name='calc_3dAllineate_warp%s' % name)
+
+    if len(resource_pool["anatomical_brain"]) == 2:
+        node, out_file = resource_pool["anatomical_brain"]
+        workflow.connect(node, out_file, calc_3dallineate_warp, 'in_file')
+    else:
+        calc_3dallineate_warp.inputs.in_file = \
+            resource_pool["anatomical_brain"]
+
+
+    calc_3dallineate_warp.inputs.reference = config["template_brain_for_anat"]
+
+    calc_3dallineate_warp.inputs.out_matrix = "3dallineate_warp.mat"
+
+
+    resource_pool["3dallineate_xfm"] = \
+        (calc_3dallineate_warp, 'matrix')
+
+    resource_pool["afni_linear_warped_image"] = \
+        (calc_3dallineate_warp, 'out_file')
+
+
+    return workflow, resource_pool
+
+
+
 def flirt_anatomical_linear_registration(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:

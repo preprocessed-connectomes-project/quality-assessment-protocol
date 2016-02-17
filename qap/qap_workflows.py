@@ -29,13 +29,13 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
 
     check_config_settings(config, 'template_skull_for_anat')
 
-    if 'flirt_affine_xfm' not in resource_pool.keys():
+    if '3dallineate_xfm' not in resource_pool.keys():
 
-        from anatomical_preproc import flirt_anatomical_linear_registration
+        from anatomical_preproc import afni_anatomical_linear_registration
 
         workflow, resource_pool = \
-            flirt_anatomical_linear_registration(workflow, resource_pool,
-                                                 config, name)
+            afni_anatomical_linear_registration(workflow, resource_pool,
+                                                    config, name)
 
     if 'anatomical_reorient' not in resource_pool.keys():
 
@@ -83,11 +83,11 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
         #    resource_pool['anatomical_reorient']
         slice_head_mask.inputs.infile = resource_pool['anatomical_reorient']
 
-    if len(resource_pool['flirt_affine_xfm']) == 2:
-        node, out_file = resource_pool['flirt_affine_xfm']
+    if len(resource_pool['3dallineate_xfm']) == 2:
+        node, out_file = resource_pool['3dallineate_xfm']
         workflow.connect(node, out_file, slice_head_mask, 'transform')
     else:
-        slice_head_mask.inputs.transform = resource_pool['flirt_affine_xfm']
+        slice_head_mask.inputs.transform = resource_pool['3dallineate_xfm']
 
     # convert_fsl_xfm.inputs.standard = config['template_skull_for_anat']
     slice_head_mask.inputs.standard = config['template_skull_for_anat']
@@ -106,7 +106,7 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
 
 
 
-def run_qap_mask(anatomical_reorient, flirt_affine_xfm, template_skull,
+def run_qap_mask(anatomical_reorient, allineate_out_xfm, template_skull,
                  run=True):
 
     # stand-alone runner for anatomical reorient workflow
@@ -133,7 +133,7 @@ def run_qap_mask(anatomical_reorient, flirt_affine_xfm, template_skull,
     num_cores_per_subject = 1
 
     resource_pool['anatomical_reorient'] = anatomical_reorient
-    resource_pool['flirt_affine_xfm'] = flirt_affine_xfm
+    resource_pool['3dallineate_xfm'] = allineate_out_xfm
     config['template_skull_for_anat'] = template_skull
 
     workflow, resource_pool = \
