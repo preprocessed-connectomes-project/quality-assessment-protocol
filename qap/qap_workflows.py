@@ -16,8 +16,9 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     import nipype.interfaces.utility as niu
     import nipype.interfaces.fsl.maths as fsl
     from nipype.interfaces.fsl.base import Info
+    from nipype.interfaces.afni import preprocess
 
-    from qap_workflows_utils import run_3dClipLevel, slice_head_mask
+    from qap_workflows_utils import create_expr_string, slice_head_mask
 
     from workflow_utils import check_input_resources, check_config_settings
 
@@ -29,7 +30,7 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
 
     check_config_settings(config, 'template_skull_for_anat')
 
-    if '3dallineate_xfm' not in resource_pool.keys():
+    if 'allineate_linear_xfm' not in resource_pool.keys():
 
         from anatomical_preproc import afni_anatomical_linear_registration
 
@@ -44,61 +45,71 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
         workflow, resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config, name)
 
-    select_thresh = pe.Node(niu.Function(
-        input_names=['input_skull'], output_names=['thresh_out'],
-        function=run_3dClipLevel), name='qap_headmask_3dClipLevel%s' % name,
-        iterfield=['input_skull'])
 
-    mask_skull = pe.Node(
-        fsl.Threshold(args='-bin'), name='qap_headmask_thresh%s' % name)
+    # find the clipping level for thresholding the head mask
+    clip_level = pe.Node(interface=preprocess.ClipLevel(),
+                         name='qap_headmask_clip_level%s' % name)
 
-    dilate_node = pe.Node(
-        fsl.MathsCommand(args='-dilM -dilM -dilM -dilM -dilM -dilM'),
-        name='qap_headmask_dilate%s' % name)
+    # create the expression string for Calc in mask_skull node
+    create_expr_string = pe.Node(niu.Function(
+        input_names=['clip_level_value'],
+        output_names=['expr_string'], function=create_expr_string),
+        name='qap_headmask_create_expr_string%s' % name)
 
-    erode_node = pe.Node(
-        fsl.MathsCommand(args='-eroF -eroF -eroF -eroF -eroF -eroF'),
-        name='qap_headmask_erode%s' % name)
+    workflow.connect(clip_level, 'clip_val', 
+                         create_expr_string, 'clip_level_value')
+
+    # let's create a binary mask of the skull image with that threshold
+    mask_skull = pe.Node(interface=preprocess.Calc(),
+                         name='qap_headmask_mask_skull%s' % name)
+    mask_skull.inputs.outputtype = "NIFTI_GZ"
+
+    workflow.connect(create_expr_string, 'expr_string', mask_skull, 'expr')
+
+
+    dilate_erode = pe.Node(interface=preprocess.MaskTool(),
+                           name='qap_headmask_mask_tool%s' % name)
+
+    dilate_erode.inputs.dilate_inputs = "6 -6"
+    dilate_erode.inputs.outputtype = "NIFTI_GZ"
+
+    workflow.connect(mask_skull, 'out_file', dilate_erode, 'in_file')
 
     slice_head_mask = pe.Node(niu.Function(
         input_names=['infile', 'transform', 'standard'],
         output_names=['outfile_path'], function=slice_head_mask),
         name='qap_headmask_slice_head_mask%s' % name)
 
-    combine_masks = pe.Node(fsl.BinaryMaths(
-        operation='add', args='-bin'), 
-        name='qap_headmask_combine_masks%s' % name)
+    combine_masks = pe.Node(interface=preprocess.Calc(), 
+                            name='qap_headmask_combine_masks%s' % name)
+
+    combine_masks.inputs.expr = "(a+b)-(a*b)"
 
     if len(resource_pool['anatomical_reorient']) == 2:
         node, out_file = resource_pool['anatomical_reorient']
         workflow.connect([
-            (node, select_thresh,   [(out_file, 'input_skull')]),
-            (node, mask_skull,      [(out_file, 'in_file')]),
+            (node, clip_level,      [(out_file, 'in_file')]),
+            (node, mask_skull,      [(out_file, 'in_file_a')]),
             (node, slice_head_mask, [(out_file, 'infile')])
         ])
     else:
-        select_thresh.inputs.input_skull = resource_pool['anatomical_reorient']
-        mask_skull.inputs.in_file = resource_pool['anatomical_reorient']
-        # convert_fsl_xfm.inputs.infile =
-        #    resource_pool['anatomical_reorient']
+        clip_level.inputs.in_file = resource_pool['anatomical_reorient']
+        mask_skull.inputs.in_file_a = resource_pool['anatomical_reorient']
         slice_head_mask.inputs.infile = resource_pool['anatomical_reorient']
 
-    if len(resource_pool['3dallineate_xfm']) == 2:
-        node, out_file = resource_pool['3dallineate_xfm']
+    if len(resource_pool['allineate_linear_xfm']) == 2:
+        node, out_file = resource_pool['allineate_linear_xfm']
         workflow.connect(node, out_file, slice_head_mask, 'transform')
     else:
-        slice_head_mask.inputs.transform = resource_pool['3dallineate_xfm']
+        slice_head_mask.inputs.transform = \
+            resource_pool['allineate_linear_xfm']
 
     # convert_fsl_xfm.inputs.standard = config['template_skull_for_anat']
     slice_head_mask.inputs.standard = config['template_skull_for_anat']
 
     workflow.connect([
-        (select_thresh, mask_skull,      [('thresh_out', 'thresh')]),
-        # (convert_fsl_xfm, slice_head_mask, [('converted_xfm', 'transform')])
-        (mask_skull, dilate_node,        [('out_file', 'in_file')]),
-        (dilate_node, erode_node,        [('out_file', 'in_file')]),
-        (erode_node, combine_masks,      [('out_file', 'in_file')]),
-        (slice_head_mask, combine_masks, [('outfile_path', 'operand_file')])
+        (dilate_erode, combine_masks, [('out_file', 'in_file_a')]),
+        (slice_head_mask, combine_masks, [('outfile_path', 'in_file_b')])
     ])
 
     resource_pool['qap_head_mask'] = (combine_masks, 'out_file')
@@ -242,10 +253,10 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
             ('anatomical_wm_mask' not in resource_pool.keys()) or \
             ('anatomical_csf_mask' not in resource_pool.keys()):
 
-        from anatomical_preproc import segmentation_workflow
+        from anatomical_preproc import afni_segmentation_workflow
 
         workflow, resource_pool = \
-            segmentation_workflow(workflow, resource_pool, config, name)
+            afni_segmentation_workflow(workflow, resource_pool, config, name)
 
     if 'anatomical_reorient' not in resource_pool.keys():
         

@@ -1,22 +1,10 @@
 
 
-def run_3dClipLevel(input_skull):
+def create_expr_string(clip_level_value):
 
-    import subprocess
-    from qap.workflow_utils import raise_smart_exception
+    expr_string = "step(a-%s)" % clip_level_value
 
-    try:
-        out_val = subprocess.check_output(("3dClipLevel",input_skull))
-        if "\n" in out_val:
-            out_val = out_val.replace("\n","")
-        thresh_out = int(float(out_val))
-    except:
-        msg = "[!] QAP says: Something went wrong with running AFNI's " \
-              "3dClipLevel."
-        raise_smart_exception(locals(),msg)
-
-
-    return thresh_out
+    return expr_string
 
 
 
