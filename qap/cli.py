@@ -31,6 +31,8 @@ class QAProtocolCLI:
 
         cloudgroup.add_argument('--subj_idx', type=int,
                                 help='Subject index to run')
+        cloudgroup.add_argument('--bundle_idx', type=int,
+                                help='Bundle index to run')
         cloudgroup.add_argument(
             '--s3_dict_yml', type=str,
             help='Path to YAML file containing S3 input filepaths dictionary')
@@ -55,58 +57,43 @@ class QAProtocolCLI:
                 "When executing cloud-based runs, please provide both "
                 "inputs.\n")
 
-        elif args.s3_dict_yml and not args.subj_idx and not args.sublist:
+        if args.bundle_idx and not args.s3_dict_yml and not args.sublist:
             raise RuntimeError(
-                "\n[!] You provided --s3_dict_yml, but not --subj_idx. "
+                "\n[!] You provided --bundle_idx, but not --s3_dict_yml. "
                 "When executing cloud-based runs, please provide both "
                 "inputs.\n")
+
+        elif args.s3_dict_yml and not args.sublist:
+            if not args.subj_idx and not args.bundle_idx:
+                raise RuntimeError(
+                    "\n[!] You provided --s3_dict_yml, but no --subj_idx or "\
+                    "--bundle_idx. When executing cloud-based runs, please " \
+                    "provide both required inputs.\n")
+            if args.subj_idx and args.bundle_idx:
+                raise RuntimeError(
+                    "\n[!] You provided both --subj_idx and --bundle_idx. " \
+                    "You only need one for the run.\n")
 
         elif not args.sublist and not args.subj_idx and not args.s3_dict_yml:
             raise RuntimeError(
                 "\n[!] Either --sublist is required for regular runs, or "
                 "both --subj_idx and --s3_dict_yml for cloud-based runs.\n")
 
-        elif args.sublist and args.subj_idx and args.s3_dict_yml:
+        elif args.sublist and args.s3_dict_yml:
             raise RuntimeError(
                 "\n[!] Either --sublist is required for regular runs, or "
-                "both --subj_idx and --s3_dict_yml for cloud-based runs, "
-                "but not all three. (I'm not sure which you are trying to "
-                "do!)\n")
+                "both --s3_dict_yml and either --subj_idx or --bundle_idx " \
+                "for cloud-based runs, but not all three. (I'm not sure " \
+                "which you are trying to do!)\n")
 
-        elif args.sublist and (args.subj_idx or args.s3_dict_yml):
+        elif args.sublist and (args.subj_idx or args.bundle_idx or \
+            args.s3_dict_yml):
             raise RuntimeError(
                 "\n[!] Either --sublist is required for regular runs, or "
-                "both --subj_idx and --s3_dict_yml for cloud-based runs. "
-                "(I'm not sure which you are trying to do!)\n")
+                "both --s3_dict_yml and either --subj_idx or --bundle_idx " \
+                "for cloud-based runs. (I'm not sure which you are trying " \
+                "to do!)\n")
 
-        self._cloudify = False
-
-        if args.subj_idx and args.s3_dict_yml:
-            self._cloudify = True
-
-            # ---- Cloud-ify! ----
-            # Import packages
-            from cloud_utils import dl_subj_from_s3, upl_qap_output
-            # Download and build a one-subject dictionary from S3
-
-            self._sub_dict = {}
-
-            for idx in range(1,args.subj_idx+1):
-                single_sub_dict = dl_subj_from_s3(
-                    idx, args.config, args.s3_dict_yml)
-                self._sub_dict.update(single_sub_dict)
-
-            if len(self._sub_dict) == 0:
-                err = "\n[!] Subject dictionary was not successfully " \
-                      "downloaded from the S3 bucket!\n"
-                raise RuntimeError(err)
-
-        elif args.sublist:
-            self._sub_dict = args.sublist
-
-        else:
-            raise RuntimeError(
-                "\n[!] Arguments were parsed, but no appropriate run found")
 
         # Load config
         with open(args.config, "r") as f:
@@ -118,33 +105,199 @@ class QAProtocolCLI:
         if args.with_reports:
             self._config['write_report'] = True
 
-        if "num_subjects_at_once" not in self._config.keys():
-            self._config["num_subjects_at_once"] = 1
+        if "num_subjects_per_bundle" not in self._config.keys():
+            self._config["num_subjects_per_bundle"] = 1
 
-        if "num_threads" not in self._config.keys():
-            self._config["num_threads"] = 1
+        if "num_bundles_at_once" not in self._config.keys():
+            self._config["num_bundles_at_once"] = 1
+
+
+        # handle Cloud stuff if applicable
+
+        self._cloudify = False
+
+        if args.s3_dict_yml and (args.subj_idx or args.bundle_idx):
+
+            # ---- Cloud-ify! ----
+            # Download and build a one-bundle dictionary from S3
+
+            from cloud_utils import dl_subj_from_s3, upl_qap_output
+
+            self._cloudify = True
+
+            self._sub_dict = {}
+
+            # s3_dict_yml is a dictionary of dictionaries, keyed with
+            # sub-session-scan tuples, and is generated by the 
+            # qap_aws_s3_dict_generator.py script, containing filepath info of
+            # data on S3 storage
+            #   format:
+            #     { (sub01,session01,scan01):
+            #           {"anatomical_scan": <S3 filepath>},
+            #       (sub02,session01,scan01):
+            #           {"anatomical_scan": <S3 filepath>}, ..}
+
+            # bundle_idx is an integer (minimum of 1) which will be used to
+            # calculate where in the s3_dict_yml to begin downloading subjects
+            # for that bundle, based on the number of subjects per bundle
+            # (specified by the user)
+
+            # subj_idx is an integer (minimum of 1) which will select the
+            # entry from s3_dict_yml to retrieve using the dl_subj_from_s3
+            # function
+
+            if args.bundle_idx:
+
+                # download data from S3 by the bundle
+                #   ex. if we are doing 4 subjects per bundle and we are on
+                #       our 3rd bundle (bundle_idx = 3), then this should be
+                #       subjects 9-12 from the s3_dict_yml
+
+                first_subj_idx = \
+                    (bundle_idx-1)*self._config["num_subjects_per_bundle"] + 1
+
+                last_subj_idx = \
+                    first_subj_idx + self._config["num_subjects_per_bundle"]
+
+                for idx in range(first_subj_idx, last_subj_idx):
+                    single_sub_dict = dl_subj_from_s3(
+                        idx, args.config, args.s3_dict_yml)
+                    self._sub_dict.update(single_sub_dict)
+
+            elif args.subj_idx:
+
+                self._sub_dict = dl_subj_from_s3(
+                    args.subj_idx, args.config, args.s3_dict_yml)
+
+
+            if len(self._sub_dict) == 0:
+                err = "\n[!] Subject dictionary was not successfully " \
+                      "downloaded from the S3 bucket!\n"
+                raise RuntimeError(err)
+
+        elif args.sublist:
+            self._config["subject_list"] = args.sublist
+
+        else:
+            raise RuntimeError(
+                "\n[!] Arguments were parsed, but no appropriate run found")
 
 
 
-    def _run_here(self, run_name):
+    def _run_on_cluster(self, run_name, wfargs):
 
-        from qap.workflow_utils import raise_smart_exception
+        from INDI_utils.indi_schedulers import cluster_templates
 
-        ns_at_once = self._config.get('num_subjects_at_once', 1)
-        num_threads = int(self._config["num_threads"])
+        # Cluster batch file setup code borrowed from dclark87's CPAC cluster
+        # setup code
+        #     https://github.com/FCP-INDI/C-PAC/blob/0.4.0_development/CPAC/..
+        #         ..pipeline/cpac_runner.py
+        #     https://github.com/dclark87
 
-        with open(self._sub_dict, "r") as f:
-            subdict = yaml.load(f)
+        # Create cluster log dir
+        cluster_files_dir = \
+            os.path.join(self._config["output_directory"], "cluster_files")
+        if not os.path.exists(cluster_files_dir):
+            os.makedirs(cluster_files_dir)
 
-        if len(subdict) == 0:
-            msg = "The participant list provided is either empty or could " \
-                  "not be read properly!"
-            raise_smart_exception(locals(),msg)
+        # Batch file variables
+        timestamp = str(strftime("%Y_%m_%d_%H_%M_%S"))
+        shell = commands.getoutput('echo $SHELL')
+        user_account = getpass.getuser()
 
-        flat_sub_dict = {}
+        num_bundles = len(wfargs)
+
+        # Set up config dictionary
+        config_dict = {'timestamp' : timestamp,
+                       'shell' : shell,
+                       'pipeline_name' : run_name,
+                       'num_tasks' : num_bundles,
+                       'queue' : "all.q",
+                       'par_env' : "mpi_smp",
+                       'cores_per_task' : self._num_subjects_per_bundle,
+                       'user' : user_account,
+                       'work_dir' : cluster_files_dir,
+                       'plugin_args' : plugin_args}
+
+
+        # Get string template for job scheduler
+        if self._platform == "PBS":
+            env_arr_idx = '$PBS_ARRAYID'
+            batch_file_contents = cluster_templates.pbs_template
+            confirm_str = '(?<=Your job-array )\d+'
+            exec_cmd = 'qsub'
+        elif self._platform == "SGE":
+            env_arr_idx = '$SGE_TASK_ID'
+            batch_file_contents = cluster_templates.sge_template
+            confirm_str = '(?<=Your job-array )\d+'
+            exec_cmd = 'qsub'
+        elif self._platform == "SLURM":
+            hrs_limit = 8*len(sublist)
+            time_limit = '%d:00:00' % hrs_limit
+            config_dict["time_limit"] = time_limit
+            env_arr_idx = '$SLURM_ARRAY_TASK_ID'
+            batch_file_contents = cluster_templates.slurm_template
+            confirm_str = '(?<=Submitted batch job )\d+'
+            exec_cmd = 'sbatch'
+
+
+        config_dict['run_cmd'] = 'echo "Running task: %s"' % env_arr_idx
+
+        # Populate string from config dict values
+        batch_file_contents = batch_file_contents % config_dict
+
+        run_str = "%s.py --sublist %s %s" % (self._config["qap_type"], \
+                                         self._config["subject_list"], \
+                                         self._config["pipeline_config_yaml"])
+
+        batch_file_contents = "\n".join([batch_file_contents], run_str)
+
+
+        # Write file
+        batch_filepath = os.path.join(cluster_files_dir, 'cpac_submit_%s.%s' \
+                                      % (timestamp, self._platform))
+        with open(batch_filepath, 'w') as f:
+            f.write(batch_file_contents)
+
+        # Get output response from job submission
+        out = commands.getoutput('%s %s' % (exec_cmd, batch_filepath))
+
+        # Check for successful qsub submission
+        if re.search(confirm_str, out) == None:
+            err_msg = 'Error submitting QAP pipeline run to %s queue' \
+                      % job_scheduler
+            raise Exception(err_msg)
+
+        # Get pid and send to pid file
+        pid = re.search(confirm_str, out).group(0)
+        pid_file = os.path.join(cluster_files_dir, 'pid.txt')
+        with open(pid_file, 'w') as f:
+            f.write(pid)
+
+
+
+    def create_flat_sub_dict_dict(self, subdict):
+
+        # "collapses" the subject resource pools so that each sub-session-scan
+        # combination has its own entry
+
+        # input
+        #   subdict: resource pool dictionary loaded from a sublist YAML
+        #   format:  
+        #     {'sub_01': {'session_01': 
+        #                    {'anatomical_scan': {'scan_01': <filepath>,
+        #                                         'scan_02': <filepath>},
+        #                     'site_name': 'Site_1'} },
+        #      'sub_02': {..} }
+
+        # output
+        #   flat_sub_dict_dict is a dictionary of dictionaries. format:
+        #     { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
+        #                                  "anatomical_brain": <filepath>} }
+
+        flat_sub_dict_dict = {}
         sites_dict = {}
 
-        # Preamble: generate flat_subdict
         for subid in subdict.keys():
             # sessions
             for session in subdict[subid].keys():
@@ -157,10 +310,10 @@ class QAProtocolCLI:
                             resource_dict = {}
                             resource_dict[resource] = filepath
                             sub_info_tuple = (subid, session, scan)
-                            if sub_info_tuple not in flat_sub_dict.keys():
-                                flat_sub_dict[sub_info_tuple] = {}
+                            if sub_info_tuple not in flat_sub_dict_dict.keys():
+                                flat_sub_dict_dict[sub_info_tuple] = {}
 
-                            flat_sub_dict[sub_info_tuple].update(resource_dict)
+                            flat_sub_dict_dict[sub_info_tuple].update(resource_dict)
 
                     elif resource == "site_name":
                         sites_dict[subid] = subdict[subid][session][resource]
@@ -171,12 +324,12 @@ class QAProtocolCLI:
                         resource_dict[resource] = filepath
                         sub_info_tuple = (subid, session, None)
 
-                        if sub_info_tuple not in flat_sub_dict.keys():
-                            flat_sub_dict[sub_info_tuple] = {}
+                        if sub_info_tuple not in flat_sub_dict_dict.keys():
+                            flat_sub_dict_dict[sub_info_tuple] = {}
 
-                        flat_sub_dict[sub_info_tuple].update(resource_dict)
+                        flat_sub_dict_dict[sub_info_tuple].update(resource_dict)
 
-        if len(flat_sub_dict) == 0:
+        if len(flat_sub_dict_dict) == 0:
             # this error message meant more for devs than user
             msg = "The participant dictionary is empty."
             raise_smart_exception(locals(),msg)
@@ -187,34 +340,46 @@ class QAProtocolCLI:
                 if subid not in sites_dict.keys():
                     sites_dict[subid] = None
 
-            # integrate site information into flat_sub_dict
-            #     it was separate in the first place to circumvent the fact that
-            #     even though site_name doesn't get keyed with scan names, that
-            #     doesn't necessarily mean scan names haven't been specified for
-            #     that participant
-            for sub_info_tuple in flat_sub_dict.keys():
+            # integrate site information into flat_sub_dict_dict
+            #     it was separate in the first place to circumvent the fact
+            #     that even though site_name doesn't get keyed with scan names
+            #     names, that doesn't necessarily mean scan names haven't been
+            #     specified for that participant
+            for sub_info_tuple in flat_sub_dict_dict.keys():
                 site_info = {}
                 site_info["site_name"] = sites_dict[sub_info_tuple[0]]
-                flat_sub_dict[sub_info_tuple].update(site_info)
-
-        # Start the magic
-        logger.info('There are %d subjects in the pool' %
-                    len(flat_sub_dict.keys()))
+                flat_sub_dict_dict[sub_info_tuple].update(site_info)
 
 
-        # Create bundles
+        return flat_sub_dict_dict
+
+
+
+    def create_bundles(self, flat_sub_dict_dict):
+
+        # input
+        #   flat_sub_dict_dict is a dictionary of dictionaries. format:
+        #     { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
+        #                                  "anatomical_brain": <filepath>} }
+
+        # output
+        #   bundles: a list of bundles - each bundle being a dictionary that
+        #            is a starting resource pool for N sub-session-scan combos
+        #            with N being the number of subjects per bundle
+        #            (set by the user)
+
         i = 0
         bundles = []
 
-        if len(flat_sub_dict) < ns_at_once:
-            bundles.append(flat_sub_dict)
+        if len(flat_sub_dict_dict) < self._num_subjects_per_bundle:
+            bundles.append(flat_sub_dict_dict)
         else:
-            for sub_info_tuple in flat_sub_dict.keys():
+            for sub_info_tuple in flat_sub_dict_dict.keys():
                 if i == 0:
                     new_bundle = {}
-                new_bundle[sub_info_tuple] = flat_sub_dict[sub_info_tuple]
+                new_bundle[sub_info_tuple] = flat_sub_dict_dict[sub_info_tuple]
                 i += 1
-                if i == ns_at_once:
+                if i == self._num_subjects_per_bundle:
                     bundles.append(new_bundle)
                     i = 0
 
@@ -223,23 +388,32 @@ class QAProtocolCLI:
             raise_smart_exception(locals(),msg)
 
 
-        # Stack workflow args
-        wfargs = [(data_bundle, data_bundle.keys(), self._config, run_name,
-                  self.runargs) for data_bundle in bundles]
+        return bundles
+
+
+
+    def _run_here(self, wfargs, run_name):
+
+        # input
+        #   wfargs: a list of tuples, one tuple per bundle
+        #           (length of wfargs is num_bundles)
+        #   run_name: the filename of the pipeline config YAML file
 
         results = []
 
         # skip parallel machinery if we are running only one bundle at once
-        if num_threads == 1:
+        if self._num_bundles_at_once == 1:
             for a in wfargs:
                 results.append(_run_workflow(a))
+        # or use Pool if running multiple bundles simultaneously
         else:
             from multiprocessing import Pool
 
             try:
-                pool = Pool(processes=num_threads, masktasksperchild=50)
+                pool = Pool(processes=self._num_bundles_at_once, \
+                            masktasksperchild=50)
             except TypeError:  # Make python <2.7 compatible
-                pool = Pool(processes=num_threads)
+                pool = Pool(processes=self._num_bundles_at_once)
 
             results = pool.map(_run_workflow, wfargs)
             pool.close()
@@ -250,13 +424,24 @@ class QAProtocolCLI:
 
 
 
-    def _run_cloud(self, run_name, subject_list):
+    def _run_cloud(self):
+
+        # kick off a single-bundle run
+        #   this will be called multiple times throughout the execution of
+        #   a batch script for SGE on the cloud
 
         from cloud_utils import upl_qap_output
+
+        '''
 
         #sub = subject_list.keys()[0]
 
         try:
+            # integrate site information into the subject list
+            #     it was separate in the first place to circumvent the fact
+            #     that even though site_name doesn't get keyed with scan names
+            #     names, that doesn't necessarily mean scan names haven't been
+            #     specified for that participant
 
             for sub in subject_list.keys():
                 for resource_path in subject_list[sub].values():
@@ -274,7 +459,9 @@ class QAProtocolCLI:
         # let's go!
         rt = _run_workflow((subject_list, subject_list.keys(), self._config, \
                                run_name, self.runargs))
-	
+
+        '''
+    
         # make not uploading results to S3 bucket the default if not specified
         if "upload_to_s3" not in self._config.keys():
             self._config["upload_to_s3"] = False
@@ -293,22 +480,22 @@ class QAProtocolCLI:
 
         # Get configurations and settings
         config = self._config
-        subject_list = self._sub_dict
         cloudify = self._cloudify
-        ns_at_once = config.get('num_subjects_at_once', 1)
+        self._num_subjects_per_bundle = config.get('num_subjects_per_bundle', 1)
+        self._num_bundles_at_once = int(self._config["num_bundles_at_once"])
         write_report = config.get('write_report', False)
 
-        if "platform" in config.keys():
-            platforms = ["SGE","PBS","SLURM","CondorDAGMan"]
-            platform = str(config["platform"])
-            if platform not in platforms:
-                msg = "The platform %s provided in the pipeline " \
+        if "resource_manager" in config.keys():
+            platforms = ["SGE","PBS","SLURM"]
+            self._platform = str(config["resource_manager"]).upper()
+            if self._platform not in platforms:
+                msg = "The resource manager %s provided in the pipeline " \
                       "configuration file is not one of the valid choices. " \
                       "It must be one of the following:\n%s" \
-                      % (platform,str(platforms))
+                      % (self._platform,str(platforms))
                 raise_smart_exception(locals(),msg)
         else:
-            platform = None
+            self._platform = None
 
         # Create output directory
         try:
@@ -339,17 +526,59 @@ class QAProtocolCLI:
 
         # settle run arguments (plugins)
         self.runargs = {'plugin': 'Linear', 'plugin_args': {}}
-        if platform:
-            self.runargs['plugin'] = platform
-        elif ns_at_once > 1:
+        if self._num_subjects_per_bundle > 1:
             self.runargs['plugin'] = 'MultiProc'
-            self.runargs['plugin_args'] = {'n_procs': ns_at_once}
+            self.runargs['plugin_args'] = \
+                {'n_procs': self._num_subjects_per_bundle}
 
 
+        # subdict is in the format:
+        #   {'sub_01': {'session_01': 
+        #                  {'anatomical_scan': {'scan_01': <filepath>,
+        #                                       'scan_02': <filepath>},
+        #                   'site_name': 'Site_1'} },
+        #    'sub_02': {..} }
+        with open(self._config["subject_list"], "r") as f:
+            subdict = yaml.load(f)
+
+        if len(subdict) == 0:
+            msg = "The participant list provided is either empty or could " \
+                  "not be read properly!"
+            raise_smart_exception(locals(),msg)
+
+
+        # Generate flat_sub_dict_dict
+
+        # flat_sub_dict_dict is a dictionary of dictionaries. format:
+        #   { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
+        #                                "anatomical_brain": <filepath>} }
+        flat_sub_dict_dict = create_flat_sub_dict_dict(subdict)
+
+
+        logger.info('There are %d subjects in the pool' %
+                    len(flat_sub_dict.keys()))
+
+
+        # Create bundles
+
+        # bundles is a list of "bundles" - each bundle being a dictionary that
+        # is a starting resource pool for N sub-session-scan combos with N
+        # being the number of subjects per bundle (set by the user)
+        bundles = create_bundles(flat_sub_dict_dict)
+
+
+        # Stack workflow args, make a list of tuples containing run args
+        #     one tuple for each bundle
+        #     len(wfargs) = number of bundles
+        wfargs = [(data_bundle, data_bundle.keys(), self._config, run_name,
+                   self.runargs) for data_bundle in bundles]
+
+
+        # Start the magic
         if not cloudify:
-            results = self._run_here(run_name)
+            results = self._run_here(wfargs, run_name)
         else:
-            results = self._run_cloud(run_name, subject_list)
+            results = self._run_cloud(wfargs, run_name)
 
 
         # PDF reporting
