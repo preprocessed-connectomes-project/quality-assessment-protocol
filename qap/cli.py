@@ -350,8 +350,9 @@ class QAProtocolCLI:
 
         import yaml
 
-        with open(self._config["subject_list"], "r") as f:
-            subdict = yaml.load(f)
+        if "subject_list" in self._config.keys():
+            with open(self._config["subject_list"], "r") as f:
+                subdict = yaml.load(f)
 
         # subdict is in the format:
         #   {'sub_01': {'session_01': 
@@ -693,7 +694,7 @@ class QAProtocolCLI:
 
 
             # round up if it is a float
-            num_bundles = int(math.ciel(num_bundles))
+            num_bundles = int(math.ceil(num_bundles))
 
             batch_file_contents, batch_filepath, exec_cmd, \
                    confirm_str, cluster_files_dir = \
@@ -758,7 +759,7 @@ def _run_workflow(args):
     # Read and apply general settings in config
     keep_outputs = config.get('write_all_outputs', False)
 
-    num_subjects_at_once = config.get('num_subjects_at_once',1)
+    num_subjects_per_bundle = config.get('num_subjects_per_bundle',1)
 
     log_dir = op.join(config["output_directory"], run_name)
 
