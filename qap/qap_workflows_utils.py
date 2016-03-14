@@ -18,7 +18,7 @@ def slice_head_mask(infile, transform, standard):
     import subprocess
     import pkg_resources as p
 
-    from qap.workflow_utils import raise_smart_exception
+    #from qap.workflow_utils import raise_smart_exception
 
     # get file info
     infile_img = nb.load(infile)
@@ -28,22 +28,41 @@ def slice_head_mask(infile, transform, standard):
     infile_dims = infile_header.get_data_shape()
 
     # these are stored in the files listed below, just here for reference
-    inpoint_a = "78 -110 -72"
-    inpoint_b = "-78 -110 -72"
-    inpoint_c = "0 88 -72"  # nose, apparently
+    inpoint_a = [78, -110, -72]
+    inpoint_b = [-78, -110, -72]
+    inpoint_c = [0, 88, -72]  # nose, apparently
+
+    inpoint_coords = [inpoint_a, inpoint_b, inpoint_c]
 
     # these each contain a set of coordinates for drawing the plane across
     # the image (to "slice" it)
-    inpoint_files = [p.resource_filename("qap", "inpoint_a.txt"),
-                     p.resource_filename("qap", "inpoint_b.txt"),
-                     p.resource_filename("qap", "inpoint_c.txt")]
+    #inpoint_files = [p.resource_filename("qap", "inpoint_a.txt"),
+    #                 p.resource_filename("qap", "inpoint_b.txt"),
+    #                 p.resource_filename("qap", "inpoint_c.txt")]
 
     # let's convert the coordinates into voxel coordinates
+    with open(transform,"r") as f:
+        allineate_mat_list = f.readlines()
 
-    coords = []
+    # get the 3dAllineate output affine matrix into a list
+    mat_list = filter(None,allineate_mat_list[1].rstrip("\n").split(" "))
 
-    for inpoint in inpoint_files:
+    # put together the 3x3 matrix
+    row1 = [float(mat_list[0]), float(mat_list[1]), float(mat_list[2])]
+    row2 = [float(mat_list[4]), float(mat_list[5]), float(mat_list[6])]
+    row3 = [float(mat_list[8]), float(mat_list[9]), float(mat_list[10])]
 
+    allineate_mat = np.asarray([row1,row2,row3])
+
+    offset = [float(mat_list[3]), float(mat_list[7]), float(mat_list[11])]
+
+    coords_list = []
+
+    for inpoint in inpoint_coords:      
+
+        coord_out = list(np.dot(allineate_mat,inpoint) + offset)
+
+        '''
         coord_cmd = ("std2imgcoord", "-img", infile, "-std", standard, \
             "-xfm", transform, "-vox", inpoint)
 
@@ -59,23 +78,22 @@ def slice_head_mask(infile, transform, standard):
 
         if "\n" in coord_out:
             coord_out = coord_out.replace("\n","")
+        '''
 
-        coords.append(coord_out)
+        coords_list.append(coord_out)
 
-    # get the converted coordinates into a list format, and also check to make
-    # sure they are not "out of bounds"
+
+    # make sure converted coordinates are not "out of bounds"
     new_coords = []
 
-    for coord in coords:
-
-        co_nums = coord.split(" ")
+    for coords in coords_list:
 
         co_nums_newlist = []
 
-        for num in co_nums:
+        for num in coords:
 
             if num != "":
-                co_nums_newlist.append(int(num.split(".")[0]))
+                co_nums_newlist.append(int(num)) #.split(".")[0]))
 
         for ind in range(0, 3):
 
@@ -87,8 +105,8 @@ def slice_head_mask(infile, transform, standard):
 
         new_coords.append(co_nums_newlist)
 
-    # get the vectors connecting the points
 
+    # get the vectors connecting the points
     u = []
 
     for a_pt, c_pt in zip(new_coords[0], new_coords[2]):

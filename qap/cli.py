@@ -63,19 +63,6 @@ class QAProtocolCLI:
                 "When executing cloud-based runs, please provide both "
                 "inputs.\n")
 
-        '''
-        elif args.s3_dict_yml and not args.sublist:
-            if not args.subj_idx and not args.bundle_idx:
-                raise RuntimeError(
-                    "\n[!] You provided --s3_dict_yml, but no --subj_idx or "\
-                    "--bundle_idx. When executing cloud-based runs, please " \
-                    "provide both required inputs.\n")
-            if args.subj_idx and args.bundle_idx:
-                raise RuntimeError(
-                    "\n[!] You provided both --subj_idx and --bundle_idx. " \
-                    "You only need one for the run.\n")
-        '''
-
         elif not args.sublist and not args.subj_idx and not args.s3_dict_yml:
             raise RuntimeError(
                 "\n[!] Either --sublist is required for regular runs, or "
@@ -89,6 +76,19 @@ class QAProtocolCLI:
                 "which you are trying to do!)\n")
 
         '''
+        elif args.s3_dict_yml and not args.sublist:
+            if not args.subj_idx and not args.bundle_idx:
+                raise RuntimeError(
+                    "\n[!] You provided --s3_dict_yml, but no --subj_idx or "\
+                    "--bundle_idx. When executing cloud-based runs, please " \
+                    "provide both required inputs.\n")
+            if args.subj_idx and args.bundle_idx:
+                raise RuntimeError(
+                    "\n[!] You provided both --subj_idx and --bundle_idx. " \
+                    "You only need one for the run.\n")
+        '''
+
+        '''
         elif args.sublist and (args.subj_idx or args.bundle_idx or \
             args.s3_dict_yml):
             raise RuntimeError(
@@ -97,7 +97,6 @@ class QAProtocolCLI:
                 "for cloud-based runs. (I'm not sure which you are trying " \
                 "to do!)\n")
         '''
-
 
         # Load config
         with open(args.config, "r") as f:
@@ -118,7 +117,12 @@ class QAProtocolCLI:
 
         self._cloudify = False
 
-        if args.s3_dict_yml:
+        if args.s3_dict_yml and (args.subj_idx or args.bundle_idx):
+
+            # ---- Cloud-ify! ----
+            self._cloudify = True
+
+        elif args.s3_dict_yml:
 
             # do this alone in case we are sending in an S3 dict YAML but no
             # YAML entry indexes (like bundle_idx) - this happens when we
@@ -126,15 +130,14 @@ class QAProtocolCLI:
             self._s3_dict_yml = args.s3_dict_yml
             self._config["subject_list"] = None
 
-        if args.s3_dict_yml and (args.subj_idx or args.bundle_idx):
-
-            # ---- Cloud-ify! ----
-            self._cloudify = True
-
         elif args.sublist:
 
             self._config["subject_list"] = args.sublist
             self._s3_dict_yml = None
+
+        else:
+            raise RuntimeError(
+                "\n[!] Arguments were parsed, but no appropriate run found")
 
         
         if args.bundle_idx:
@@ -146,11 +149,6 @@ class QAProtocolCLI:
 
             self._subj_idx = args.subj_idx
             self._bundle_idx = None
-
-
-        else:
-            raise RuntimeError(
-                "\n[!] Arguments were parsed, but no appropriate run found")
 
 
 
@@ -214,18 +212,26 @@ class QAProtocolCLI:
         # Populate string from config dict values
         batch_file_contents = batch_file_contents % config_dict
 
+
+        if self._s3_dict_yml:
+            subdict_arg = "--s3_dict_yml"
+            subdict = self._s3_dict_yml
+        elif self._config["subject_list"]:
+            subdict_arg = "--sublist"
+            subdict = self._config["subject_list"]
+
         if self._bundle_idx:
-            run_str = "%s.py --s3_dict_yml %s --bundle_idx %d %s" % \
-                          (self._config["qap_type"], \
-                           self._s3_dict_yml, \
-                           self._bundle_idx, \
-                           self._config["pipeline_config_yaml"])
+            idx_arg = "--bundle_idx"
+            idx = self._bundle_idx
         elif self._subj_idx:
-            run_str = "%s.py --s3_dict_yml %s --subj_idx %d %s" % \
-                          (self._config["qap_type"], \
-                           self._s3_dict_yml, \
-                           self._subj_idx, \
-                           self._config["pipeline_config_yaml"])
+            idx_arg = "--subj_idx"
+            idx = self._subj_idx
+
+        run_str = "%s.py %s %s %s %d %s" % \
+                      (self._config["qap_type"], \
+                       subdict_arg, subdict, \
+                       idx_arg, idx, \
+                       self._config["pipeline_config_yaml"])
 
         batch_file_contents = "\n".join([batch_file_contents], run_str)
 
@@ -340,7 +346,7 @@ class QAProtocolCLI:
 
 
 
-    def load_and_flatten_sublist(self):
+    def _load_and_flatten_sublist(self):
 
         import yaml
 
@@ -365,14 +371,14 @@ class QAProtocolCLI:
         # flat_sub_dict_dict is a dictionary of dictionaries. format:
         #   { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
         #                                "anatomical_brain": <filepath>} }
-        flat_sub_dict_dict = create_flat_sub_dict_dict(subdict)
+        flat_sub_dict_dict = self.create_flat_sub_dict_dict(subdict)
 
 
         return flat_sub_dict_dict
 
 
 
-    def create_bundles(self, flat_sub_dict_dict):
+    def _create_bundles(self, flat_sub_dict_dict):
 
         # input
         #   flat_sub_dict_dict is a dictionary of dictionaries. format:
@@ -415,7 +421,7 @@ class QAProtocolCLI:
         #   run_name: the filename of the pipeline config YAML file
 
         # get flattened sublist
-        flat_sub_dict_dict = self.load_and_flatten_sublist()
+        flat_sub_dict_dict = self._load_and_flatten_sublist()
 
         logger.info('There are %d subjects in the pool' %
                     len(flat_sub_dict_dict.keys()))
@@ -425,15 +431,13 @@ class QAProtocolCLI:
         # bundles is a list of "bundles" - each bundle being a dictionary that
         # is a starting resource pool for N sub-session-scan combos with N
         # being the number of subjects per bundle (set by the user)
-        bundles = create_bundles(flat_sub_dict_dict)
-
+        bundles = self._create_bundles(flat_sub_dict_dict)
 
         # Stack workflow args, make a list of tuples containing run args
         #     one tuple for each bundle
         #     len(wfargs) = number of bundles
         wfargs = [(data_bundle, data_bundle.keys(), self._config, run_name,
                    self.runargs) for data_bundle in bundles]
-
 
         results = []
 
@@ -548,7 +552,7 @@ class QAProtocolCLI:
             # run on a cluster without pulling data from S3
 
             # get flat sublist
-            flat_sub_dict_dict = self.load_and_flatten_sublist()
+            flat_sub_dict_dict = self._load_and_flatten_sublist()
 
             if self._bundle_idx:
 
@@ -592,6 +596,7 @@ class QAProtocolCLI:
         # upload results
         if self._config["upload_to_s3"]:
             upl_qap_output(self._config)
+
 
         return rt
 
@@ -654,9 +659,12 @@ class QAProtocolCLI:
                 {'n_procs': self._num_subjects_per_bundle}
 
 
-
         # Start the magic
-        if not self._platform:
+        if self._cloudify:
+
+            results = self._run_one_bundle()
+
+        elif not self._platform:
 
             results = self._run_here(run_name)
 
@@ -666,11 +674,23 @@ class QAProtocolCLI:
             import math
 
             # get num_bundles
-            with open(self._s3_dict_yml,"r") as f:
-                s3_dict = yaml.load(f)
+            bundle_size = self._config["num_subjects_per_bundle"]
 
-            num_bundles = \
-                len(s3_dict) / self._config["num_subjects_per_bundle"]
+            if self._s3_dict_yml:
+
+                with open(self._s3_dict_yml,"r") as f:
+                    s3_dict = yaml.load(f)
+
+                num_bundles = len(s3_dict) / bundle_size
+
+            elif self._config["subject_list"]:
+
+                # get flattened sublist
+                flat_sub_dict_dict = self._load_and_flatten_sublist()
+
+                num_bundles = \
+                    len(flat_sub_dict_dict) / bundle_size
+
 
             # round up if it is a float
             num_bundles = int(math.ciel(num_bundles))
@@ -681,10 +701,6 @@ class QAProtocolCLI:
 
             self._run_on_cluster(batch_file_contents, batch_filepath, \
                                      exec_cmd, confirm_str, cluster_files_dir)
-
-        elif self._cloudify:
-
-            results = self._run_one_bundle()
 
 
         # PDF reporting
