@@ -99,10 +99,10 @@ class QAProtocolCLI:
         '''
 
         # Load config
-        with open(args.config, "r") as f:
+        with open(os.path.realpath(args.config), "r") as f:
             self._config = yaml.load(f)
 
-        self._config['pipeline_config_yaml'] = args.config
+        self._config['pipeline_config_yaml'] = os.path.realpath(args.config)
         self._config['qap_type'] = parser.prog[4:-3]
 
         if args.with_reports:
@@ -121,18 +121,20 @@ class QAProtocolCLI:
 
             # ---- Cloud-ify! ----
             self._cloudify = True
+            self._s3_dict_yml = os.path.realpath(args.s3_dict_yml)
+            self._config["subject_list"] = None
 
         elif args.s3_dict_yml:
 
             # do this alone in case we are sending in an S3 dict YAML but no
             # YAML entry indexes (like bundle_idx) - this happens when we
             # first kick off a cluster run
-            self._s3_dict_yml = args.s3_dict_yml
+            self._s3_dict_yml = os.path.realpath(args.s3_dict_yml)
             self._config["subject_list"] = None
 
         elif args.sublist:
 
-            self._config["subject_list"] = args.sublist
+            self._config["subject_list"] = os.path.realpath(args.sublist)
             self._s3_dict_yml = None
 
         else:
@@ -154,7 +156,10 @@ class QAProtocolCLI:
 
     def _prepare_cluster_batch_file(self, run_name, num_bundles):
 
-        from INDI_utils.indi_schedulers import cluster_templates
+        import getpass
+        import commands
+        from time import strftime
+        from indi_schedulers import cluster_templates
 
         # Cluster batch file setup code borrowed from dclark87's CPAC cluster
         # setup code
@@ -164,9 +169,12 @@ class QAProtocolCLI:
 
         # Create cluster log dir
         cluster_files_dir = \
-            os.path.join(self._config["output_directory"], "cluster_files")
+            os.path.join("/home/ubuntu", "cluster_files")
         if not os.path.exists(cluster_files_dir):
             os.makedirs(cluster_files_dir)
+
+        #run_error_file = os.path.join(cluster_files_dir, "%s.err" % run_name)
+        #run_out_file = os.path.join(cluster_files_dir, "%s.out" % run_name)
 
         # Batch file variables
         timestamp = str(strftime("%Y_%m_%d_%H_%M_%S"))
@@ -176,14 +184,13 @@ class QAProtocolCLI:
         # Set up config dictionary
         config_dict = {'timestamp' : timestamp,
                        'shell' : shell,
-                       'pipeline_name' : run_name,
+                       'job_name' : run_name,
                        'num_tasks' : num_bundles,
                        'queue' : "all.q",
                        'par_env' : "mpi_smp",
                        'cores_per_task' : self._num_subjects_per_bundle,
                        'user' : user_account,
-                       'work_dir' : cluster_files_dir,
-                       'plugin_args' : plugin_args}
+                       'work_dir' : cluster_files_dir}
 
 
         # Get string template for job scheduler
@@ -207,6 +214,7 @@ class QAProtocolCLI:
             exec_cmd = 'sbatch'
 
 
+        config_dict['env_arr_idx'] = env_arr_idx
         config_dict['run_cmd'] = 'echo "Running task: %s"' % env_arr_idx
 
         # Populate string from config dict values
@@ -220,20 +228,23 @@ class QAProtocolCLI:
             subdict_arg = "--sublist"
             subdict = self._config["subject_list"]
 
+        '''
         if self._bundle_idx:
             idx_arg = "--bundle_idx"
             idx = self._bundle_idx
         elif self._subj_idx:
             idx_arg = "--subj_idx"
             idx = self._subj_idx
+        '''
 
-        run_str = "%s.py %s %s %s %d %s" % \
+        run_str = "qap_%s.py %s %s --bundle_idx %s %s" % \
                       (self._config["qap_type"], \
-                       subdict_arg, subdict, \
-                       idx_arg, idx, \
+                       subdict_arg, subdict, env_arr_idx, \
                        self._config["pipeline_config_yaml"])
 
-        batch_file_contents = "\n".join([batch_file_contents], run_str)
+        #batch_file_contents = "".join([batch_file_contents, "#$ -e %s" % run_error_file, "#$ -o %s" % run_out_file])
+
+        batch_file_contents = "\n".join([batch_file_contents, run_str])
 
         batch_filepath = os.path.join(cluster_files_dir, 'cpac_submit_%s.%s' \
                                       % (timestamp, self._platform))
@@ -246,6 +257,10 @@ class QAProtocolCLI:
 
     def _run_on_cluster(self, batch_file_contents, batch_filepath, exec_cmd, \
                             confirm_str, cluster_files_dir):
+
+        import os
+        import re
+        import commands
 
         with open(batch_filepath, 'w') as f:
             f.write(batch_file_contents)
@@ -505,13 +520,13 @@ class QAProtocolCLI:
                 #       subjects 9-12 from the s3_dict_yml
 
                 first_subj_idx = \
-                    (bundle_idx-1)*self._config["num_subjects_per_bundle"] + 1
+                    (self._bundle_idx-1)*self._config["num_subjects_per_bundle"] + 1
 
                 last_subj_idx = \
                     first_subj_idx + self._config["num_subjects_per_bundle"]
 
                 for idx in range(first_subj_idx, last_subj_idx):
-                    single_sub_dict = dl_subj_from_s3(idx, self._config, \
+                    single_sub_dict = dl_subj_from_s3(idx, self._config["pipeline_config_yaml"], \
                                                           self._s3_dict_yml)
                     self._sub_dict.update(single_sub_dict)
 
@@ -558,7 +573,7 @@ class QAProtocolCLI:
             if self._bundle_idx:
 
                 first_subj_idx = \
-                    (bundle_idx-1)*self._config["num_subjects_per_bundle"] + 1
+                    (self._bundle_idx-1)*self._config["num_subjects_per_bundle"] + 1
 
                 last_subj_idx = \
                     first_subj_idx + self._config["num_subjects_per_bundle"]
@@ -663,7 +678,7 @@ class QAProtocolCLI:
         # Start the magic
         if self._cloudify:
 
-            results = self._run_one_bundle()
+            results = self._run_one_bundle(run_name)
 
         elif not self._platform:
 
