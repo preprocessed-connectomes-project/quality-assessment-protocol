@@ -262,7 +262,7 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
     calc_3dallineate_warp.inputs.reference = config["template_brain_for_anat"]
 
     calc_3dallineate_warp.inputs.out_file = "allineate_warped_brain.nii.gz"
-    calc_3dallineate_warp.inputs.out_matrix = "3dallineate_warp.mat"
+    calc_3dallineate_warp.inputs.out_matrix = "3dallineate_warp"
 
 
     resource_pool["allineate_linear_xfm"] = \
@@ -276,7 +276,8 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
 
 
 
-def run_afni_anatomical_linear_registration(anatomical_brain, run=True):
+def run_afni_anatomical_linear_registration(anatomical_brain, \
+                                            reference_brain, run=True):
 
     # stand-alone runner for anatomical skullstrip workflow
 
@@ -302,6 +303,7 @@ def run_afni_anatomical_linear_registration(anatomical_brain, run=True):
 
 
     resource_pool["anatomical_brain"] = anatomical_brain
+    config["template_brain_for_anat"] = reference_brain
     
     workflow, resource_pool = \
             afni_anatomical_linear_registration(workflow, resource_pool, \

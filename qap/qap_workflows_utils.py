@@ -15,6 +15,7 @@ def slice_head_mask(infile, transform, standard):
 
     import nibabel as nb
     import numpy as np
+    import numpy.linalg as npl
     import subprocess
     import pkg_resources as p
 
@@ -30,7 +31,7 @@ def slice_head_mask(infile, transform, standard):
     # these are stored in the files listed below, just here for reference
     inpoint_a = [78, -110, -72]
     inpoint_b = [-78, -110, -72]
-    inpoint_c = [0, 88, -72]  # nose, apparently
+    inpoint_c = [-1, 91, -29]  # nose, apparently
 
     inpoint_coords = [inpoint_a, inpoint_b, inpoint_c]
 
@@ -62,23 +63,9 @@ def slice_head_mask(infile, transform, standard):
 
         coord_out = list(np.dot(allineate_mat,inpoint) + offset)
 
-        '''
-        coord_cmd = ("std2imgcoord", "-img", infile, "-std", standard, \
-            "-xfm", transform, "-vox", inpoint)
-
-        try:
-            coord_out = subprocess.check_output(coord_cmd)
-        except:
-            msg = "[!] QAP says: Something went wrong with running " \
-                  "std2imgcoord."
-            raise_smart_exception(locals(),msg)
-
-        if "Could not" in coord_out:
-            raise Exception(coord_out)
-
-        if "\n" in coord_out:
-            coord_out = coord_out.replace("\n","")
-        '''
+        # convert the coordinates from mm to voxels
+        coord_out = \
+            nb.affines.apply_affine(npl.inv(infile_affine),coord_out)
 
         coords_list.append(coord_out)
 

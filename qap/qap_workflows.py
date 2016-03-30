@@ -84,6 +84,7 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
                             name='qap_headmask_combine_masks%s' % name)
 
     combine_masks.inputs.expr = "(a+b)-(a*b)"
+    combine_masks.inputs.outputtype = "NIFTI_GZ"
 
     if len(resource_pool['anatomical_reorient']) == 2:
         node, out_file = resource_pool['anatomical_reorient']

@@ -242,8 +242,6 @@ class QAProtocolCLI:
                        subdict_arg, subdict, env_arr_idx, \
                        self._config["pipeline_config_yaml"])
 
-        #batch_file_contents = "".join([batch_file_contents, "#$ -e %s" % run_error_file, "#$ -o %s" % run_out_file])
-
         batch_file_contents = "\n".join([batch_file_contents, run_str])
 
         batch_filepath = os.path.join(cluster_files_dir, 'cpac_submit_%s.%s' \
@@ -718,7 +716,6 @@ class QAProtocolCLI:
             self._run_on_cluster(batch_file_contents, batch_filepath, \
                                      exec_cmd, confirm_str, cluster_files_dir)
 
-
         # PDF reporting
         if write_report:
             from qap.viz.reports import workflow_report
@@ -906,7 +903,8 @@ def _run_workflow(args):
                        "scan_id": scan_id, "run_name": run_name})
 
 
-        # update that resource pool with what's already in the output directory
+        # update that resource pool with what's already in the output
+        # directory
         for resource in os.listdir(output_dir):
             if (op.isdir(op.join(output_dir, resource)) and
                     resource not in resource_pool.keys()):
@@ -965,7 +963,10 @@ def _run_workflow(args):
                                     run_name + ".dot"),
                 simple_form=False)
         try:
-            workflow.run(**runargs)
+            logger.info("Running with plugin %s" % runargs["plugin"])
+            logger.info("Using plugin args %s" % runargs["plugin_args"])
+            workflow.run(plugin=runargs["plugin"], \
+                         plugin_args=runargs["plugin_args"])
             rt['status'] = 'finished'
         except Exception as e:  # TODO We should be more specific here ...
             rt.update({'status': 'failed', 'msg': e})
@@ -987,11 +988,14 @@ def _run_workflow(args):
             logger.warn("Couldn\'t remove the working directory!")
             pass
 
-    pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
-    pipeline_end_time = time.time()
-    logger.info("Elapsed time (minutes) since last start: %s"
-                % ((pipeline_end_time - pipeline_start_time) / 60))
-    logger.info("Pipeline end time: %s" % pipeline_end_stamp)
+    if rt["status"] == "failed":
+        logger.error(rt["msg"])
+    else:
+        pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
+        pipeline_end_time = time.time()
+        logger.info("Elapsed time (minutes) since last start: %s"
+                    % ((pipeline_end_time - pipeline_start_time) / 60))
+        logger.info("Pipeline end time: %s" % pipeline_end_stamp)
 
 
     return rt
