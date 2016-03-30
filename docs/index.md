@@ -93,6 +93,7 @@ To determine subjects that are outliers for any of these measures, run QAP on an
 
 * **Standardized DVARS [dvars]:** The spatial standard deviation of the temporal derivative of the data, normalized by the temporal standard deviation and temporal autocorrelation.  Lower values are better [^5][^6]. 
 * **Outlier Detection [outlier]:** The mean fraction of outliers found in each volume using the [3dToutcount](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni).  Lower values are better [^7]. 
+* **Global Correlation [gcorr]:** The average correlation of all combinations of voxels in a time series.  Illustrates differences between data due to motion/physiological noise.
 * **Median Distance Index [quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s [3dTqual](http://afni.nimh.nih.gov/afni) command.  Lower values are better [^7]. 
 * **Mean Fractional Displacement - Jenkinson [mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere.  Lower values are better [^8][^10]. 
 * **Number of volumes with FD greater than 0.2mm [num_fd]:** Lower values are better.
