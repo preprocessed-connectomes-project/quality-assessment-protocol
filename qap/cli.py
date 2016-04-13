@@ -663,7 +663,7 @@ class QAProtocolCLI:
         # settle run arguments (plugins)
         self.runargs = {'plugin': 'Linear', 'plugin_args': {}}
         if self._num_subjects_per_bundle > 1:
-            self.runargs['plugin'] = 'MultiProc'
+            self.runargs['plugin'] = 'ResourceMultiProc'
             self.runargs['plugin_args'] = \
                 {'n_procs': self._num_subjects_per_bundle}
 
