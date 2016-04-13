@@ -66,7 +66,7 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
             resource_dict = {}
             resource_dict[subkey_type] = sfile
 
-            if incude_site:
+            if include_site:
                 resource_dict["site_name"] = site_id
 
             if series_list:
