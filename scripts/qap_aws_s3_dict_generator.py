@@ -51,7 +51,17 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
         if include_site:
             site_id = ssplit[-5]
 
-        if (img_type == scan_type) and ("nii" in filename):
+        include = False
+        if img_type == "anat":
+            if ("anat" in scan_type) or ("anat" in filename) or \
+                ("mprage" in filename):
+                include = True
+        if img_type == "func":
+            if ("func" in scan_type) or ("rest" in scan_type) or \
+                ("func" in filename) or ("rest" in filename):
+                include = True
+
+        if (include == True) and ("nii" in filename):
         
             resource_dict = {}
             resource_dict[subkey_type] = sfile
