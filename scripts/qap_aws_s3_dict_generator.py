@@ -3,7 +3,7 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
 
     import os
     import yaml
-    from indi_awsutils import fetch_creds
+    from indi_aws import fetch_creds
 
     s3_list = []
     s3_dict = {}
