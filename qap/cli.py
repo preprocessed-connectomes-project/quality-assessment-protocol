@@ -228,15 +228,6 @@ class QAProtocolCLI:
             subdict_arg = "--sublist"
             subdict = self._config["subject_list"]
 
-        '''
-        if self._bundle_idx:
-            idx_arg = "--bundle_idx"
-            idx = self._bundle_idx
-        elif self._subj_idx:
-            idx_arg = "--subj_idx"
-            idx = self._subj_idx
-        '''
-
         run_str = "qap_%s.py %s %s --bundle_idx %s %s" % \
                       (self._config["qap_type"], \
                        subdict_arg, subdict, env_arr_idx, \
@@ -540,6 +531,9 @@ class QAProtocolCLI:
                 raise RuntimeError(err)
 
 
+            '''
+            # currently--- aws_s3_dict_generator can take in sites info
+            #              instead
             try:
                 # integrate site information into the subject list
                 #   it was separate in the first place to circumvent the fact
@@ -559,6 +553,7 @@ class QAProtocolCLI:
 
             except:
                 pass
+            '''
 
 
         elif self._config["subject_list"]:

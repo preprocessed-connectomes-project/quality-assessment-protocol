@@ -1,5 +1,5 @@
 def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
-                        creds_path, series_list=None):
+                        creds_path, include_site=False, series_list=None):
 
     import os
     import yaml
@@ -48,10 +48,16 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
 
         filename = ssplit[-1]
 
+        if include_site:
+            site_id = ssplit[-5]
+
         if (img_type == scan_type) and ("nii" in filename):
         
             resource_dict = {}
             resource_dict[subkey_type] = sfile
+
+            if incude_site:
+                resource_dict["site_name"] = site_id
 
             if series_list:
                 selected = 0
