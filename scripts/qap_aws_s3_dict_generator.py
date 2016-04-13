@@ -138,6 +138,12 @@ def main():
                             help="the full filepath for the S3 subject " \
                                  "YAML dictionary this script will create")
 
+    parser.add_argument('--include_sites', action='store_true', \
+                            help="include this flag if you wish to include " \
+                                 "site information in your subject list - " \
+                                 "data must be organized as /site_name/" \
+                                 "subject_id/session_id/scan_id/..")
+
     parser.add_argument("--series_list", type=str, \
                             help="filepath to a text file containing the " \
                                  "names of series you want included, one " \
@@ -148,7 +154,8 @@ def main():
 
     # run it!
     pull_S3_sublist(args.outfile_path, args.scan_type, args.bucket_name, \
-                        args.bucket_prefix, args.creds_path, args.series_list)
+                        args.bucket_prefix, args.creds_path, \
+                        args.include_sites, args.series_list)
 
 
 
