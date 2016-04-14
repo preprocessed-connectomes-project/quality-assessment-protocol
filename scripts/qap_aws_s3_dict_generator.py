@@ -44,7 +44,7 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
 
         session_id = ssplit[-3]
 
-        scan_type = ssplit[-2]
+        scan_id = ssplit[-2]
 
         filename = ssplit[-1]
 
@@ -53,13 +53,17 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
 
         include = False
         if img_type == "anat":
-            if ("anat" in scan_type) or ("anat" in filename) or \
+            if ("anat" in scan_id) or ("anat" in filename) or \
                 ("mprage" in filename):
                 include = True
         if img_type == "func":
-            if ("func" in scan_type) or ("rest" in scan_type) or \
+            if ("func" in scan_id) or ("rest" in scan_id) or \
                 ("func" in filename) or ("rest" in filename):
                 include = True
+
+        if series_list:
+            if scan_id not in series:
+                include = False
 
         if (include == True) and ("nii" in filename):
         
@@ -69,23 +73,15 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
             if include_site:
                 resource_dict["site_name"] = site_id
 
-            if series_list:
-                selected = 0
-                for series_name in series:
-                    if series_name in filename:
-                        selected = 1
-                if selected == 0:
-                    continue
-
             # this ONLY handles raw data inputs, not CPAC-generated outputs!
-            if not s3_dict.has_key((sub_id, session_id, filename)):
+            if not s3_dict.has_key((sub_id, session_id, scan_id)):
 
-                s3_dict[(sub_id, session_id, filename)] = {}
-                s3_dict[(sub_id, session_id, filename)].update(resource_dict)
+                s3_dict[(sub_id, session_id, scan_id)] = {}
+                s3_dict[(sub_id, session_id, scan_id)].update(resource_dict)
 
             else:
 
-                s3_dict[(sub_id, session_id, filename)].update(resource_dict)    
+                s3_dict[(sub_id, session_id, scan_id)].update(resource_dict)    
 
         else:
 
