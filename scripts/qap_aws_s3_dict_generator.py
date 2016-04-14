@@ -1,5 +1,5 @@
 def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
-                        creds_path, include_site=False, series_list=None):
+                        creds_path, series_list=None):
 
     import os
     import yaml
@@ -48,9 +48,6 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
 
         filename = ssplit[-1]
 
-        if include_site:
-            site_id = ssplit[-5]
-
         include = False
         if img_type == "anat":
             if ("anat" in scan_id) or ("anat" in filename) or \
@@ -69,9 +66,6 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
         
             resource_dict = {}
             resource_dict[subkey_type] = sfile
-
-            if include_site:
-                resource_dict["site_name"] = site_id
 
             # this ONLY handles raw data inputs, not CPAC-generated outputs!
             if not s3_dict.has_key((sub_id, session_id, scan_id)):
@@ -160,8 +154,7 @@ def main():
 
     # run it!
     pull_S3_sublist(args.outfile_path, args.scan_type, args.bucket_name, \
-                        args.bucket_prefix, args.creds_path, \
-                        args.include_sites, args.series_list)
+                        args.bucket_prefix, args.creds_path, args.series_list)
 
 
 

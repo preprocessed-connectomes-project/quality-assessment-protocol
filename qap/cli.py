@@ -530,10 +530,7 @@ class QAProtocolCLI:
                       "downloaded from the S3 bucket!\n"
                 raise RuntimeError(err)
 
-
-            '''
-            # currently--- aws_s3_dict_generator can take in sites info
-            #              instead
+            
             try:
                 # integrate site information into the subject list
                 #   it was separate in the first place to circumvent the fact
@@ -553,7 +550,7 @@ class QAProtocolCLI:
 
             except:
                 pass
-            '''
+            
 
 
         elif self._config["subject_list"]:
