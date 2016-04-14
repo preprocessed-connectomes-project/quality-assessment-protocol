@@ -893,6 +893,9 @@ def _run_workflow(args):
         config.update({"subject_id": sub_id, "session_id": session_id,
                        "scan_id": scan_id, "run_name": run_name})
 
+        if "site_name" in resource_pool:
+            config.update({"site_name": resource_pool["site_name"]})
+
 
         # update that resource pool with what's already in the output
         # directory
