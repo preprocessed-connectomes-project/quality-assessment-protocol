@@ -539,13 +539,12 @@ class QAProtocolCLI:
                 #   been specified for that participant
 
                 for sub in self._sub_dict.keys():
-                    for resource_path in subject_list[sub].values():
+                    for resource_path in self._sub_dict[sub].values():
                         if ".nii" in resource_path:
                             filepath = resource_path
                             break
 
-                    filesplit = filepath.split(self._config["bucket_prefix"])
-                    site_name = filesplit[1].split("/")[1]
+                    site_name = filepath.split("/")[-5]
                     self._sub_dict[sub]["site_name"] = site_name
 
             except:
