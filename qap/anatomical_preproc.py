@@ -250,7 +250,7 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
 
     calc_3dallineate_warp = pe.Node(interface=afni.Allineate(),
                                     name='calc_3dAllineate_warp%s' % name)
-    calc_3dAllineate_warp.inputs.outputtype = "NIFTI_GZ"
+    calc_3dallineate_warp.inputs.outputtype = "NIFTI_GZ"
 
     if len(resource_pool["anatomical_brain"]) == 2:
         node, out_file = resource_pool["anatomical_brain"]
