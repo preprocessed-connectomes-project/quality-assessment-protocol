@@ -365,7 +365,6 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
     segment = pe.Node(interface=preprocess.Seg(), name='segmentation%s' % name)
 
     segment.inputs.mask = 'AUTO'
-    segment.inputs.outputtype = "NIFTI_GZ"
 
     if len(resource_pool["anatomical_brain"]) == 2:
         node, out_file = resource_pool["anatomical_brain"]
