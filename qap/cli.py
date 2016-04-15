@@ -260,7 +260,7 @@ class QAProtocolCLI:
         # Check for successful qsub submission
         if re.search(confirm_str, out) == None:
             err_msg = 'Error submitting QAP pipeline run to %s queue' \
-                      % job_scheduler
+                      % self._platform
             raise Exception(err_msg)
 
         # Get pid and send to pid file
