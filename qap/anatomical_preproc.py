@@ -241,26 +241,35 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
 
     check_config_settings(config, "template_brain_for_anat")
 
+    '''
     if "anatomical_brain" not in resource_pool.keys():
 
         from anatomical_preproc import anatomical_skullstrip_workflow
 
         workflow, resource_pool = \
             anatomical_skullstrip_workflow(workflow, resource_pool, config, name)
+    '''
+
+    if "anatomical_reorient" not in resource_pool.keys():
+
+        from anatomical_preproc import anatomical_reorient_workflow
+
+        workflow, resource_pool = \
+            anatomical_reorient_workflow(workflow, resource_pool, config, name)
 
     calc_3dallineate_warp = pe.Node(interface=afni.Allineate(),
                                     name='calc_3dAllineate_warp%s' % name)
     calc_3dallineate_warp.inputs.outputtype = "NIFTI_GZ"
 
-    if len(resource_pool["anatomical_brain"]) == 2:
-        node, out_file = resource_pool["anatomical_brain"]
+    if len(resource_pool["anatomical_reorient"]) == 2:
+        node, out_file = resource_pool["anatomical_reorient"]
         workflow.connect(node, out_file, calc_3dallineate_warp, 'in_file')
     else:
         calc_3dallineate_warp.inputs.in_file = \
-            resource_pool["anatomical_brain"]
+            resource_pool["anatomical_reorient"]
 
 
-    calc_3dallineate_warp.inputs.reference = config["template_brain_for_anat"]
+    calc_3dallineate_warp.inputs.reference = config["template_skull_for_anat"]
 
     calc_3dallineate_warp.inputs.out_file = "allineate_warped_brain.nii.gz"
     calc_3dallineate_warp.inputs.out_matrix = "3dallineate_warp"
@@ -322,7 +331,7 @@ def run_afni_anatomical_linear_registration(anatomical_brain, \
 
     if run == True:
 
-        workflow.run(plugin='MultiProc', plugin_args= \
+        workflow.run(plugin='ResourceMultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
 
         outpath = glob.glob(os.path.join(workflow_dir, \

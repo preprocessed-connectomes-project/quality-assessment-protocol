@@ -86,6 +86,14 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     combine_masks.inputs.expr = "(a+b)-(a*b)"
     combine_masks.inputs.outputtype = "NIFTI_GZ"
 
+    # subtract the slice mask from the original head mask to create a
+    # skull-only mask for FG calculations
+    subtract_mask = pe.Node(interface=preprocess.Calc(),
+                            name='qap_headmask_subtract_masks%s' % name)
+
+    subtract_mask.inputs.expr = "a-b"
+    subtract_mask.inputs.outputtype = "NIFTI_GZ"
+
     if len(resource_pool['anatomical_reorient']) == 2:
         node, out_file = resource_pool['anatomical_reorient']
         workflow.connect([
@@ -113,7 +121,15 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
         (slice_head_mask, combine_masks, [('outfile_path', 'in_file_b')])
     ])
 
+    workflow.connect(dilate_erode, 'out_file', subtract_mask, 'in_file_a')
+    workflow.connect(slice_head_mask, 'outfile_path', \
+                         subtract_mask, 'in_file_b')
+
     resource_pool['qap_head_mask'] = (combine_masks, 'out_file')
+    resource_pool['whole_head_mask'] = (dilate_erode, 'out_file')
+    resource_pool['skull_only_mask'] = (subtract_mask, 'out_file')
+
+
     return workflow, resource_pool
 
 
@@ -268,7 +284,8 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
 
 
     spatial = pe.Node(niu.Function(
-        input_names=['anatomical_reorient', 'head_mask_path',
+        input_names=['anatomical_reorient', 'qap_head_mask_path',
+                     'whole_head_mask_path', 'skull_mask_path',
                      'anatomical_gm_mask', 'anatomical_wm_mask',
                      'anatomical_csf_mask', 'subject_id',
                      'session_id', 'scan_id', 'site_name',
@@ -296,9 +313,21 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
 
     if len(resource_pool['qap_head_mask']) == 2:
         node, out_file = resource_pool['qap_head_mask']
-        workflow.connect(node, out_file, spatial, 'head_mask_path')
+        workflow.connect(node, out_file, spatial, 'qap_head_mask_path')
     else:
-        spatial.inputs.head_mask_path = resource_pool['qap_head_mask']
+        spatial.inputs.qap_head_mask_path = resource_pool['qap_head_mask']
+
+    if len(resource_pool['whole_head_mask']) == 2:
+        node, out_file = resource_pool['whole_head_mask']
+        workflow.connect(node, out_file, spatial, 'whole_head_mask_path')
+    else:
+        spatial.inputs.whole_head_mask_path = resource_pool['whole_head_mask']
+
+    if len(resource_pool['skull_only_mask']) == 2:
+        node, out_file = resource_pool['skull_only_mask']
+        workflow.connect(node, out_file, spatial, 'skull_mask_path')
+    else:
+        spatial.inputs.skull_mask_path = resource_pool['skull_only_mask']
 
     if len(resource_pool['anatomical_gm_mask']) == 2:
         node, out_file = resource_pool['anatomical_gm_mask']

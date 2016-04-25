@@ -754,7 +754,7 @@ def _run_workflow(args):
     from nipype import config as nyconfig
 
     # unpack args
-    resource_pool_list, sub_info_list, config, run_name, runargs = args
+    resource_pool_dict, sub_info_list, config, run_name, runargs = args
 
     qap_type = config['qap_type']
 
@@ -800,6 +800,10 @@ def _run_workflow(args):
     workflow.config['execution'] = \
         {'crashdump_dir': config["output_directory"]}
 
+    # individual workflow and logger setup
+    logger.info("Contents of resource pool:\n" + str(resource_pool_dict))
+    logger.info("Configuration settings:\n" + str(config))
+
     # create the one node all participants will start from
     starter_node = pe.Node(niu.Function(input_names=['starter'], 
                                         output_names=['starter'], 
@@ -809,12 +813,11 @@ def _run_workflow(args):
     # set a dummy variable
     starter_node.inputs.starter = ""
 
-
     new_outputs = 0
 
     for sub_info in sub_info_list:
 
-        resource_pool = resource_pool_list[sub_info]
+        resource_pool = resource_pool_dict[sub_info]
 
         # resource pool check
 
@@ -835,8 +838,6 @@ def _run_workflow(args):
             err = err + "\n\n"
             raise Exception(err)
 
-
-        resource_pool["starter"] = (starter_node, 'starter')
 
         # process subject info
         sub_id = str(sub_info[0])
@@ -885,10 +886,6 @@ def _run_workflow(args):
                 pass
 
 
-        # individual workflow and logger setup
-        logger.info("Contents of resource pool:\n" + str(resource_pool))
-        logger.info("Configuration settings:\n" + str(config))
-
         # for QAP spreadsheet generation only
         config.update({"subject_id": sub_id, "session_id": session_id,
                        "scan_id": scan_id, "run_name": run_name})
@@ -905,6 +902,8 @@ def _run_workflow(args):
                 resource_pool[resource] = glob.glob(op.join(output_dir,
                                                             resource, "*"))[0]
 
+
+        resource_pool["starter"] = (starter_node, 'starter')
 
         # start connecting the pipeline
         if 'qap_' + qap_type not in resource_pool.keys():

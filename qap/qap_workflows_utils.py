@@ -19,8 +19,6 @@ def slice_head_mask(infile, transform, standard):
     import subprocess
     import pkg_resources as p
 
-    #from qap.workflow_utils import raise_smart_exception
-
     # get file info
     infile_img = nb.load(infile)
     infile_header = infile_img.get_header()
@@ -28,40 +26,45 @@ def slice_head_mask(infile, transform, standard):
 
     infile_dims = infile_header.get_data_shape()
 
-    # these are stored in the files listed below, just here for reference
-    inpoint_a = [78, -110, -72]
-    inpoint_b = [-78, -110, -72]
-    inpoint_c = [-1, 91, -29]  # nose, apparently
+    # these coordinates correspond to the points of defining the slice plane
+    # on the MNI template
+    inpoint_a = [78, -110, -72, 0]
+    inpoint_b = [-78, -110, -72, 0]
+    inpoint_c = [-1, 91, -29, 0]  # nose
 
     inpoint_coords = [inpoint_a, inpoint_b, inpoint_c]
 
-    # these each contain a set of coordinates for drawing the plane across
-    # the image (to "slice" it)
-    #inpoint_files = [p.resource_filename("qap", "inpoint_a.txt"),
-    #                 p.resource_filename("qap", "inpoint_b.txt"),
-    #                 p.resource_filename("qap", "inpoint_c.txt")]
-
-    # let's convert the coordinates into voxel coordinates
+    # get the affine output matrix of 3dallineate
     with open(transform,"r") as f:
         allineate_mat_list = f.readlines()
 
     # get the 3dAllineate output affine matrix into a list
     mat_list = filter(None,allineate_mat_list[1].rstrip("\n").split(" "))
 
-    # put together the 3x3 matrix
-    row1 = [float(mat_list[0]), float(mat_list[1]), float(mat_list[2])]
-    row2 = [float(mat_list[4]), float(mat_list[5]), float(mat_list[6])]
-    row3 = [float(mat_list[8]), float(mat_list[9]), float(mat_list[10])]
+    # put together the 4x4 matrix
+    #   (encode the offset as the fourth row and include the 0,0,0,1
+    #    dummy row, so that this will only require one matrix multiplication)
+    row1 = [float(mat_list[0]), float(mat_list[1]), float(mat_list[2]), \
+                float(mat_list[3])]
+    row2 = [float(mat_list[4]), float(mat_list[5]), float(mat_list[6]), \
+                float(mat_list[7])]
+    row3 = [float(mat_list[8]), float(mat_list[9]), float(mat_list[10]), \
+                float(mat_list[11])]
+    row4 = [0,0,0,1]
 
-    allineate_mat = np.asarray([row1,row2,row3])
-
-    offset = [float(mat_list[3]), float(mat_list[7]), float(mat_list[11])]
+    allineate_mat = np.asarray([row1,row2,row3,row4])
 
     coords_list = []
 
     for inpoint in inpoint_coords:      
 
-        coord_out = list(np.dot(allineate_mat,inpoint) + offset)
+        # using the transform, calculate what the three coordinates are in
+        # native space, as it corresponds to the anatomical scan
+        coord_out = \
+            list(np.dot(np.linalg.inv(allineate_mat),inpoint))
+
+        # remove the one resulting zero at the end
+        coord_out = coord_out[:-1]
 
         # convert the coordinates from mm to voxels
         coord_out = \
@@ -164,7 +167,8 @@ def slice_head_mask(infile, transform, standard):
 
 
 
-def qap_anatomical_spatial(anatomical_reorient, head_mask_path,
+def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
+                           whole_head_mask_path, skull_mask_path,
                            anatomical_gm_mask, anatomical_wm_mask,
                            anatomical_csf_mask, subject_id, session_id,
                            scan_id, site_name=None, out_vox=True,
@@ -179,8 +183,12 @@ def qap_anatomical_spatial(anatomical_reorient, head_mask_path,
 
     # Load the data
     anat_data = load_image(anatomical_reorient)
-    fg_mask = load_mask(head_mask_path, anatomical_reorient)
+
+    fg_mask = load_mask(qap_head_mask_path, anatomical_reorient)
     bg_mask = 1 - fg_mask
+
+    whole_head_mask = load_mask(whole_head_mask_path, anatomical_reorient)
+    skull_mask = load_mask(skull_mask_path, anatomical_reorient)
 
     gm_mask = load_mask(anatomical_gm_mask, anatomical_reorient)
     wm_mask = load_mask(anatomical_wm_mask, anatomical_reorient)
@@ -199,7 +207,7 @@ def qap_anatomical_spatial(anatomical_reorient, head_mask_path,
         qc['Site'] = site_name
 
     # FBER
-    qc['FBER'] = fber(anat_data, fg_mask)
+    qc['FBER'] = fber(anat_data, skull_mask, bg_mask)
 
     # EFC
     qc['EFC'] = efc(anat_data)
@@ -208,11 +216,11 @@ def qap_anatomical_spatial(anatomical_reorient, head_mask_path,
     qc['Qi1'], _ = artifacts(anat_data, fg_mask, calculate_qi2=False)
 
     # Smoothness in voxels
-    tmp = fwhm(anatomical_reorient, head_mask_path, out_vox=out_vox)
+    tmp = fwhm(anatomical_reorient, whole_head_mask_path, out_vox=out_vox)
     qc['FWHM_x'], qc['FWHM_y'], qc['FWHM_z'], qc['FWHM'] = tmp
 
     # Summary Measures
-    fg_mean, fg_std, fg_size = summary_mask(anat_data, fg_mask)
+    fg_mean, fg_std, fg_size = summary_mask(anat_data, whole_head_mask)
     bg_mean, bg_std, bg_size = summary_mask(anat_data, bg_mask)
 
     gm_mean, gm_std, gm_size = (None, None, None)
@@ -260,7 +268,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
         qc['Site'] = site_name
 
     # FBER
-    qc['FBER'] = fber(anat_data, fg_mask)
+    qc['FBER'] = fber(anat_data, fg_mask, bg_mask)
 
     # EFC
     qc['EFC'] = efc(anat_data)
