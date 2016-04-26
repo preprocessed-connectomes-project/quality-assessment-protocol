@@ -85,14 +85,18 @@ def run_anatomical_reorient(anatomical_scan, run=True):
 
 
     if run == True:
-
-        workflow.run(plugin='MultiProc', plugin_args= \
-                         {'n_procs': num_cores_per_subject})
-
-        outpath = glob.glob(os.path.join(workflow_dir, "anatomical_reorient",\
-                                         "*"))[0]
-
-        return outpath
+        try:
+            workflow.run(plugin='ResourceMultiProc', plugin_args= \
+                             {'n_procs': num_cores_per_subject})
+            outpath = glob.glob(os.path.join(workflow_dir, "anatomical_reorient",\
+                                             "*"))[0]
+            return outpath
+        except:
+            workflow.run(plugin='MultiProc', plugin_args= \
+                             {'n_procs': num_cores_per_subject})
+            outpath = glob.glob(os.path.join(workflow_dir, "anatomical_reorient",\
+                                             "*"))[0]
+            return outpath
 
     else:
 
@@ -207,14 +211,18 @@ def run_anatomical_skullstrip(anatomical_reorient, run=True):
     workflow.connect(node, out_file, ds, 'anatomical_brain')
 
     if run == True:
-
-        workflow.run(plugin='MultiProc', plugin_args= \
-                         {'n_procs': num_cores_per_subject})
-
-        outpath = glob.glob(os.path.join(workflow_dir, "anatomical_brain", \
-                                         "*"))[0]
-
-        return outpath
+        try:
+            workflow.run(plugin='ResourceMultiProc', plugin_args= \
+                             {'n_procs': num_cores_per_subject})
+            outpath = glob.glob(os.path.join(workflow_dir, "anatomical_brain", \
+                                             "*"))[0]
+            return outpath
+        except:
+            workflow.run(plugin='MultiProc', plugin_args= \
+                             {'n_procs': num_cores_per_subject})
+            outpath = glob.glob(os.path.join(workflow_dir, "anatomical_brain", \
+                                             "*"))[0]
+            return outpath
 
     else:
 
@@ -239,16 +247,8 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
     from workflow_utils import check_input_resources, \
                                check_config_settings
 
-    check_config_settings(config, "template_brain_for_anat")
+    check_config_settings(config, "template_skull_for_anat")
 
-    '''
-    if "anatomical_brain" not in resource_pool.keys():
-
-        from anatomical_preproc import anatomical_skullstrip_workflow
-
-        workflow, resource_pool = \
-            anatomical_skullstrip_workflow(workflow, resource_pool, config, name)
-    '''
 
     if "anatomical_reorient" not in resource_pool.keys():
 
@@ -286,8 +286,10 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
 
 
 
-def run_afni_anatomical_linear_registration(anatomical_brain, \
-                                            reference_brain, run=True):
+def run_afni_anatomical_linear_registration(reference_skull,
+                                            anatomical_skull=None,
+                                            anatomical_scan=None,
+                                            run=True):
 
     # stand-alone runner for anatomical skullstrip workflow
 
@@ -298,6 +300,8 @@ def run_afni_anatomical_linear_registration(anatomical_brain, \
 
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
+
+    from workflow_utils import raise_smart_exception
 
     workflow = pe.Workflow(name='3dallineate_workflow')
 
@@ -311,9 +315,15 @@ def run_afni_anatomical_linear_registration(anatomical_brain, \
     config = {}
     num_cores_per_subject = 1
 
+    if anatomical_skull:
+        resource_pool["anatomical_reorient"] = anatomical_skull
+    elif anatomical_scan:
+        resource_pool["anatomical_scan"] = anatomical_scan
+    else:
+        err = "No anatomical_reorient or anatomical_scan provided!"
+        raise_smart_exception(locals(),err)
 
-    resource_pool["anatomical_brain"] = anatomical_brain
-    config["template_brain_for_anat"] = reference_brain
+    config["template_skull_for_anat"] = reference_skull
     
     workflow, resource_pool = \
             afni_anatomical_linear_registration(workflow, resource_pool, \
@@ -330,15 +340,20 @@ def run_afni_anatomical_linear_registration(anatomical_brain, \
     workflow.connect(node, out_file, ds, 'allineate_linear_xfm')
 
     if run == True:
-
-        workflow.run(plugin='ResourceMultiProc', plugin_args= \
-                         {'n_procs': num_cores_per_subject})
-
-        outpath = glob.glob(os.path.join(workflow_dir, \
-                                         "afni_linear_warped_image", \
-                                         "*"))[0]
-
-        return outpath
+        try:
+            workflow.run(plugin='ResourceMultiProc', plugin_args= \
+                             {'n_procs': num_cores_per_subject})
+            outpath = glob.glob(os.path.join(workflow_dir, \
+                                             "afni_linear_warped_image", \
+                                             "*"))[0]
+            return outpath
+        except:
+            workflow.run(plugin='MultiProc', plugin_args= \
+                             {'n_procs': num_cores_per_subject})
+            outpath = glob.glob(os.path.join(workflow_dir, \
+                                             "afni_linear_warped_image", \
+                                             "*"))[0]
+            return outpath
 
     else:
 

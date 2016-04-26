@@ -161,7 +161,7 @@ def run_qap_mask(anatomical_reorient, allineate_out_xfm, template_skull,
     num_cores_per_subject = 1
 
     resource_pool['anatomical_reorient'] = anatomical_reorient
-    resource_pool['3dallineate_xfm'] = allineate_out_xfm
+    resource_pool['allineate_linear_xfm'] = allineate_out_xfm
     config['template_skull_for_anat'] = template_skull
 
     workflow, resource_pool = \
@@ -175,10 +175,16 @@ def run_qap_mask(anatomical_reorient, allineate_out_xfm, template_skull,
     workflow.connect(node, out_file, ds, output)
 
     if run:
-        workflow.run(
-            plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
-        outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
-        return outpath
+        try:
+            workflow.run(
+                plugin='ResourceMultiProc', plugin_args={'n_procs': num_cores_per_subject})
+            outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
+            return outpath
+        except:
+            workflow.run(
+                plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
+            outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
+            return outpath
 
     else:
         return workflow, workflow.base_dir
