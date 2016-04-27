@@ -276,7 +276,7 @@ Sun Grid Engine (SGE) allows you to parallelize your cloud analyses by having ea
 	#$ -pe mpi_smp {number of CPU cores to use}
 	#$ -e {absolute path to a file to store standard error from the terminal}
 	#$ -o /{absolute path to a file to store standard out from the terminal}
-	source /etc/profile.d/cpac_env.sh
+	source /etc/bash.bashrc
 	ANAT_S3_DICT={absolute path to S3 subject dictionary YAML file}
 	ANAT_SP_CONFIG_FILE={absolute path to configuration YAML file}
 	echo "Start - TASKID " $SGE_TASK_ID " : " $(date)
