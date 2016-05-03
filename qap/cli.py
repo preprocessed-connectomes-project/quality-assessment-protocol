@@ -469,7 +469,7 @@ class QAProtocolCLI:
 
 
 
-    def _run_one_bundle(self, run_name):
+    def _run_one_bundle(self, run_name, bundle_idx=None):
 
         # kick off a single-bundle run
         #   this will be called multiple times throughout the execution of
@@ -478,6 +478,9 @@ class QAProtocolCLI:
         from cloud_utils import dl_subj_from_s3, upl_qap_output
 
         self._sub_dict = {}
+
+        if self._bundle_idx and (not bundle_idx):
+            bundle_idx = self._bundle_idx
 
         # if the user is using S3 storage, download the bundle or subject
         if self._s3_dict_yml:
@@ -500,8 +503,8 @@ class QAProtocolCLI:
             # subj_idx is an integer (minimum of 1) which will select the
             # entry from s3_dict_yml to retrieve using the dl_subj_from_s3
             # function
-
-            if self._bundle_idx:
+            print "bundle idx: ", bundle_idx
+            if bundle_idx:
 
                 # download data from S3 by the bundle
                 #   ex. if we are doing 4 subjects per bundle and we are on
@@ -509,7 +512,7 @@ class QAProtocolCLI:
                 #       subjects 9-12 from the s3_dict_yml
 
                 first_subj_idx = \
-                    (self._bundle_idx-1)*self._config["num_subjects_per_bundle"] + 1
+                    (bundle_idx-1)*self._config["num_subjects_per_bundle"] + 1
 
                 last_subj_idx = \
                     first_subj_idx + self._config["num_subjects_per_bundle"]
@@ -551,7 +554,6 @@ class QAProtocolCLI:
                 pass
             
 
-
         elif self._config["subject_list"]:
 
             # run on a cluster without pulling data from S3
@@ -559,10 +561,10 @@ class QAProtocolCLI:
             # get flat sublist
             flat_sub_dict_dict = self._load_and_flatten_sublist()
 
-            if self._bundle_idx:
+            if bundle_idx:
 
                 first_subj_idx = \
-                    (self._bundle_idx-1)*self._config["num_subjects_per_bundle"] + 1
+                    (bundle_idx-1)*self._config["num_subjects_per_bundle"] + 1
 
                 last_subj_idx = \
                     first_subj_idx + self._config["num_subjects_per_bundle"]
@@ -605,6 +607,36 @@ class QAProtocolCLI:
 
         return rt
 
+
+
+    def _run_here_from_s3(self, run_name, num_bundles):
+
+        results = []
+
+        self._bundle_idx = None
+        self._subj_idx = None
+
+        # skip parallel machinery if we are running only one bundle at once
+        if self._num_bundles_at_once == 1:
+            for idx in range(1,num_bundles+1):
+                results.append(self._run_one_bundle(run_name, bundle_idx=idx))
+        # or use Pool if running multiple bundles simultaneously
+        else:
+            from multiprocessing import Pool
+
+            try:
+                pool = Pool(processes=self._num_bundles_at_once, \
+                            masktasksperchild=50)
+            except TypeError:  # Make python <2.7 compatible
+                pool = Pool(processes=self._num_bundles_at_once)
+
+            results = pool.map(self._run_one_bundle,run_name,range(1,num_bundles+1))
+            pool.close()
+            pool.terminate()
+
+
+        return results    
+        
 
 
     def run(self):
@@ -656,12 +688,27 @@ class QAProtocolCLI:
         results = None
 
 
+        # set up callback logging
+        import logging
+        from nipype.pipeline.plugins.callback_log import log_nodes_cb
+
+        cb_log_filename = os.path.join(config["output_directory"], \
+                                       "callback.log")
+        # Add handler to callback log file
+        cb_logger = logging.getLogger('callback')
+        cb_logger.setLevel(logging.DEBUG)
+        handler = logging.FileHandler(cb_log_filename)
+        cb_logger.addHandler(handler)
+
+
         # settle run arguments (plugins)
-        self.runargs = {'plugin': 'Linear', 'plugin_args': {}}
+        self.runargs = {'plugin': 'Linear', \
+                        'plugin_args': {'memory_gb' : 8.0, \
+                                        'status_callback' : log_nodes_cb}}
         if self._num_subjects_per_bundle > 1:
-            self.runargs['plugin'] = 'ResourceMultiProc'
-            self.runargs['plugin_args'] = \
-                {'n_procs': self._num_subjects_per_bundle}
+            self.runargs['plugin'] = 'MultiProc'
+            n_procs = {'n_procs': self._num_subjects_per_bundle}
+            self.runargs['plugin_args'].update(n_procs)
 
 
         # Start the magic
@@ -671,7 +718,32 @@ class QAProtocolCLI:
 
         elif not self._platform:
 
-            results = self._run_here(run_name)
+            if self._config["subject_list"]:
+
+                results = self._run_here(run_name)
+
+            elif self._s3_dict_yml:
+
+                import yaml
+                import math
+
+                # get num_bundles
+                bundle_size = self._config["num_subjects_per_bundle"]
+
+                with open(self._s3_dict_yml,"r") as f:
+                    s3_dict = yaml.load(f)
+
+                num_bundles = float(len(s3_dict)) / float(bundle_size)
+                # round up if it is a float
+                num_bundles = int(math.ceil(num_bundles))
+
+                if num_bundles == 1:
+                    self._config["num_subjects_per_bundle"] = len(s3_dict)
+
+                logger.info("Running locally, pulling data from S3 - %d " \
+                            "bundles" % num_bundles)
+
+                self._run_here_from_s3(run_name, num_bundles)
 
         elif self._platform:
 
@@ -686,7 +758,7 @@ class QAProtocolCLI:
                 with open(self._s3_dict_yml,"r") as f:
                     s3_dict = yaml.load(f)
 
-                num_bundles = len(s3_dict) / bundle_size
+                num_bundles = float(len(s3_dict)) / float(bundle_size)
 
             elif self._config["subject_list"]:
 
@@ -694,11 +766,18 @@ class QAProtocolCLI:
                 flat_sub_dict_dict = self._load_and_flatten_sublist()
 
                 num_bundles = \
-                    len(flat_sub_dict_dict) / bundle_size
+                    float(len(flat_sub_dict_dict)) / float(bundle_size)
 
 
             # round up if it is a float
             num_bundles = int(math.ceil(num_bundles))
+
+            if num_bundles == 1:
+                if self._s3_dict_yml:
+                    self._config["num_subjects_per_bundle"] = len(s3_dict)
+                if self._config["subject_list"]:
+                    self._config["num_subjects_per_bundle"] = \
+                        len(flat_sub_dict_dict)
 
             batch_file_contents, batch_filepath, exec_cmd, \
                    confirm_str, cluster_files_dir = \

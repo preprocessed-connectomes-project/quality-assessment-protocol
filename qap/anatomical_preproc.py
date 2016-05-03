@@ -481,12 +481,16 @@ def run_afni_segmentation_workflow(anatomical_brain, run=True):
 
 
     if run == True:
-
-        workflow.run(plugin='MultiProc', plugin_args= \
-                         {'n_procs': num_cores_per_subject})
-
-        outpath = glob.glob(os.path.join(workflow_dir, "anatomical_*_mask", \
-                                         "*"))
+        try:
+            workflow.run(plugin='ResourceMultiProc', plugin_args= \
+                             {'n_procs': num_cores_per_subject})
+            outpath = glob.glob(os.path.join(workflow_dir, "anatomical_*_mask", \
+                                             "*"))            
+        except:
+            workflow.run(plugin='MultiProc', plugin_args= \
+                             {'n_procs': num_cores_per_subject})
+            outpath = glob.glob(os.path.join(workflow_dir, "anatomical_*_mask", \
+                                             "*"))
 
         return outpath
 

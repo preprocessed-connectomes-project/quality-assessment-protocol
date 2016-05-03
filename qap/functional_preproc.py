@@ -172,12 +172,16 @@ def run_func_preproc(functional_scan, start_idx, stop_idx, run=True):
 
 
     if run == True:
-
-        workflow.run(plugin='MultiProc', plugin_args= \
-                         {'n_procs': num_cores_per_subject})
-
-        outpath = glob.glob(os.path.join(workflow_dir, "func_reorient",\
-                                         "*"))[0]
+        try:
+            workflow.run(plugin='ResourceMultiProc', plugin_args= \
+                             {'n_procs': num_cores_per_subject})
+            outpath = glob.glob(os.path.join(workflow_dir, "func_reorient", \
+                                "*"))[0]
+        except:
+            workflow.run(plugin='MultiProc', plugin_args= \
+                             {'n_procs': num_cores_per_subject})
+            outpath = glob.glob(os.path.join(workflow_dir, "func_reorient",\
+                                             "*"))[0]
 
         return outpath
         
