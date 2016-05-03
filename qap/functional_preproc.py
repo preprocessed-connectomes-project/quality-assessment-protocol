@@ -140,7 +140,8 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
 
 
 
-def run_func_preproc(functional_scan, start_idx, stop_idx, run=True):
+def run_func_preproc(functional_scan, start_idx=None, stop_idx=None, \
+                         run=True):
 
     # stand-alone runner for functional preproc workflow
 
@@ -165,13 +166,13 @@ def run_func_preproc(functional_scan, start_idx, stop_idx, run=True):
 
     resource_pool["functional_scan"] = functional_scan
 
-    config["start_idx"] = start_idx
-    config["stop_idx"] = stop_idx
-
+    if start_idx:
+        config["start_idx"] = start_idx
+    if stop_idx:
+        config["stop_idx"] = stop_idx
     
     workflow, resource_pool = \
             func_preproc_workflow(workflow, resource_pool, config)
-
 
     ds = pe.Node(nio.DataSink(), name='datasink_func_motion_correct')
     ds.inputs.base_directory = workflow_dir
@@ -182,16 +183,10 @@ def run_func_preproc(functional_scan, start_idx, stop_idx, run=True):
 
 
     if run == True:
-        try:
-            workflow.run(plugin='ResourceMultiProc', plugin_args= \
-                             {'n_procs': num_cores_per_subject})
-            outpath = glob.glob(os.path.join(workflow_dir, "func_reorient", \
-                                "*"))[0]
-        except:
-            workflow.run(plugin='MultiProc', plugin_args= \
-                             {'n_procs': num_cores_per_subject})
-            outpath = glob.glob(os.path.join(workflow_dir, "func_reorient",\
-                                             "*"))[0]
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
+        outpath = glob.glob(os.path.join(workflow_dir, "func_reorient",\
+                                         "*"))[0]
 
         return outpath
         
