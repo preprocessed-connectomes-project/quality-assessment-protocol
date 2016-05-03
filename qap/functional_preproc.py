@@ -72,8 +72,16 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
 
 
     check_input_resources(resource_pool, "functional_scan")
-    check_config_settings(config, "start_idx")
-    check_config_settings(config, "stop_idx")
+
+    if "start_idx" not in config.keys():
+        config["start_idx"] = 0
+
+    if "stop_idx" not in config.keys():
+        config["stop_idx"] = None
+
+    drop_trs = False
+    if (config["start_idx"] != 0) and (config["stop_idx"] != None):
+        drop_trs = True
 
 
     func_get_idx = pe.Node(util.Function(input_names=['in_files', 
@@ -88,20 +96,20 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
     func_get_idx.inputs.start_idx = config["start_idx"]
     func_get_idx.inputs.stop_idx = config["stop_idx"]
     
-    
-    func_drop_trs = pe.Node(interface=preprocess.Calc(),
-                           name='func_drop_trs%s' % name)
+    if drop_trs:
+        func_drop_trs = pe.Node(interface=preprocess.Calc(),
+                                name='func_drop_trs%s' % name)
 
-    func_drop_trs.inputs.in_file_a = resource_pool["functional_scan"]
-    func_drop_trs.inputs.expr = 'a'
-    func_drop_trs.inputs.outputtype = 'NIFTI_GZ'
+        func_drop_trs.inputs.in_file_a = resource_pool["functional_scan"]
+        func_drop_trs.inputs.expr = 'a'
+        func_drop_trs.inputs.outputtype = 'NIFTI_GZ'
 
 
-    workflow.connect(func_get_idx, 'startidx',
-                     func_drop_trs, 'start_idx')
+        workflow.connect(func_get_idx, 'startidx',
+                         func_drop_trs, 'start_idx')
 
-    workflow.connect(func_get_idx, 'stopidx',
-                     func_drop_trs, 'stop_idx')
+        workflow.connect(func_get_idx, 'stopidx',
+                         func_drop_trs, 'stop_idx')
     
 
     func_deoblique = pe.Node(interface=preprocess.Refit(),
@@ -109,9 +117,11 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
 
     func_deoblique.inputs.deoblique = True
     
-    
-    workflow.connect(func_drop_trs, 'out_file',
-                     func_deoblique, 'in_file')
+    if drop_trs:
+        workflow.connect(func_drop_trs, 'out_file',
+                         func_deoblique, 'in_file')
+    else:
+        func_deoblique.inputs.in_file = resource_pool["functional_scan"]
 
 
     func_reorient = pe.Node(interface=preprocess.Resample(),
