@@ -58,6 +58,10 @@ In addtion to the visualization packges above, QAP requires Numpy, Scipy, Nipype
 
     pip install qap
 
+If you plan on using the *write_graph* option to write out an illustration of the workflow used by QAP (see below), you will also need to install *graphviz* from [here](http://www.graphviz.org/Download..php) as well as *pygraphviz*, which can be installed by typing:
+
+    pip install pygraphviz
+
 ## Taxonomy of QA Measures
 
 There are three sets of measures that can be run using the QAP software package:
@@ -125,7 +129,7 @@ Templates for these files are provided in the [`/configs` folder](https://github
 * **working_directory**: The directory to store intermediary processing files in.
 * **write_all_outputs**: A boolean option to determine whether or not all files used in the process of calculating the QAP measures will be saved to the output directory or not.  If *True*, all outputs will be saved.  If *False*, only the csv file containing the measures will be saved.
 * **write_report**: A boolean option to determine whether or not to generate report plots and a group measure CSV ([see below](#generating-reports)).  If *True*, plots and a CSV will be produced; if *False*, QAP will not produce reports.
-* **write_graph**: A boolean option to determine whether or not to write a representation of the graph that corresponds to the workflow that will be applied to each of the subjects. If *True*, it uses the *write_graph()* function of nipype Workflows to save the corresponding graph in dot format.
+* **write_graph**: A boolean option to determine whether or not to write a representation of the graph that corresponds to the workflow that will be applied to each of the subjects. If *True*, it uses the *write_graph()* function of nipype Workflows to save the corresponding graph in dot format.  Note that you will need to have grapviz/pygraphviz installed (see installation section above), otherwise you will receive an error.
 
 ### Anatomical pipelines
 
