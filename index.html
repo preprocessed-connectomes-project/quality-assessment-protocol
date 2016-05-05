@@ -102,6 +102,11 @@ sudo apt-get install libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev
 <pre><code>pip install qap
 </code></pre>
 
+<p>If you plan on using the <em>write_graph</em> option to write out an illustration of the workflow used by QAP (see below), you will also need to install <em>graphviz</em> from <a href="http://www.graphviz.org/Download..php">here</a> as well as <em>pygraphviz</em>, which can be installed by typing:</p>
+
+<pre><code>pip install pygraphviz
+</code></pre>
+
 <h2 id="taxonomy-of-qa-measures">Taxonomy of QA Measures</h2>
 
 <p>There are three sets of measures that can be run using the QAP software package:</p>
@@ -178,7 +183,7 @@ sudo apt-get install libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev
   <li><strong>working_directory</strong>: The directory to store intermediary processing files in.</li>
   <li><strong>write_all_outputs</strong>: A boolean option to determine whether or not all files used in the process of calculating the QAP measures will be saved to the output directory or not.  If <em>True</em>, all outputs will be saved.  If <em>False</em>, only the csv file containing the measures will be saved.</li>
   <li><strong>write_report</strong>: A boolean option to determine whether or not to generate report plots and a group measure CSV (<a href="#generating-reports">see below</a>).  If <em>True</em>, plots and a CSV will be produced; if <em>False</em>, QAP will not produce reports.</li>
-  <li><strong>write_graph</strong>: A boolean option to determine whether or not to write a representation of the graph that corresponds to the workflow that will be applied to each of the subjects. If <em>True</em>, it uses the <em>write_graph()</em> function of nipype Workflows to save the corresponding graph in dot format.</li>
+  <li><strong>write_graph</strong>: A boolean option to determine whether or not to write a representation of the graph that corresponds to the workflow that will be applied to each of the subjects. If <em>True</em>, it uses the <em>write_graph()</em> function of nipype Workflows to save the corresponding graph in dot format.  Note that you will need to have grapviz/pygraphviz installed (see installation section above), otherwise you will receive an error.</li>
 </ul>
 
 <h3 id="anatomical-pipelines">Anatomical pipelines</h3>
