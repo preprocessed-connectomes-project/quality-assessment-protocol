@@ -152,7 +152,7 @@ The QAP pipelines take in subject list YAML (.yml) files as an input. The filepa
 
 	/data_directory/site_name/subject_id/session_id/scan_id/file.nii.gz
 
-To make the script parse the above directory structure and generate the subject list YAML file, invoke the following command:
+Where 'subject_id' is replaced with a subject ID code, 'session_id' is replaced with a folder of the form 'session_<number>', and 'scan_id' is replaced with 'anat_<number>', 'func_<number>' or 'rest_<number>' depending on the scan type. To make the script parse the above directory structure and generate the subject list YAML file, invoke the following command:
 
     qap_raw_data_sublist_generator.py {absolute path to site_name directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'}
 
