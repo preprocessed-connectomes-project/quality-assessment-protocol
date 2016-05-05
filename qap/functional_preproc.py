@@ -327,10 +327,8 @@ def run_func_motion_correct(func_reorient, run=True):
 
 
     if run == True:
-
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
-
         outpath = glob.glob(os.path.join(workflow_dir, "func_motion_correct",\
                                          "*"))[0]
 

@@ -85,18 +85,12 @@ def run_anatomical_reorient(anatomical_scan, run=True):
 
 
     if run == True:
-        try:
-            workflow.run(plugin='ResourceMultiProc', plugin_args= \
-                             {'n_procs': num_cores_per_subject})
-            outpath = glob.glob(os.path.join(workflow_dir, "anatomical_reorient",\
-                                             "*"))[0]
-            return outpath
-        except:
-            workflow.run(plugin='MultiProc', plugin_args= \
-                             {'n_procs': num_cores_per_subject})
-            outpath = glob.glob(os.path.join(workflow_dir, "anatomical_reorient",\
-                                             "*"))[0]
-            return outpath
+
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
+        outpath = glob.glob(os.path.join(workflow_dir, "anatomical_reorient",\
+                                         "*"))[0]
+        return outpath
 
     else:
 
@@ -211,18 +205,12 @@ def run_anatomical_skullstrip(anatomical_reorient, run=True):
     workflow.connect(node, out_file, ds, 'anatomical_brain')
 
     if run == True:
-        try:
-            workflow.run(plugin='ResourceMultiProc', plugin_args= \
-                             {'n_procs': num_cores_per_subject})
-            outpath = glob.glob(os.path.join(workflow_dir, "anatomical_brain", \
-                                             "*"))[0]
-            return outpath
-        except:
-            workflow.run(plugin='MultiProc', plugin_args= \
-                             {'n_procs': num_cores_per_subject})
-            outpath = glob.glob(os.path.join(workflow_dir, "anatomical_brain", \
-                                             "*"))[0]
-            return outpath
+
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
+        outpath = glob.glob(os.path.join(workflow_dir, "anatomical_brain", \
+                                         "*"))[0]
+        return outpath
 
     else:
 
@@ -340,20 +328,13 @@ def run_afni_anatomical_linear_registration(reference_skull,
     workflow.connect(node, out_file, ds, 'allineate_linear_xfm')
 
     if run == True:
-        try:
-            workflow.run(plugin='ResourceMultiProc', plugin_args= \
-                             {'n_procs': num_cores_per_subject})
-            outpath = glob.glob(os.path.join(workflow_dir, \
-                                             "afni_linear_warped_image", \
-                                             "*"))[0]
-            return outpath
-        except:
-            workflow.run(plugin='MultiProc', plugin_args= \
-                             {'n_procs': num_cores_per_subject})
-            outpath = glob.glob(os.path.join(workflow_dir, \
-                                             "afni_linear_warped_image", \
-                                             "*"))[0]
-            return outpath
+
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
+        outpath = glob.glob(os.path.join(workflow_dir, \
+                                         "afni_linear_warped_image", \
+                                         "*"))[0]
+        return outpath
 
     else:
 
@@ -481,16 +462,11 @@ def run_afni_segmentation_workflow(anatomical_brain, run=True):
 
 
     if run == True:
-        try:
-            workflow.run(plugin='ResourceMultiProc', plugin_args= \
-                             {'n_procs': num_cores_per_subject})
-            outpath = glob.glob(os.path.join(workflow_dir, "anatomical_*_mask", \
-                                             "*"))            
-        except:
-            workflow.run(plugin='MultiProc', plugin_args= \
-                             {'n_procs': num_cores_per_subject})
-            outpath = glob.glob(os.path.join(workflow_dir, "anatomical_*_mask", \
-                                             "*"))
+
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
+        outpath = glob.glob(os.path.join(workflow_dir, "anatomical_*_mask", \
+                                         "*"))
 
         return outpath
 

@@ -1000,7 +1000,10 @@ def _run_workflow(args):
 
         # Save reports to out_dir if necessary
         if config.get('write_report', False):
-            out_list += ['qap_mosaic']
+
+            if ("qap_mosaic" in resource_pool.keys()) and \
+                ("qap_mosaic" not in out_list):
+                out_list += ['qap_mosaic']
 
             # The functional temporal also has an FD plot
             if 'functional_temporal' in qap_type:
