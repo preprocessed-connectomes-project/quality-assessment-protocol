@@ -178,7 +178,7 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     import sys
 
     from qap.spatial_qc import summary_mask, snr, cnr, fber, efc, \
-        artifacts, fwhm
+        artifacts, fwhm, cortical_contrast
     from qap.qap_utils import load_image, load_mask
 
     # Load the data
@@ -239,6 +239,9 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
 
     # CNR
     qc['CNR'] = cnr(gm_mean, wm_mean, bg_std)
+
+    # Cortical contrast
+    qc['Cortical Contrast'] = cortical_contrast(gm_mean, wm_mean)
 
 
     return qc

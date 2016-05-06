@@ -135,6 +135,21 @@ def cnr(mean_gm, mean_wm, std_bg):
 
     return cnr
 
+
+
+def cortical_contrast(mean_gm, mean_wm):
+
+    """
+    Calculate vertex-wise cortical contrast
+   
+    cortical contrast = (mean WM intensity) - (mean GM intensity) /
+                            ( (mean WM intensity + mean GM intensity) / 2 )
+    """
+
+    cort_con = (mean_wm - mean_gm) / ((mean_wm + mean_gm) / 2)
+
+    return cort_con
+
     
     
 def fber(anat_data, skull_mask_data, bg_mask_data):
