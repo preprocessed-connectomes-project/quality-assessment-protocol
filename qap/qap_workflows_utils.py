@@ -310,49 +310,59 @@ def qap_functional_temporal(
     import nibabel as nb
     import numpy as np
 
-    from qap.temporal_qc import mean_dvars_wrapper, mean_outlier_timepoints, \
-        mean_quality_timepoints, global_correlation, \
-        calculate_percent_outliers
+    from qap.temporal_qc import outlier_timepoints, quality_timepoints, \
+                                global_correlation, calculate_percent_outliers
+    from qap.dvars import calc_dvars
 
     # DVARS
-    mean_dvars, dvars = mean_dvars_wrapper(func_timeseries, func_brain_mask)
-
+    dvars = calc_dvars(func_timeseries, func_brain_mask)
     dvars_outliers, dvars_IQR = calculate_percent_outliers(dvars)
+
+    mean_dvars = dvars.mean(0)
+    mean_dvars = mean_dvars[0]
 
     # Mean FD (Jenkinson)
     fd = np.loadtxt(fd_file)
-
     meanfd_outliers, meanfd_IQR = calculate_percent_outliers(fd)
 
     # 3dTout
-    mean_outlier, outlier_perc_out, outlier_IQR = \
-        mean_outlier_timepoints(func_timeseries)
+    outliers = outlier_timepoints(func_timeseries)
+    # calculate the outliers of the outliers! AAHH!
+    outlier_perc_out, outlier_IQR = calculate_percent_outliers(outliers)
 
     # 3dTqual
-    mean_quality, qual_perc_out, qual_IQR = \
-        mean_quality_timepoints(func_timeseries)
+    quality = quality_timepoints(func_timeseries)
+    quality_outliers, quality_IQR = calculate_percent_outliers(quality)
 
     # GCOR
     gcor = global_correlation(func_timeseries, func_brain_mask)
 
     # Compile
     qc = {
-        "Participant":   subject_id,
-        "Session":   session_id,
-        "Series":      scan_id,
-        "Std. DVARS (Mean)":     mean_dvars,
-        "Std. DVARS percent outliers": dvars_outliers,
+        "Participant": subject_id,
+        "Session": session_id,
+        "Series": scan_id,
+        "Std. DVARS (Mean)": mean_dvars,
+        "Std. DVARS (Std Dev)": np.std(dvars),
+        "Std. DVARS (Median)": np.median(dvars),
         "Std. DVARs IQR": dvars_IQR,
-        "RMSD (Mean)":   fd.mean(),
-        "RMSD percent outliers": meanfd_outliers,
+        "Std. DVARS percent outliers": dvars_outliers,
+        "RMSD (Mean)": np.mean(fd),
+        "RMSD (Std Dev)": np.std(fd),
+        "RMSD (Median)": np.median(fd),
         "RMSD IQR": meanfd_IQR,
-        "Fraction of Outliers (Mean)": mean_outlier,
-        "Fraction of Outliers percent outliers": outlier_perc_out,
+        "RMSD percent outliers": meanfd_outliers,
+        "Fraction of Outliers (Mean)": np.mean(outliers),
+        "Fraction of Outliers (Std Dev)": np.std(outliers),
+        "Fraction of Outliers (Median)": np.median(outliers),
         "Fraction of Outliers IQR": outlier_IQR,
-        "Quality":   mean_quality,
-        "Quality percent outliers": qual_perc_out,
-        "Quality IQR": qual_IQR,
-        "GCOR":      gcor
+        "Fraction of Outliers percent outliers": outlier_perc_out,
+        "Quality (Mean)": np.mean(quality),
+        "Quality (Std Dev)": np.std(quality),
+        "Quality (Median)": np.median(quality),
+        "Quality IQR": quality_IQR,
+        "Quality percent outliers": quality_outliers,
+        "GCOR": gcor
     }
 
     if site_name:

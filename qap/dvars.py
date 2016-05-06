@@ -99,9 +99,12 @@ def ar1(func, method=ar_nitime):
 
 
 
-def calc_dvars(func, output_all=False, interp="fraction"):
+def calc_dvars(func_file, mask_file, output_all=False, interp="fraction"):
 
     from workflow_utils import raise_smart_exception
+
+    # load data
+    func = load(func_file, mask_file)
 
     # Robust standard deviation
     func_sd     = robust_stdev(func, interp)
@@ -137,28 +140,6 @@ def calc_dvars(func, output_all=False, interp="fraction"):
             raise_smart_exception(locals())
     
     return out
-
-
-
-def calc_mean_dvars(dvars):
-    mean_dvars = dvars.mean(0)
-    return mean_dvars
-
-
-
-def mean_dvars_wrapper(func_file, mask_file, dvars_out_file=None):
-
-    from workflow_utils import raise_smart_exception
-
-    func    = load(func_file, mask_file)
-    dvars   = calc_dvars(func)
-    if dvars_out_file:
-        try:
-            np.savetxt(dvars_out_file, dvars, fmt='%.12f')
-        except:
-            raise_smart_exception(locals())
-    mean_d  = calc_mean_dvars(dvars)
-    return mean_d[0], dvars
 
 
 

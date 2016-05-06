@@ -503,7 +503,7 @@ class QAProtocolCLI:
             # subj_idx is an integer (minimum of 1) which will select the
             # entry from s3_dict_yml to retrieve using the dl_subj_from_s3
             # function
-            print "bundle idx: ", bundle_idx
+
             if bundle_idx:
 
                 # download data from S3 by the bundle

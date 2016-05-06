@@ -9,10 +9,6 @@ import scipy.stats as stats
 from tempfile import mkdtemp
 import shutil
 
-# DVARS
-from dvars import mean_dvars_wrapper
-
-
 def pass_floats(output_string):
 
     # for parsing AFNI output strings
@@ -211,19 +207,6 @@ def outlier_timepoints(func_file, out_fraction=True):
 
 
 
-def mean_outlier_timepoints(*args, **kwrds):
-
-    outliers = outlier_timepoints(*args, **kwrds)
-
-    # calculate the outliers of the outliers! AAHH!
-    percent_outliers, IQR = calculate_percent_outliers(outliers)
-
-    mean_outliers = np.mean(outliers)
-    
-    return mean_outliers, percent_outliers, IQR
-
-
-
 def quality_timepoints(func_file):
 
     """
@@ -261,18 +244,16 @@ def quality_timepoints(func_file):
 
     quality = pass_floats(out)
 
-    # get percent outliers and IQR
-    percent_outliers, IQR = calculate_percent_outliers(quality)
-
-
-    return quality, percent_outliers, IQR
+    return quality
 
 
 
 def mean_quality_timepoints(*args, **kwrds):
     qualities, percent_outliers, IQR = quality_timepoints(*args, **kwrds)
     mean_qualities = np.mean(qualities)
-    return mean_qualities, percent_outliers, IQR
+    std_quality = np.std(qualities)
+    median_quality = np.median(qualities)
+    return mean_qualities, std_quality, median_quality, percent_outliers, IQR
 
 
 
