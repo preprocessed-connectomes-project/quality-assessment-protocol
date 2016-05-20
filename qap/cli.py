@@ -294,6 +294,7 @@ class QAProtocolCLI:
         sites_dict = {}
 
         for subid in subdict.keys():
+            subid = str(subid)
             # sessions
             for session in subdict[subid].keys():
                 # resource files
@@ -332,6 +333,7 @@ class QAProtocolCLI:
         # in case some subjects have site names and others don't
         if len(sites_dict.keys()) > 0:
             for subid in subdict.keys():
+                subid = str(subid)
                 if subid not in sites_dict.keys():
                     sites_dict[subid] = None
 
@@ -542,6 +544,7 @@ class QAProtocolCLI:
                 #   been specified for that participant
 
                 for sub in self._sub_dict.keys():
+                    sub = str(sub)
                     for resource_path in self._sub_dict[sub].values():
                         if ".nii" in resource_path:
                             filepath = resource_path
@@ -650,14 +653,19 @@ class QAProtocolCLI:
         write_report = config.get('write_report', False)
 
         if "resource_manager" in config.keys():
-            platforms = ["SGE","PBS","SLURM"]
-            self._platform = str(config["resource_manager"]).upper()
-            if self._platform not in platforms:
-                msg = "The resource manager %s provided in the pipeline " \
-                      "configuration file is not one of the valid choices. " \
-                      "It must be one of the following:\n%s" \
-                      % (self._platform,str(platforms))
-                raise_smart_exception(locals(),msg)
+            res_mngr = config["resource_manager"]
+            if (res_mngr == None) or ("None" in res_mngr) or \
+                ("none" in res_mngr):
+                self._platform = None
+            else:
+                platforms = ["SGE","PBS","SLURM"]
+                self._platform = str(res_mngr).upper()
+                if self._platform not in platforms:
+                    msg = "The resource manager %s provided in the pipeline "\
+                          "configuration file is not one of the valid " \
+                          "choices. It must be one of the following:\n%s" \
+                          % (self._platform,str(platforms))
+                    raise_smart_exception(locals(),msg)
         else:
             self._platform = None
 
