@@ -461,17 +461,12 @@ def run_functional_brain_mask(func_motion_correct, use_bet=False, run=True):
     workflow.connect(node, out_file, ds, output)
 
     if run == True:
-
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
-
         outpath = glob.glob(os.path.join(workflow_dir, "functional_brain" \
                                 "_mask", "*"))[0]
-
-        return outpath
-        
+        return outpath      
     else:
-    
         return workflow, workflow.base_dir
 
 
@@ -573,17 +568,12 @@ def run_mean_functional(func_motion_correct, run=True):
     workflow.connect(node, out_file, ds, output)
 
     if run == True:
-
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
-
         outpath = glob.glob(os.path.join(workflow_dir, "mean_functional", \
                                          "*"))[0] 
-
         return outpath
-        
     else:
-    
         return workflow, workflow.base_dir
         
 

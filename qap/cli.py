@@ -169,7 +169,7 @@ class QAProtocolCLI:
 
         # Create cluster log dir
         cluster_files_dir = \
-            os.path.join("/home/ubuntu", "cluster_files")
+            os.path.join(self._config["output_directory"], "cluster_files")
         if not os.path.exists(cluster_files_dir):
             os.makedirs(cluster_files_dir)
 

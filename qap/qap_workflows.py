@@ -175,16 +175,10 @@ def run_qap_mask(anatomical_reorient, allineate_out_xfm, template_skull,
     workflow.connect(node, out_file, ds, output)
 
     if run:
-        try:
-            workflow.run(
-                plugin='ResourceMultiProc', plugin_args={'n_procs': num_cores_per_subject})
-            outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
-            return outpath
-        except:
-            workflow.run(
-                plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
-            outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
-            return outpath
+        workflow.run(
+            plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
+        outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
+        return outpath
 
     else:
         return workflow, workflow.base_dir
