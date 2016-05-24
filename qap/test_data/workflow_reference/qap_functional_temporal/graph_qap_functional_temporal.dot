@@ -1,8 +1,0 @@
-digraph qap_functional_temporal_workflow{
-  label="qap_functional_temporal_workflow";
-  qap_functional_temporal_workflow_qap_functional_temporal[label="qap_functional_temporal.Function.utility"];
-  qap_functional_temporal_workflow_qap_functional_temporal_to_csv[label="qap_functional_temporal_to_csv.Function.utility"];
-  qap_functional_temporal_workflow_datasink_qap_functional_temporal[label="datasink_qap_functional_temporal.DataSink.io"];
-  qap_functional_temporal_workflow_qap_functional_temporal -> qap_functional_temporal_workflow_qap_functional_temporal_to_csv;
-  qap_functional_temporal_workflow_qap_functional_temporal_to_csv -> qap_functional_temporal_workflow_datasink_qap_functional_temporal;
-}

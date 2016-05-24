@@ -1,8 +1,0 @@
-digraph qap_functional_spatial_workflow{
-  label="qap_functional_spatial_workflow";
-  qap_functional_spatial_workflow_qap_functional_spatial[label="qap_functional_spatial.Function.utility"];
-  qap_functional_spatial_workflow_qap_functional_spatial_to_csv[label="qap_functional_spatial_to_csv.Function.utility"];
-  qap_functional_spatial_workflow_datasink_qap_functional_spatial[label="datasink_qap_functional_spatial.DataSink.io"];
-  qap_functional_spatial_workflow_qap_functional_spatial -> qap_functional_spatial_workflow_qap_functional_spatial_to_csv;
-  qap_functional_spatial_workflow_qap_functional_spatial_to_csv -> qap_functional_spatial_workflow_datasink_qap_functional_spatial;
-}

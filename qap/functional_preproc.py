@@ -141,7 +141,7 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
 
 
 def run_func_preproc(functional_scan, start_idx=None, stop_idx=None, \
-                         run=True):
+                         out_dir=None, run=True):
 
     # stand-alone runner for functional preproc workflow
 
@@ -152,13 +152,15 @@ def run_func_preproc(functional_scan, start_idx=None, stop_idx=None, \
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
 
-    workflow = pe.Workflow(name='func_preproc_workflow')
+    output = "func_preproc"
 
-    current_dir = os.getcwd()
-    workflow_dir = os.path.join(current_dir, "func_preproc")
+    workflow = pe.Workflow(name='%s_workflow' % output)
 
+    if not out_dir:
+        out_dir = os.getcwd()
+
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
-
 
     resource_pool = {}
     config = {}
@@ -280,7 +282,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
 
 
 
-def run_func_motion_correct(func_reorient, run=True):
+def run_func_motion_correct(func_reorient, out_dir=None, run=True):
 
     # stand-alone runner for functional motion correct workflow
 
@@ -291,13 +293,15 @@ def run_func_motion_correct(func_reorient, run=True):
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
 
-    workflow = pe.Workflow(name='func_motion_correct_workflow')
+    output = "func_motion_correct"
 
-    current_dir = os.getcwd()
-    workflow_dir = os.path.join(current_dir, "func_motion_correct")
+    workflow = pe.Workflow(name='%s_workflow' % output)
 
+    if not out_dir:
+        out_dir = os.getcwd()
+
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
-
 
     resource_pool = {}
     config = {}
@@ -331,11 +335,8 @@ def run_func_motion_correct(func_reorient, run=True):
                          {'n_procs': num_cores_per_subject})
         outpath = glob.glob(os.path.join(workflow_dir, "func_motion_correct",\
                                          "*"))[0]
-
-        return outpath
-        
+        return outpath      
     else:
-    
         return workflow, workflow.base_dir
 
 
@@ -420,7 +421,8 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
 
 
 
-def run_functional_brain_mask(func_motion_correct, use_bet=False, run=True):
+def run_functional_brain_mask(func_motion_correct, use_bet=False, \
+    out_dir=None, run=True):
 
     # stand-alone runner for functional brain mask workflow
 
@@ -435,8 +437,14 @@ def run_functional_brain_mask(func_motion_correct, use_bet=False, run=True):
 
     workflow = pe.Workflow(name='%s_workflow' % output)
 
-    current_dir = os.getcwd()
-    workflow_dir = os.path.join(current_dir, output)
+    if not out_dir:
+        out_dir = os.getcwd()
+
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
+
+    if use_bet == True:
+        workflow_dir = os.path.join(out_dir, "workflow_output", \
+            output + "_BET")
 
     workflow.base_dir = workflow_dir
 
@@ -526,7 +534,7 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
 
 
  
-def run_mean_functional(func_motion_correct, run=True):
+def run_mean_functional(func_motion_correct, out_dir=None, run=True):
 
     # stand-alone runner for mean functional workflow
 
@@ -543,9 +551,10 @@ def run_mean_functional(func_motion_correct, run=True):
 
     workflow = pe.Workflow(name='%s_workflow' % output)
 
-    current_dir = os.getcwd()
-    workflow_dir = os.path.join(current_dir, output)
+    if not out_dir:
+        out_dir = os.getcwd()
 
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
 
 
