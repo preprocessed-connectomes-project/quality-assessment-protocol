@@ -47,7 +47,7 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
 
 
 
-def run_anatomical_reorient(anatomical_scan, run=True):
+def run_anatomical_reorient(anatomical_scan, out_dir=None, run=True):
 
     # stand-alone runner for anatomical reorient workflow
 
@@ -59,11 +59,14 @@ def run_anatomical_reorient(anatomical_scan, run=True):
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
 
+    output = "anatomical_reorient"
+
     workflow = pe.Workflow(name='anatomical_reorient_workflow')
 
-    current_dir = os.getcwd()
+    if not out_dir:
+        out_dir = os.getcwd()
 
-    workflow_dir = os.path.join(current_dir, "anatomical_reorient")
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
 
     resource_pool = {}
@@ -75,7 +78,6 @@ def run_anatomical_reorient(anatomical_scan, run=True):
     workflow, resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config)
 
-
     ds = pe.Node(nio.DataSink(), name='datasink_anatomical_reorient')
     ds.inputs.base_directory = workflow_dir
     
@@ -85,15 +87,12 @@ def run_anatomical_reorient(anatomical_scan, run=True):
 
 
     if run == True:
-
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
         outpath = glob.glob(os.path.join(workflow_dir, "anatomical_reorient",\
                                          "*"))[0]
         return outpath
-
     else:
-
         return workflow, workflow.base_dir
 
 
@@ -166,7 +165,7 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
 
 
 
-def run_anatomical_skullstrip(anatomical_reorient, run=True):
+def run_anatomical_skullstrip(anatomical_reorient, out_dir=None, run=True):
 
     # stand-alone runner for anatomical skullstrip workflow
 
@@ -178,18 +177,19 @@ def run_anatomical_skullstrip(anatomical_reorient, run=True):
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
 
+    output = "anatomical_brain"
+
     workflow = pe.Workflow(name='anatomical_skullstrip_workflow')
 
-    current_dir = os.getcwd()
+    if not out_dir:
+        out_dir = os.getcwd()
 
-    workflow_dir = os.path.join(current_dir, "anatomical_skullstrip")
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
-
 
     resource_pool = {}
     config = {}
     num_cores_per_subject = 1
-
 
     resource_pool["anatomical_reorient"] = anatomical_reorient
     
@@ -235,31 +235,60 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
     from workflow_utils import check_input_resources, \
                                check_config_settings
 
-    check_config_settings(config, "template_skull_for_anat")
-
-
-    if "anatomical_reorient" not in resource_pool.keys():
-
-        from anatomical_preproc import anatomical_reorient_workflow
-
-        workflow, resource_pool = \
-            anatomical_reorient_workflow(workflow, resource_pool, config, name)
+    if "skull_on_registration" not in config.keys():
+        config["skull_on_registration"] = False
 
     calc_3dallineate_warp = pe.Node(interface=afni.Allineate(),
                                     name='calc_3dAllineate_warp%s' % name)
     calc_3dallineate_warp.inputs.outputtype = "NIFTI_GZ"
 
-    if len(resource_pool["anatomical_reorient"]) == 2:
-        node, out_file = resource_pool["anatomical_reorient"]
-        workflow.connect(node, out_file, calc_3dallineate_warp, 'in_file')
+
+    if config["skull_on_registration"]:
+
+        if "anatomical_reorient" not in resource_pool.keys():
+
+            from anatomical_preproc import anatomical_reorient_workflow
+
+            workflow, resource_pool = \
+                anatomical_reorient_workflow(workflow, resource_pool, \
+                                             config, name)
+
+        if len(resource_pool["anatomical_reorient"]) == 2:
+            node, out_file = resource_pool["anatomical_reorient"]
+            workflow.connect(node, out_file, calc_3dallineate_warp, 'in_file')
+        else:
+            calc_3dallineate_warp.inputs.in_file = \
+                resource_pool["anatomical_reorient"]
+
+        calc_3dallineate_warp.inputs.reference = \
+            config["template_skull_for_anat"]
+
+        calc_3dallineate_warp.inputs.out_file = "allineate_warped_head.nii.gz"
+
     else:
-        calc_3dallineate_warp.inputs.in_file = \
-            resource_pool["anatomical_reorient"]
+
+        if "anatomical_brain" not in resource_pool.keys():
+
+            from anatomical_preproc import anatomical_skullstrip_workflow
+
+            workflow, resource_pool = \
+                anatomical_skullstrip_workflow(workflow, resource_pool, \
+                                               config, name)
+
+        if len(resource_pool["anatomical_brain"]) == 2:
+            node, out_file = resource_pool["anatomical_brain"]
+            workflow.connect(node, out_file, calc_3dallineate_warp, 'in_file')
+        else:
+            calc_3dallineate_warp.inputs.in_file = \
+                resource_pool["anatomical_brain"]
+
+        calc_3dallineate_warp.inputs.reference = \
+            config["template_brain_for_anat"]
+
+        calc_3dallineate_warp.inputs.out_file = \
+            "allineate_warped_brain.nii.gz"
 
 
-    calc_3dallineate_warp.inputs.reference = config["template_skull_for_anat"]
-
-    calc_3dallineate_warp.inputs.out_file = "allineate_warped_brain.nii.gz"
     calc_3dallineate_warp.inputs.out_matrix = "3dallineate_warp"
 
 
@@ -274,12 +303,11 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
 
 
 
-def run_afni_anatomical_linear_registration(reference_skull,
-                                            anatomical_skull=None,
-                                            anatomical_scan=None,
+def run_afni_anatomical_linear_registration(input_image, reference_image,
+                                            skull_on=False, out_dir=None,
                                             run=True):
 
-    # stand-alone runner for anatomical skullstrip workflow
+    # stand-alone runner for anatomical linear registration workflow
 
     import os
     import sys
@@ -291,27 +319,29 @@ def run_afni_anatomical_linear_registration(reference_skull,
 
     from workflow_utils import raise_smart_exception
 
+    output = "afni_linear_warped_image"
+
     workflow = pe.Workflow(name='3dallineate_workflow')
 
-    current_dir = os.getcwd()
+    if not out_dir:
+        out_dir = os.getcwd()
 
-    workflow_dir = os.path.join(current_dir, "3dallineate")
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
-
 
     resource_pool = {}
     config = {}
     num_cores_per_subject = 1
 
-    if anatomical_skull:
-        resource_pool["anatomical_reorient"] = anatomical_skull
-    elif anatomical_scan:
-        resource_pool["anatomical_scan"] = anatomical_scan
-    else:
-        err = "No anatomical_reorient or anatomical_scan provided!"
-        raise_smart_exception(locals(),err)
+    config["skull_on_registration"] = skull_on
 
-    config["template_skull_for_anat"] = reference_skull
+    if skull_on:
+        resource_pool["anatomical_reorient"] = input_image
+        config["template_skull_for_anat"] = reference_image
+    else:
+        resource_pool["anatomical_brain"] = input_image
+        config["template_brain_for_anat"] = reference_image
+
     
     workflow, resource_pool = \
             afni_anatomical_linear_registration(workflow, resource_pool, \
@@ -328,16 +358,13 @@ def run_afni_anatomical_linear_registration(reference_skull,
     workflow.connect(node, out_file, ds, 'allineate_linear_xfm')
 
     if run == True:
-
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
         outpath = glob.glob(os.path.join(workflow_dir, \
                                          "afni_linear_warped_image", \
                                          "*"))[0]
         return outpath
-
     else:
-
         return workflow, workflow.base_dir
 
 
@@ -417,7 +444,7 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
 
 
 
-def run_afni_segmentation_workflow(anatomical_brain, run=True):
+def run_afni_segmentation(anatomical_brain, out_dir=None, run=True):
 
     # stand-alone runner for segmentation workflow
 
@@ -429,13 +456,15 @@ def run_afni_segmentation_workflow(anatomical_brain, run=True):
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
 
+    output = "anatomical_afni_segmentation_masks"
+
     workflow = pe.Workflow(name='afni_segmentation_workflow')
 
-    current_dir = os.getcwd()
+    if not out_dir:
+        out_dir = os.getcwd()
 
-    workflow_dir = os.path.join(current_dir, "afni_segmentation")
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
-
 
     resource_pool = {}
     config = {}
