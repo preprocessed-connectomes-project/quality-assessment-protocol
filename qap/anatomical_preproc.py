@@ -236,7 +236,7 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
                                check_config_settings
 
     if "skull_on_registration" not in config.keys():
-        config["skull_on_registration"] = False
+        config["skull_on_registration"] = True
 
     calc_3dallineate_warp = pe.Node(interface=afni.Allineate(),
                                     name='calc_3dAllineate_warp%s' % name)

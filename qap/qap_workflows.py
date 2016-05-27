@@ -135,7 +135,7 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
 
 
 def run_qap_mask(anatomical_reorient, allineate_out_xfm, template_skull,
-                 run=True):
+                 out_dir=None, run=True):
 
     # stand-alone runner for anatomical reorient workflow
 
@@ -151,9 +151,10 @@ def run_qap_mask(anatomical_reorient, allineate_out_xfm, template_skull,
 
     workflow = pe.Workflow(name='%s_workflow' % output)
 
-    current_dir = os.getcwd()
+    if not out_dir:
+        out_dir = os.getcwd()
 
-    workflow_dir = os.path.join(current_dir, output)
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
 
     resource_pool = {}
@@ -404,8 +405,8 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
 
 def run_single_qap_anatomical_spatial(
         anatomical_reorient, qap_head_mask, anatomical_csf_mask,
-        anatomical_gm_mask, anatomical_wm_mask, subject_id,
-        session_id, scan_id, site_name=None, run=True):
+        anatomical_gm_mask, anatomical_wm_mask, subject_id, session_id=None,
+        scan_id=None, site_name=None, out_dir=None, run=True):
 
     # stand-alone runner for anatomical spatial QAP workflow
 
@@ -418,8 +419,10 @@ def run_single_qap_anatomical_spatial(
     output = 'qap_anatomical_spatial'
     workflow = pe.Workflow(name='%s_workflow' % output)
 
-    current_dir = os.getcwd()
-    workflow_dir = os.path.join(current_dir, output)
+    if not out_dir:
+        out_dir = os.getcwd()
+
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
 
     num_cores_per_subject = 1
@@ -439,6 +442,78 @@ def run_single_qap_anatomical_spatial(
 
     if site_name:
         config['site_name'] = site_name
+
+    workflow, resource_pool = \
+        qap_anatomical_spatial_workflow(workflow, resource_pool, config)
+
+    ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
+    ds.inputs.base_directory = workflow_dir
+
+    node, out_file = resource_pool[output]
+
+    workflow.connect(node, out_file, ds, output)
+
+    if run:
+        workflow.run(
+            plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
+        outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
+        return outpath
+
+    else:
+        return workflow, workflow.base_dir
+
+
+
+def run_whole_single_qap_anatomical_spatial(
+        anatomical_scan, template_head, subject_id, session_id=None,
+        scan_id=None, site_name=None, out_dir=None, run=True):
+
+    # stand-alone runner for anatomical spatial QAP workflow
+
+    import os
+    import sys
+    import glob
+    import nipype.interfaces.io as nio
+    import nipype.interfaces.utility as niu
+    import nipype.pipeline.engine as pe
+
+    from qap import cli
+
+    output = 'qap_anatomical_spatial'
+    workflow = pe.Workflow(name='%s_workflow' % output)
+
+    if not out_dir:
+        out_dir = os.getcwd()
+
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
+    workflow.base_dir = workflow_dir
+
+    num_cores_per_subject = 1
+    resource_pool = {
+        'anatomical_scan': anatomical_scan
+    }
+
+    config = {
+        'template_skull_for_anat': template_head,
+        'subject_id': subject_id,
+        'session_id': session_id,
+        'scan_id': scan_id,
+        'output_directory': workflow_dir
+    }
+
+    if site_name:
+        config['site_name'] = site_name
+
+    # create the one node all participants will start from
+    starter_node = pe.Node(niu.Function(input_names=['starter'], 
+                                        output_names=['starter'], 
+                                        function=cli.starter_node_func),
+                           name='starter_node')
+
+    # set a dummy variable
+    starter_node.inputs.starter = ""
+
+    resource_pool["starter"] = (starter_node, 'starter')
 
     workflow, resource_pool = \
         qap_anatomical_spatial_workflow(workflow, resource_pool, config)
@@ -577,7 +652,8 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
 
 def run_single_qap_functional_spatial(
         mean_functional, functional_brain_mask, subject_id, session_id,
-        scan_id, site_name=None, ghost_direction=None, run=True):
+        scan_id, site_name=None, ghost_direction=None, out_dir=None,
+        run=True):
 
     # stand-alone runner for functional spatial QAP workflow
     import os
@@ -588,8 +664,11 @@ def run_single_qap_functional_spatial(
 
     output = 'qap_functional_spatial'
     workflow = pe.Workflow(name='%s_workflow' % output)
-    current_dir = os.getcwd()
-    workflow_dir = os.path.join(current_dir, output)
+
+    if not out_dir:
+        out_dir = os.getcwd()
+
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
 
     resource_pool = {}
@@ -608,6 +687,77 @@ def run_single_qap_functional_spatial(
 
     if ghost_direction:
         config['ghost_direction'] = ghost_direction
+
+    workflow, resource_pool = \
+        qap_functional_spatial_workflow(workflow, resource_pool, config)
+
+    ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
+    ds.inputs.base_directory = workflow_dir
+
+    node, out_file = resource_pool[output]
+
+    workflow.connect(node, out_file, ds, output)
+
+    if run:
+        workflow.run(
+            plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
+        outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
+        return outpath
+
+    else:
+        return workflow, workflow.base_dir
+
+
+
+def run_whole_single_qap_functional_spatial(
+        functional_scan, subject_id, session_id=None, scan_id=None,
+        site_name=None, out_dir=None, run=True):
+
+    # stand-alone runner for functional spatial QAP workflow
+
+    import os
+    import sys
+    import glob
+    import nipype.interfaces.io as nio
+    import nipype.interfaces.utility as niu
+    import nipype.pipeline.engine as pe
+
+    from qap import cli
+
+    output = 'qap_functional_spatial'
+    workflow = pe.Workflow(name='%s_workflow' % output)
+
+    if not out_dir:
+        out_dir = os.getcwd()
+
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
+    workflow.base_dir = workflow_dir
+
+    num_cores_per_subject = 1
+    resource_pool = {
+        'functional_scan': functional_scan
+    }
+
+    config = {
+        'subject_id': subject_id,
+        'session_id': session_id,
+        'scan_id': scan_id,
+        'output_directory': workflow_dir
+    }
+
+    if site_name:
+        config['site_name'] = site_name
+
+    # create the one node all participants will start from
+    starter_node = pe.Node(niu.Function(input_names=['starter'], 
+                                        output_names=['starter'], 
+                                        function=cli.starter_node_func),
+                           name='starter_node')
+
+    # set a dummy variable
+    starter_node.inputs.starter = ""
+
+    resource_pool["starter"] = (starter_node, 'starter')
 
     workflow, resource_pool = \
         qap_functional_spatial_workflow(workflow, resource_pool, config)
@@ -773,13 +923,12 @@ def run_single_qap_functional_temporal(func_reorient, functional_brain_mask,
                                        subject_id, session_id, scan_id,
                                        site_name=None, mcflirt_rel_rms=None,
                                        coordinate_transformation=None,
-                                       run=True):
+                                       out_dir=None, run=True):
 
     # stand-alone runner for functional temporal QAP workflow
 
     import os
     import sys
-
     import glob
 
     import nipype.interfaces.io as nio
@@ -789,9 +938,10 @@ def run_single_qap_functional_temporal(func_reorient, functional_brain_mask,
 
     workflow = pe.Workflow(name='%s_workflow' % output)
 
-    current_dir = os.getcwd()
+    if not out_dir:
+        out_dir = os.getcwd()
 
-    workflow_dir = os.path.join(current_dir, output)
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
 
     resource_pool = {}
@@ -826,9 +976,77 @@ def run_single_qap_functional_temporal(func_reorient, functional_brain_mask,
     if run:
         workflow.run(
             plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
-
         outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
+        return outpath
+    else:
+        return workflow, workflow.base_dir
 
+
+
+def run_whole_single_qap_functional_temporal(
+        functional_scan, subject_id, session_id=None, scan_id=None,
+        site_name=None, out_dir=None, run=True):
+
+    # stand-alone runner for functional temporal QAP workflow
+
+    import os
+    import sys
+    import glob
+    import nipype.interfaces.io as nio
+    import nipype.interfaces.utility as niu
+    import nipype.pipeline.engine as pe
+
+    from qap import cli
+
+    output = 'qap_functional_temporal'
+    workflow = pe.Workflow(name='%s_workflow' % output)
+
+    if not out_dir:
+        out_dir = os.getcwd()
+
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
+    workflow.base_dir = workflow_dir
+
+    num_cores_per_subject = 1
+    resource_pool = {
+        'functional_scan': functional_scan
+    }
+
+    config = {
+        'subject_id': subject_id,
+        'session_id': session_id,
+        'scan_id': scan_id,
+        'output_directory': workflow_dir
+    }
+
+    if site_name:
+        config['site_name'] = site_name
+
+    # create the one node all participants will start from
+    starter_node = pe.Node(niu.Function(input_names=['starter'], 
+                                        output_names=['starter'], 
+                                        function=cli.starter_node_func),
+                           name='starter_node')
+
+    # set a dummy variable
+    starter_node.inputs.starter = ""
+
+    resource_pool["starter"] = (starter_node, 'starter')
+
+    workflow, resource_pool = \
+        qap_functional_temporal_workflow(workflow, resource_pool, config)
+
+    ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
+    ds.inputs.base_directory = workflow_dir
+
+    node, out_file = resource_pool[output]
+
+    workflow.connect(node, out_file, ds, output)
+
+    if run:
+        workflow.run(
+            plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
+        outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
         return outpath
 
     else:
