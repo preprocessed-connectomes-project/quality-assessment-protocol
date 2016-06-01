@@ -172,8 +172,10 @@ def run_qap_mask(anatomical_reorient, allineate_out_xfm, template_skull,
     ds.inputs.base_directory = workflow_dir
 
     node, out_file = resource_pool[output]
-
     workflow.connect(node, out_file, ds, output)
+
+    node, out_file = resource_pool["skull_only_mask"]
+    workflow.connect(node, out_file, ds, "skull_only_mask")
 
     if run:
         workflow.run(
@@ -485,7 +487,19 @@ def run_whole_single_qap_anatomical_spatial(
     if not out_dir:
         out_dir = os.getcwd()
 
-    workflow_dir = os.path.join(out_dir, "workflow_output", output)
+    if site_name:
+        workflow_dir = os.path.join(out_dir, "workflow_output", output, \
+            site_name, subject_id)
+    else:
+        workflow_dir = os.path.join(out_dir, "workflow_output", output, \
+            subject_id)
+
+    if session_id:
+        workflow_dir = os.path.join(workflow_dir, session_id)
+
+    if scan_id:
+        workflow_dir = os.path.join(workflow_dir, scan_id)
+
     workflow.base_dir = workflow_dir
 
     num_cores_per_subject = 1
@@ -730,7 +744,19 @@ def run_whole_single_qap_functional_spatial(
     if not out_dir:
         out_dir = os.getcwd()
 
-    workflow_dir = os.path.join(out_dir, "workflow_output", output)
+    if site_name != None:
+        workflow_dir = os.path.join(out_dir, "workflow_output", output, \
+            site_name, subject_id)
+    else:
+        workflow_dir = os.path.join(out_dir, "workflow_output", output, \
+            subject_id)
+
+    if session_id != None:
+        workflow_dir = os.path.join(workflow_dir, session_id)
+
+    if scan_id != None:
+        workflow_dir = os.path.join(workflow_dir, scan_id)
+
     workflow.base_dir = workflow_dir
 
     num_cores_per_subject = 1
@@ -803,11 +829,6 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
             return inlist[0]
 
         return inlist
-
-    # if 'mean_functional' not in resource_pool.keys():
-    #     from functional_preproc import mean_functional_workflow
-    #     workflow, resource_pool = \
-    #         mean_functional_workflow(workflow, resource_pool, config)
 
     if 'functional_brain_mask' not in resource_pool.keys():
         from functional_preproc import functional_brain_mask_workflow
@@ -1004,7 +1025,19 @@ def run_whole_single_qap_functional_temporal(
     if not out_dir:
         out_dir = os.getcwd()
 
-    workflow_dir = os.path.join(out_dir, "workflow_output", output)
+    if site_name:
+        workflow_dir = os.path.join(out_dir, "workflow_output", output, \
+            site_name, subject_id)
+    else:
+        workflow_dir = os.path.join(out_dir, "workflow_output", output, \
+            subject_id)
+
+    if session_id:
+        workflow_dir = os.path.join(workflow_dir, session_id)
+
+    if scan_id:
+        workflow_dir = os.path.join(workflow_dir, scan_id)
+
     workflow.base_dir = workflow_dir
 
     num_cores_per_subject = 1

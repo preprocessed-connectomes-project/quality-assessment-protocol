@@ -66,7 +66,7 @@ def calculate_percent_outliers(values_list):
 
 
 
-def fd_jenkinson(in_file, rmax=80., out_file=None):
+def fd_jenkinson(in_file, rmax=80., out_file=None, out_array=False):
     '''
     @ Krsna
     May 2013
@@ -143,8 +143,10 @@ def fd_jenkinson(in_file, rmax=80., out_file=None):
     except:
         raise_smart_exception(locals())
 
-
-    return out_file
+    if out_array:
+        return np.array(X)
+    else:
+        return out_file
 
 
 
@@ -257,13 +259,13 @@ def mean_quality_timepoints(*args, **kwrds):
 
 
 
-def global_correlation(func_motion, func_mask):
+def global_correlation(func_reorient, func_mask):
 
     import scipy
     import numpy as np
     from dvars import load
 
-    zero_variance_func = load(func_motion, func_mask)
+    zero_variance_func = load(func_reorient, func_mask)
 
     list_of_ts = zero_variance_func.transpose()
 

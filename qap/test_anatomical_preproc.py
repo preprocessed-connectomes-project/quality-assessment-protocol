@@ -1,7 +1,5 @@
 
-
 test_sub_dir = "test_data"
-
 
 
 def test_run_anatomical_reorient():
