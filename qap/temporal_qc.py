@@ -186,7 +186,8 @@ def outlier_timepoints(func_file, out_fraction=True):
     str_opts = " ".join(opts)
 
     # TODO:
-    # check if should use -polort 2 (http://www.na-mic.org/Wiki/images/8/86/FBIRNSupplementalMaterial082005.pdf)
+    # check if should use -polort 2
+    # (http://www.na-mic.org/Wiki/images/8/86/FBIRNSupplementalMaterial082005.pdf)
     # or -legendre to remove any trend
     cmd = "3dToutcount %s" % str_opts
 
