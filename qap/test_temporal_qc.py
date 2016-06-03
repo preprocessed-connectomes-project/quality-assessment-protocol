@@ -1,7 +1,9 @@
 
+import pytest
 test_sub_dir = "test_data"
 
 
+@pytest.mark.quick
 def test_calculate_percent_outliers():
 
     from qap.temporal_qc import calculate_percent_outliers
@@ -18,6 +20,7 @@ def test_calculate_percent_outliers():
 
 
 
+@pytest.mark.quick
 def test_fd_jenkinson():
 
     import os
@@ -39,7 +42,8 @@ def test_fd_jenkinson():
     np.testing.assert_array_equal(ref_meanfd_arr, meanfd)
     
     
-    
+
+@pytest.mark.quick  
 def test_outlier_timepoints():
 
     import os
@@ -62,7 +66,8 @@ def test_outlier_timepoints():
     assert out_list == ref_list
     
 
-    
+
+@pytest.mark.quick
 def test_quality_timepoints():
 
     import os
@@ -86,6 +91,7 @@ def test_quality_timepoints():
 
 
 
+@pytest.mark.quick
 def test_global_correlation():
 
     import os

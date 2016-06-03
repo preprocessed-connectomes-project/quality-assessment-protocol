@@ -1,7 +1,9 @@
 
+import pytest
 test_sub_dir = "test_data"
 
 
+@pytest.mark.quick
 def test_run_qap_mask_workflow_graph():
 
     import os
@@ -53,6 +55,7 @@ def test_run_qap_mask_workflow_graph():
 
 
 
+@pytest.mark.slow
 def test_run_qap_mask():
 
     import os
@@ -92,6 +95,7 @@ def test_run_qap_mask():
 
 
 
+@pytest.mark.quick
 def test_run_whole_single_qap_anatomical_spatial():
 
     # this tests the workflow builder, not the end results (these have their
@@ -146,6 +150,7 @@ def test_run_whole_single_qap_anatomical_spatial():
 
 
 
+@pytest.mark.quick
 def test_run_whole_single_qap_functional_spatial():
 
     # this tests the workflow builder, not the end results (these have their
@@ -196,6 +201,7 @@ def test_run_whole_single_qap_functional_spatial():
 
 
 
+@pytest.mark.quick
 def test_run_whole_single_qap_functional_temporal():
 
     # this tests the workflow builder, not the end results (these have their

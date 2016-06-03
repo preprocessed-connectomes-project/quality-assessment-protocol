@@ -3,6 +3,7 @@ import pytest
 test_sub_dir = "test_data"
 
 
+@pytest.mark.quick
 def test_get_idx_whole_timeseries():
 
     import os
@@ -19,7 +20,8 @@ def test_get_idx_whole_timeseries():
     assert idx_tuple == (123,0)
     
     
-    
+
+@pytest.mark.quick
 def test_get_idx_partial_timeseries():
 
     import os
@@ -37,7 +39,8 @@ def test_get_idx_partial_timeseries():
     assert idx_tuple == (100,20)
     
     
-    
+
+@pytest.mark.quick
 def test_get_idx_partial_timeseries_overshoot():
 
     import os
@@ -55,6 +58,7 @@ def test_get_idx_partial_timeseries_overshoot():
 
 
 
+@pytest.mark.quick
 def test_run_func_preproc_workflow_graph():
 
     import os
@@ -99,7 +103,7 @@ def test_run_func_preproc_workflow_graph():
 
 
 
-@pytest.mark.skip()
+@pytest.mark.slow
 def test_run_func_preproc():
 
     import os
@@ -132,6 +136,7 @@ def test_run_func_preproc():
 
 
 
+@pytest.mark.quick
 def test_run_func_motion_correct_workflow_graph():
 
     import os
@@ -177,7 +182,7 @@ def test_run_func_motion_correct_workflow_graph():
 
 
 
-@pytest.mark.skip()
+@pytest.mark.slow
 def test_run_func_motion_correct():
 
     import os
@@ -210,6 +215,7 @@ def test_run_func_motion_correct():
 
 
 
+@pytest.mark.quick
 def test_run_functional_brain_mask_3dAutoMask_workflow_graph():
 
     import os
@@ -257,7 +263,7 @@ def test_run_functional_brain_mask_3dAutoMask_workflow_graph():
 
 
 
-@pytest.mark.skip()
+@pytest.mark.slow
 def test_run_functional_brain_mask_3dAutoMask():
 
     import os
@@ -292,6 +298,7 @@ def test_run_functional_brain_mask_3dAutoMask():
 
 
 
+@pytest.mark.quick
 def test_run_functional_brain_mask_BET_workflow_graph():
 
     import os
@@ -339,7 +346,7 @@ def test_run_functional_brain_mask_BET_workflow_graph():
 
 
 
-@pytest.mark.skip()
+@pytest.mark.slow
 def test_run_functional_brain_mask_BET():
 
     import os
@@ -374,6 +381,7 @@ def test_run_functional_brain_mask_BET():
  
 
 
+@pytest.mark.quick
 def test_run_mean_functional_workflow_graph():
 
     import os
@@ -420,7 +428,7 @@ def test_run_mean_functional_workflow_graph():
 
 
 
-@pytest.mark.skip()
+@pytest.mark.slow
 def test_run_mean_functional():
 
     import os

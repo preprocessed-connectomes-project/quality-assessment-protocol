@@ -1,7 +1,9 @@
 
+import pytest
 test_sub_dir = "test_data"
 
 
+@pytest.mark.quick
 def test_remove_zero_variance_voxels():
 
     import os
@@ -38,6 +40,7 @@ def test_remove_zero_variance_voxels():
 
 
 
+@pytest.mark.quick
 def test_load():
 
     import os
@@ -70,7 +73,8 @@ def test_load():
     np.testing.assert_array_equal(ref_out_data, func_out_data)
     
     
-    
+
+@pytest.mark.quick
 def test_robust_stdev():
 
     import os
@@ -100,6 +104,7 @@ def test_robust_stdev():
 
 
 
+@pytest.mark.quick
 def test_ar1():
 
     import os

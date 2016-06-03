@@ -1,7 +1,9 @@
 
+import pytest
 test_sub_dir = "test_data"
 
 
+@pytest.mark.quick
 def test_summary_mask():
 
     import os
@@ -25,7 +27,8 @@ def test_summary_mask():
     assert summary_tuple == (230.34472886830682, 233.13835676355924, 157221)
     
     
-    
+
+@pytest.mark.quick
 def test_check_datatype():
 
     import numpy as np
@@ -58,7 +61,8 @@ def test_check_datatype():
     assert assert_list == [1,1]
     
     
-    
+
+@pytest.mark.quick
 def test_snr():
 
     from qap.spatial_qc import snr
@@ -72,6 +76,7 @@ def test_snr():
 
 
 
+@pytest.mark.quick
 def test_cnr():
 
     from qap.spatial_qc import cnr
@@ -86,6 +91,7 @@ def test_cnr():
     
 
 
+@pytest.mark.quick
 def test_cortical_contrast():
 
     from qap.spatial_qc import cortical_contrast
@@ -99,6 +105,7 @@ def test_cortical_contrast():
 
 
 
+@pytest.mark.quick
 def test_fber():
 
     import os
@@ -129,6 +136,7 @@ def test_fber():
 
 
 
+@pytest.mark.quick
 def test_efc():
 
     import os
@@ -149,6 +157,7 @@ def test_efc():
 
 
 
+@pytest.mark.quick
 def test_artifacts_no_qi2():
 
     import os
@@ -173,7 +182,8 @@ def test_artifacts_no_qi2():
 
 
 
-'''
+@pytest.mark.skip()
+@pytest.mark.quick
 def test_artifacts_with_qi2():
 
     # this will fail until the code in 'if calculate_qi2' is updated
@@ -203,10 +213,10 @@ def test_artifacts_with_qi2():
 
     # not the actual expected output, needs verification
     assert art_out == 0
-'''
 
 
 
+@pytest.mark.quick
 def test_fwhm_out_vox():
 
     import os
@@ -228,6 +238,7 @@ def test_fwhm_out_vox():
 
 
 
+@pytest.mark.quick
 def test_fwhm_no_out_vox():
 
     import os
@@ -247,6 +258,7 @@ def test_fwhm_no_out_vox():
 
 
 
+@pytest.mark.quick
 def test_ghost_direction():
 
     import os

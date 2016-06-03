@@ -1,5 +1,8 @@
 
+import pytest
 
+
+@pytest.mark.quick
 def init_cli_obj():
 
     import os
@@ -17,6 +20,7 @@ def init_cli_obj():
 
 
 
+@pytest.mark.quick
 def init_flat_sub_dict_dict():
 
     ref_flat_dict = {}
@@ -37,6 +41,7 @@ def init_flat_sub_dict_dict():
 
 
 
+@pytest.mark.quick
 def test_prepare_cluster_batch_file_for_SGE_with_s3_dict():
 
     import os
@@ -71,6 +76,7 @@ def test_prepare_cluster_batch_file_for_SGE_with_s3_dict():
 
 
 
+@pytest.mark.quick
 def test_prepare_cluster_batch_file_for_SGE_with_sublist():
 
     import os
@@ -107,6 +113,7 @@ def test_prepare_cluster_batch_file_for_SGE_with_sublist():
 
 
 
+@pytest.mark.quick
 def test_prepare_cluster_batch_file_for_PBS_with_sublist():
 
     import os
@@ -143,6 +150,7 @@ def test_prepare_cluster_batch_file_for_PBS_with_sublist():
 
 
 
+@pytest.mark.quick
 def test_prepare_cluster_batch_file_for_SLURM_with_sublist():
 
     import os
@@ -179,6 +187,7 @@ def test_prepare_cluster_batch_file_for_SLURM_with_sublist():
 
 
 
+@pytest.mark.quick
 def test_create_flat_sub_dict_dict():
 
     from qap import cli
@@ -214,6 +223,7 @@ def test_create_flat_sub_dict_dict():
 
 
 
+@pytest.mark.quick
 def test_create_bundles_one_sub_per_bundle():
 
     from qap import cli
@@ -234,6 +244,7 @@ def test_create_bundles_one_sub_per_bundle():
 
 
 
+@pytest.mark.quick
 def test_create_bundles_two_subs_per_bundle():
 
     from qap import cli
@@ -254,6 +265,7 @@ def test_create_bundles_two_subs_per_bundle():
 
 
 
+@pytest.mark.quick
 def test_create_bundles_six_subs_per_bundle():
 
     from qap import cli
