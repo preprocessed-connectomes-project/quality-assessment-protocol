@@ -357,12 +357,8 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
     
     from nipype.interfaces.afni import preprocess
 
-
-    #check_input_resources(resource_pool, "func_motion_correct")
-
     if "use_bet" not in config.keys():
         config["use_bet"] = False
-
 
     if "func_motion_correct" not in resource_pool.keys():
 
@@ -498,10 +494,6 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
     from nipype.interfaces.afni import preprocess
 
     from workflow_utils import check_input_resources
-        
-
-    #check_input_resources(resource_pool, "func_motion_correct")
-    #check_input_resources(resource_pool, "functional_brain_mask")
 
 
     if "func_motion_correct" not in resource_pool.keys():
@@ -521,7 +513,7 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
 
     if len(resource_pool["func_motion_correct"]) == 2:
         node, out_file = resource_pool["func_motion_correct"]
-        workflow.connect(node, out_file, func_mean_skullstrip, 'in_file')#func_edge_detect, 'in_file_a')
+        workflow.connect(node, out_file, func_mean_skullstrip, 'in_file')
     else:
         func_mean_skullstrip.inputs.in_file = \
             resource_pool["func_motion_correct"]

@@ -127,11 +127,3 @@ def test_ar1():
         
     np.testing.assert_array_equal(ref_out_data, func_out_data)                           
                                     
-                                
-
-def run_all_tests_dvars():
-
-    test_remove_zero_variance_voxels()
-    test_load()
-    test_robust_stdev()
-    test_ar1()

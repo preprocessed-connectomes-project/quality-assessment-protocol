@@ -20,7 +20,14 @@ class QAProtocolCLI:
     the former scripts (qap_anatomical_spatial.py, etc.) contained
     """
 
-    def __init__(self):
+    def __init__(self, parse_args=True):
+
+        if parse_args:
+            self._parse_args()
+
+
+    def _parse_args(self):
+
         parser = argparse.ArgumentParser()
 
         group = parser.add_argument_group(
@@ -192,6 +199,12 @@ class QAProtocolCLI:
                        'user' : user_account,
                        'work_dir' : cluster_files_dir}
 
+        if self._s3_dict_yml:
+            subdict_arg = "--s3_dict_yml"
+            subdict = self._s3_dict_yml
+        elif self._config["subject_list"]:
+            subdict_arg = "--sublist"
+            subdict = self._config["subject_list"]
 
         # Get string template for job scheduler
         if self._platform == "PBS":
@@ -205,7 +218,7 @@ class QAProtocolCLI:
             confirm_str = '(?<=Your job-array )\d+'
             exec_cmd = 'qsub'
         elif self._platform == "SLURM":
-            hrs_limit = 8*len(sublist)
+            hrs_limit = 8*len(subdict)
             time_limit = '%d:00:00' % hrs_limit
             config_dict["time_limit"] = time_limit
             env_arr_idx = '$SLURM_ARRAY_TASK_ID'
@@ -219,14 +232,6 @@ class QAProtocolCLI:
 
         # Populate string from config dict values
         batch_file_contents = batch_file_contents % config_dict
-
-
-        if self._s3_dict_yml:
-            subdict_arg = "--s3_dict_yml"
-            subdict = self._s3_dict_yml
-        elif self._config["subject_list"]:
-            subdict_arg = "--sublist"
-            subdict = self._config["subject_list"]
 
         run_str = "qap_%s.py %s %s --bundle_idx %s %s" % \
                       (self._config["qap_type"], \

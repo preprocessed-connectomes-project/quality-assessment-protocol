@@ -1,0 +1,8 @@
+digraph func_preproc_workflow{
+  label="func_preproc_workflow";
+  func_preproc_workflow_func_deoblique_[label="func_deoblique_.Refit.afni"];
+  func_preproc_workflow_func_reorient_[label="func_reorient_.Resample.afni"];
+  func_preproc_workflow_datasink_func_motion_correct[label="datasink_func_motion_correct.DataSink.io"];
+  func_preproc_workflow_func_deoblique_ -> func_preproc_workflow_func_reorient_;
+  func_preproc_workflow_func_reorient_ -> func_preproc_workflow_datasink_func_motion_correct;
+}

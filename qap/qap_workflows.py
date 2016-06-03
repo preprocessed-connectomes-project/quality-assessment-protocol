@@ -22,8 +22,6 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
 
     from workflow_utils import check_input_resources, check_config_settings
 
-    # check_input_resources(resource_pool, 'anatomical_reorient')
-    # check_input_resources(resource_pool, 'ants_affine_xfm')
     if 'template_skull_for_anat' not in config:
         config['template_skull_for_anat'] = Info.standard_image(
             'MNI152_T1_2mm.nii.gz')

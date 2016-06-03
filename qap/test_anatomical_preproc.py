@@ -1,7 +1,8 @@
 
+import pytest
 test_sub_dir = "test_data"
 
-
+@pytest.mark.skip()
 def test_run_anatomical_reorient():
 
     import os
@@ -33,7 +34,7 @@ def test_run_anatomical_reorient():
     np.testing.assert_array_equal(ref_out_data, out_data)
 
 
-
+@pytest.mark.skip()
 def test_run_anatomical_skullstrip():
 
     import os
@@ -66,7 +67,7 @@ def test_run_anatomical_skullstrip():
     np.testing.assert_array_equal(ref_out_data, out_data)
 
 
-
+@pytest.mark.skip()
 def test_run_afni_anatomical_linear_registration_brain_only():
 
     import os
@@ -103,7 +104,7 @@ def test_run_afni_anatomical_linear_registration_brain_only():
     np.testing.assert_array_equal(ref_out_data, out_data)
 
 
-
+@pytest.mark.skip()
 def test_run_afni_anatomical_linear_registration_skull_on():
 
     import os
@@ -141,7 +142,7 @@ def test_run_afni_anatomical_linear_registration_skull_on():
     np.testing.assert_array_equal(ref_out_data, out_data)
 
 
-
+@pytest.mark.skip()
 def test_run_afni_segmentation():
 
     import os
@@ -193,15 +194,3 @@ def test_run_afni_segmentation():
                                               out_data[seg_type])
         except Exception as e:
             print e, "\n\n", seg_type
-
-
-
-def run_all_tests_anatomical_preproc():
-
-    test_run_anatomical_reorient()
-    test_run_anatomical_skullstrip()
-    test_run_afni_anatomical_linear_registration_brain_only()
-    test_run_afni_anatomical_linear_registration_skull_on()
-    test_run_afni_segmentation()
-
-

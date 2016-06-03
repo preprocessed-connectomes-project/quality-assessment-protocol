@@ -2,6 +2,57 @@
 test_sub_dir = "test_data"
 
 
+def test_run_qap_mask_workflow_graph():
+
+    import os
+    import numpy as np
+    import nibabel as nb
+    import shutil
+
+    import pkg_resources as p
+
+    from qap.qap_workflows import run_qap_mask
+   
+    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                        "anat_reorient.nii.gz"))
+
+    allineate_xfm = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                        "3dallineate_warp_head.aff12.1D"))
+
+    template_head = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                        "MNI152_T1_3mm.nii.gz"))
+
+    ref_graph = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                    "qap_mask_graph.dot"))
+
+    out_dir = os.path.join(os.getcwd(), "unit_tests_qap_workflows")
+
+    workflow = run_qap_mask(anat_reorient, allineate_xfm, template_head, \
+                   out_dir=out_dir, run=False)
+
+    out_workflow_obj = workflow[0]
+    out_workflow_dir = workflow[1]
+
+    # write the dependency graph of the workflow we are testing
+    out_graph = os.path.join(out_workflow_dir, "graph.dot")
+    out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
+    
+    # load the both the reference and the to-test dependency graphs
+    with open(ref_graph,"r") as f:
+        ref_graph_lines = sorted(f.readlines())
+
+    with open(out_graph,"r") as f:
+        out_graph_lines = sorted(f.readlines())
+
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
+
+    assert ref_graph_lines == out_graph_lines
+
+
+
 def test_run_qap_mask():
 
     import os
@@ -174,7 +225,7 @@ def test_run_whole_single_qap_functional_temporal():
     out_workflow_obj = out_workflow[0]
     out_workflow_dir = out_workflow[1]
 
-        # write the dependency graph of the workflow we are testing
+    # write the dependency graph of the workflow we are testing
     out_graph = os.path.join(out_workflow_dir, "graph.dot")
     out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
     
@@ -193,11 +244,3 @@ def test_run_whole_single_qap_functional_temporal():
 
     assert ref_graph_lines == out_graph_lines
                    
-
-
-def run_all_tests_qap_workflows():
-
-    test_run_qap_mask()
-    test_run_whole_single_qap_anatomical_spatial()
-    test_run_whole_single_qap_functional_spatial()
-    test_run_whole_single_qap_functional_temporal()

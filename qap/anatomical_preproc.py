@@ -19,7 +19,6 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
 
     from workflow_utils import check_input_resources
     
-    
     check_input_resources(resource_pool, "anatomical_scan")
 
 
@@ -119,9 +118,6 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
 
         workflow, resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config, name)
-
-
-    #check_input_resources(resource_pool, "anatomical_reorient")
 
 
     anat_skullstrip = pe.Node(interface=preprocess.SkullStrip(),

@@ -173,9 +173,10 @@ def test_artifacts_no_qi2():
 
 
 
-def test_artifacts():
+'''
+def test_artifacts_with_qi2():
 
-    ''' this will fail until the code in 'if calculate_qi2' is updated '''
+    # this will fail until the code in 'if calculate_qi2' is updated
 
     import os
     import pickle
@@ -200,8 +201,9 @@ def test_artifacts():
 
     art_out = artifacts(anat_data, mask_data, calculate_qi2=True)
 
-    ''' not the actual expected output, needs verification '''
+    # not the actual expected output, needs verification
     assert art_out == 0
+'''
 
 
 
@@ -271,24 +273,5 @@ def test_ghost_direction():
     gsr_out_all = (gsr_out_x, gsr_out_y, gsr_out_z)
 
     assert gsr_out_all == (-0.018987976014614105, 0.020795321092009544, \
-        0.06708560138940811)
-
-
-
-def run_all_tests_spatial_qc():
-
-    test_summary_mask()
-    test_check_datatype()
-    test_snr()
-    test_cnr()
-    test_cortical_contrast()
-    test_fber()
-    test_efc()
-    test_artifacts_no_qi2()
-    #test_artifacts()
-    test_fwhm_out_vox()
-    test_fwhm_no_out_vox()
-    test_ghost_direction()
-
-    
+        0.06708560138940811)  
     

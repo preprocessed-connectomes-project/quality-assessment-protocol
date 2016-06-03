@@ -104,15 +104,3 @@ def test_global_correlation():
 
     assert gcor == 0.13903011798720202
 
-
-
-def run_all_tests_temporal_qc():
-
-    test_calculate_percent_outliers()
-    test_fd_jenkinson()
-    test_outlier_timepoints()
-    test_quality_timepoints()
-    test_global_correlation()
-    
-    
-    
