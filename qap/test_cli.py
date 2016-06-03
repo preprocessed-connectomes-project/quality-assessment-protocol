@@ -45,6 +45,7 @@ def init_flat_sub_dict_dict():
 def test_prepare_cluster_batch_file_for_SGE_with_s3_dict():
 
     import os
+    import shutil
     from qap import cli
 
     out_dir = os.path.join(os.getcwd(), "unit_tests_cli")
@@ -61,6 +62,11 @@ def test_prepare_cluster_batch_file_for_SGE_with_s3_dict():
 
     file_contents, file_path, exec_cmd, confirm_str, cluster_files_dir = \
         cli_obj._prepare_cluster_batch_file(run_name, num_bundles)
+
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
 
     assert "SGE" in file_contents.split("\n")[1]
     assert file_contents.split("\n")[3] == "#$ -N run_1"
@@ -80,6 +86,7 @@ def test_prepare_cluster_batch_file_for_SGE_with_s3_dict():
 def test_prepare_cluster_batch_file_for_SGE_with_sublist():
 
     import os
+    import shutil
     from qap import cli
 
     out_dir = os.path.join(os.getcwd(), "unit_tests_cli")
@@ -99,6 +106,11 @@ def test_prepare_cluster_batch_file_for_SGE_with_sublist():
     file_contents, file_path, exec_cmd, confirm_str, cluster_files_dir = \
         cli_obj._prepare_cluster_batch_file(run_name, num_bundles)
 
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
+
     assert "SGE" in file_contents.split("\n")[1]
     assert file_contents.split("\n")[3] == "#$ -N run_1"
     assert file_contents.split("\n")[4] == "#$ -t 1-5"
@@ -117,6 +129,7 @@ def test_prepare_cluster_batch_file_for_SGE_with_sublist():
 def test_prepare_cluster_batch_file_for_PBS_with_sublist():
 
     import os
+    import shutil
     from qap import cli
 
     out_dir = os.path.join(os.getcwd(), "unit_tests_cli")
@@ -136,6 +149,11 @@ def test_prepare_cluster_batch_file_for_PBS_with_sublist():
     file_contents, file_path, exec_cmd, confirm_str, cluster_files_dir = \
         cli_obj._prepare_cluster_batch_file(run_name, num_bundles)
 
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
+
     assert "PBS" in file_contents.split("\n")[1]
     assert file_contents.split("\n")[3] == "#PBS -N run_1"
     assert file_contents.split("\n")[4] == "#PBS -t 1-5"
@@ -154,6 +172,7 @@ def test_prepare_cluster_batch_file_for_PBS_with_sublist():
 def test_prepare_cluster_batch_file_for_SLURM_with_sublist():
 
     import os
+    import shutil
     from qap import cli
 
     out_dir = os.path.join(os.getcwd(), "unit_tests_cli")
@@ -172,6 +191,11 @@ def test_prepare_cluster_batch_file_for_SLURM_with_sublist():
 
     file_contents, file_path, exec_cmd, confirm_str, cluster_files_dir = \
         cli_obj._prepare_cluster_batch_file(run_name, num_bundles)
+
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
 
     assert "SLURM" in file_contents.split("\n")[1]
     assert file_contents.split("\n")[2] == "#SBATCH --job-name=run_1"
