@@ -1,0 +1,8 @@
+digraph anatomical_skullstrip_workflow{
+  label="anatomical_skullstrip_workflow";
+  anatomical_skullstrip_workflow_anat_skullstrip_[label="anat_skullstrip_.SkullStrip.afni"];
+  anatomical_skullstrip_workflow_anat_skullstrip_orig_vol_[label="anat_skullstrip_orig_vol_.Calc.afni"];
+  anatomical_skullstrip_workflow_datasink_anatomical_skullstrip[label="datasink_anatomical_skullstrip.DataSink.io"];
+  anatomical_skullstrip_workflow_anat_skullstrip_ -> anatomical_skullstrip_workflow_anat_skullstrip_orig_vol_;
+  anatomical_skullstrip_workflow_anat_skullstrip_orig_vol_ -> anatomical_skullstrip_workflow_datasink_anatomical_skullstrip;
+}

@@ -1,0 +1,7 @@
+digraph 3dallineate_workflow{
+  label="3dallineate_workflow";
+  3dallineate_workflow_calc_3dAllineate_warp_[label="calc_3dAllineate_warp_.Allineate.afni"];
+  3dallineate_workflow_datasink_3dallineate[label="datasink_3dallineate.DataSink.io"];
+  3dallineate_workflow_calc_3dAllineate_warp_ -> 3dallineate_workflow_datasink_3dallineate;
+  3dallineate_workflow_calc_3dAllineate_warp_ -> 3dallineate_workflow_datasink_3dallineate;
+}

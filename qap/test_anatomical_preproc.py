@@ -3,6 +3,52 @@ import pytest
 test_sub_dir = "test_data"
 
 
+@pytest.mark.quick
+def test_run_anatomical_reorient_workflow_graph():
+
+    import os
+    import numpy as np
+    import nibabel as nb
+    import shutil
+
+    import pkg_resources as p
+
+    from qap.anatomical_preproc import run_anatomical_reorient
+   
+    anatomical_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                          "anatomical_scan.nii.gz"))
+
+    ref_graph = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                    "anat_reorient_graph.dot"))
+
+    out_dir = os.path.join(os.getcwd(), "unit_tests_anat_preproc")
+
+    workflow = run_anatomical_reorient(anatomical_scan, out_dir=out_dir, \
+                                           run=False)
+
+    out_workflow_obj = workflow[0]
+    out_workflow_dir = workflow[1]
+
+    # write the dependency graph of the workflow we are testing
+    out_graph = os.path.join(out_workflow_dir, "graph.dot")
+    out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
+    
+    # load the both the reference and the to-test dependency graphs
+    with open(ref_graph,"r") as f:
+        ref_graph_lines = sorted(f.readlines())
+
+    with open(out_graph,"r") as f:
+        out_graph_lines = sorted(f.readlines())
+
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
+
+    assert ref_graph_lines == out_graph_lines
+
+
+
 @pytest.mark.slow
 def test_run_anatomical_reorient():
 
@@ -33,6 +79,53 @@ def test_run_anatomical_reorient():
         pass
 
     np.testing.assert_array_equal(ref_out_data, out_data)
+
+
+
+@pytest.mark.quick
+def test_run_anatomical_skullstrip_workflow_graph():
+
+    import os
+    import numpy as np
+    import nibabel as nb
+    import shutil
+
+    import pkg_resources as p
+
+    from qap.anatomical_preproc import run_anatomical_skullstrip
+   
+    anat_reorient = p.resource_filename("qap", \
+                                        os.path.join(test_sub_dir, \
+                                        "anat_reorient.nii.gz"))
+
+    ref_graph = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                    "anat_skullstrip_graph.dot"))
+
+    out_dir = os.path.join(os.getcwd(), "unit_tests_anat_preproc")
+
+    workflow = run_anatomical_skullstrip(anat_reorient, out_dir=out_dir, \
+                                             run=False)
+
+    out_workflow_obj = workflow[0]
+    out_workflow_dir = workflow[1]
+
+    # write the dependency graph of the workflow we are testing
+    out_graph = os.path.join(out_workflow_dir, "graph.dot")
+    out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
+    
+    # load the both the reference and the to-test dependency graphs
+    with open(ref_graph,"r") as f:
+        ref_graph_lines = sorted(f.readlines())
+
+    with open(out_graph,"r") as f:
+        out_graph_lines = sorted(f.readlines())
+
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
+
+    assert ref_graph_lines == out_graph_lines
 
 
 
@@ -67,6 +160,57 @@ def test_run_anatomical_skullstrip():
         pass
 
     np.testing.assert_array_equal(ref_out_data, out_data)
+
+
+
+@pytest.mark.quick
+def test_run_afni_anatomical_linear_registration_workflow_graph():
+
+    import os
+    import numpy as np
+    import nibabel as nb
+    import shutil
+
+    import pkg_resources as p
+
+    from qap.anatomical_preproc import run_afni_anatomical_linear_registration
+   
+    anat_brain = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                     "anat_brain.nii.gz"))
+
+    template_brain = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                         "MNI152_T1_3mm_brain.nii.gz"))
+
+    ref_graph = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                    "afni_linear_registration_graph.dot"))
+
+    out_dir = os.path.join(os.getcwd(), "unit_tests_anat_preproc")
+
+    workflow = run_afni_anatomical_linear_registration(anat_brain,
+                                                       template_brain,
+                                                       out_dir=out_dir,
+                                                       run=False)
+
+    out_workflow_obj = workflow[0]
+    out_workflow_dir = workflow[1]
+
+    # write the dependency graph of the workflow we are testing
+    out_graph = os.path.join(out_workflow_dir, "graph.dot")
+    out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
+    
+    # load the both the reference and the to-test dependency graphs
+    with open(ref_graph,"r") as f:
+        ref_graph_lines = sorted(f.readlines())
+
+    with open(out_graph,"r") as f:
+        out_graph_lines = sorted(f.readlines())
+
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
+
+    assert ref_graph_lines == out_graph_lines
 
 
 
@@ -144,6 +288,51 @@ def test_run_afni_anatomical_linear_registration_skull_on():
         pass
 
     np.testing.assert_array_equal(ref_out_data, out_data)
+
+
+
+@pytest.mark.quick
+def test_run_afni_segmentation_workflow_graph():
+
+    import os
+    import numpy as np
+    import nibabel as nb
+    import shutil
+
+    import pkg_resources as p
+
+    from qap.anatomical_preproc import run_afni_segmentation
+   
+    anat_brain = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                     "anat_brain.nii.gz"))
+
+    ref_graph = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                    "afni_segmentation_graph.dot"))
+
+    out_dir = os.path.join(os.getcwd(), "unit_tests_anat_preproc")
+
+    workflow = run_afni_segmentation(anat_brain, out_dir=out_dir, run=False)
+
+    out_workflow_obj = workflow[0]
+    out_workflow_dir = workflow[1]
+
+    # write the dependency graph of the workflow we are testing
+    out_graph = os.path.join(out_workflow_dir, "graph.dot")
+    out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
+    
+    # load the both the reference and the to-test dependency graphs
+    with open(ref_graph,"r") as f:
+        ref_graph_lines = sorted(f.readlines())
+
+    with open(out_graph,"r") as f:
+        out_graph_lines = sorted(f.readlines())
+
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
+
+    assert ref_graph_lines == out_graph_lines
 
 
 

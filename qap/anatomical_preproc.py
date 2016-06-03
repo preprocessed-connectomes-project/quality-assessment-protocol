@@ -234,9 +234,9 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
     if "skull_on_registration" not in config.keys():
         config["skull_on_registration"] = True
 
-    calc_3dallineate_warp = pe.Node(interface=afni.Allineate(),
+    calc_allineate_warp = pe.Node(interface=afni.Allineate(),
                                     name='calc_3dAllineate_warp%s' % name)
-    calc_3dallineate_warp.inputs.outputtype = "NIFTI_GZ"
+    calc_allineate_warp.inputs.outputtype = "NIFTI_GZ"
 
 
     if config["skull_on_registration"]:
@@ -251,15 +251,15 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
 
         if len(resource_pool["anatomical_reorient"]) == 2:
             node, out_file = resource_pool["anatomical_reorient"]
-            workflow.connect(node, out_file, calc_3dallineate_warp, 'in_file')
+            workflow.connect(node, out_file, calc_allineate_warp, 'in_file')
         else:
-            calc_3dallineate_warp.inputs.in_file = \
+            calc_allineate_warp.inputs.in_file = \
                 resource_pool["anatomical_reorient"]
 
-        calc_3dallineate_warp.inputs.reference = \
+        calc_allineate_warp.inputs.reference = \
             config["template_skull_for_anat"]
 
-        calc_3dallineate_warp.inputs.out_file = "allineate_warped_head.nii.gz"
+        calc_allineate_warp.inputs.out_file = "allineate_warped_head.nii.gz"
 
     else:
 
@@ -273,26 +273,26 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
 
         if len(resource_pool["anatomical_brain"]) == 2:
             node, out_file = resource_pool["anatomical_brain"]
-            workflow.connect(node, out_file, calc_3dallineate_warp, 'in_file')
+            workflow.connect(node, out_file, calc_allineate_warp, 'in_file')
         else:
-            calc_3dallineate_warp.inputs.in_file = \
+            calc_allineate_warp.inputs.in_file = \
                 resource_pool["anatomical_brain"]
 
-        calc_3dallineate_warp.inputs.reference = \
+        calc_allineate_warp.inputs.reference = \
             config["template_brain_for_anat"]
 
-        calc_3dallineate_warp.inputs.out_file = \
+        calc_allineate_warp.inputs.out_file = \
             "allineate_warped_brain.nii.gz"
 
 
-    calc_3dallineate_warp.inputs.out_matrix = "3dallineate_warp"
+    calc_allineate_warp.inputs.out_matrix = "3dallineate_warp"
 
 
     resource_pool["allineate_linear_xfm"] = \
-        (calc_3dallineate_warp, 'matrix')
+        (calc_allineate_warp, 'matrix')
 
     resource_pool["afni_linear_warped_image"] = \
-        (calc_3dallineate_warp, 'out_file')
+        (calc_allineate_warp, 'out_file')
 
 
     return workflow, resource_pool
