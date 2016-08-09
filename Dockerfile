@@ -6,11 +6,12 @@ ENV PATH /code:/opt/ants/bin:/usr/local/bin/miniconda/bin:${PATH}
 
 # install dependencies
 RUN apt-get update && apt-get install -y wget
-RUN apt-get install -y graphviz gsl-bin \
+RUN apt-get install -y pkg-config graphviz gsl-bin \
     libexpat1-dev libgiftiio-dev libglu1-mesa libglu1-mesa-dev \
     libgsl0-dev libjpeg-progs libxml2 libxml2-dev libxext-dev \
     libxpm-dev libxp6 libxp-dev mesa-common-dev mesa-utils \
-    netpbm
+    netpbm libpng-dev libfreetype6-dev libxml2-dev libxslt1-dev python-dev \
+    build-essential g++
 
 # install miniconda
 RUN wget http://repo.continuum.io/miniconda/Miniconda-3.8.3-Linux-x86_64.sh && \
