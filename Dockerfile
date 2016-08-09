@@ -27,4 +27,10 @@ RUN wget http://afni.nimh.nih.gov/pub/dist/tgz/linux_openmp_64.tgz && \
     mv linux_openmp_64/ /opt/afni/bin && \
     rm -rf linux_openmp_64.tgz
 
-RUN python setup.py build && python setup.py install
+COPY . /tmp/qap
+
+RUN cd /tmp/qap && \
+    python setup.py build && python setup.py install
+
+# don't forget ipython!
+RUN conda install ipython
