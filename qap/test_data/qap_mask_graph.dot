@@ -1,0 +1,20 @@
+digraph qap_head_mask_workflow{
+  label="qap_head_mask_workflow";
+  qap_head_mask_workflow_qap_headmask_clip_level_[label="qap_headmask_clip_level_.ClipLevel.afni"];
+  qap_head_mask_workflow_qap_headmask_slice_head_mask_[label="qap_headmask_slice_head_mask_.Function.utility"];
+  qap_head_mask_workflow_qap_headmask_create_expr_string_[label="qap_headmask_create_expr_string_.Function.utility"];
+  qap_head_mask_workflow_qap_headmask_mask_skull_[label="qap_headmask_mask_skull_.Calc.afni"];
+  qap_head_mask_workflow_qap_headmask_mask_tool_[label="qap_headmask_mask_tool_.MaskTool.afni"];
+  qap_head_mask_workflow_qap_headmask_subtract_masks_[label="qap_headmask_subtract_masks_.Calc.afni"];
+  qap_head_mask_workflow_qap_headmask_combine_masks_[label="qap_headmask_combine_masks_.Calc.afni"];
+  qap_head_mask_workflow_datasink_qap_head_mask[label="datasink_qap_head_mask.DataSink.io"];
+  qap_head_mask_workflow_qap_headmask_clip_level_ -> qap_head_mask_workflow_qap_headmask_create_expr_string_;
+  qap_head_mask_workflow_qap_headmask_slice_head_mask_ -> qap_head_mask_workflow_qap_headmask_subtract_masks_;
+  qap_head_mask_workflow_qap_headmask_slice_head_mask_ -> qap_head_mask_workflow_qap_headmask_combine_masks_;
+  qap_head_mask_workflow_qap_headmask_create_expr_string_ -> qap_head_mask_workflow_qap_headmask_mask_skull_;
+  qap_head_mask_workflow_qap_headmask_mask_skull_ -> qap_head_mask_workflow_qap_headmask_mask_tool_;
+  qap_head_mask_workflow_qap_headmask_mask_tool_ -> qap_head_mask_workflow_qap_headmask_subtract_masks_;
+  qap_head_mask_workflow_qap_headmask_mask_tool_ -> qap_head_mask_workflow_qap_headmask_combine_masks_;
+  qap_head_mask_workflow_qap_headmask_subtract_masks_ -> qap_head_mask_workflow_datasink_qap_head_mask;
+  qap_head_mask_workflow_qap_headmask_combine_masks_ -> qap_head_mask_workflow_datasink_qap_head_mask;
+}

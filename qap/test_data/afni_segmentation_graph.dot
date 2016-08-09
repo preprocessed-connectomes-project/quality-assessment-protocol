@@ -1,0 +1,16 @@
+digraph afni_segmentation_workflow{
+  label="afni_segmentation_workflow";
+  afni_segmentation_workflow_segmentation_[label="segmentation_.Seg.afni"];
+  afni_segmentation_workflow_segment_AFNItoNIFTI_[label="segment_AFNItoNIFTI_.AFNItoNIFTI.afni"];
+  afni_segmentation_workflow_extract_CSF_mask_[label="extract_CSF_mask_.Calc.afni"];
+  afni_segmentation_workflow_extract_GM_mask_[label="extract_GM_mask_.Calc.afni"];
+  afni_segmentation_workflow_extract_WM_mask_[label="extract_WM_mask_.Calc.afni"];
+  afni_segmentation_workflow_datasink_afni_segmentation[label="datasink_afni_segmentation.DataSink.io"];
+  afni_segmentation_workflow_segmentation_ -> afni_segmentation_workflow_segment_AFNItoNIFTI_;
+  afni_segmentation_workflow_segment_AFNItoNIFTI_ -> afni_segmentation_workflow_extract_WM_mask_;
+  afni_segmentation_workflow_segment_AFNItoNIFTI_ -> afni_segmentation_workflow_extract_CSF_mask_;
+  afni_segmentation_workflow_segment_AFNItoNIFTI_ -> afni_segmentation_workflow_extract_GM_mask_;
+  afni_segmentation_workflow_extract_CSF_mask_ -> afni_segmentation_workflow_datasink_afni_segmentation;
+  afni_segmentation_workflow_extract_GM_mask_ -> afni_segmentation_workflow_datasink_afni_segmentation;
+  afni_segmentation_workflow_extract_WM_mask_ -> afni_segmentation_workflow_datasink_afni_segmentation;
+}

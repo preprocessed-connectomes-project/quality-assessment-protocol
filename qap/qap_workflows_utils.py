@@ -1,22 +1,10 @@
 
 
-def run_3dClipLevel(input_skull):
+def create_expr_string(clip_level_value):
 
-    import subprocess
-    from qap.workflow_utils import raise_smart_exception
+    expr_string = "step(a-%s)" % clip_level_value
 
-    try:
-        out_val = subprocess.check_output(("3dClipLevel",input_skull))
-        if "\n" in out_val:
-            out_val = out_val.replace("\n","")
-        thresh_out = int(float(out_val))
-    except:
-        msg = "[!] QAP says: Something went wrong with running AFNI's " \
-              "3dClipLevel."
-        raise_smart_exception(locals(),msg)
-
-
-    return thresh_out
+    return expr_string
 
 
 
@@ -27,10 +15,9 @@ def slice_head_mask(infile, transform, standard):
 
     import nibabel as nb
     import numpy as np
+    import numpy.linalg as npl
     import subprocess
     import pkg_resources as p
-
-    from qap.workflow_utils import raise_smart_exception
 
     # get file info
     infile_img = nb.load(infile)
@@ -39,55 +26,64 @@ def slice_head_mask(infile, transform, standard):
 
     infile_dims = infile_header.get_data_shape()
 
-    # these are stored in the files listed below, just here for reference
-    inpoint_a = "78 -110 -72"
-    inpoint_b = "-78 -110 -72"
-    inpoint_c = "0 88 -72"  # nose, apparently
+    # these coordinates correspond to the points of defining the slice plane
+    # on the MNI template
+    inpoint_a = [78, -110, -72, 0]
+    inpoint_b = [-78, -110, -72, 0]
+    inpoint_c = [-1, 91, -29, 0]  # nose
 
-    # these each contain a set of coordinates for drawing the plane across
-    # the image (to "slice" it)
-    inpoint_files = [p.resource_filename("qap", "inpoint_a.txt"),
-                     p.resource_filename("qap", "inpoint_b.txt"),
-                     p.resource_filename("qap", "inpoint_c.txt")]
+    inpoint_coords = [inpoint_a, inpoint_b, inpoint_c]
 
-    # let's convert the coordinates into voxel coordinates
+    # get the affine output matrix of 3dallineate
+    with open(transform,"r") as f:
+        allineate_mat_list = f.readlines()
 
-    coords = []
+    # get the 3dAllineate output affine matrix into a list
+    mat_list = filter(None,allineate_mat_list[1].rstrip("\n").split(" "))
 
-    for inpoint in inpoint_files:
+    # put together the 4x4 matrix
+    #   (encode the offset as the fourth row and include the 0,0,0,1
+    #    dummy row, so that this will only require one matrix multiplication)
+    row1 = [float(mat_list[0]), float(mat_list[1]), float(mat_list[2]), \
+                float(mat_list[3])]
+    row2 = [float(mat_list[4]), float(mat_list[5]), float(mat_list[6]), \
+                float(mat_list[7])]
+    row3 = [float(mat_list[8]), float(mat_list[9]), float(mat_list[10]), \
+                float(mat_list[11])]
+    row4 = [0,0,0,1]
 
-        coord_cmd = ("std2imgcoord", "-img", infile, "-std", standard, \
-            "-xfm", transform, "-vox", inpoint)
+    allineate_mat = np.asarray([row1,row2,row3,row4])
 
-        try:
-            coord_out = subprocess.check_output(coord_cmd)
-        except:
-            msg = "[!] QAP says: Something went wrong with running " \
-                  "std2imgcoord."
-            raise_smart_exception(locals(),msg)
+    coords_list = []
 
-        if "Could not" in coord_out:
-            raise Exception(coord_out)
+    for inpoint in inpoint_coords:      
 
-        if "\n" in coord_out:
-            coord_out = coord_out.replace("\n","")
+        # using the transform, calculate what the three coordinates are in
+        # native space, as it corresponds to the anatomical scan
+        coord_out = \
+            list(np.dot(np.linalg.inv(allineate_mat),inpoint))
 
-        coords.append(coord_out)
+        # remove the one resulting zero at the end
+        coord_out = coord_out[:-1]
 
-    # get the converted coordinates into a list format, and also check to make
-    # sure they are not "out of bounds"
+        # convert the coordinates from mm to voxels
+        coord_out = \
+            nb.affines.apply_affine(npl.inv(infile_affine),coord_out)
+
+        coords_list.append(coord_out)
+
+
+    # make sure converted coordinates are not "out of bounds"
     new_coords = []
 
-    for coord in coords:
-
-        co_nums = coord.split(" ")
+    for coords in coords_list:
 
         co_nums_newlist = []
 
-        for num in co_nums:
+        for num in coords:
 
             if num != "":
-                co_nums_newlist.append(int(num.split(".")[0]))
+                co_nums_newlist.append(int(num)) #.split(".")[0]))
 
         for ind in range(0, 3):
 
@@ -99,8 +95,8 @@ def slice_head_mask(infile, transform, standard):
 
         new_coords.append(co_nums_newlist)
 
-    # get the vectors connecting the points
 
+    # get the vectors connecting the points
     u = []
 
     for a_pt, c_pt in zip(new_coords[0], new_coords[2]):
@@ -171,22 +167,28 @@ def slice_head_mask(infile, transform, standard):
 
 
 
-def qap_anatomical_spatial(anatomical_reorient, head_mask_path,
+def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
+                           whole_head_mask_path, skull_mask_path,
                            anatomical_gm_mask, anatomical_wm_mask,
                            anatomical_csf_mask, subject_id, session_id,
-                           scan_id, site_name=None, out_vox=True):
+                           scan_id, site_name=None, out_vox=True,
+                           starter=None):
 
     import os
     import sys
 
     from qap.spatial_qc import summary_mask, snr, cnr, fber, efc, \
-        artifacts, fwhm
+        artifacts, fwhm, cortical_contrast
     from qap.qap_utils import load_image, load_mask
 
     # Load the data
     anat_data = load_image(anatomical_reorient)
-    fg_mask = load_mask(head_mask_path, anatomical_reorient)
+
+    fg_mask = load_mask(qap_head_mask_path, anatomical_reorient)
     bg_mask = 1 - fg_mask
+
+    whole_head_mask = load_mask(whole_head_mask_path, anatomical_reorient)
+    skull_mask = load_mask(skull_mask_path, anatomical_reorient)
 
     gm_mask = load_mask(anatomical_gm_mask, anatomical_reorient)
     wm_mask = load_mask(anatomical_wm_mask, anatomical_reorient)
@@ -205,7 +207,7 @@ def qap_anatomical_spatial(anatomical_reorient, head_mask_path,
         qc['Site'] = site_name
 
     # FBER
-    qc['FBER'] = fber(anat_data, fg_mask)
+    qc['FBER'] = fber(anat_data, skull_mask, bg_mask)
 
     # EFC
     qc['EFC'] = efc(anat_data)
@@ -214,11 +216,11 @@ def qap_anatomical_spatial(anatomical_reorient, head_mask_path,
     qc['Qi1'], _ = artifacts(anat_data, fg_mask, calculate_qi2=False)
 
     # Smoothness in voxels
-    tmp = fwhm(anatomical_reorient, head_mask_path, out_vox=out_vox)
+    tmp = fwhm(anatomical_reorient, whole_head_mask_path, out_vox=out_vox)
     qc['FWHM_x'], qc['FWHM_y'], qc['FWHM_z'], qc['FWHM'] = tmp
 
     # Summary Measures
-    fg_mean, fg_std, fg_size = summary_mask(anat_data, fg_mask)
+    fg_mean, fg_std, fg_size = summary_mask(anat_data, whole_head_mask)
     bg_mean, bg_std, bg_size = summary_mask(anat_data, bg_mask)
 
     gm_mean, gm_std, gm_size = (None, None, None)
@@ -238,13 +240,17 @@ def qap_anatomical_spatial(anatomical_reorient, head_mask_path,
     # CNR
     qc['CNR'] = cnr(gm_mean, wm_mean, bg_std)
 
+    # Cortical contrast
+    qc['Cortical Contrast'] = cortical_contrast(gm_mean, wm_mean)
+
 
     return qc
 
 
 
 def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
-                           session_id, scan_id, site_name=None, out_vox=True):
+                           session_id, scan_id, site_name=None, out_vox=True,
+                           starter=None):
 
     import os
     import sys
@@ -265,7 +271,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
         qc['Site'] = site_name
 
     # FBER
-    qc['FBER'] = fber(anat_data, fg_mask)
+    qc['FBER'] = fber(anat_data, fg_mask, bg_mask)
 
     # EFC
     qc['EFC'] = efc(anat_data)
@@ -301,55 +307,65 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 def qap_functional_temporal(
         func_timeseries, func_brain_mask, fd_file,
         subject_id, session_id, scan_id, site_name=None, 
-        motion_threshold=1.0):
+        motion_threshold=1.0, starter=None):
 
     import sys
     import nibabel as nb
     import numpy as np
 
-    from qap.temporal_qc import mean_dvars_wrapper, mean_outlier_timepoints, \
-        mean_quality_timepoints, global_correlation, \
-        calculate_percent_outliers
+    from qap.temporal_qc import outlier_timepoints, quality_timepoints, \
+                                global_correlation, calculate_percent_outliers
+    from qap.dvars import calc_dvars
 
     # DVARS
-    mean_dvars, dvars = mean_dvars_wrapper(func_timeseries, func_brain_mask)
-
+    dvars = calc_dvars(func_timeseries, func_brain_mask)
     dvars_outliers, dvars_IQR = calculate_percent_outliers(dvars)
+
+    mean_dvars = dvars.mean(0)
+    mean_dvars = mean_dvars[0]
 
     # Mean FD (Jenkinson)
     fd = np.loadtxt(fd_file)
-
     meanfd_outliers, meanfd_IQR = calculate_percent_outliers(fd)
 
     # 3dTout
-    mean_outlier, outlier_perc_out, outlier_IQR = \
-        mean_outlier_timepoints(func_timeseries)
+    outliers = outlier_timepoints(func_timeseries)
+    # calculate the outliers of the outliers! AAHH!
+    outlier_perc_out, outlier_IQR = calculate_percent_outliers(outliers)
 
     # 3dTqual
-    mean_quality, qual_perc_out, qual_IQR = \
-        mean_quality_timepoints(func_timeseries)
+    quality = quality_timepoints(func_timeseries)
+    quality_outliers, quality_IQR = calculate_percent_outliers(quality)
 
     # GCOR
     gcor = global_correlation(func_timeseries, func_brain_mask)
 
     # Compile
     qc = {
-        "Participant":   subject_id,
-        "Session":   session_id,
-        "Series":      scan_id,
-        "Std. DVARS (Mean)":     mean_dvars,
-        "Std. DVARS percent outliers": dvars_outliers,
+        "Participant": subject_id,
+        "Session": session_id,
+        "Series": scan_id,
+        "Std. DVARS (Mean)": mean_dvars,
+        "Std. DVARS (Std Dev)": np.std(dvars),
+        "Std. DVARS (Median)": np.median(dvars),
         "Std. DVARs IQR": dvars_IQR,
-        "RMSD (Mean)":   fd.mean(),
-        "RMSD percent outliers": meanfd_outliers,
+        "Std. DVARS percent outliers": dvars_outliers,
+        "RMSD (Mean)": np.mean(fd),
+        "RMSD (Std Dev)": np.std(fd),
+        "RMSD (Median)": np.median(fd),
         "RMSD IQR": meanfd_IQR,
-        "Fraction of Outliers (Mean)": mean_outlier,
-        "Fraction of Outliers percent outliers": outlier_perc_out,
+        "RMSD percent outliers": meanfd_outliers,
+        "Fraction of Outliers (Mean)": np.mean(outliers),
+        "Fraction of Outliers (Std Dev)": np.std(outliers),
+        "Fraction of Outliers (Median)": np.median(outliers),
         "Fraction of Outliers IQR": outlier_IQR,
-        "Quality":   mean_quality,
-        "Quality percent outliers": qual_perc_out,
-        "Quality IQR": qual_IQR,
-        "GCOR":      gcor
+        "Fraction of Outliers percent outliers": outlier_perc_out,
+        "Quality (Mean)": np.mean(quality),
+        "Quality (Std Dev)": np.std(quality),
+        "Quality (Median)": np.median(quality),
+        "Quality IQR": quality_IQR,
+        "Quality percent outliers": quality_outliers,
+        "GCOR": gcor
     }
 
     if site_name:

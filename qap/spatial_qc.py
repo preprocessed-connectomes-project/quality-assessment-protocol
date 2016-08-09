@@ -135,9 +135,24 @@ def cnr(mean_gm, mean_wm, std_bg):
 
     return cnr
 
+
+
+def cortical_contrast(mean_gm, mean_wm):
+
+    """
+    Calculate vertex-wise cortical contrast
+   
+    cortical contrast = (mean WM intensity) - (mean GM intensity) /
+                            ( (mean WM intensity + mean GM intensity) / 2 )
+    """
+
+    cort_con = (mean_wm - mean_gm) / ((mean_wm + mean_gm) / 2)
+
+    return cort_con
+
     
     
-def fber(anat_data, mask_data):
+def fber(anat_data, skull_mask_data, bg_mask_data):
 
     """
     Calculate Foreground:Background Energy Ratio
@@ -147,8 +162,8 @@ def fber(anat_data, mask_data):
 
     import numpy as np
 
-    mean_fg = (np.abs(anat_data[mask_data == 1]) ** 2).sum() / (mask_data.sum())
-    mean_bg = (np.abs(anat_data[mask_data == 0]) ** 2).sum() / (mask_data.size - mask_data.sum())
+    mean_fg = (np.abs(anat_data[skull_mask_data == 1]) ** 2).sum() / (skull_mask_data.sum())
+    mean_bg = (np.abs(anat_data[bg_mask_data == 1]) ** 2).sum() / (bg_mask_data.size - bg_mask_data.sum())
     fber    = mean_fg / mean_bg
 
     return fber

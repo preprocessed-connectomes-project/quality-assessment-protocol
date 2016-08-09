@@ -51,7 +51,7 @@ def get_idx(in_files, stop_idx=None, start_idx=None):
 
 
 
-def func_preproc_workflow(workflow, resource_pool, config):
+def func_preproc_workflow(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
     #     functional_scan
@@ -72,8 +72,16 @@ def func_preproc_workflow(workflow, resource_pool, config):
 
 
     check_input_resources(resource_pool, "functional_scan")
-    check_config_settings(config, "start_idx")
-    check_config_settings(config, "stop_idx")
+
+    if "start_idx" not in config.keys():
+        config["start_idx"] = 0
+
+    if "stop_idx" not in config.keys():
+        config["stop_idx"] = None
+
+    drop_trs = False
+    if (config["start_idx"] != 0) and (config["stop_idx"] != None):
+        drop_trs = True
 
 
     func_get_idx = pe.Node(util.Function(input_names=['in_files', 
@@ -82,40 +90,42 @@ def func_preproc_workflow(workflow, resource_pool, config):
                                          output_names=['stopidx', 
                                                        'startidx'],
                                          function=get_idx),
-                                         name='func_get_idx')
+                                         name='func_get_idx%s' % name)
 
     func_get_idx.inputs.in_files = resource_pool["functional_scan"]
     func_get_idx.inputs.start_idx = config["start_idx"]
     func_get_idx.inputs.stop_idx = config["stop_idx"]
     
-    
-    func_drop_trs = pe.Node(interface=preprocess.Calc(),
-                           name='func_drop_trs')
+    if drop_trs:
+        func_drop_trs = pe.Node(interface=preprocess.Calc(),
+                                name='func_drop_trs%s' % name)
 
-    func_drop_trs.inputs.in_file_a = resource_pool["functional_scan"]
-    func_drop_trs.inputs.expr = 'a'
-    func_drop_trs.inputs.outputtype = 'NIFTI_GZ'
+        func_drop_trs.inputs.in_file_a = resource_pool["functional_scan"]
+        func_drop_trs.inputs.expr = 'a'
+        func_drop_trs.inputs.outputtype = 'NIFTI_GZ'
 
 
-    workflow.connect(func_get_idx, 'startidx',
-                     func_drop_trs, 'start_idx')
+        workflow.connect(func_get_idx, 'startidx',
+                         func_drop_trs, 'start_idx')
 
-    workflow.connect(func_get_idx, 'stopidx',
-                     func_drop_trs, 'stop_idx')
+        workflow.connect(func_get_idx, 'stopidx',
+                         func_drop_trs, 'stop_idx')
     
 
     func_deoblique = pe.Node(interface=preprocess.Refit(),
-                            name='func_deoblique')
+                            name='func_deoblique%s' % name)
 
     func_deoblique.inputs.deoblique = True
     
-    
-    workflow.connect(func_drop_trs, 'out_file',
-                     func_deoblique, 'in_file')
+    if drop_trs:
+        workflow.connect(func_drop_trs, 'out_file',
+                         func_deoblique, 'in_file')
+    else:
+        func_deoblique.inputs.in_file = resource_pool["functional_scan"]
 
 
     func_reorient = pe.Node(interface=preprocess.Resample(),
-                               name='func_reorient')
+                               name='func_reorient%s' % name)
     func_reorient.inputs.orientation = 'RPI'
     func_reorient.inputs.outputtype = 'NIFTI_GZ'
 
@@ -130,7 +140,8 @@ def func_preproc_workflow(workflow, resource_pool, config):
 
 
 
-def run_func_preproc(functional_scan, start_idx, stop_idx, run=True):
+def run_func_preproc(functional_scan, start_idx=None, stop_idx=None, \
+                         out_dir=None, run=True):
 
     # stand-alone runner for functional preproc workflow
 
@@ -141,13 +152,15 @@ def run_func_preproc(functional_scan, start_idx, stop_idx, run=True):
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
 
-    workflow = pe.Workflow(name='func_preproc_workflow')
+    output = "func_preproc"
 
-    current_dir = os.getcwd()
-    workflow_dir = os.path.join(current_dir, "func_preproc")
+    workflow = pe.Workflow(name='%s_workflow' % output)
 
+    if not out_dir:
+        out_dir = os.getcwd()
+
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
-
 
     resource_pool = {}
     config = {}
@@ -155,13 +168,13 @@ def run_func_preproc(functional_scan, start_idx, stop_idx, run=True):
 
     resource_pool["functional_scan"] = functional_scan
 
-    config["start_idx"] = start_idx
-    config["stop_idx"] = stop_idx
-
+    if start_idx:
+        config["start_idx"] = start_idx
+    if stop_idx:
+        config["stop_idx"] = stop_idx
     
     workflow, resource_pool = \
             func_preproc_workflow(workflow, resource_pool, config)
-
 
     ds = pe.Node(nio.DataSink(), name='datasink_func_motion_correct')
     ds.inputs.base_directory = workflow_dir
@@ -172,10 +185,8 @@ def run_func_preproc(functional_scan, start_idx, stop_idx, run=True):
 
 
     if run == True:
-
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
-
         outpath = glob.glob(os.path.join(workflow_dir, "func_reorient",\
                                          "*"))[0]
 
@@ -187,7 +198,7 @@ def run_func_preproc(functional_scan, start_idx, stop_idx, run=True):
     
 
 
-def func_motion_correct_workflow(workflow, resource_pool, config):
+def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
     #     func_reorient
@@ -212,11 +223,11 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
         from functional_preproc import func_preproc_workflow
 
         workflow, resource_pool = \
-            func_preproc_workflow(workflow, resource_pool, config)
+            func_preproc_workflow(workflow, resource_pool, config, name)
 
     
     func_get_mean_RPI = pe.Node(interface=preprocess.TStat(),
-                            name='func_get_mean_RPI')
+                            name='func_get_mean_RPI%s' % name)
     func_get_mean_RPI.inputs.options = '-mean'
     func_get_mean_RPI.inputs.outputtype = 'NIFTI_GZ'
     
@@ -229,7 +240,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
 
     # get the first volume of the time series
     get_func_volume = pe.Node(interface=preprocess.Calc(),
-                              name='get_func_volume')
+                              name='get_func_volume%s' % name)
          
     get_func_volume.inputs.expr = 'a'
     get_func_volume.inputs.single_idx = 0
@@ -244,7 +255,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
 
     # calculate motion parameters
     func_motion_correct = pe.Node(interface=preprocess.Volreg(),
-                             name='func_motion_correct')
+                             name='func_motion_correct%s' % name)
 
     func_motion_correct.inputs.args = '-Fourier -twopass'
     func_motion_correct.inputs.zpad = 4
@@ -271,7 +282,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config):
 
 
 
-def run_func_motion_correct(func_reorient, run=True):
+def run_func_motion_correct(func_reorient, out_dir=None, run=True):
 
     # stand-alone runner for functional motion correct workflow
 
@@ -282,13 +293,15 @@ def run_func_motion_correct(func_reorient, run=True):
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
 
-    workflow = pe.Workflow(name='func_motion_correct_workflow')
+    output = "func_motion_correct"
 
-    current_dir = os.getcwd()
-    workflow_dir = os.path.join(current_dir, "func_motion_correct")
+    workflow = pe.Workflow(name='%s_workflow' % output)
 
+    if not out_dir:
+        out_dir = os.getcwd()
+
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
-
 
     resource_pool = {}
     config = {}
@@ -318,22 +331,17 @@ def run_func_motion_correct(func_reorient, run=True):
 
 
     if run == True:
-
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
-
         outpath = glob.glob(os.path.join(workflow_dir, "func_motion_correct",\
                                          "*"))[0]
-
-        return outpath
-        
+        return outpath      
     else:
-    
         return workflow, workflow.base_dir
 
 
 
-def functional_brain_mask_workflow(workflow, resource_pool, config):
+def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
     #     func_motion_correct
@@ -349,38 +357,34 @@ def functional_brain_mask_workflow(workflow, resource_pool, config):
     
     from nipype.interfaces.afni import preprocess
 
-
-    #check_input_resources(resource_pool, "func_motion_correct")
-
     if "use_bet" not in config.keys():
         config["use_bet"] = False
-
 
     if "func_motion_correct" not in resource_pool.keys():
 
         from functional_preproc import func_motion_correct_workflow
 
         workflow, resource_pool = \
-            func_motion_correct_workflow(workflow, resource_pool, config)
+            func_motion_correct_workflow(workflow, resource_pool, config, name)
 
   
     if config["use_bet"] == False:
 
         func_get_brain_mask = pe.Node(interface=preprocess.Automask(),
-                                      name='func_get_brain_mask')
+                                      name='func_get_brain_mask%s' % name)
 
         func_get_brain_mask.inputs.outputtype = 'NIFTI_GZ'
 
     else:
 
         func_get_brain_mask = pe.Node(interface=fsl.BET(),
-                                      name='func_get_brain_mask_BET')
+                                      name='func_get_brain_mask_BET%s' % name)
 
         func_get_brain_mask.inputs.mask = True
         func_get_brain_mask.inputs.functional = True
 
         erode_one_voxel = pe.Node(interface=fsl.ErodeImage(),
-                                  name='erode_one_voxel')
+                                  name='erode_one_voxel%s' % name)
 
         erode_one_voxel.inputs.kernel_shape = 'box'
         erode_one_voxel.inputs.kernel_size = 1.0
@@ -413,7 +417,8 @@ def functional_brain_mask_workflow(workflow, resource_pool, config):
 
 
 
-def run_functional_brain_mask(func_motion_correct, use_bet=False, run=True):
+def run_functional_brain_mask(func_motion_correct, use_bet=False, \
+    out_dir=None, run=True):
 
     # stand-alone runner for functional brain mask workflow
 
@@ -428,8 +433,14 @@ def run_functional_brain_mask(func_motion_correct, use_bet=False, run=True):
 
     workflow = pe.Workflow(name='%s_workflow' % output)
 
-    current_dir = os.getcwd()
-    workflow_dir = os.path.join(current_dir, output)
+    if not out_dir:
+        out_dir = os.getcwd()
+
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
+
+    if use_bet == True:
+        workflow_dir = os.path.join(out_dir, "workflow_output", \
+            output + "_BET")
 
     workflow.base_dir = workflow_dir
 
@@ -454,22 +465,17 @@ def run_functional_brain_mask(func_motion_correct, use_bet=False, run=True):
     workflow.connect(node, out_file, ds, output)
 
     if run == True:
-
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
-
         outpath = glob.glob(os.path.join(workflow_dir, "functional_brain" \
                                 "_mask", "*"))[0]
-
-        return outpath
-        
+        return outpath      
     else:
-    
         return workflow, workflow.base_dir
 
 
 
-def mean_functional_workflow(workflow, resource_pool, config):
+def mean_functional_workflow(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
     #     func_motion_correct
@@ -488,10 +494,6 @@ def mean_functional_workflow(workflow, resource_pool, config):
     from nipype.interfaces.afni import preprocess
 
     from workflow_utils import check_input_resources
-        
-
-    #check_input_resources(resource_pool, "func_motion_correct")
-    #check_input_resources(resource_pool, "functional_brain_mask")
 
 
     if "func_motion_correct" not in resource_pool.keys():
@@ -499,11 +501,11 @@ def mean_functional_workflow(workflow, resource_pool, config):
         from functional_preproc import func_motion_correct_workflow
 
         workflow, resource_pool = \
-            func_motion_correct_workflow(workflow, resource_pool, config)
+            func_motion_correct_workflow(workflow, resource_pool, config, name)
             
    
     func_mean_skullstrip = pe.Node(interface=preprocess.TStat(),
-                           name='func_mean_skullstrip')
+                           name='func_mean_skullstrip%s' % name)
 
     func_mean_skullstrip.inputs.options = '-mean'
     func_mean_skullstrip.inputs.outputtype = 'NIFTI_GZ'
@@ -511,7 +513,7 @@ def mean_functional_workflow(workflow, resource_pool, config):
 
     if len(resource_pool["func_motion_correct"]) == 2:
         node, out_file = resource_pool["func_motion_correct"]
-        workflow.connect(node, out_file, func_mean_skullstrip, 'in_file')#func_edge_detect, 'in_file_a')
+        workflow.connect(node, out_file, func_mean_skullstrip, 'in_file')
     else:
         func_mean_skullstrip.inputs.in_file = \
             resource_pool["func_motion_correct"]
@@ -524,7 +526,7 @@ def mean_functional_workflow(workflow, resource_pool, config):
 
 
  
-def run_mean_functional(func_motion_correct, run=True):
+def run_mean_functional(func_motion_correct, out_dir=None, run=True):
 
     # stand-alone runner for mean functional workflow
 
@@ -541,9 +543,10 @@ def run_mean_functional(func_motion_correct, run=True):
 
     workflow = pe.Workflow(name='%s_workflow' % output)
 
-    current_dir = os.getcwd()
-    workflow_dir = os.path.join(current_dir, output)
+    if not out_dir:
+        out_dir = os.getcwd()
 
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
 
 
@@ -566,17 +569,12 @@ def run_mean_functional(func_motion_correct, run=True):
     workflow.connect(node, out_file, ds, output)
 
     if run == True:
-
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
-
         outpath = glob.glob(os.path.join(workflow_dir, "mean_functional", \
                                          "*"))[0] 
-
         return outpath
-        
     else:
-    
         return workflow, workflow.base_dir
         
 

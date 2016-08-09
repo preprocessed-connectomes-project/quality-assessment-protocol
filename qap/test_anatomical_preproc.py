@@ -1,211 +1,390 @@
 
+import pytest
+test_sub_dir = "test_data"
 
-test_sub_dir = "test_data/1019436/session_1"
 
-
-def test_workflow_anatomical_reorient():
-
-    ''' unit test for the anatomical reorient workflow BUILDER '''
+@pytest.mark.quick
+def test_run_anatomical_reorient_workflow_graph():
 
     import os
-    import commands
-    
+    import numpy as np
+    import nibabel as nb
+    import shutil
+
     import pkg_resources as p
 
     from qap.anatomical_preproc import run_anatomical_reorient
-    from qap.workflow_utils import build_test_case
+   
+    anatomical_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                          "anatomical_scan.nii.gz"))
 
+    ref_graph = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                    "anat_reorient_graph.dot"))
 
-    anat_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "anat_1", \
-                                    "anatomical_scan", \
-                                    "mprage.nii.gz"))
+    out_dir = os.path.join(os.getcwd(), "unit_tests_anat_preproc")
 
-    ref_graph = p.resource_filename("qap", os.path.join("test_data", \
-                                    "workflow_reference", \
-                                    "anatomical_reorient", \
-                                    "graph_anatomical_reorient.dot"))
-                                    
-    ref_inputs = p.resource_filename("qap", os.path.join("test_data", \
-                                     "workflow_reference", \
-                                     "anatomical_reorient", \
-                                     "wf_inputs.txt"))
+    workflow = run_anatomical_reorient(anatomical_scan, out_dir=out_dir, \
+                                           run=False)
 
+    out_workflow_obj = workflow[0]
+    out_workflow_dir = workflow[1]
 
-    # build the workflow and return it
-    wf, base_dir = run_anatomical_reorient(anat_scan, False)
-
-
-    # get the workflow inputs of the workflow being tested
-    wf_inputs_string = str(wf.inputs).replace("\n","")
+    # write the dependency graph of the workflow we are testing
+    out_graph = os.path.join(out_workflow_dir, "graph.dot")
+    out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
     
-    wf_inputs_string = wf_inputs_string.replace(base_dir, \
-                           "BASE_DIRECTORY_HERE")
-    wf_inputs_string = wf_inputs_string.replace(anat_scan, "IN_FILE_HERE")
+    # load the both the reference and the to-test dependency graphs
+    with open(ref_graph,"r") as f:
+        ref_graph_lines = sorted(f.readlines())
+
+    with open(out_graph,"r") as f:
+        out_graph_lines = sorted(f.readlines())
+
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
+
+    assert ref_graph_lines == out_graph_lines
 
 
-    flag, err = build_test_case(wf, ref_inputs, ref_graph, wf_inputs_string)
 
-        
-    assert flag == 2, err
-
-  
-    
-def test_workflow_anatomical_skullstrip():
-
-    ''' unit test for the anatomical skullstrip workflow BUILDER '''
+@pytest.mark.slow
+def test_run_anatomical_reorient():
 
     import os
-    import commands
-    
+    import numpy as np
+    import nibabel as nb
+    import shutil
+
+    import pkg_resources as p
+
+    from qap.anatomical_preproc import run_anatomical_reorient
+   
+    anatomical_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                          "anatomical_scan.nii.gz"))
+
+    ref_output = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                     "anat_reorient.nii.gz"))
+
+    out_dir = os.path.join(os.getcwd(), "unit_tests_anat_preproc")
+    output = run_anatomical_reorient(anatomical_scan, out_dir=out_dir)
+
+    ref_out_data = nb.load(ref_output).get_data()
+    out_data = nb.load(output).get_data()
+
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
+
+    np.testing.assert_array_equal(ref_out_data, out_data)
+
+
+
+@pytest.mark.quick
+def test_run_anatomical_skullstrip_workflow_graph():
+
+    import os
+    import numpy as np
+    import nibabel as nb
+    import shutil
+
     import pkg_resources as p
 
     from qap.anatomical_preproc import run_anatomical_skullstrip
-    from qap.workflow_utils import build_test_case
+   
+    anat_reorient = p.resource_filename("qap", \
+                                        os.path.join(test_sub_dir, \
+                                        "anat_reorient.nii.gz"))
+
+    ref_graph = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                    "anat_skullstrip_graph.dot"))
+
+    out_dir = os.path.join(os.getcwd(), "unit_tests_anat_preproc")
+
+    workflow = run_anatomical_skullstrip(anat_reorient, out_dir=out_dir, \
+                                             run=False)
+
+    out_workflow_obj = workflow[0]
+    out_workflow_dir = workflow[1]
+
+    # write the dependency graph of the workflow we are testing
+    out_graph = os.path.join(out_workflow_dir, "graph.dot")
+    out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
+    
+    # load the both the reference and the to-test dependency graphs
+    with open(ref_graph,"r") as f:
+        ref_graph_lines = sorted(f.readlines())
+
+    with open(out_graph,"r") as f:
+        out_graph_lines = sorted(f.readlines())
+
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
+
+    assert ref_graph_lines == out_graph_lines
 
 
+
+@pytest.mark.slow
+def test_run_anatomical_skullstrip():
+
+    import os
+    import numpy as np
+    import nibabel as nb
+    import shutil
+
+    import pkg_resources as p
+
+    from qap.anatomical_preproc import run_anatomical_skullstrip
+   
+    anat_reorient = p.resource_filename("qap", \
+                                        os.path.join(test_sub_dir, \
+                                        "anat_reorient.nii.gz"))
+
+    ref_output = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                     "anat_brain.nii.gz"))
+
+    out_dir = os.path.join(os.getcwd(), "unit_tests_anat_preproc")
+    output = run_anatomical_skullstrip(anat_reorient, out_dir=out_dir)
+
+    ref_out_data = nb.load(ref_output).get_data()
+    out_data = nb.load(output).get_data()
+
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
+
+    np.testing.assert_array_equal(ref_out_data, out_data)
+
+
+
+@pytest.mark.quick
+def test_run_afni_anatomical_linear_registration_workflow_graph():
+
+    import os
+    import numpy as np
+    import nibabel as nb
+    import shutil
+
+    import pkg_resources as p
+
+    from qap.anatomical_preproc import run_afni_anatomical_linear_registration
+   
+    anat_brain = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                     "anat_brain.nii.gz"))
+
+    template_brain = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                         "MNI152_T1_3mm_brain.nii.gz"))
+
+    ref_graph = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                    "afni_linear_registration_graph.dot"))
+
+    out_dir = os.path.join(os.getcwd(), "unit_tests_anat_preproc")
+
+    workflow = run_afni_anatomical_linear_registration(anat_brain,
+                                                       template_brain,
+                                                       out_dir=out_dir,
+                                                       run=False)
+
+    out_workflow_obj = workflow[0]
+    out_workflow_dir = workflow[1]
+
+    # write the dependency graph of the workflow we are testing
+    out_graph = os.path.join(out_workflow_dir, "graph.dot")
+    out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
+    
+    # load the both the reference and the to-test dependency graphs
+    with open(ref_graph,"r") as f:
+        ref_graph_lines = sorted(f.readlines())
+
+    with open(out_graph,"r") as f:
+        out_graph_lines = sorted(f.readlines())
+
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
+
+    assert ref_graph_lines == out_graph_lines
+
+
+
+@pytest.mark.slow
+def test_run_afni_anatomical_linear_registration_brain_only():
+
+    import os
+    import numpy as np
+    import nibabel as nb
+    import shutil
+
+    import pkg_resources as p
+
+    from qap.anatomical_preproc import run_afni_anatomical_linear_registration
+   
+    anat_brain = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                     "anat_brain.nii.gz"))
+
+    template_brain = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                         "MNI152_T1_3mm_brain.nii.gz"))
+
+    ref_output = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                     "allineate_warped_brain.nii.gz"))
+
+    out_dir = os.path.join(os.getcwd(), "unit_tests_anat_preproc")
+    output = run_afni_anatomical_linear_registration(anat_brain,
+                                                     template_brain,
+                                                     out_dir=out_dir)
+
+    ref_out_data = nb.load(ref_output).get_data()
+    out_data = nb.load(output).get_data()
+
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
+
+    np.testing.assert_array_equal(ref_out_data, out_data)
+
+
+
+@pytest.mark.slow
+def test_run_afni_anatomical_linear_registration_skull_on():
+
+    import os
+    import numpy as np
+    import nibabel as nb
+    import shutil
+
+    import pkg_resources as p
+
+    from qap.anatomical_preproc import run_afni_anatomical_linear_registration
+   
     anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                        "anat_1", \
-                                        "anatomical_reorient", \
-                                        "mprage_resample.nii.gz"))
+                                        "anat_reorient.nii.gz"))
 
-    ref_graph = p.resource_filename("qap", os.path.join("test_data", \
-                                    "workflow_reference", \
-                                    "anatomical_skullstrip", \
-                                    "graph_anatomical_skullstrip.dot"))
-                                    
-    ref_inputs = p.resource_filename("qap", os.path.join("test_data", \
-                                     "workflow_reference", \
-                                     "anatomical_skullstrip", \
-                                     "wf_inputs.txt"))
+    template_head = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                        "MNI152_T1_3mm.nii.gz"))
 
+    ref_output = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                     "allineate_warped_head.nii.gz"))
 
-    # build the workflow and return it
-    wf, base_dir = run_anatomical_skullstrip(anat_reorient, False)
+    out_dir = os.path.join(os.getcwd(), "unit_tests_anat_preproc")
+    output = run_afni_anatomical_linear_registration(anat_reorient,
+                                                     template_head,
+                                                     skull_on=True,
+                                                     out_dir=out_dir)
 
+    ref_out_data = nb.load(ref_output).get_data()
+    out_data = nb.load(output).get_data()
 
-    # get the workflow inputs of the workflow being tested
-    wf_inputs_string = str(wf.inputs).replace("\n","")
-    
-    wf_inputs_string = wf_inputs_string.replace(base_dir, \
-                           "base_directory_here")
-    wf_inputs_string = wf_inputs_string.replace(anat_reorient, "in_file_here", 1)
-    wf_inputs_string = wf_inputs_string.replace(anat_reorient, "in_file_a_here")
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
 
-
-    flag, err = build_test_case(wf, ref_inputs, ref_graph, wf_inputs_string)
-
-        
-    assert flag == 2, err
+    np.testing.assert_array_equal(ref_out_data, out_data)
 
 
 
-def test_workflow_flirt_anatomical_linear_registration():
-
-    ''' unit test for the anatomical reorient workflow BUILDER '''
+@pytest.mark.quick
+def test_run_afni_segmentation_workflow_graph():
 
     import os
+    import numpy as np
+    import nibabel as nb
+    import shutil
+
     import pkg_resources as p
 
-    from qap.anatomical_preproc import run_flirt_anatomical_linear_registration
-    from qap.workflow_utils import build_test_case
-
+    from qap.anatomical_preproc import run_afni_segmentation
+   
     anat_brain = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                     "anat_1", \
-                                     "anatomical_brain", \
-                                     "mprage_resample_calc.nii.gz"))
+                                     "anat_brain.nii.gz"))
 
-    template_brain = p.resource_filename("qap", os.path.join("test_data", \
-                                         "MNI152_T1_2mm_brain.nii.gz"))
+    ref_graph = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                    "afni_segmentation_graph.dot"))
 
-    ref_graph = p.resource_filename("qap", os.path.join("test_data", \
-                                    "workflow_reference", \
-                                    "flirt_anatomical_linear_registration", \
-                                    "graph_flirt_anatomical_linear" \
-                                    "_registration.dot"))
-                                    
-    ref_inputs = p.resource_filename("qap", os.path.join("test_data", \
-                                     "workflow_reference", \
-                                     "flirt_anatomical_linear_registration", \
-                                     "wf_inputs.txt"))
+    out_dir = os.path.join(os.getcwd(), "unit_tests_anat_preproc")
 
-    # build the workflow and return it
-    wf, base_dir = run_flirt_anatomical_linear_registration(anat_brain, \
-                                                            template_brain, \
-                                                            False)
+    workflow = run_afni_segmentation(anat_brain, out_dir=out_dir, run=False)
 
-    # get the workflow inputs of the workflow being tested
-    wf_inputs_string = str(wf.inputs).replace("\n","")
+    out_workflow_obj = workflow[0]
+    out_workflow_dir = workflow[1]
+
+    # write the dependency graph of the workflow we are testing
+    out_graph = os.path.join(out_workflow_dir, "graph.dot")
+    out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
     
-    wf_inputs_string = wf_inputs_string.replace(base_dir, \
-                           "base_directory_here")
-    wf_inputs_string = wf_inputs_string.replace(anat_brain, "in_file_here")
-    wf_inputs_string = wf_inputs_string.replace(template_brain, \
-                                                    "reference_here")
+    # load the both the reference and the to-test dependency graphs
+    with open(ref_graph,"r") as f:
+        ref_graph_lines = sorted(f.readlines())
+
+    with open(out_graph,"r") as f:
+        out_graph_lines = sorted(f.readlines())
+
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
+
+    assert ref_graph_lines == out_graph_lines
 
 
-    flag, err = build_test_case(wf, ref_inputs, ref_graph, wf_inputs_string)
 
-        
-    assert flag == 2, err
-
-       
-    
-def test_workflow_segmentation():
-
-    ''' unit test for the segmentation workflow BUILDER '''
+@pytest.mark.slow
+def test_run_afni_segmentation():
 
     import os
-    import commands
-    
+    import numpy as np
+    import nibabel as nb
+    import shutil
+
     import pkg_resources as p
 
-    from qap.anatomical_preproc import run_segmentation_workflow
-    from qap.workflow_utils import build_test_case
-
+    from qap.anatomical_preproc import run_afni_segmentation
+   
     anat_brain = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                     "anat_1", \
-                                     "anatomical_brain", \
-                                     "mprage_resample_calc.nii.gz"))
+                                     "anat_brain.nii.gz"))
 
-    ref_graph = p.resource_filename("qap", os.path.join("test_data", \
-                                    "workflow_reference", \
-                                    "segmentation", \
-                                    "graph_segmentation.dot"))
+    ref_csf_output = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                         "anatomical_csf_mask.nii.gz"))
 
-    ref_inputs = p.resource_filename("qap", os.path.join("test_data", \
-                                     "workflow_reference", \
-                                     "segmentation", \
-                                     "wf_inputs.txt"))
+    ref_gm_output = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                        "anatomical_gm_mask.nii.gz"))
 
+    ref_wm_output = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                        "anatomical_wm_mask.nii.gz"))
 
-    # build the workflow and return it
-    wf, base_dir = run_segmentation_workflow(anat_brain, False)
+    out_dir = os.path.join(os.getcwd(), "unit_tests_anat_preproc")
+    output = run_afni_segmentation(anat_brain, out_dir=out_dir)
 
+    out_data = {}
+    out_ref_data = {}
+    for seg_mask in output:
+        print seg_mask
+        if "csf_mask" in seg_mask:
+            out_ref_data["csf"] = nb.load(ref_csf_output).get_data()
+            out_data["csf"] = nb.load(seg_mask).get_data()
+        elif "gm_mask" in seg_mask:
+            out_ref_data["gm"] = nb.load(ref_gm_output).get_data()
+            out_data["gm"] = nb.load(seg_mask).get_data()
+        elif "wm_mask" in seg_mask:
+            out_ref_data["wm"] = nb.load(ref_wm_output).get_data()
+            out_data["wm"] = nb.load(seg_mask).get_data()
 
-    # get the workflow inputs of the workflow being tested
-    wf_inputs_string = str(wf.inputs).replace("\n","")
-    
-    wf_inputs_string = wf_inputs_string.replace(base_dir, \
-                           "base_directory_here")
+    try:
+        shutil.rmtree(out_dir)
+    except:
+        pass
 
-    list_input = "['" + anat_brain + "']"
-
-    wf_inputs_string = wf_inputs_string.replace(list_input, "in_files_here")
-
-
-    flag, err = build_test_case(wf, ref_inputs, ref_graph, wf_inputs_string)
-
-        
-    assert flag == 2, err
-
-
-
-def run_all_tests_anatomical_preproc():
-
-    test_workflow_anatomical_reorient()
-    test_workflow_anatomical_skullstrip()
-    test_workflow_flirt_anatomical_linear_registration()
-    test_workflow_segmentation()
-
-
+    for seg_type in out_data.keys():
+        try:
+            np.testing.assert_array_equal(out_ref_data[seg_type], \
+                                              out_data[seg_type])
+        except Exception as e:
+            print e, "\n\n", seg_type

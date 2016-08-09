@@ -15,7 +15,7 @@ def pull_S3_sublist(yaml_outpath, img_type, cfg_file):
     # s3_dict_yml = pull_S3_sublist(yamlpath, 'anat', args.config)
 
     import os
-    from indi_awsutils import fetch_creds
+    from indi_aws import fetch_creds
     import yaml
 
     s3_list = []
@@ -101,7 +101,7 @@ def dl_subj_from_s3(subj_idx, cfg_file, s3_dict_yaml):
     '''
 
     # Import packages
-    from indi_awsutils import fetch_creds, aws_utils
+    from indi_aws import fetch_creds, aws_utils
     import yaml
 
     # Load config file
@@ -160,7 +160,7 @@ def upl_qap_output(cfg_file):
     '''
 
     # Import packages
-    from indi_awsutils import aws_utils, fetch_creds
+    from indi_aws import aws_utils, fetch_creds
     import os
     import yaml
 

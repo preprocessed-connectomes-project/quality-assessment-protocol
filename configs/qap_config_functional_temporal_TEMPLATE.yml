@@ -1,0 +1,38 @@
+# how many participants to run per workflow
+num_subjects_per_bundle: 1
+
+# how many workflows to run at once
+num_bundles_at_once: 1
+
+# which resource manager being used, if any
+resource_manager: None
+
+# where to place output files
+output_directory: /path/to/output/directory
+
+# where to place Nipype workflow working files
+working_directory: /path/to/working/directory
+
+# whether or not to keep all output files, or only the QAP numbers CSVs
+write_all_outputs: False
+
+# AWS Cloud Settings
+####################
+
+# whether or not to upload output files to S3 bucket
+upload_to_s3: False
+
+# bucket prefix (where to pull data from in S3, if applicable)
+bucket_prefix: bucket/prefix/path
+
+# bucket output prefix (where to push output files to S3, if applicable)
+bucket_out_prefix: bucket/prefix/output/destination
+
+# where to download input files to, locally, from S3
+local_prefix: /path/to/local/dir
+
+# name of your S3 bucket
+bucket_name: bucket_name
+
+# local path to your AWS credentials
+creds_path: /path/to/AWS/creds.csv
