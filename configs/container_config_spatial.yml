@@ -2,9 +2,9 @@ num_cores_per_subject: 1
 
 num_subjects_at_once: 1
 
-output_directory: /mnt/output
+output_directory: /home/test/out/output
 
-working_directory: /mnt/working
+working_directory: /mnt/test/out/working
 
 write_all_outputs: False
 

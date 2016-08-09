@@ -8,7 +8,7 @@ def create_expr_string(clip_level_value):
 
 
 
-def slice_head_mask(infile, transform, standard):
+def slice_head_mask(infile, transform):
 
     import os
     import sys
@@ -56,7 +56,7 @@ def slice_head_mask(infile, transform, standard):
 
     coords_list = []
 
-    for inpoint in inpoint_coords:      
+    for inpoint in inpoint_coords:
 
         # using the transform, calculate what the three coordinates are in
         # native space, as it corresponds to the anatomical scan
@@ -306,7 +306,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
 def qap_functional_temporal(
         func_timeseries, func_brain_mask, fd_file,
-        subject_id, session_id, scan_id, site_name=None, 
+        subject_id, session_id, scan_id, site_name=None,
         motion_threshold=1.0, starter=None):
 
     import sys

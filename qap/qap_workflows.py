@@ -22,12 +22,6 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
 
     from workflow_utils import check_input_resources, check_config_settings
 
-    if 'template_skull_for_anat' not in config:
-        config['template_skull_for_anat'] = Info.standard_image(
-            'MNI152_T1_2mm.nii.gz')
-
-    check_config_settings(config, 'template_skull_for_anat')
-
     if 'allineate_linear_xfm' not in resource_pool.keys():
 
         from anatomical_preproc import afni_anatomical_linear_registration
@@ -54,7 +48,7 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
         output_names=['expr_string'], function=create_expr_string),
         name='qap_headmask_create_expr_string%s' % name)
 
-    workflow.connect(clip_level, 'clip_val', 
+    workflow.connect(clip_level, 'clip_val',
                          create_expr_string, 'clip_level_value')
 
     # let's create a binary mask of the skull image with that threshold
@@ -78,7 +72,7 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
         output_names=['outfile_path'], function=slice_head_mask),
         name='qap_headmask_slice_head_mask%s' % name)
 
-    combine_masks = pe.Node(interface=preprocess.Calc(), 
+    combine_masks = pe.Node(interface=preprocess.Calc(),
                             name='qap_headmask_combine_masks%s' % name)
 
     combine_masks.inputs.expr = "(a+b)-(a*b)"
@@ -111,9 +105,6 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
         slice_head_mask.inputs.transform = \
             resource_pool['allineate_linear_xfm']
 
-    # convert_fsl_xfm.inputs.standard = config['template_skull_for_anat']
-    slice_head_mask.inputs.standard = config['template_skull_for_anat']
-
     workflow.connect([
         (dilate_erode, combine_masks, [('out_file', 'in_file_a')]),
         (slice_head_mask, combine_masks, [('outfile_path', 'in_file_b')])
@@ -132,7 +123,7 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
 
 
 
-def run_qap_mask(anatomical_reorient, allineate_out_xfm, template_skull,
+def run_qap_mask(anatomical_reorient, allineate_out_xfm,
                  out_dir=None, run=True):
 
     # stand-alone runner for anatomical reorient workflow
@@ -161,7 +152,6 @@ def run_qap_mask(anatomical_reorient, allineate_out_xfm, template_skull,
 
     resource_pool['anatomical_reorient'] = anatomical_reorient
     resource_pool['allineate_linear_xfm'] = allineate_out_xfm
-    config['template_skull_for_anat'] = template_skull
 
     workflow, resource_pool = \
         qap_mask_workflow(workflow, resource_pool, config)
@@ -277,7 +267,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
             afni_segmentation_workflow(workflow, resource_pool, config, name)
 
     if 'anatomical_reorient' not in resource_pool.keys():
-        
+
         from anatomical_preproc import anatomical_reorient_workflow
 
         workflow, resource_pool = \
@@ -374,7 +364,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         #     workflow.connect(node, out_file, plot, 'in_mask')
         # else:
         #     plot.inputs.in_mask = resource_pool['qap_head_mask']
-        
+
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
     add_header = pe.Node(niu.Function(
@@ -506,7 +496,6 @@ def run_whole_single_qap_anatomical_spatial(
     }
 
     config = {
-        'template_skull_for_anat': template_head,
         'subject_id': subject_id,
         'session_id': session_id,
         'scan_id': scan_id,
@@ -517,8 +506,8 @@ def run_whole_single_qap_anatomical_spatial(
         config['site_name'] = site_name
 
     # create the one node all participants will start from
-    starter_node = pe.Node(niu.Function(input_names=['starter'], 
-                                        output_names=['starter'], 
+    starter_node = pe.Node(niu.Function(input_names=['starter'],
+                                        output_names=['starter'],
                                         function=cli.starter_node_func),
                            name='starter_node')
 
@@ -655,7 +644,7 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
 
     workflow.connect(spatial_epi, 'qc', add_header, 'qap_dict')
     workflow.connect(add_header, 'qap_dict', spatial_epi_to_csv, '_outputs')
-    
+
     resource_pool['qap_functional_spatial'] = (spatial_epi_to_csv, 'csv_file')
 
     return workflow, resource_pool
@@ -773,8 +762,8 @@ def run_whole_single_qap_functional_spatial(
         config['site_name'] = site_name
 
     # create the one node all participants will start from
-    starter_node = pe.Node(niu.Function(input_names=['starter'], 
-                                        output_names=['starter'], 
+    starter_node = pe.Node(niu.Function(input_names=['starter'],
+                                        output_names=['starter'],
                                         function=cli.starter_node_func),
                            name='starter_node')
 
@@ -1054,8 +1043,8 @@ def run_whole_single_qap_functional_temporal(
         config['site_name'] = site_name
 
     # create the one node all participants will start from
-    starter_node = pe.Node(niu.Function(input_names=['starter'], 
-                                        output_names=['starter'], 
+    starter_node = pe.Node(niu.Function(input_names=['starter'],
+                                        output_names=['starter'],
                                         function=cli.starter_node_func),
                            name='starter_node')
 

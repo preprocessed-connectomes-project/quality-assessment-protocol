@@ -14,7 +14,7 @@ def test_run_qap_mask_workflow_graph():
     import pkg_resources as p
 
     from qap.qap_workflows import run_qap_mask
-   
+
     anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                         "anat_reorient.nii.gz"))
 
@@ -38,7 +38,7 @@ def test_run_qap_mask_workflow_graph():
     # write the dependency graph of the workflow we are testing
     out_graph = os.path.join(out_workflow_dir, "graph.dot")
     out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
-    
+
     # load the both the reference and the to-test dependency graphs
     with open(ref_graph,"r") as f:
         ref_graph_lines = sorted(f.readlines())
@@ -66,21 +66,18 @@ def test_run_qap_mask():
     import pkg_resources as p
 
     from qap.qap_workflows import run_qap_mask
-   
+
     anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                         "anat_reorient.nii.gz"))
 
     allineate_xfm = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                         "3dallineate_warp_head.aff12.1D"))
 
-    template_head = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                        "MNI152_T1_3mm.nii.gz"))
-
     ref_output = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                      "qap_head_mask.nii.gz"))
 
     out_dir = os.path.join(os.getcwd(), "unit_tests_qap_workflows")
-    output = run_qap_mask(anat_reorient, allineate_xfm, template_head, \
+    output = run_qap_mask(anat_reorient, allineate_xfm, \
                  out_dir=out_dir)
 
     ref_out_data = nb.load(ref_output).get_data()
@@ -109,7 +106,7 @@ def test_run_whole_single_qap_anatomical_spatial():
     import pkg_resources as p
 
     from qap.qap_workflows import run_whole_single_qap_anatomical_spatial
-   
+
     anatomical_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                           "anatomical_scan.nii.gz"))
 
@@ -132,8 +129,8 @@ def test_run_whole_single_qap_anatomical_spatial():
         # write the dependency graph of the workflow we are testing
     out_graph = os.path.join(out_workflow_dir, "graph.dot")
     out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
-    
-    
+
+
     # load the both the reference and the to-test dependency graphs
     with open(ref_graph,"r") as f:
         ref_graph_lines = sorted(f.readlines())
@@ -164,7 +161,7 @@ def test_run_whole_single_qap_functional_spatial():
     import pkg_resources as p
 
     from qap.qap_workflows import run_whole_single_qap_functional_spatial
-   
+
     functional_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                           "functional_scan.nii.gz"))
 
@@ -183,8 +180,8 @@ def test_run_whole_single_qap_functional_spatial():
         # write the dependency graph of the workflow we are testing
     out_graph = os.path.join(out_workflow_dir, "graph.dot")
     out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
-    
-    
+
+
     # load the both the reference and the to-test dependency graphs
     with open(ref_graph,"r") as f:
         ref_graph_lines = sorted(f.readlines())
@@ -215,7 +212,7 @@ def test_run_whole_single_qap_functional_temporal():
     import pkg_resources as p
 
     from qap.qap_workflows import run_whole_single_qap_functional_temporal
-   
+
     functional_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                           "functional_scan.nii.gz"))
 
@@ -234,8 +231,8 @@ def test_run_whole_single_qap_functional_temporal():
     # write the dependency graph of the workflow we are testing
     out_graph = os.path.join(out_workflow_dir, "graph.dot")
     out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
-    
-    
+
+
     # load the both the reference and the to-test dependency graphs
     with open(ref_graph,"r") as f:
         ref_graph_lines = sorted(f.readlines())
@@ -249,4 +246,3 @@ def test_run_whole_single_qap_functional_temporal():
         pass
 
     assert ref_graph_lines == out_graph_lines
-                   
