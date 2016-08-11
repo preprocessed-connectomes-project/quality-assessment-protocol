@@ -5,6 +5,8 @@
 
 import os
 import os.path as op
+import sys
+from traceback import format_exception
 import time
 import argparse
 import yaml
@@ -415,16 +417,20 @@ def _run_workflow(args):
         nc_per_subject = config.get('num_cores_per_subject', 1)
         runargs = {'plugin': 'Linear', 'plugin_args': {}}
         if nc_per_subject > 1:
-            runargs['plugin'] = 'MultiProc',
+            runargs['plugin'] = 'MultiProc'
             runargs['plugin_args'] = {'n_procs': nc_per_subject}
 
         try:
             workflow.run(**runargs)
             rt['status'] = 'finished'
-        except Exception as e:  # TODO We should be more specific here ...
-            rt.update({'status': 'failed', 'msg': e})
-            # ... however this is run inside a pool.map: do not raise Execption
-
+        except Exception as e:
+            # ... however this is run inside a pool.map: do not raise Exception
+            etype, evalue, etrace = sys.exc_info()
+            tb = format_exception(etype, evalue, etrace)
+            rt.update({'status': 'failed', 'msg': '%s' % e, 'traceback': tb})
+            logger.error('An error occurred processing subject %s. '
+                         'Runtime dict: %s\n%s' %
+                         (rt['id'], rt, '\n'.join(rt['traceback'])))
     else:
         rt['status'] = 'cached'
         logger.info("\nEverything is already done for subject %s." % sub_id)
