@@ -1,5 +1,6 @@
 def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
-                        creds_path, series_list=None):
+                        creds_path, session_list=None, series_list=None, \
+                        BIDS=False):
 
     import os
     import yaml
@@ -23,6 +24,18 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
 
 
     # Read in series_list, if it is provided
+    if session_list:
+        try:
+            session_list = os.path.abspath(session_list)
+            with open(session_list,"r") as f:
+                sessions = f.readlines()
+            sessions = [i.rstrip("\n") for i in sessions]
+        except:
+            err = "\n\nCould not successfully read the session list.\n%s" \
+                  % session_list
+            raise Exception(err)
+
+    # Read in series_list, if it is provided
     if series_list:
         try:
             series_list = os.path.abspath(series_list)
@@ -38,29 +51,89 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
     # Build dictionary of filepaths
     for sfile in s3_list:
 
-        ssplit = sfile.split('/')
-
-        sub_id = ssplit[-4]
-
-        session_id = ssplit[-3]
-
-        scan_id = ssplit[-2]
-
-        filename = ssplit[-1]
-
         include = False
-        if img_type == "anat":
-            if ("anat" in scan_id) or ("anat" in filename) or \
-                ("mprage" in filename):
-                include = True
-        if img_type == "func":
-            if ("func" in scan_id) or ("rest" in scan_id) or \
-                ("func" in filename) or ("rest" in filename):
+
+        if BIDS:
+            ssplit = sfile.split("/")
+            folder = ssplit[-5]
+            sub_id = ssplit[-4]
+            session_id = ssplit[-3]
+            scan_type = ssplit[-2]
+            filename = ssplit[-1]
+
+            if ".nii" not in filename:
+                continue
+
+            scan_id = None
+
+            if sub_id in filename:
+                scan_id = filename.replace(sub_id,"")
+            if session_id in scan_id:
+                scan_id = scan_id.replace(session_id,"")
+            if ".nii" in scan_id:
+                scan_id = scan_id.replace(".nii","")
+            if ".gz" in scan_id:
+                scan_id = scan_id.replace(".gz","")
+            if "__" in scan_id:
+                scan_id = scan_id.replace("__","")          
+
+            if (img_type == "anat") and (scan_type == "anat"):
+                # this requirement is subject to change with the BIDS spec!!
+                if "T1w.nii" in filename:
+                    include = True
+            if (img_type == "func") and (scan_type == "func"):
                 include = True
 
-        if series_list:
-            if scan_id not in series:
+            if ("sub-" not in sub_id) or (scan_id == None):
+                err = "\n\n[!] This is not a BIDS-formatted dataset!\n\n"
+                raise Exception(err)
+
+            # this is to get the folder containing the sub-ID folders so that
+            # we can avoid sub-folders within the directory
+            bucket_prefix_split = bucket_prefix.split("/")
+            if bucket_prefix_split[-1] != "":
+                containing_folder = bucket_prefix_split[-1]
+            else:
+                containing_folder = bucket_prefix_split[-2]
+
+            if containing_folder != folder:
                 include = False
+
+            if session_list:
+                if session_id not in sessions:
+                    include = False
+
+            if series_list:
+                for series_id in series:
+                    if series_id in scan_id:
+                        break
+                else:
+                    include = False 
+
+
+        else:
+            ssplit = sfile.split('/')
+            sub_id = ssplit[-4]
+            session_id = ssplit[-3]
+            scan_id = ssplit[-2]
+            filename = ssplit[-1]
+
+            if img_type == "anat":
+                if ("anat" in scan_id) or ("anat" in filename) or \
+                    ("mprage" in filename):
+                    include = True
+            if img_type == "func":
+                if ("func" in scan_id) or ("rest" in scan_id) or \
+                    ("func" in filename) or ("rest" in filename):
+                    include = True
+
+            if session_list:
+                if session_id not in sessions:
+                    include = False
+
+            if series_list:
+                if scan_id not in series:
+                    include = False
 
         if (include == True) and ("nii" in filename):
         
@@ -144,17 +217,26 @@ def main():
                                  "data must be organized as /site_name/" \
                                  "subject_id/session_id/scan_id/..")
 
+    parser.add_argument("--session_list", type=str, \
+                            help="filepath to a text file containing the " \
+                                 "names of sessions you want included, one " \
+                                 "on each line")
+
     parser.add_argument("--series_list", type=str, \
                             help="filepath to a text file containing the " \
                                  "names of series you want included, one " \
                                  "on each line")
+
+    parser.add_argument("--BIDS", action="store_true", \
+                            help="if the dataset is in BIDS format")
  
     args = parser.parse_args()
 
 
     # run it!
     pull_S3_sublist(args.outfile_path, args.scan_type, args.bucket_name, \
-                        args.bucket_prefix, args.creds_path, args.series_list)
+                        args.bucket_prefix, args.creds_path, \
+                        args.session_list, args.series_list, args.BIDS)
 
 
 

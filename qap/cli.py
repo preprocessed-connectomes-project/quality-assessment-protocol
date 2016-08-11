@@ -418,6 +418,9 @@ class QAProtocolCLI:
                     bundles.append(new_bundle)
                     i = 0
 
+            if i > 0:
+                bundles.append(new_bundle)
+
         if len(bundles) == 0:
             msg = "No bundles created."
             raise_smart_exception(locals(),msg)
@@ -439,7 +442,6 @@ class QAProtocolCLI:
                     len(flat_sub_dict_dict.keys()))
 
         # Create bundles
-
         # bundles is a list of "bundles" - each bundle being a dictionary that
         # is a starting resource pool for N sub-session-scan combos with N
         # being the number of subjects per bundle (set by the user)
@@ -1047,6 +1049,16 @@ def _run_workflow(args):
     if new_outputs > 0:
         if config.get('write_graph', False):
             workflow.write_graph(
+                dotfilename=op.join(config["output_directory"], \
+                                    run_name + ".dot"),
+                simple_form=False)
+            workflow.write_graph(
+                graph2use="orig",
+                dotfilename=op.join(config["output_directory"], \
+                                    run_name + ".dot"),
+                simple_form=False)
+            workflow.write_graph(
+                graph2use="hierarchical",
                 dotfilename=op.join(config["output_directory"], \
                                     run_name + ".dot"),
                 simple_form=False)
