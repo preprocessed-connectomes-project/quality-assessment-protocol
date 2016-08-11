@@ -74,6 +74,8 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
                 scan_id = scan_id.replace(".nii","")
             if ".gz" in scan_id:
                 scan_id = scan_id.replace(".gz","")
+            if "task-" in scan_id:
+                scan_id = scan_id.replace("task-","")
             if "__" in scan_id:
                 scan_id = scan_id.replace("__","")          
 
