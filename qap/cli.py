@@ -374,19 +374,20 @@ def _run_workflow(args):
     # set up the datasinks
     new_outputs = 0
 
-    out_list = ['qap_' + qap_type]
-    if keep_outputs:
-        out_list = resource_pool.keys()
+    out_list = set(['qap_' + qap_type])
 
     # Save reports to out_dir if necessary
     if config.get('write_report', False):
-        out_list += ['qap_mosaic']
-
+        out_list.add('qap_mosaic')
         # The functional temporal also has an FD plot
         if 'functional_temporal' in qap_type:
-            out_list += ['qap_fd']
+            out_list.add('qap_fd')
 
-    for output in out_list:
+    if keep_outputs:
+        for k in resource_pool.keys():
+            out_list.add(k)
+
+    for output in list(out_list):
         # we use a check for len()==2 here to select those items in the
         # resource pool which are tuples of (node, node_output), instead
         # of the items which are straight paths to files
