@@ -46,15 +46,15 @@ def plot_measures(df, measures, ncols=4, title='Group level report',
             except ValueError:
                 pass
 
-            subdf = df.loc[df['subject'] == subid]
-            sessions = np.atleast_1d(subdf[['session']]).reshape(-1).tolist()
+            subdf = df.loc[df['Participant'] == subid]
+            sessions = np.atleast_1d(subdf[['Session']]).reshape(-1).tolist()
 
             for ss in sessions:
-                sesdf = subdf.loc[subdf['session'] == ss]
-                scans = np.atleast_1d(sesdf[['scan']]).reshape(-1).tolist()
+                sesdf = subdf.loc[subdf['Session'] == ss]
+                scans = np.atleast_1d(sesdf[['Series']]).reshape(-1).tolist()
 
                 for sc in scans:
-                    scndf = subdf.loc[sesdf['scan'] == sc]
+                    scndf = subdf.loc[sesdf['Series'] == sc]
                     plot_vline(
                         scndf.iloc[0][mname], '%s_%s' % (ss, sc), axes[-1])
 
@@ -74,7 +74,7 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
     fig = plt.figure(figsize=figsize)
     gs = gridspec.GridSpec(1, len(groups), width_ratios=lengs)
 
-    subjects = sorted(pd.unique(df.subject.ravel()))
+    subjects = sorted(pd.unique(df.Participant.ravel()))
     nsubj = len(subjects)
     subid = subject
     if subid is not None:
@@ -92,7 +92,7 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
         else:
             stdf = df.copy()
             if subid is not None:
-                stdf = stdf.loc[stdf['subject'] != subid]
+                stdf = stdf.loc[stdf['Participant'] != subid]
             sns.stripplot(data=stdf[snames], ax=axes[-1], jitter=0.25)
 
         axes[-1].set_xticklabels(
@@ -103,22 +103,21 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
 
         # If we know the subject, place a star for each scan
         if subject is not None:
-            subdf = df.loc[df['subject'] == subid]
-            scans = sorted(pd.unique(subdf.scan.ravel()))
+            subdf = df.loc[df['Participant'] == str(subid)]
+            scans = sorted(pd.unique(subdf.Series.ravel()))
             nstars = len(scans)
             for j, s in enumerate(snames):
                 vals = []
                 for k, scid in enumerate(scans):
-                    val = subdf.loc[df.scan == scid, [s]].iloc[0, 0]
+                    val = subdf.loc[df.Series == scid, [s]].iloc[0, 0]
                     vals.append(val)
-
                 if len(vals) != nstars:
                     continue
 
                 pos = [j]
                 if nstars > 1:
                     pos = np.linspace(j-0.3, j+0.3, num=nstars)
-
+                    
                 axes[-1].plot(
                     pos, vals, ms=9, mew=.8, linestyle='None',
                     color='w', marker='*', markeredgecolor='k',
