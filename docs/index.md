@@ -3,7 +3,7 @@ layout: page
 title: PCP Quality Assessment Protocol
 ---
 
-Various objective measures for MRI data quality have been proposed over the years.  However, until now no software has allowed researchers to obtain all these measures in the same place with relative ease.  The QAP package allows you to obtain spatial and anatomical data quality measures for your own data.  Since no standard thresholds demarcating acceptable from unacceptable data are currently existent, you can then compare your data to normative distributions of measures obtained from the [ABIDE](http://fcon_1000.projects.nitrc.org/indi/abide/) and [CoRR](http://fcon_1000.projects.nitrc.org/indi/CoRR/html/index.html) datasets.
+Various objective measures for MRI data quality have been proposed over the years.  However, until now no software has allowed researchers to obtain all these measures in the same place with relative ease.  The QAP package allows you to obtain spatial and anatomical data quality measures for your own data.  Since no standard thresholds demarcating acceptable from unacceptable data are currently existent, you can then compare your data to normative distributions of measures obtained from the [ABIDE](http://fcon_1000.projects.nitrc.org/indi/abide/),  [CoRR](http://fcon_1000.projects.nitrc.org/indi/CoRR/html/index.html) and [NFB](http://fcon_1000.projects.nitrc.org/indi/enhanced/) datasets.
 
 For more information, please see our recent [resting-state poster and associated code]( http://github.com/czarrar/qap_poster).
 
@@ -111,7 +111,8 @@ We have gathered QA metrics for two multi-site resting-state datasets: [ABIDE](h
 * [ABIDE - Functional Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/abide_func.csv)
 * [CoRR - Anatomical Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/corr_anat.csv)
 * [CoRR - Functional Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/poster_data/corr_func.csv)
-
+* [NFB - Anatomical Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/normative_data/NFB_qap_anatomical_spatial.csv)
+* [NFB - Functional Measures](https://raw.githubusercontent.com/preprocessed-connectomes-project/quality-assessment-protocol/master/normative_data/NFB_qap_functional_spatial_temporal.csv)
 
 ## Pipeline Configuration YAML Files
 
