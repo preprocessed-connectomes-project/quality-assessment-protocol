@@ -11,10 +11,7 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
 
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
-
     import nipype.interfaces.utility as util
-    import nipype.interfaces.fsl.maths as fsl
-
     from nipype.interfaces.afni import preprocess
 
     from workflow_utils import check_input_resources

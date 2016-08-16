@@ -1,3 +1,4 @@
+
 def load_image(image_file):
 
     import nibabel as nib
@@ -47,7 +48,6 @@ def load_image(image_file):
     return dat
 
 
-
 def load_mask(mask_file, ref_file):
 
     import nibabel as nib
@@ -91,7 +91,6 @@ def load_mask(mask_file, ref_file):
         err = "Error: Mask and anatomical image are not in the same space " \
               "for %s vs %s" % (mask_file, ref_file)
         raise_smart_exception(locals(),err)
-
 
     return mask_dat
 

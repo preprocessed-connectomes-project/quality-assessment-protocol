@@ -12,14 +12,10 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
 
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
-
     import nipype.interfaces.utility as niu
-    import nipype.interfaces.fsl.maths as fsl
-    from nipype.interfaces.fsl.base import Info
     from nipype.interfaces.afni import preprocess
 
     from qap_workflows_utils import create_expr_string, slice_head_mask
-
     from workflow_utils import check_input_resources, check_config_settings
 
     if 'template_skull_for_anat' not in config:
@@ -42,7 +38,6 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
 
         workflow, resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config, name)
-
 
     # find the clipping level for thresholding the head mask
     clip_level = pe.Node(interface=preprocess.ClipLevel(),
@@ -111,7 +106,6 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
         slice_head_mask.inputs.transform = \
             resource_pool['allineate_linear_xfm']
 
-    # convert_fsl_xfm.inputs.standard = config['template_skull_for_anat']
     slice_head_mask.inputs.standard = config['template_skull_for_anat']
 
     workflow.connect([
@@ -127,9 +121,7 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     resource_pool['whole_head_mask'] = (dilate_erode, 'out_file')
     resource_pool['skull_only_mask'] = (subtract_mask, 'out_file')
 
-
     return workflow, resource_pool
-
 
 
 def run_qap_mask(anatomical_reorient, allineate_out_xfm, template_skull,
@@ -185,7 +177,6 @@ def run_qap_mask(anatomical_reorient, allineate_out_xfm, template_skull,
         return workflow, workflow.base_dir
 
 
-
 def add_header_to_qap_dict(in_file, qap_dict=None):
 
     import nibabel
@@ -237,7 +228,6 @@ def add_header_to_qap_dict(in_file, qap_dict=None):
 
 
     return qap_dict
-
 
 
 def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
@@ -402,7 +392,6 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     return workflow, resource_pool
 
 
-
 def run_single_qap_anatomical_spatial(
         anatomical_reorient, qap_head_mask, anatomical_csf_mask,
         anatomical_gm_mask, anatomical_wm_mask, subject_id, session_id=None,
@@ -461,7 +450,6 @@ def run_single_qap_anatomical_spatial(
 
     else:
         return workflow, workflow.base_dir
-
 
 
 def run_whole_single_qap_anatomical_spatial(
@@ -545,7 +533,6 @@ def run_whole_single_qap_anatomical_spatial(
 
     else:
         return workflow, workflow.base_dir
-
 
 
 def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
@@ -661,7 +648,6 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
     return workflow, resource_pool
 
 
-
 def run_single_qap_functional_spatial(
         mean_functional, functional_brain_mask, subject_id, session_id,
         scan_id, site_name=None, ghost_direction=None, out_dir=None,
@@ -718,7 +704,6 @@ def run_single_qap_functional_spatial(
 
     else:
         return workflow, workflow.base_dir
-
 
 
 def run_whole_single_qap_functional_spatial(
@@ -803,7 +788,6 @@ def run_whole_single_qap_functional_spatial(
         return workflow, workflow.base_dir
 
 
-
 def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
@@ -828,10 +812,11 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
 
         return inlist
 
-    if 'functional_brain_mask' not in resource_pool.keys():
-        from functional_preproc import functional_brain_mask_workflow
+    # ensures functional_brain_mask is created as well
+    if 'inverted_functional_brain_mask' not in resource_pool.keys():
+        from functional_preproc import invert_functional_brain_mask_workflow
         workflow, resource_pool = \
-            functional_brain_mask_workflow(workflow, resource_pool, config, name)
+            invert_functional_brain_mask_workflow(workflow, resource_pool, config, name)
 
     if ('func_motion_correct' not in resource_pool.keys()) or \
         ('coordinate_transformation' not in resource_pool.keys() and
@@ -855,8 +840,9 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
 
     temporal = pe.Node(niu.Function(
         input_names=['func_timeseries', 'func_brain_mask',
-                     'fd_file', 'subject_id', 'session_id',
-                     'scan_id', 'site_name', 'starter'], output_names=['qc'],
+                     'bg_func_brain_mask', 'fd_file', 'subject_id',
+                     'session_id', 'scan_id', 'site_name', 'starter'],
+        output_names=['qc'],
         function=qap_functional_temporal),
         name='qap_functional_temporal%s' % name)
     temporal.inputs.subject_id = config['subject_id']

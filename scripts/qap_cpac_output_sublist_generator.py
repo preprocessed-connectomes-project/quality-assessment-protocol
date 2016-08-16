@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 
-def run(cpac_outdir, outfile_name, qap_type, session_format):
+def create_outputs_dict(cpac_outdir, qap_type, session_format):
 
     import os
     import glob
-    import yaml
 
- 
     if qap_type == "anat":
 
         outputs = ["anatomical_reorient", "anatomical_csf_mask", \
@@ -18,9 +16,7 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
         outputs = ["mean_functional", "functional_brain_mask", \
                    "motion_correct", "coordinate_transformation"]
 
-
     outputs_dict = {}
-
 
     for sub_dir in os.listdir(cpac_outdir):
 
@@ -60,7 +56,6 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
             sub_dir = sub_dir.split("_",1)[0]
             sessions = [session_id]
 
-
         for session in sessions:
 
             for resource in outputs:
@@ -84,13 +79,11 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
                 if not os.path.isdir(resource_folder):
                     continue
 
-
                 if qap_type == "anat":
 
                     ''' until CPAC writes multiple anat scans in the '''
                     ''' output folder structure '''
                     scans = ["anat_1"]
-
 
                 if qap_type == "func":
     
@@ -101,7 +94,6 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
                             item = item.replace("_scan_","")
                             item = item.replace("_rest","")
                             scans.append(item)
-
 
                 for scan in scans:
 
@@ -140,9 +132,7 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
                                   "subject list.\n" % (resource, sub_dir)
                             continue
 
-
                     ''' put a catch here for multiple files '''
-
 
                     if sub_dir not in outputs_dict.keys():
                         outputs_dict[sub_dir] = {}
@@ -155,9 +145,6 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
 
                     if scan not in outputs_dict[sub_dir][session][resource].keys():
                         outputs_dict[sub_dir][session][resource][scan] = resource_path
-
-
-
 
     # make up for QAP - CPAC resource naming discrepancy
     for subid in outputs_dict.keys():
@@ -184,14 +171,17 @@ def run(cpac_outdir, outfile_name, qap_type, session_format):
 
                     del outputs_dict[subid][session]["anatomical_to_mni_linear_xfm"]
 
+    return outputs_dict
 
+
+def write_yaml_file(outputs_dict, outfile_name):
+
+    import yaml
 
     outfile = os.path.join(os.getcwd(), outfile_name + ".yml")
 
     with open(outfile, 'w') as f:
-
         f.write(yaml.dump(outputs_dict, default_flow_style=True))
-
 
 
 def main():
@@ -230,9 +220,9 @@ def main():
     args = parser.parse_args()
 
     # run it!
-    run(args.cpac_output_dir, args.outfile_name, args.qap_type, \
-            args.session_format)
-
+    outputs_dict = create_outputs_dict(args.cpac_output_dir, args.qap_type,
+        args.session_format)
+    write_yaml_file(outputs_dict, args.outfile_name)
 
 
 if __name__ == "__main__":

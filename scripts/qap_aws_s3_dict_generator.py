@@ -2,7 +2,6 @@
 def pull_S3_sublist(bucket_name, bucket_prefix, creds_path):
 
     import os
-    import yaml
     from indi_aws import fetch_creds
 
     s3_list = []
@@ -24,8 +23,8 @@ def pull_S3_sublist(bucket_name, bucket_prefix, creds_path):
     return s3_list
 
 
-def create_sublist(s3_list, img_type, session_list=None, series_list=None,
-    BIDS=False):
+def create_sublist(s3_list, img_type, bucket_prefix, session_list=None,
+    series_list=None, BIDS=False):
 
     # Read in series_list, if it is provided
     if session_list:
@@ -168,6 +167,8 @@ def create_sublist(s3_list, img_type, session_list=None, series_list=None,
 
 def write_yaml_file(s3_dict, yaml_outpath):
 
+    import yaml
+
     dict_len = len(s3_dict)            
            
     # write yaml file
@@ -181,7 +182,6 @@ def write_yaml_file(s3_dict, yaml_outpath):
               "/sublist.yml\n\nOutput path provided: %s\n\n" % yaml_outpath
         raise Exception(err)
         
-    
     if os.path.isfile(yaml_outpath):
         print "\nS3 dictionary file successfully created: %s\n" % yaml_outpath
         print "Total number of subject-session-scans: %d\n" % dict_len
@@ -190,7 +190,6 @@ def write_yaml_file(s3_dict, yaml_outpath):
               "successfully saved to the YAML file!\nOutput filepath: %s\n" \
               % yaml_outpath
         raise Exception(err)
-
 
 
 def main():
@@ -245,11 +244,10 @@ def main():
     s3_list = pull_s3_sublist(args.bucket_name, args.bucket_prefix, \
         args.creds_path)
 
-    s3_dict = create_sublist(s3_list, args.scan_type, args.session_list, \
-        args.series_list, args.BIDS)
+    s3_dict = create_sublist(s3_list, args.scan_type, args.bucket_prefix, \
+        args.session_list, args.series_list, args.BIDS)
 
     write_yaml_file(s3_dict, args.outfile_path)
-
 
 
 if __name__ == "__main__":

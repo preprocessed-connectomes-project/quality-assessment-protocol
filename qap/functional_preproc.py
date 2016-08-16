@@ -445,7 +445,6 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
     if "functional_brain_mask" not in resource_pool.keys():
 
         from functional_preproc import functional_brain_mask_workflow
-
         workflow, resource_pool = \
             functional_brain_mask_workflow(workflow, resource_pool, config, name)
   

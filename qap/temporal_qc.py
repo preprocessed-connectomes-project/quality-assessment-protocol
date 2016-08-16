@@ -150,7 +150,7 @@ def fd_jenkinson(in_file, rmax=80., out_file=None, out_array=False):
 
 
 
-def outlier_timepoints(func_file, out_fraction=True):
+def outlier_timepoints(func_file, mask_file=None, out_fraction=True):
 
     """
     Calculates the number of 'outliers' in a 4D functional dataset,
@@ -181,7 +181,8 @@ def outlier_timepoints(func_file, out_fraction=True):
     opts = []
     if out_fraction:
         opts.append("-fraction")
-    #opts.append("-mask %s" % mask_file)
+    if mask_file:
+        opts.append("-mask %s" % mask_file)
     opts.append(func_file)
     str_opts = " ".join(opts)
 

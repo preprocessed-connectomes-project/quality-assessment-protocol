@@ -71,7 +71,6 @@ def slice_head_mask(infile, transform, standard):
 
         coords_list.append(coord_out)
 
-
     # make sure converted coordinates are not "out of bounds"
     new_coords = []
 
@@ -93,7 +92,6 @@ def slice_head_mask(infile, transform, standard):
                 co_nums_newlist[ind] = 1
 
         new_coords.append(co_nums_newlist)
-
 
     # get the vectors connecting the points
     u = []
@@ -163,7 +161,6 @@ def slice_head_mask(infile, transform, standard):
 
 
     return outfile_path
-
 
 
 def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
@@ -246,7 +243,6 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     return qc
 
 
-
 def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
                            session_id, scan_id, site_name=None, out_vox=True,
                            starter=None):
@@ -302,7 +298,6 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
     return qc
 
 
-
 def qap_functional_temporal(
         func_timeseries, func_brain_mask, bg_func_brain_mask, fd_file,
         subject_id, session_id, scan_id, site_name=None, 
@@ -328,12 +323,13 @@ def qap_functional_temporal(
     meanfd_outliers, meanfd_IQR = calculate_percent_outliers(fd)
 
     # 3dTout
-    outliers = outlier_timepoints(func_timeseries)
+    outliers = outlier_timepoints(func_timeseries, mask_file=func_brain_mask)
     # calculate the outliers of the outliers! AAHH!
     outlier_perc_out, outlier_IQR = calculate_percent_outliers(outliers)
 
     # 3dTout (outside of brain)
-    oob_outliers = outlier_timepoints(oob_func_timeseries, bg_func_brain_mask)
+    oob_outliers = outlier_timepoints(func_timeseries,
+        mask_file=bg_func_brain_mask)
     oob_outlier_perc_out, oob_outlier_IQR = \
         calculate_percent_outliers(oob_outliers)
 

@@ -835,9 +835,7 @@ def _run_workflow(args):
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
-
     import nipype.interfaces.utility as util
-    import nipype.interfaces.fsl.maths as fsl
 
     import qap
 
