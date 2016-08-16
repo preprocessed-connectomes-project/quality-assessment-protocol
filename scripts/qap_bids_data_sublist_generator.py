@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from qap.bids_utils import gather_bids_data
+from qap.bids_utils import gather_nifti_file_paths, extract_bids_data
 
 
 def main():
@@ -36,9 +36,10 @@ def main():
         # remove any /n's
         inclusion_list = map(lambda s: s.strip(), inclusion_list)
 
+    file_path_list = gather_nifti_file_paths(args.dataset_folder)
+
     # run it!
-    sub_dict = gather_bids_data(args.dataset_folder, inclusion_list,
-                     args.type)
+    sub_dict = extract_bids_data(file_path_list, inclusion_list)
 
     with open(args.outfile_path, "wt") as f:
         f.write(yaml.dump(sub_dict))

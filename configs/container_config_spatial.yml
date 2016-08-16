@@ -4,7 +4,7 @@ num_subjects_at_once: 1
 
 output_directory: /home/test/out/output
 
-working_directory: /mnt/test/out/working
+working_directory: /home/test/out/working
 
 write_all_outputs: False
 
