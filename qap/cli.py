@@ -5,6 +5,8 @@
 
 import os
 import os.path as op
+import sys
+from traceback import format_exception
 import time
 import argparse
 import yaml
@@ -374,19 +376,20 @@ def _run_workflow(args):
     # set up the datasinks
     new_outputs = 0
 
-    out_list = ['qap_' + qap_type]
-    if keep_outputs:
-        out_list = resource_pool.keys()
+    out_list = set(['qap_' + qap_type])
 
     # Save reports to out_dir if necessary
     if config.get('write_report', False):
-        out_list += ['qap_mosaic']
-
+        out_list.add('qap_mosaic')
         # The functional temporal also has an FD plot
         if 'functional_temporal' in qap_type:
-            out_list += ['qap_fd']
+            out_list.add('qap_fd')
 
-    for output in out_list:
+    if keep_outputs:
+        for k in resource_pool.keys():
+            out_list.add(k)
+
+    for output in list(out_list):
         # we use a check for len()==2 here to select those items in the
         # resource pool which are tuples of (node, node_output), instead
         # of the items which are straight paths to files
@@ -414,16 +417,20 @@ def _run_workflow(args):
         nc_per_subject = config.get('num_cores_per_subject', 1)
         runargs = {'plugin': 'Linear', 'plugin_args': {}}
         if nc_per_subject > 1:
-            runargs['plugin'] = 'MultiProc',
+            runargs['plugin'] = 'MultiProc'
             runargs['plugin_args'] = {'n_procs': nc_per_subject}
 
         try:
             workflow.run(**runargs)
             rt['status'] = 'finished'
-        except Exception as e:  # TODO We should be more specific here ...
-            rt.update({'status': 'failed', 'msg': e})
-            # ... however this is run inside a pool.map: do not raise Execption
-
+        except Exception as e:
+            # ... however this is run inside a pool.map: do not raise Exception
+            etype, evalue, etrace = sys.exc_info()
+            tb = format_exception(etype, evalue, etrace)
+            rt.update({'status': 'failed', 'msg': '%s' % e, 'traceback': tb})
+            logger.error('An error occurred processing subject %s. '
+                         'Runtime dict: %s\n%s' %
+                         (rt['id'], rt, '\n'.join(rt['traceback'])))
     else:
         rt['status'] = 'cached'
         logger.info("\nEverything is already done for subject %s." % sub_id)
