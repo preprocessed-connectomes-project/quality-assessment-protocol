@@ -1,6 +1,5 @@
-def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
-                        creds_path, session_list=None, series_list=None, \
-                        BIDS=False):
+
+def pull_S3_sublist(bucket_name, bucket_prefix, creds_path):
 
     import os
     import yaml
@@ -22,6 +21,11 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
     for bk in bucket.objects.filter(Prefix=bucket_prefix):
         s3_list.append(str(bk.key))
 
+    return s3_list
+
+
+def create_sublist(s3_list, img_type, session_list=None, series_list=None,
+    BIDS=False):
 
     # Read in series_list, if it is provided
     if session_list:
@@ -46,7 +50,6 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
             err = "\n\nCould not successfully read the series list.\n%s" \
                   % series_list
             raise Exception(err)
-
 
     # Build dictionary of filepaths
     for sfile in s3_list:
@@ -112,7 +115,6 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
                 else:
                     include = False 
 
-
         else:
             ssplit = sfile.split('/')
             sub_id = ssplit[-4]
@@ -156,11 +158,15 @@ def pull_S3_sublist(yaml_outpath, img_type, bucket_name, bucket_prefix, \
 
             continue
     
-            
     if len(s3_dict) == 0:
         err = "\n[!] Filepaths have not been successfully gathered from " \
               "the S3 bucket!\n"
         raise Exception(err)
+
+    return s3_dict
+
+
+def write_yaml_file(s3_dict, yaml_outpath):
 
     dict_len = len(s3_dict)            
            
@@ -236,9 +242,13 @@ def main():
 
 
     # run it!
-    pull_S3_sublist(args.outfile_path, args.scan_type, args.bucket_name, \
-                        args.bucket_prefix, args.creds_path, \
-                        args.session_list, args.series_list, args.BIDS)
+    s3_list = pull_s3_sublist(args.bucket_name, args.bucket_prefix, \
+        args.creds_path)
+
+    s3_dict = create_sublist(s3_list, args.scan_type, args.session_list, \
+        args.series_list, args.BIDS)
+
+    write_yaml_file(s3_dict, args.outfile_path)
 
 
 

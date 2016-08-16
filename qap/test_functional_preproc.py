@@ -20,7 +20,6 @@ def test_get_idx_whole_timeseries():
     assert idx_tuple == (123,0)
     
     
-
 @pytest.mark.quick
 def test_get_idx_partial_timeseries():
 
@@ -37,8 +36,7 @@ def test_get_idx_partial_timeseries():
     
     
     assert idx_tuple == (100,20)
-    
-    
+        
 
 @pytest.mark.quick
 def test_get_idx_partial_timeseries_overshoot():
@@ -55,7 +53,6 @@ def test_get_idx_partial_timeseries_overshoot():
     
     
     assert idx_tuple == (123,20)
-
 
 
 @pytest.mark.quick
@@ -87,7 +84,7 @@ def test_run_func_preproc_workflow_graph():
     out_graph = os.path.join(out_workflow_dir, "graph.dot")
     out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
     
-    # load the both the reference and the to-test dependency graphs
+    # load both the reference and the to-test dependency graphs
     with open(ref_graph,"r") as f:
         ref_graph_lines = sorted(f.readlines())
 
@@ -100,7 +97,6 @@ def test_run_func_preproc_workflow_graph():
         pass
 
     assert ref_graph_lines == out_graph_lines
-
 
 
 @pytest.mark.slow
@@ -135,7 +131,6 @@ def test_run_func_preproc():
     np.testing.assert_array_equal(ref_out_sform, out_sform)
 
 
-
 @pytest.mark.quick
 def test_run_func_motion_correct_workflow_graph():
 
@@ -166,7 +161,7 @@ def test_run_func_motion_correct_workflow_graph():
     out_graph = os.path.join(out_workflow_dir, "graph.dot")
     out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
     
-    # load the both the reference and the to-test dependency graphs
+    # load both the reference and the to-test dependency graphs
     with open(ref_graph,"r") as f:
         ref_graph_lines = sorted(f.readlines())
 
@@ -179,7 +174,6 @@ def test_run_func_motion_correct_workflow_graph():
         pass
 
     assert ref_graph_lines == out_graph_lines
-
 
 
 @pytest.mark.slow
@@ -214,9 +208,8 @@ def test_run_func_motion_correct():
     np.testing.assert_array_equal(ref_out_data, out_data)
 
 
-
 @pytest.mark.quick
-def test_run_functional_brain_mask_3dAutoMask_workflow_graph():
+def test_run_functional_brain_mask_workflow_graph():
 
     import os
     import numpy as np
@@ -232,8 +225,7 @@ def test_run_functional_brain_mask_3dAutoMask_workflow_graph():
                                               "func_motion_correct.nii.gz"))
 
     ref_graph = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "functional_brain_mask_3dAutoMask" \
-                                    "_graph.dot"))
+                                    "functional_brain_mask_graph.dot"))
 
     out_dir = os.path.join(os.getcwd(), "unit_tests_func_preproc")
 
@@ -247,7 +239,7 @@ def test_run_functional_brain_mask_3dAutoMask_workflow_graph():
     out_graph = os.path.join(out_workflow_dir, "graph.dot")
     out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
     
-    # load the both the reference and the to-test dependency graphs
+    # load both the reference and the to-test dependency graphs
     with open(ref_graph,"r") as f:
         ref_graph_lines = sorted(f.readlines())
 
@@ -262,9 +254,8 @@ def test_run_functional_brain_mask_3dAutoMask_workflow_graph():
     assert ref_graph_lines == out_graph_lines
 
 
-
 @pytest.mark.slow
-def test_run_functional_brain_mask_3dAutoMask():
+def test_run_functional_brain_mask():
 
     import os
     import numpy as np
@@ -280,8 +271,7 @@ def test_run_functional_brain_mask_3dAutoMask():
                                               "func_motion_correct.nii.gz"))
 
     ref_output = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                     "functional_brain_mask_3dAutoMask" \
-                                     ".nii.gz"))
+                                     "functional_brain_mask.nii.gz"))
 
     out_dir = os.path.join(os.getcwd(), "unit_tests_func_preproc")
     output = run_functional_brain_mask(func_motion_correct, out_dir=out_dir)
@@ -297,9 +287,8 @@ def test_run_functional_brain_mask_3dAutoMask():
     np.testing.assert_array_equal(ref_out_data, out_data)
 
 
-
 @pytest.mark.quick
-def test_run_functional_brain_mask_BET_workflow_graph():
+def test_run_invert_functional_brain_mask_workflow_graph():
 
     import os
     import numpy as np
@@ -308,20 +297,19 @@ def test_run_functional_brain_mask_BET_workflow_graph():
 
     import pkg_resources as p
 
-    from qap.functional_preproc import run_functional_brain_mask
+    from qap.functional_preproc import run_invert_functional_brain_mask
    
-    func_motion_correct = p.resource_filename("qap", \
-                                              os.path.join(test_sub_dir, \
-                                              "func_motion_correct.nii.gz"))
+    functional_brain_mask = p.resource_filename("qap", \
+                                                os.path.join(test_sub_dir, \
+                                                "functional_brain_mask.nii.gz"))
 
     ref_graph = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "functional_brain_mask_BET" \
-                                    "_graph.dot"))
+                                    "invert_functional_brain_mask_graph.dot"))
 
     out_dir = os.path.join(os.getcwd(), "unit_tests_func_preproc")
 
-    workflow = run_functional_brain_mask(func_motion_correct, use_bet=True, \
-                                             out_dir=out_dir, run=False)
+    workflow = run_invert_functional_brain_mask(functional_brain_mask, \
+                   out_dir=out_dir, run=False)
 
     out_workflow_obj = workflow[0]
     out_workflow_dir = workflow[1]
@@ -330,7 +318,7 @@ def test_run_functional_brain_mask_BET_workflow_graph():
     out_graph = os.path.join(out_workflow_dir, "graph.dot")
     out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
     
-    # load the both the reference and the to-test dependency graphs
+    # load both the reference and the to-test dependency graphs
     with open(ref_graph,"r") as f:
         ref_graph_lines = sorted(f.readlines())
 
@@ -345,9 +333,8 @@ def test_run_functional_brain_mask_BET_workflow_graph():
     assert ref_graph_lines == out_graph_lines
 
 
-
 @pytest.mark.slow
-def test_run_functional_brain_mask_BET():
+def test_run_invert_functional_brain_mask():
 
     import os
     import numpy as np
@@ -356,18 +343,19 @@ def test_run_functional_brain_mask_BET():
 
     import pkg_resources as p
 
-    from qap.functional_preproc import run_functional_brain_mask
+    from qap.functional_preproc import run_invert_functional_brain_mask
    
-    func_motion_correct = p.resource_filename("qap", \
-                                              os.path.join(test_sub_dir, \
-                                              "func_motion_correct.nii.gz"))
+    functional_brain_mask = p.resource_filename("qap", \
+                                                os.path.join(test_sub_dir, \
+                                                "functional_brain_mask" \
+                                                ".nii.gz"))
 
     ref_output = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                     "functional_brain_mask_BET.nii.gz"))
+                                     "inverted_functional_brain_mask.nii.gz"))
 
     out_dir = os.path.join(os.getcwd(), "unit_tests_func_preproc")
-    output = run_functional_brain_mask(func_motion_correct, use_bet=True, \
-                                           out_dir=out_dir)
+    output = run_invert_functional_brain_mask(functional_brain_mask,
+        out_dir=out_dir)
 
     ref_out_data = nb.load(ref_output).get_data()
     out_data = nb.load(output).get_data()
@@ -378,7 +366,6 @@ def test_run_functional_brain_mask_BET():
         pass
 
     np.testing.assert_array_equal(ref_out_data, out_data)
- 
 
 
 @pytest.mark.quick
@@ -412,7 +399,7 @@ def test_run_mean_functional_workflow_graph():
     out_graph = os.path.join(out_workflow_dir, "graph.dot")
     out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
     
-    # load the both the reference and the to-test dependency graphs
+    # load both the reference and the to-test dependency graphs
     with open(ref_graph,"r") as f:
         ref_graph_lines = sorted(f.readlines())
 
@@ -425,7 +412,6 @@ def test_run_mean_functional_workflow_graph():
         pass
 
     assert ref_graph_lines == out_graph_lines
-
 
 
 @pytest.mark.slow

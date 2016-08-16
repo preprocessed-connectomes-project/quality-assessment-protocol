@@ -7,7 +7,6 @@ def create_expr_string(clip_level_value):
     return expr_string
 
 
-
 def slice_head_mask(infile, transform, standard):
 
     import os
@@ -305,7 +304,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
 
 def qap_functional_temporal(
-        func_timeseries, func_brain_mask, fd_file,
+        func_timeseries, func_brain_mask, bg_func_brain_mask, fd_file,
         subject_id, session_id, scan_id, site_name=None, 
         motion_threshold=1.0, starter=None):
 
@@ -332,6 +331,11 @@ def qap_functional_temporal(
     outliers = outlier_timepoints(func_timeseries)
     # calculate the outliers of the outliers! AAHH!
     outlier_perc_out, outlier_IQR = calculate_percent_outliers(outliers)
+
+    # 3dTout (outside of brain)
+    oob_outliers = outlier_timepoints(oob_func_timeseries, bg_func_brain_mask)
+    oob_outlier_perc_out, oob_outlier_IQR = \
+        calculate_percent_outliers(oob_outliers)
 
     # 3dTqual
     quality = quality_timepoints(func_timeseries)
@@ -360,6 +364,11 @@ def qap_functional_temporal(
         "Fraction of Outliers (Median)": np.median(outliers),
         "Fraction of Outliers IQR": outlier_IQR,
         "Fraction of Outliers percent outliers": outlier_perc_out,
+        "Fraction of OOB Outliers (Mean)": np.mean(oob_outliers),
+        "Fraction of OOB Outliers (Std Dev)": np.std(oob_outliers),
+        "Fraction of OOB Outliers (Median)": np.median(oob_outliers),
+        "Fraction of OOB Outliers IQR": oob_outlier_IQR,
+        "Fraction of OOB Outliers percent outliers": oob_outlier_perc_out,
         "Quality (Mean)": np.mean(quality),
         "Quality (Std Dev)": np.std(quality),
         "Quality (Median)": np.median(quality),

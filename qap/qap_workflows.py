@@ -867,6 +867,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     if 'site_name' in config.keys():
         temporal.inputs.site_name = config['site_name']
 
+    # func reorient (timeseries) -> QAP func temp
     if len(resource_pool['func_reorient']) == 2:
         node, out_file = resource_pool['func_reorient']
         workflow.connect(node, out_file, temporal, 'func_timeseries')
@@ -876,12 +877,21 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         input_file = resource_pool['func_reorient']
         temporal.inputs.func_timeseries = input_file
 
+    # functional brain mask -> QAP func temp
     if len(resource_pool['functional_brain_mask']) == 2:
         node, out_file = resource_pool['functional_brain_mask']
         workflow.connect(node, out_file, temporal, 'func_brain_mask')
     else:
         temporal.inputs.func_brain_mask = \
             resource_pool['functional_brain_mask']
+
+    # inverted functional brain mask -> QAP func temp
+    if len(resource_pool['inverted_functional_brain_mask']) == 2:
+        node, out_file = resource_pool['inverted_functional_brain_mask']
+        workflow.connect(node, out_file, temporal, 'bg_func_brain_mask')
+    else:
+        temporal.inputs.bg_func_brain_mask = \
+            resource_pool['inverted_functional_brain_mask']
 
     # Write mosaic and FD plot
     if config.get('write_report', False):

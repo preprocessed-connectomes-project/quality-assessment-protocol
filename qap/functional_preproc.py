@@ -63,7 +63,6 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
     import nipype.pipeline.engine as pe
 
     import nipype.interfaces.utility as util
-    import nipype.interfaces.fsl.maths as fsl
 
     from nipype.interfaces.afni import preprocess
 
@@ -210,7 +209,6 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
     import nipype.pipeline.engine as pe
 
     import nipype.interfaces.utility as util
-    import nipype.interfaces.fsl.maths as fsl
 
     from nipype.interfaces.afni import preprocess
 
@@ -351,14 +349,8 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
 
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
-
-    import nipype.interfaces.utility as util
-    import nipype.interfaces.fsl as fsl
-    
+    import nipype.interfaces.utility as util   
     from nipype.interfaces.afni import preprocess
-
-    if "use_bet" not in config.keys():
-        config["use_bet"] = False
 
     if "func_motion_correct" not in resource_pool.keys():
 
@@ -368,29 +360,11 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
             func_motion_correct_workflow(workflow, resource_pool, config, name)
 
   
-    if config["use_bet"] == False:
+    func_get_brain_mask = pe.Node(interface=preprocess.Automask(),
+                                  name='func_get_brain_mask%s' % name)
 
-        func_get_brain_mask = pe.Node(interface=preprocess.Automask(),
-                                      name='func_get_brain_mask%s' % name)
+    func_get_brain_mask.inputs.outputtype = 'NIFTI_GZ'
 
-        func_get_brain_mask.inputs.outputtype = 'NIFTI_GZ'
-
-    else:
-
-        func_get_brain_mask = pe.Node(interface=fsl.BET(),
-                                      name='func_get_brain_mask_BET%s' % name)
-
-        func_get_brain_mask.inputs.mask = True
-        func_get_brain_mask.inputs.functional = True
-
-        erode_one_voxel = pe.Node(interface=fsl.ErodeImage(),
-                                  name='erode_one_voxel%s' % name)
-
-        erode_one_voxel.inputs.kernel_shape = 'box'
-        erode_one_voxel.inputs.kernel_size = 1.0
-       
-
-    #if isinstance(tuple, resource_pool["func_motion_correct"]):
         
     if len(resource_pool["func_motion_correct"]) == 2:
         node, out_file = resource_pool["func_motion_correct"]
@@ -399,26 +373,12 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
         func_get_brain_mask.inputs.in_file = \
             resource_pool["func_motion_correct"]
 
-
-    if config["use_bet"] == False:
-
-        resource_pool["functional_brain_mask"] = (func_get_brain_mask, \
-                                                     'out_file')
-
-    else:
-
-        workflow.connect(func_get_brain_mask, 'mask_file',
-                             erode_one_voxel, 'in_file')
-
-        resource_pool["functional_brain_mask"] = (erode_one_voxel, 'out_file')
-
+    resource_pool["functional_brain_mask"] = (func_get_brain_mask, 'out_file')
 
     return workflow, resource_pool
 
 
-
-def run_functional_brain_mask(func_motion_correct, use_bet=False, \
-    out_dir=None, run=True):
+def run_functional_brain_mask(func_motion_correct, out_dir=None, run=True):
 
     # stand-alone runner for functional brain mask workflow
 
@@ -438,10 +398,6 @@ def run_functional_brain_mask(func_motion_correct, use_bet=False, \
 
     workflow_dir = os.path.join(out_dir, "workflow_output", output)
 
-    if use_bet == True:
-        workflow_dir = os.path.join(out_dir, "workflow_output", \
-            output + "_BET")
-
     workflow.base_dir = workflow_dir
 
 
@@ -450,8 +406,6 @@ def run_functional_brain_mask(func_motion_correct, use_bet=False, \
     num_cores_per_subject = 1
 
     resource_pool["func_motion_correct"] = func_motion_correct
-
-    config["use_bet"] = use_bet
     
     workflow, resource_pool = \
             functional_brain_mask_workflow(workflow, resource_pool, config)
@@ -474,6 +428,96 @@ def run_functional_brain_mask(func_motion_correct, use_bet=False, \
         return workflow, workflow.base_dir
 
 
+def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
+    name="_"):
+
+    # resource pool should have:
+    #     functional_brain_mask
+
+    import os
+    import sys
+
+    import nipype.interfaces.io as nio
+    import nipype.pipeline.engine as pe
+    import nipype.interfaces.utility as util   
+    from nipype.interfaces.afni import preprocess
+
+    if "functional_brain_mask" not in resource_pool.keys():
+
+        from functional_preproc import functional_brain_mask_workflow
+
+        workflow, resource_pool = \
+            functional_brain_mask_workflow(workflow, resource_pool, config, name)
+  
+    # 3dcalc to invert the binary functional brain mask
+    invert_mask = pe.Node(interface=preprocess.Calc(), 
+                          name='invert_mask%s' % name)
+
+    invert_mask.inputs.expr = "iszero(a)"
+    invert_mask.inputs.outputtype = "NIFTI_GZ"
+
+    # functional_brain_mask -> 3dcalc        
+    if len(resource_pool["functional_brain_mask"]) == 2:
+        node, out_file = resource_pool["functional_brain_mask"]
+        workflow.connect(node, out_file, invert_mask, 'in_file_a')
+    else:
+        invert_mask.inputs.in_file_a = resource_pool["functional_brain_mask"]
+
+    resource_pool["inverted_functional_brain_mask"] = (invert_mask, 'out_file')
+
+    return workflow, resource_pool
+
+
+def run_invert_functional_brain_mask(functional_brain_mask, out_dir=None,
+    run=True):
+
+    # stand-alone runner for inverted functional brain mask workflow
+
+    import os
+    import sys
+    import glob
+
+    import nipype.interfaces.io as nio
+    import nipype.pipeline.engine as pe
+
+    output = "inverted_functional_brain_mask"
+
+    workflow = pe.Workflow(name='%s_workflow' % output)
+
+    if not out_dir:
+        out_dir = os.getcwd()
+
+    workflow_dir = os.path.join(out_dir, "workflow_output", output)
+
+    workflow.base_dir = workflow_dir
+
+
+    resource_pool = {}
+    config = {}
+    num_cores_per_subject = 1
+
+    resource_pool["functional_brain_mask"] = functional_brain_mask
+    
+    workflow, resource_pool = \
+            invert_functional_brain_mask_workflow(workflow, resource_pool, config)
+
+
+    ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
+    ds.inputs.base_directory = workflow_dir
+    
+    node, out_file = resource_pool[output]
+
+    workflow.connect(node, out_file, ds, output)
+
+    if run == True:
+        workflow.run(plugin='MultiProc', plugin_args= \
+                         {'n_procs': num_cores_per_subject})
+        outpath = glob.glob(os.path.join(workflow_dir, "inverted_functional_"\
+                                "brain_mask", "*"))[0]
+        return outpath      
+    else:
+        return workflow, workflow.base_dir
+
 
 def mean_functional_workflow(workflow, resource_pool, config, name="_"):
 
@@ -489,7 +533,6 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
     import nipype.pipeline.engine as pe
 
     import nipype.interfaces.utility as util
-    import nipype.interfaces.fsl.maths as fsl
     
     from nipype.interfaces.afni import preprocess
 
