@@ -44,7 +44,7 @@ def test_fd_jenkinson():
     
 
 @pytest.mark.quick  
-def test_outlier_timepoints():
+def test_outlier_timepoints_no_mask():
 
     import os
     import pickle
@@ -56,7 +56,7 @@ def test_outlier_timepoints():
                                         "func_reorient.nii.gz"))
                                   
     ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                  "outlier_timepoints_output.p"))
+                                  "outlier_timepoints_output_nomask.p"))
                                     
     out_list = outlier_timepoints(func_reorient)
 
@@ -64,7 +64,32 @@ def test_outlier_timepoints():
         ref_list = pickle.load(f)
         
     assert out_list == ref_list
+
+
+@pytest.mark.quick  
+def test_outlier_timepoints_with_mask():
+
+    import os
+    import pickle
+    import pkg_resources as p
     
+    from qap.temporal_qc import outlier_timepoints
+
+    func_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                        "func_reorient.nii.gz"))
+
+    func_brain_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                          "functional_brain_mask.nii.gz"))
+                                  
+    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                  "outlier_timepoints_output_withmask.p"))
+                                    
+    out_list = outlier_timepoints(func_reorient, mask_file=func_brain_mask)
+
+    with open(ref_out, "r") as f:
+        ref_list = pickle.load(f)
+        
+    assert out_list == ref_list    
 
 
 @pytest.mark.quick
@@ -103,8 +128,7 @@ def test_global_correlation():
                                         "func_reorient.nii.gz"))
                                   
     func_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "functional_brain_mask_3dAutoMask" \
-                                    ".nii.gz"))
+                                    "functional_brain_mask.nii.gz"))
 
     gcor = global_correlation(func_reorient, func_mask)
 
