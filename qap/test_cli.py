@@ -19,7 +19,6 @@ def init_cli_obj():
     return cli_obj
 
 
-
 @pytest.mark.quick
 def init_flat_sub_dict_dict():
 
@@ -38,7 +37,6 @@ def init_flat_sub_dict_dict():
         "/file/path/sub_002/session_01/anatomical_scan/anat_2/file.nii.gz"
 
     return ref_flat_dict
-
 
 
 @pytest.mark.quick
@@ -79,7 +77,6 @@ def test_prepare_cluster_batch_file_for_SGE_with_s3_dict():
     assert exec_cmd == "qsub"
     assert confirm_str == "(?<=Your job-array )\d+"
     assert cluster_files_dir == os.path.join(out_dir, "cluster_files")
-
 
 
 @pytest.mark.quick
@@ -124,7 +121,6 @@ def test_prepare_cluster_batch_file_for_SGE_with_sublist():
     assert cluster_files_dir == os.path.join(out_dir, "cluster_files")
 
 
-
 @pytest.mark.quick
 def test_prepare_cluster_batch_file_for_PBS_with_sublist():
 
@@ -165,7 +161,6 @@ def test_prepare_cluster_batch_file_for_PBS_with_sublist():
     assert exec_cmd == "qsub"
     assert confirm_str == "(?<=Your job-array )\d+"
     assert cluster_files_dir == os.path.join(out_dir, "cluster_files")
-
 
 
 @pytest.mark.quick
@@ -210,7 +205,6 @@ def test_prepare_cluster_batch_file_for_SLURM_with_sublist():
     assert cluster_files_dir == os.path.join(out_dir, "cluster_files")
 
 
-
 @pytest.mark.quick
 def test_create_flat_sub_dict_dict():
 
@@ -246,7 +240,6 @@ def test_create_flat_sub_dict_dict():
     assert flat_sub_dict_dict == ref_flat_dict
 
 
-
 @pytest.mark.quick
 def test_create_bundles_one_sub_per_bundle():
 
@@ -267,7 +260,6 @@ def test_create_bundles_one_sub_per_bundle():
     assert len(bundles[0]) == cli_obj._num_subjects_per_bundle
 
 
-
 @pytest.mark.quick
 def test_create_bundles_two_subs_per_bundle():
 
@@ -286,7 +278,6 @@ def test_create_bundles_two_subs_per_bundle():
 
     # how many sub-session-scans should be in each bundle
     assert len(bundles[0]) == cli_obj._num_subjects_per_bundle
-
 
 
 @pytest.mark.quick

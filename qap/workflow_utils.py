@@ -10,7 +10,6 @@ def raise_smart_exception(local_vars, msg=None):
     raise Exception(e)
 
 
-
 def check_input_resources(resource_pool, resource_name):
 
     import os
@@ -35,7 +34,6 @@ def check_input_resources(resource_pool, resource_name):
                       (resource_name, resource_pool[resource_name])
               
                 raise_smart_exception(locals(),err)
-            
             
             
 def check_config_settings(config, parameter):

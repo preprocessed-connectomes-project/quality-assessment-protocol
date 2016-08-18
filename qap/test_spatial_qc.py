@@ -272,7 +272,7 @@ def test_ghost_direction():
                                    "mean_functional.nii.gz"))
                                    
     func_brain_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                          "functional_brain_mask_3dAutoMask" \
+                                          "functional_brain_mask" \
                                           ".nii.gz"))
 
     mean_epi_data = load_image(mean_epi)

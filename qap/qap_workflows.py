@@ -226,7 +226,6 @@ def add_header_to_qap_dict(in_file, qap_dict=None):
         print "\n\nExtensions not in NIFTI header of %s\n\n" % in_file
         pass
 
-
     return qap_dict
 
 
@@ -249,11 +248,13 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     import nipype.algorithms.misc as nam
     from qap_workflows_utils import qap_anatomical_spatial
     from qap.viz.interfaces import PlotMosaic
+    from workflow_utils import check_config_settings
+
+    check_config_settings(config, "template_brain_for_anat")
 
     if 'qap_head_mask' not in resource_pool.keys():
 
         from qap_workflows import qap_mask_workflow
-
         workflow, resource_pool = \
             qap_mask_workflow(workflow, resource_pool, config, name)
 
@@ -262,14 +263,12 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
             ('anatomical_csf_mask' not in resource_pool.keys()):
 
         from anatomical_preproc import afni_segmentation_workflow
-
         workflow, resource_pool = \
             afni_segmentation_workflow(workflow, resource_pool, config, name)
 
     if 'anatomical_reorient' not in resource_pool.keys():
         
         from anatomical_preproc import anatomical_reorient_workflow
-
         workflow, resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config, name)
 
@@ -387,7 +386,6 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     workflow.connect(spatial, 'qc', add_header, 'qap_dict')
     workflow.connect(add_header, 'qap_dict', spatial_to_csv, '_outputs')
     resource_pool['qap_anatomical_spatial'] = (spatial_to_csv, 'csv_file')
-
 
     return workflow, resource_pool
 
@@ -929,9 +927,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
 
     resource_pool['qap_functional_temporal'] = (temporal_to_csv, 'csv_file')
 
-
     return workflow, resource_pool
-
 
 
 def run_single_qap_functional_temporal(func_reorient, functional_brain_mask,

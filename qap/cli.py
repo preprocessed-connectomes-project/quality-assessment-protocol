@@ -651,10 +651,17 @@ class QAProtocolCLI:
 
     def run(self):
 
-        from qap.workflow_utils import raise_smart_exception
+        from qap.workflow_utils import raise_smart_exception, \
+                                       check_config_settings
 
         # Get configurations and settings
         config = self._config
+
+        check_config_settings(config, "num_subjects_per_bundle")
+        check_config_settings(config, "num_bundles_at_once")
+        check_config_settings(config, "output_directory")
+        check_config_settings(config, "working_directory")
+
         self._num_subjects_per_bundle = config.get('num_subjects_per_bundle', 1)
         self._num_bundles_at_once = int(self._config["num_bundles_at_once"])
         write_report = config.get('write_report', False)
@@ -816,10 +823,8 @@ class QAProtocolCLI:
                     logger.info('Written report (%s) in %s' % (k, v['path']))
 
 
-
 def starter_node_func(starter):
     return starter
-
 
 
 def _run_workflow(args):
@@ -850,7 +855,6 @@ def _run_workflow(args):
 
     qap_type = config['qap_type']
 
-
     # Read and apply general settings in config
     keep_outputs = config.get('write_all_outputs', False)
 
@@ -867,7 +871,6 @@ def _run_workflow(args):
             raise Exception(err)
         else:
             pass
-
 
     # set up logging
     nyconfig.update_config(
