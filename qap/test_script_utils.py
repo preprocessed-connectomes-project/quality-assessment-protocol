@@ -94,11 +94,10 @@ BIDS_s3_list = [
 
 
 @pytest.mark.quick
-def test_create_subdict_from_s3_list_anat_nonBIDS():
+def test_create_subdict_from_s3_list_nonBIDS():
 
     from qap.script_utils import create_subdict_from_s3_list
 
-    img_type = "anat"
     bucket_prefix = "data/RawData"
 
     ref_dict = {
@@ -117,29 +116,7 @@ def test_create_subdict_from_s3_list_anat_nonBIDS():
         ('0033005', 'session_1', 'anat_1'):
             {'anatomical_scan': 'data/RawData/site_2/0033005/session_1/anat_1/anat.nii.gz'},
         ('0033005', 'session_2', 'anat_1'):
-            {'anatomical_scan': 'data/RawData/site_2/0033005/session_2/anat_1/anat.nii.gz'}}
-
-    s3_dict = create_subdict_from_s3_list(nonBIDS_s3_list, img_type,
-    	bucket_prefix)
-
-    assert s3_dict == ref_dict
-
-
-@pytest.mark.quick
-def test_create_subdict_from_s3_list_anat_nonBIDS_BIDSdata():
-	# todo
-	raise Exception
-
-
-@pytest.mark.quick
-def test_create_subdict_from_s3_list_func_nonBIDS():
-
-    from qap.script_utils import create_subdict_from_s3_list
-
-    img_type = "func"
-    bucket_prefix = "data/RawData"
-
-    ref_dict = {
+            {'anatomical_scan': 'data/RawData/site_2/0033005/session_2/anat_1/anat.nii.gz'},
         ('0026005', 'session_1', 'rest_1'):
             {'functional_scan': 'data/RawData/site_1/0026005/session_1/rest_1/rest.nii.gz'},
         ('0026005', 'session_1', 'rest_2'):
@@ -169,47 +146,61 @@ def test_create_subdict_from_s3_list_func_nonBIDS():
         ('0033005', 'session_2', 'rest_2'):
             {'functional_scan': 'data/RawData/site_2/0033005/session_2/rest_2/rest.nii.gz'}}
 
-    s3_dict = create_subdict_from_s3_list(nonBIDS_s3_list, img_type,
-    	bucket_prefix)
+    s3_dict = create_subdict_from_s3_list(nonBIDS_s3_list, bucket_prefix)
 
     assert s3_dict == ref_dict
 
 
 @pytest.mark.quick
-def test_create_subdict_from_s3_list_anat_BIDS():
+def test_create_subdict_from_s3_list_nonBIDS_BIDSdata():
+	# todo
+	raise Exception
+
+
+@pytest.mark.quick
+def test_create_subdict_from_s3_list_BIDS():
 
     from qap.script_utils import create_subdict_from_s3_list
 
-    img_type = "anat"
     bucket_prefix = "data/RawDataBIDS"
 
     ref_dict = {
+        ('sub-A0200', 'ses-A01', 'STUDY1_bold'):
+            {'functional_scan': 'data/RawDataBIDS/sub-A0200/ses-A01/func/sub-A0200_ses-A01_task-STUDY1_bold.nii.gz'},
+        ('sub-A0200', 'ses-A01', 'STUDY2_bold'):
+            {'functional_scan': 'data/RawDataBIDS/sub-A0200/ses-A01/func/sub-A0200_ses-A01_task-STUDY2_bold.nii.gz'},
         ('sub-A0200', 'ses-A01', 'T1w'):
             {'anatomical_scan': 'data/RawDataBIDS/sub-A0200/ses-A01/anat/sub-A0200_ses-A01_T1w.nii.gz'},
+        ('sub-A0200', 'ses-A02', 'STUDY1_bold'):
+            {'functional_scan': 'data/RawDataBIDS/sub-A0200/ses-A02/func/sub-A0200_ses-A02_task-STUDY1_bold.nii.gz'},
+        ('sub-A0200', 'ses-A02', 'STUDY2_bold'):
+            {'functional_scan': 'data/RawDataBIDS/sub-A0200/ses-A02/func/sub-A0200_ses-A02_task-STUDY2_bold.nii.gz'},
         ('sub-A0200', 'ses-A02', 'T1w'):
             {'anatomical_scan': 'data/RawDataBIDS/sub-A0200/ses-A02/anat/sub-A0200_ses-A02_T1w.nii.gz'},
+        ('sub-A0300', 'ses-A01', 'STUDY1_bold'):
+            {'functional_scan': 'data/RawDataBIDS/sub-A0300/ses-A01/func/sub-A0300_ses-A01_task-STUDY1_bold.nii.gz'},
+        ('sub-A0300', 'ses-A01', 'STUDY2_bold'):
+            {'functional_scan': 'data/RawDataBIDS/sub-A0300/ses-A01/func/sub-A0300_ses-A01_task-STUDY2_bold.nii.gz'},
         ('sub-A0300', 'ses-A01', 'T1w'):
-            {'anatomical_scan': 'data/RawDataBIDS/sub-A0300/ses-A01/anat/sub-A0300_ses-A01_T1w.nii.gz'}
-    }
+            {'anatomical_scan': 'data/RawDataBIDS/sub-A0300/ses-A01/anat/sub-A0300_ses-A01_T1w.nii.gz'}}
 
-    s3_dict = create_subdict_from_s3_list(BIDS_s3_list, img_type, 
-    	bucket_prefix, BIDS=True)
+    s3_dict = create_subdict_from_s3_list(BIDS_s3_list, bucket_prefix,
+    	BIDS=True)
 
     assert s3_dict == ref_dict
 
 
 @pytest.mark.quick
-def test_create_subdict_from_s3_list_anat_BIDS_nonBIDS_data():
+def test_create_subdict_from_s3_list_BIDS_nonBIDS_data():
 
     import pytest
     from qap.script_utils import create_subdict_from_s3_list
 
-    img_type = "anat"
     bucket_prefix = "data/RawData"
 
     with pytest.raises(Exception) as excinfo:
-        s3_dict = create_subdict_from_s3_list(nonBIDS_s3_list, img_type, 
-    	    bucket_prefix, BIDS=True)
+        s3_dict = create_subdict_from_s3_list(nonBIDS_s3_list, bucket_prefix,
+    	    BIDS=True)
 
     assert "dataset provided" in str(excinfo.value)
 

@@ -160,7 +160,6 @@ class QAProtocolCLI:
             self._bundle_idx = None
 
 
-
     def _prepare_cluster_batch_file(self, run_name, num_bundles):
 
         import getpass
@@ -226,7 +225,6 @@ class QAProtocolCLI:
             confirm_str = '(?<=Submitted batch job )\d+'
             exec_cmd = 'sbatch'
 
-
         config_dict['env_arr_idx'] = env_arr_idx
         config_dict['run_cmd'] = 'echo "Running task: %s"' % env_arr_idx
 
@@ -246,7 +244,6 @@ class QAProtocolCLI:
 
         return batch_file_contents, batch_filepath, exec_cmd, \
                    confirm_str, cluster_files_dir
-
 
 
     def _run_on_cluster(self, batch_file_contents, batch_filepath, exec_cmd, \
@@ -273,7 +270,6 @@ class QAProtocolCLI:
         pid_file = os.path.join(cluster_files_dir, 'pid.txt')
         with open(pid_file, 'w') as f:
             f.write(pid)
-
 
 
     def create_flat_sub_dict_dict(self, subdict):
@@ -356,7 +352,6 @@ class QAProtocolCLI:
         return flat_sub_dict_dict
 
 
-
     def _load_and_flatten_sublist(self):
 
         import yaml
@@ -387,7 +382,6 @@ class QAProtocolCLI:
 
 
         return flat_sub_dict_dict
-
 
 
     def _create_bundles(self, flat_sub_dict_dict):
@@ -427,7 +421,6 @@ class QAProtocolCLI:
 
 
         return bundles
-
 
 
     def _run_here(self, run_name):
@@ -473,9 +466,7 @@ class QAProtocolCLI:
             pool.close()
             pool.terminate()
 
-
         return results
-
 
 
     def _run_one_bundle(self, run_name, bundle_idx=None):
@@ -614,9 +605,7 @@ class QAProtocolCLI:
         if self._config["upload_to_s3"]:
             upl_qap_output(self._config)
 
-
         return rt
-
 
 
     def _run_here_from_s3(self, run_name, num_bundles):
@@ -647,7 +636,6 @@ class QAProtocolCLI:
 
         return results    
         
-
 
     def run(self):
 
@@ -919,9 +907,13 @@ def _run_workflow(args):
         invalid_paths = []
 
         for resource in resource_pool.keys():
-            if not op.isfile(resource_pool[resource]) and \
-                resource != "site_name":
-                invalid_paths.append((resource, resource_pool[resource]))
+            try:
+                if not op.isfile(resource_pool[resource]) and \
+                    resource != "site_name":
+                    invalid_paths.append((resource, resource_pool[resource]))
+            except:
+                err = "\n\n[!]"
+                raise Exception(err)
 
         if len(invalid_paths) > 0:
             err = "\n\n[!] The paths provided in the subject list to the " \
@@ -980,14 +972,12 @@ def _run_workflow(args):
             else:
                 pass
 
-
         # for QAP spreadsheet generation only
         config.update({"subject_id": sub_id, "session_id": session_id,
                        "scan_id": scan_id, "run_name": run_name})
 
         if "site_name" in resource_pool:
             config.update({"site_name": resource_pool["site_name"]})
-
 
         # update that resource pool with what's already in the output
         # directory
@@ -996,7 +986,6 @@ def _run_workflow(args):
                     resource not in resource_pool.keys()):
                 resource_pool[resource] = glob.glob(op.join(output_dir,
                                                             resource, "*"))[0]
-
 
         resource_pool["starter"] = (starter_node, 'starter')
 
@@ -1007,9 +996,7 @@ def _run_workflow(args):
             workflow, resource_pool = wf_builder(workflow, resource_pool, \
                                                  config, name)
 
-
         # set up the datasinks
-
         out_list = ['qap_' + qap_type]
         if keep_outputs:
             out_list = resource_pool.keys()
@@ -1044,7 +1031,6 @@ def _run_workflow(args):
 
         rt = {'id': sub_id, 'session': session_id, 'scan': scan_id,
               'status': 'started'}
-
 
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
@@ -1097,6 +1083,5 @@ def _run_workflow(args):
         logger.info("Elapsed time (minutes) since last start: %s"
                     % ((pipeline_end_time - pipeline_start_time) / 60))
         logger.info("Pipeline end time: %s" % pipeline_end_stamp)
-
 
     return rt

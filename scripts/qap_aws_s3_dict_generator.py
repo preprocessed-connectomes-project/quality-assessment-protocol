@@ -7,11 +7,6 @@ def main():
                                  write_s3_dict_to_yaml_file
 
     parser = argparse.ArgumentParser()
-                       
-    parser.add_argument("scan_type", type=str, \
-                            help="'anat' or 'func', depending on which QAP " \
-                                 "measures you will be using the S3 subject "\
-                                 "dictionary for")
  
     parser.add_argument("bucket_name", type=str, \
                             help="the name of your AWS S3 bucket")
@@ -53,8 +48,8 @@ def main():
     s3_list = pull_s3_sublist(args.bucket_name, args.bucket_prefix, \
         args.creds_path)
 
-    s3_dict = create_subdict_from_s3_list(s3_list, args.scan_type, \
-        args.bucket_prefix, args.session_list, args.series_list, args.BIDS)
+    s3_dict = create_subdict_from_s3_list(s3_list, args.bucket_prefix, \
+        args.session_list, args.series_list, args.BIDS)
 
     write_s3_dict_to_yaml_file(s3_dict, args.outfile_path)
 

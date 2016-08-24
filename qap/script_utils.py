@@ -14,14 +14,8 @@ def pull_S3_sublist(bucket_name, bucket_prefix, creds_path):
     return s3_list
 
 
-def create_subdict_from_s3_list(s3_list, img_type, bucket_prefix,
-    session_list=None, series_list=None, BIDS=False):
-
-    # Filter for anat/rest
-    if img_type == 'anat':
-        subkey_type = 'anatomical_scan'
-    elif img_type == 'func':
-        subkey_type = 'functional_scan'
+def create_subdict_from_s3_list(s3_list, bucket_prefix, session_list=None,
+    series_list=None, BIDS=False):
 
     s3_dict = {}
 
@@ -84,11 +78,11 @@ def create_subdict_from_s3_list(s3_list, img_type, bucket_prefix,
             if "__" in scan_id:
                 scan_id = scan_id.replace("__","")          
 
-            if (img_type == "anat") and (scan_type == "anat"):
+            if scan_type == "anat":
                 # this requirement is subject to change with the BIDS spec!!
                 if "T1w.nii" in filename:
                     include = True
-            if (img_type == "func") and (scan_type == "func"):
+            if scan_type == "func":
                 include = True
 
             if ("sub-" not in sub_id) or (scan_id == None):
@@ -124,14 +118,14 @@ def create_subdict_from_s3_list(s3_list, img_type, bucket_prefix,
             scan_id = ssplit[-2]
             filename = ssplit[-1]
 
-            if img_type == "anat":
-                if ("anat" in scan_id) or ("anat" in filename) or \
-                    ("mprage" in filename):
-                    include = True
-            if img_type == "func":
-                if ("func" in scan_id) or ("rest" in scan_id) or \
-                    ("func" in filename) or ("rest" in filename):
-                    include = True
+            if ("anat" in scan_id) or ("anat" in filename) or \
+                ("mprage" in filename):
+                scan_type = "anat"
+                include = True
+            if ("func" in scan_id) or ("rest" in scan_id) or \
+                ("func" in filename) or ("rest" in filename):
+                scan_type = "func"
+                include = True
 
             if session_list:
                 if session_id not in sessions:
@@ -143,6 +137,11 @@ def create_subdict_from_s3_list(s3_list, img_type, bucket_prefix,
 
         if (include == True) and ("nii" in filename):
         
+            if scan_type == "anat":
+                subkey_type = "anatomical_scan"
+            elif scan_type == "func":
+                subkey_type = "functional_scan"
+
             resource_dict = {}
             resource_dict[subkey_type] = sfile
 
