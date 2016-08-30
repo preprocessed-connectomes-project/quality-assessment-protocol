@@ -92,6 +92,9 @@ To determine subjects that are outliers for any of these measures, run QAP on an
 
 ### Temporal Functional
 
+* **Foreground to Background Energy Ratio [fber]:** The variance of voxels inside the brain divided by the variance of voxels outside the brain.  Higher values are better. 
+* **Smoothness of Voxels (FWHM) [fwhm, fwhm_x, fwhm_y, fwhm_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in voxel units.  Lower values are better [^3].
+* **Entropy Focus Criterion (EFC) [efc]:** The Shannon entropy of voxel intensities proportional to the maximum possibly entropy for a similarly sized image. Indicates ghosting and head motion-induced blurring.  Lower values are better [^1].
 * **Standardized DVARS [dvars]:** The average change in mean intensity between each pair of fMRI volumes in a series scaled to make comparisons across scanning protocols possible.  Lower values are better [^7]. 
 * **Outlier Detection [outlier]:** The mean count of outliers found in each volume using the [3dToutcount](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni).  Lower values are better [^2]. 
 * **Global Correlation [gcorr]:** The average correlation of all pairs of voxel time series inside of the brain.  Illustrates differences between data due to motion/physiological noise/imaging artifacts (such as signal bleeding).  Values closer to zero are better. [^11]
@@ -389,3 +392,4 @@ Oscar Esteban
 [^12]: Shehzad, Z., Giavasis, S., Li, Q., Benhajali, Y., Yan, C., Yang, Z., Milham, M., Bellec, P., Craddock, R.C., 2015. The Preprocessed Connectomes Project Quality Assessment Protocol - a Resource for Measuring the Quality of Mri Data. Front. Neurosci. 9. 
 
 [^13]: Yan CG, Cheung B, Kelly C, Colcombe S, Craddock RC, Di Martino A, Li Q, Zuo XN, Castellanos FX, Milham MP (2013). A comprehensive assessment of regional variation in the impact of head micromovements on functional connectomics. Neuroimage. 76:183-201.
+
