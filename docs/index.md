@@ -76,30 +76,27 @@ To determine subjects that are outliers for any of these measures, run QAP on an
 
 ### Spatial Anatomical
 
-* **Contrast to Noise Ratio (CNR) [cnr]:** Calculated as the mean of the gray matter values minus the mean of the white matter values, divided by the standard deviation of the air values.  Higher values are better [^1].
-* **Entropy Focus Criterion (EFC) [efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion.  Lower values are better [^2].
-* **Foreground to Background Energy Ratio (FBER) [fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head.  Higher values are better.
-* **Smoothness of Voxels (FWHM) [fwhm, fwhm_x, fwhm_y, fwhm_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels.  Lower values are better [^3].
-* **Artifact Detection (Qi1) [qi1]:** The proportion of voxels with intensity corrupted by artifacts normalized by the number of voxels in the background.  Lower values are better [^4].
-* **Signal-to-Noise Ratio (SNR) [snr]:** The mean of image values within gray matter divided by the standard deviation of the image values within air (i.e., outside the head).  Higher values are better [^1].
+* **Signal-to-Noise Ratio (SNR) [snr]:** The mean intensity within gray matter divided by the standard deviation of the values outside the brain.  Higher values are better [^4].
+* **Contrast to Noise Ratio (CNR) [cnr]:** The mean of the gray matter intensity values minus the mean of the white matter intensity values divided by the standard deviation of the values outside the brain.  Higher values are better [^4].
+* **Foreground to Background Energy Ratio [fber]:** The variance of voxels inside the brain divided by the variance of voxels outside the brain.  Higher values are better. 
+* **Percent Artifact Voxels (Qi1) [qi1]:** The proportion of voxels outside the brain with artifacts to the total number of voxels outside the brain.  Lower values are better [^5].
+* **Smoothness of Voxels (FWHM) [fwhm, fwhm_x, fwhm_y, fwhm_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in voxel units.  Lower values are better [^3].
+* **Entropy Focus Criterion (EFC) [efc]:** The Shannon entropy of voxel intensities proportional to the maximum possibly entropy for a similarly sized image. Indicates ghosting and head motion-induced blurring.  Lower values are better [^1].
 * **Summary Measures [fg_mean, fg_std, fg_size, bg_mean, bg_std, bg_size, gm_mean, gm_std, gm_size, wm_mean, wm_std, wm_size, csf_mean, csf_std, csf_size]:** Intermediate measures used to calculate the metrics above. Mean, standard deviation, and mask size are given for foreground, background, white matter, and CSF masks.
 
 ### Spatial Functional
 
-* **Entropy Focus Criterion [efc]:** Uses the Shannon entropy of voxel intensities as an indication of ghosting and blurring induced by head motion.  Lower values are better [^2]. 
-* **Foreground to Background Energy Ratio [fber]:** Mean energy of image values (i.e., mean of squares) within the head relative to outside the head.  Higher values are better. 
-* **Smoothness of Voxels [fwhm, fwhm_x, fwhm_y, fwhm_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in units of voxels.  Lower values are better. 
-* **Ghost to Signal Ratio (GSR) [ghost_x, ghost_y or ghost_z]:** A measure of the mean signal in the ‘ghost’ image (signal present outside the brain due to acquisition in the phase encoding direction) relative to mean signal within the brain.  Lower values are better. 
+* **Ghost to Signal Ratio (GSR) [ghost_x, ghost_y or ghost_z]:** A measure of the mean signal in the areas of the image that are prone to ghosting based off the phase encoding direction.  Lower values are better. [^10]
 * **Summary Measures [fg_mean, fg_std, fg_size, bg_mean, bg_std, bg_size]:** Intermediate measures used to calculate the metrics above. Mean, standard deviation, and mask size are given for foreground and background masks.
 
 
 ### Temporal Functional
 
-* **Standardized DVARS [dvars]:** The spatial standard deviation of the temporal derivative of the data, normalized by the temporal standard deviation and temporal autocorrelation.  Lower values are better [^5][^6]. 
-* **Outlier Detection [outlier]:** The mean fraction of outliers found in each volume using the [3dToutcount](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni).  Lower values are better [^7]. 
-* **Global Correlation [gcorr]:** The average correlation of all combinations of voxels in a time series.  Illustrates differences between data due to motion/physiological noise.
-* **Median Distance Index [quality]:** The mean distance (1 – spearman’s rho) between each time-point's volume and the median volume using AFNI’s [3dTqual](http://afni.nimh.nih.gov/afni) command.  Lower values are better [^7]. 
-* **Mean Fractional Displacement - Jenkinson [mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere.  Lower values are better [^8][^10]. 
+* **Standardized DVARS [dvars]:** The average change in mean intensity between each pair of fMRI volumes in a series scaled to make comparisons across scanning protocols possible.  Lower values are better [^7]. 
+* **Outlier Detection [outlier]:** The mean count of outliers found in each volume using the [3dToutcount](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni).  Lower values are better [^2]. 
+* **Global Correlation [gcorr]:** The average correlation of all pairs of voxel time series inside of the brain.  Illustrates differences between data due to motion/physiological noise/imaging artifacts (such as signal bleeding).  Values closer to zero are better. [^11]
+* **Median Distance Index [quality]:** The mean distance (1 – spearman’s rho) between each time point's volume and the median volume using AFNI’s [3dTqual](https://afni.nimh.nih.gov/pub/dist/doc/program_help/3dTqual.html) command.  Lower values are better [^2]. 
+* **Mean RMSD [mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere.  Lower values are better [^9][^13]. 
 * **Number of volumes with FD greater than 0.2mm [num_fd]:** Lower values are better.
 * **Percent of volumes with FD greater than 0.2mm [perc_fd]:** Lower values are better.
 
@@ -367,22 +364,28 @@ Oscar Esteban
 
 ## References
 
-[^1]: Magnotta, V. A., & Friedman, L. (2006). Measurement of signal-to-noise and contrast-to-noise in the fBIRN multicenter imaging study. Journal of Digital Imaging, 19(2), 140-147.
+[^1]: Atkinson D, Hill DL, Stoyle PN, Summers PE, Keevil SF (1997). Automatic correction of motion artifacts in magnetic resonance images using an entropy focus criterion. IEEE Trans Med Imaging. 16(6):903-10.
 
-[^2]: Atkinson D, Hill DL, Stoyle PN, Summers PE, Keevil SF (1997). Automatic correction of motion artifacts in magnetic resonance images using an entropy focus criterion. IEEE Trans Med Imaging. 16(6):903-10.
+[^2]: Cox, R.W. (1996) AFNI: Software for analysis and visualization of functional magnetic resonance neuroimages. Computers and Biomedical Research, 29:162-173.
 
-[^3]: Friedman, L., Stern, H., Brown, G. G., Mathalon, D. H., Turner, J., Glover, G. H., ... & Potkin, S. G. (2008). Test–retest and between‐site reliability in a multicenter fMRI study. Human brain mapping, 29(8), 958-972.
+[^3]: Friedman, L., Glover, G.H., Krenz, D., Magnotta, V., First, B., 2006. Reducing Inter-Scanner Variability of Activation in a Multicenter Fmri Study: Role of Smoothness Equalization. Neuroimage 32, 1656-1668. 
 
-[^4]: Mortamet, B., Bernstein, M. A., Jack, C. R., Gunter, J. L., Ward, C., Britson, P. J., ... & Krueger, G. (2009). Automatic quality assessment in structural brain magnetic resonance imaging. Magnetic Resonance in Medicine, 62(2), 365-372.
+[^4]: Magnotta, V. A., & Friedman, L. (2006). Measurement of signal-to-noise and contrast-to-noise in the fBIRN multicenter imaging study. Journal of Digital Imaging, 19(2), 140-147.
 
-[^5]: Power, J. D., Barnes, K. A., Snyder, A. Z., Schlaggar, B. L. & Petersen, S. E. (2012) Spurious but systematic correlations in functional connectivity MRI networks arise from subject motion. Neuroimage 59, 2142-2154.
+[^5]: Mortamet, B., Bernstein, M. A., Jack, C. R., Gunter, J. L., Ward, C., Britson, P. J., ... & Krueger, G. (2009). Automatic quality assessment in structural brain magnetic resonance imaging. Magnetic Resonance in Medicine, 62(2), 365-372.
 
-[^6]: Nichols, T. (2012, Oct 28). Standardizing DVARS. Retrieved from http://blogs.warwick.ac.uk/nichols/entry/standardizing_dvars.
+[^6]: Meuli, R., Thiran, J.P., Krueger, G., Alzheimer's Disease Neuroimaging, I., 2009. Automatic Quality Assessment in Structural Brain Magnetic Resonance Imaging. Magn Reson Med 62, 365-372. 
 
-[^7]: Cox, R.W. (1996) AFNI: Software for analysis and visualization of functional magnetic resonance neuroimages. Computers and Biomedical Research, 29:162-173.
+[^7]: Nichols, T. (2012, Oct 28). Standardizing DVARS. Retrieved from http://blogs.warwick.ac.uk/nichols/entry/standardizing_dvars.
 
-[^8]: Jenkinson, M., Bannister, P., Brady, M., & Smith, S. (2002). Improved optimization for the robust and accurate linear registration and motion correction of brain images. Neuroimage, 17(2), 825-841.
+[^8]: Power, J. D., Barnes, K. A., Snyder, A. Z., Schlaggar, B. L. & Petersen, S. E. (2012) Spurious but systematic correlations in functional connectivity MRI networks arise from subject motion. Neuroimage 59, 2142-2154.
 
-[^9]: Giannelli, M., Diciotti, S., Tessa, C., & Mascalchi, M. (2010). Characterization of Nyquist ghost in EPI-fMRI acquisition sequences implemented on two clinical 1.5 T MR scanner systems: effect of readout bandwidth and echo spacing. Journal of Applied Clinical Medical Physics, 11(4).
+[^9]: Jenkinson, M., Bannister, P., Brady, M., & Smith, S. (2002). Improved optimization for the robust and accurate linear registration and motion correction of brain images. Neuroimage, 17(2), 825-841.
 
-[^10]: Yan CG, Cheung B, Kelly C, Colcombe S, Craddock RC, Di Martino A, Li Q, Zuo XN, Castellanos FX, Milham MP (2013). A comprehensive assessment of regional variation in the impact of head micromovements on functional connectomics. Neuroimage. 76:183-201.
+[^10]: Giannelli, M., Diciotti, S., Tessa, C., & Mascalchi, M. (2010). Characterization of Nyquist ghost in EPI-fMRI acquisition sequences implemented on two clinical 1.5 T MR scanner systems: effect of readout bandwidth and echo spacing. Journal of Applied Clinical Medical Physics, 11(4).
+
+[^11]: Saad, Z.S., Reynolds, R.C., Jo, H.J., Gotts, S.J., Chen, G., Martin, A., Cox, R.W., 2013. Correcting Brain-Wide Correlation Differences in Resting-State Fmri. Brain Connect 3, 339-352. 
+
+[^12]: Shehzad, Z., Giavasis, S., Li, Q., Benhajali, Y., Yan, C., Yang, Z., Milham, M., Bellec, P., Craddock, R.C., 2015. The Preprocessed Connectomes Project Quality Assessment Protocol - a Resource for Measuring the Quality of Mri Data. Front. Neurosci. 9. 
+
+[^13]: Yan CG, Cheung B, Kelly C, Colcombe S, Craddock RC, Di Martino A, Li Q, Zuo XN, Castellanos FX, Milham MP (2013). A comprehensive assessment of regional variation in the impact of head micromovements on functional connectomics. Neuroimage. 76:183-201.
