@@ -143,6 +143,9 @@ sudo apt-get install libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev
 <h3 id="temporal-functional">Temporal Functional</h3>
 
 <ul>
+  <li><strong>Foreground to Background Energy Ratio [fber]:</strong> The variance of voxels inside the brain divided by the variance of voxels outside the brain.  Higher values are better.</li>
+  <li><strong>Smoothness of Voxels (FWHM) [fwhm, fwhm_x, fwhm_y, fwhm_z]:</strong> The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in voxel units.  Lower values are better <sup id="fnref:3:1"><a href="#fn:3" class="footnote">3</a></sup>.</li>
+  <li><strong>Entropy Focus Criterion (EFC) [efc]:</strong> The Shannon entropy of voxel intensities proportional to the maximum possibly entropy for a similarly sized image. Indicates ghosting and head motion-induced blurring.  Lower values are better <sup id="fnref:1:1"><a href="#fn:1" class="footnote">4</a></sup>.</li>
   <li><strong>Standardized DVARS [dvars]:</strong> The average change in mean intensity between each pair of fMRI volumes in a series scaled to make comparisons across scanning protocols possible.  Lower values are better <sup id="fnref:7"><a href="#fn:7" class="footnote">6</a></sup>.</li>
   <li><strong>Outlier Detection [outlier]:</strong> The mean count of outliers found in each volume using the <a href="http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html">3dToutcount</a> command from <a href="http://afni.nimh.nih.gov/afni">AFNI</a>.  Lower values are better <sup id="fnref:2"><a href="#fn:2" class="footnote">7</a></sup>.</li>
   <li><strong>Global Correlation [gcorr]:</strong> The average correlation of all pairs of voxel time series inside of the brain.  Illustrates differences between data due to motion/physiological noise/imaging artifacts (such as signal bleeding).  Values closer to zero are better. <sup id="fnref:11"><a href="#fn:11" class="footnote">8</a></sup></li>
@@ -459,10 +462,10 @@ echo "End - TASKID " $SGE_TASK_ID " : " $(date)
       <p>Mortamet, B., Bernstein, M. A., Jack, C. R., Gunter, J. L., Ward, C., Britson, P. J., … &amp; Krueger, G. (2009). Automatic quality assessment in structural brain magnetic resonance imaging. Magnetic Resonance in Medicine, 62(2), 365-372. <a href="#fnref:5" class="reversefootnote">&#8617;</a></p>
     </li>
     <li id="fn:3">
-      <p>Friedman, L., Glover, G.H., Krenz, D., Magnotta, V., First, B., 2006. Reducing Inter-Scanner Variability of Activation in a Multicenter Fmri Study: Role of Smoothness Equalization. Neuroimage 32, 1656-1668. <a href="#fnref:3" class="reversefootnote">&#8617;</a></p>
+      <p>Friedman, L., Glover, G.H., Krenz, D., Magnotta, V., First, B., 2006. Reducing Inter-Scanner Variability of Activation in a Multicenter Fmri Study: Role of Smoothness Equalization. Neuroimage 32, 1656-1668. <a href="#fnref:3" class="reversefootnote">&#8617;</a> <a href="#fnref:3:1" class="reversefootnote">&#8617;<sup>2</sup></a></p>
     </li>
     <li id="fn:1">
-      <p>Atkinson D, Hill DL, Stoyle PN, Summers PE, Keevil SF (1997). Automatic correction of motion artifacts in magnetic resonance images using an entropy focus criterion. IEEE Trans Med Imaging. 16(6):903-10. <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+      <p>Atkinson D, Hill DL, Stoyle PN, Summers PE, Keevil SF (1997). Automatic correction of motion artifacts in magnetic resonance images using an entropy focus criterion. IEEE Trans Med Imaging. 16(6):903-10. <a href="#fnref:1" class="reversefootnote">&#8617;</a> <a href="#fnref:1:1" class="reversefootnote">&#8617;<sup>2</sup></a></p>
     </li>
     <li id="fn:10">
       <p>Giannelli, M., Diciotti, S., Tessa, C., &amp; Mascalchi, M. (2010). Characterization of Nyquist ghost in EPI-fMRI acquisition sequences implemented on two clinical 1.5 T MR scanner systems: effect of readout bandwidth and echo spacing. Journal of Applied Clinical Medical Physics, 11(4). <a href="#fnref:10" class="reversefootnote">&#8617;</a></p>
