@@ -20,7 +20,6 @@ def remove_zero_variance_voxels(func_timeseries, mask):
     return mask
 
 
-
 def load(func_file, mask_file, check4d=True):
 
     import nibabel as nib
@@ -43,9 +42,7 @@ def load(func_file, mask_file, check4d=True):
 
     func  = func[mask_var_filtered.nonzero()].T # will have ntpts x nvoxs
     
-    
     return func
-
 
 
 def robust_stdev(func, interp="fraction"):
@@ -59,7 +56,6 @@ def robust_stdev(func, interp="fraction"):
     #upper_qs    = stats.scoreatpercentile(func, 75, interpolation_method=interp, axis=0)
     stdev       = (upper_qs - lower_qs)/1.349
     return stdev
-
 
 
 def ar_nitime(x, order=1, center=False):

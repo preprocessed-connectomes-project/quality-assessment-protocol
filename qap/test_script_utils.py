@@ -94,6 +94,11 @@ BIDS_s3_list = [
 
 
 @pytest.mark.quick
+def test_gather_raw_data():
+    raise Exception
+
+
+@pytest.mark.quick
 def test_create_subdict_from_s3_list_nonBIDS():
 
     from qap.script_utils import create_subdict_from_s3_list

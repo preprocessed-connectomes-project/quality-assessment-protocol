@@ -28,16 +28,27 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
 
         from anatomical_preproc import afni_anatomical_linear_registration
 
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             afni_anatomical_linear_registration(workflow, resource_pool,
                                                     config, name)
+        if new_resource_pool == resource_pool:
+            return workflow, resource_pool
+        else:
+            resource_pool = new_resource_pool
 
     if 'anatomical_reorient' not in resource_pool.keys():
 
         from anatomical_preproc import anatomical_reorient_workflow
 
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config, name)
+        print resource_pool
+        print new_resource_pool
+        raise
+        if new_resource_pool == resource_pool:
+            return workflow, resource_pool
+        else:
+            resource_pool = new_resource_pool
 
     # find the clipping level for thresholding the head mask
     clip_level = pe.Node(interface=preprocess.ClipLevel(),
@@ -255,23 +266,37 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     if 'qap_head_mask' not in resource_pool.keys():
 
         from qap_workflows import qap_mask_workflow
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             qap_mask_workflow(workflow, resource_pool, config, name)
+
+        if new_resource_pool == resource_pool:
+            return workflow, resource_pool
+        else:
+            resource_pool = new_resource_pool
 
     if ('anatomical_gm_mask' not in resource_pool.keys()) or \
             ('anatomical_wm_mask' not in resource_pool.keys()) or \
             ('anatomical_csf_mask' not in resource_pool.keys()):
 
         from anatomical_preproc import afni_segmentation_workflow
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             afni_segmentation_workflow(workflow, resource_pool, config, name)
+
+        if new_resource_pool == resource_pool:
+            return workflow, resource_pool
+        else:
+            resource_pool = new_resource_pool
 
     if 'anatomical_reorient' not in resource_pool.keys():
         
         from anatomical_preproc import anatomical_reorient_workflow
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config, name)
 
+        if new_resource_pool == resource_pool:
+            return workflow, resource_pool
+        else:
+            resource_pool = new_resource_pool
 
     spatial = pe.Node(niu.Function(
         input_names=['anatomical_reorient', 'qap_head_mask_path',
@@ -556,13 +581,21 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
 
     if 'mean_functional' not in resource_pool.keys():
         from functional_preproc import mean_functional_workflow
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             mean_functional_workflow(workflow, resource_pool, config, name)
+        if new_resource_pool == resource_pool:
+            return workflow, resource_pool
+        else:
+            resource_pool = new_resource_pool
 
     if 'functional_brain_mask' not in resource_pool.keys():
         from functional_preproc import functional_brain_mask_workflow
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             functional_brain_mask_workflow(workflow, resource_pool, config, name)
+        if new_resource_pool == resource_pool:
+            return workflow, resource_pool
+        else:
+            resource_pool = new_resource_pool
 
     spatial_epi = pe.Node(niu.Function(
         input_names=['mean_epi', 'func_brain_mask', 'direction', 'subject_id',
@@ -807,21 +840,28 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     def _getfirst(inlist):
         if isinstance(inlist, list):
             return inlist[0]
-
         return inlist
 
     # ensures functional_brain_mask is created as well
     if 'inverted_functional_brain_mask' not in resource_pool.keys():
         from functional_preproc import invert_functional_brain_mask_workflow
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             invert_functional_brain_mask_workflow(workflow, resource_pool, config, name)
+        if new_resource_pool == resource_pool:
+            return workflow, resource_pool
+        else:
+            resource_pool = new_resource_pool
 
     if ('func_motion_correct' not in resource_pool.keys()) or \
         ('coordinate_transformation' not in resource_pool.keys() and
             'mcflirt_rel_rms' not in resource_pool.keys()):
         from functional_preproc import func_motion_correct_workflow
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config, name)
+        if new_resource_pool == resource_pool:
+            return workflow, resource_pool
+        else:
+            resource_pool = new_resource_pool
 
     fd = pe.Node(niu.Function(
         input_names=['in_file'], output_names=['out_file'],

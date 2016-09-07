@@ -94,3 +94,23 @@ def load_mask(mask_file, ref_file):
 
     return mask_dat
 
+
+def create_anatomical_background_mask(fg_mask_data, anatomical_data):
+
+    # invert the foreground mask
+    try:
+        bg_mask_data = 1 - fg_mask_data
+    except Exception as e:
+        err = "\n\n[!] Input data must be a NumPy array object, and not a " \
+              "list.\n\nError details: %s\n\n" % e
+        raise Exception(err)
+
+    # modify the mask to exclude zeroes in the background of the anatomical
+    # image, as these are often introduced artificially and can skew the
+    # QAP metric results
+    bool_anat_data = anatomical_data > 0
+    bg_mask_data = bg_mask_data * bool_anat_data
+
+    return bg_mask_data
+
+    

@@ -16,8 +16,9 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
 
     from workflow_utils import check_input_resources
     
-    check_input_resources(resource_pool, "anatomical_scan")
-
+    #check_input_resources(resource_pool, "anatomical_scan")
+    if "anatomical_scan" not in resource_pool.keys():
+        return workflow, resource_pool
 
     anat_deoblique = pe.Node(interface=preprocess.Refit(),
                                 name='anat_deoblique%s' % name)
@@ -113,8 +114,13 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
         
         from anatomical_preproc import anatomical_reorient_workflow
 
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config, name)
+
+        if new_resource_pool == resource_pool:
+            return workflow, resource_pool
+        else:
+            resource_pool = new_resource_pool
 
 
     anat_skullstrip = pe.Node(interface=preprocess.SkullStrip(),
@@ -242,9 +248,14 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
 
             from anatomical_preproc import anatomical_reorient_workflow
 
-            workflow, resource_pool = \
+            workflow, new_resource_pool = \
                 anatomical_reorient_workflow(workflow, resource_pool, \
                                              config, name)
+
+            if new_resource_pool == resource_pool:
+                return workflow, resource_pool
+            else:
+                resource_pool = new_resource_pool
 
         if len(resource_pool["anatomical_reorient"]) == 2:
             node, out_file = resource_pool["anatomical_reorient"]
@@ -264,9 +275,14 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
 
             from anatomical_preproc import anatomical_skullstrip_workflow
 
-            workflow, resource_pool = \
+            workflow, new_resource_pool = \
                 anatomical_skullstrip_workflow(workflow, resource_pool, \
                                                config, name)
+
+            if new_resource_pool == resource_pool:
+                return workflow, resource_pool
+            else:
+                resource_pool = new_resource_pool
 
         if len(resource_pool["anatomical_brain"]) == 2:
             node, out_file = resource_pool["anatomical_brain"]
@@ -383,9 +399,13 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
 
         from anatomical_preproc import anatomical_skullstrip_workflow
 
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             anatomical_skullstrip_workflow(workflow, resource_pool, config, name)
 
+        if new_resource_pool == resource_pool:
+            return workflow, resource_pool
+        else:
+            resource_pool = new_resource_pool
 
     segment = pe.Node(interface=preprocess.Seg(), name='segmentation%s' % name)
 

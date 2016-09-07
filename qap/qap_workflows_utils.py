@@ -175,13 +175,14 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
 
     from qap.spatial_qc import summary_mask, snr, cnr, fber, efc, \
         artifacts, fwhm, cortical_contrast
-    from qap.qap_utils import load_image, load_mask
+    from qap.qap_utils import load_image, load_mask, \
+                              create_anatomical_background_mask
 
     # Load the data
     anat_data = load_image(anatomical_reorient)
 
     fg_mask = load_mask(qap_head_mask_path, anatomical_reorient)
-    bg_mask = 1 - fg_mask
+    bg_mask = create_anatomical_background_mask(fg_mask, anat_data)
 
     whole_head_mask = load_mask(whole_head_mask_path, anatomical_reorient)
     skull_mask = load_mask(skull_mask_path, anatomical_reorient)

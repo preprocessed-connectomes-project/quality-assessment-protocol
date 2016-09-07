@@ -55,7 +55,6 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
     #     functional_scan
-
     import os
     import sys
 
@@ -69,8 +68,9 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
     from workflow_utils import check_input_resources, \
                                check_config_settings
 
-
-    check_input_resources(resource_pool, "functional_scan")
+    #check_input_resources(resource_pool, "functional_scan")
+    if "functional_scan" not in resource_pool.keys():
+        return workflow, resource_pool
 
     if "start_idx" not in config.keys():
         config["start_idx"] = 0
@@ -81,7 +81,6 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
     drop_trs = False
     if (config["start_idx"] != 0) and (config["stop_idx"] != None):
         drop_trs = True
-
 
     func_get_idx = pe.Node(util.Function(input_names=['in_files', 
                                                       'stop_idx', 
@@ -103,7 +102,6 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
         func_drop_trs.inputs.expr = 'a'
         func_drop_trs.inputs.outputtype = 'NIFTI_GZ'
 
-
         workflow.connect(func_get_idx, 'startidx',
                          func_drop_trs, 'start_idx')
 
@@ -113,7 +111,6 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
 
     func_deoblique = pe.Node(interface=preprocess.Refit(),
                             name='func_deoblique%s' % name)
-
     func_deoblique.inputs.deoblique = True
     
     if drop_trs:
@@ -122,21 +119,17 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
     else:
         func_deoblique.inputs.in_file = resource_pool["functional_scan"]
 
-
     func_reorient = pe.Node(interface=preprocess.Resample(),
                                name='func_reorient%s' % name)
     func_reorient.inputs.orientation = 'RPI'
     func_reorient.inputs.outputtype = 'NIFTI_GZ'
-
 
     workflow.connect(func_deoblique, 'out_file',
                     func_reorient, 'in_file')
 
     resource_pool["func_reorient"] = (func_reorient, 'out_file')
 
-
     return workflow, resource_pool
-
 
 
 def run_func_preproc(functional_scan, start_idx=None, stop_idx=None, \
@@ -214,15 +207,20 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
 
     from workflow_utils import check_input_resources, \
                                check_config_settings
-
-
+    print "wait a second...", resource_pool
     if "func_reorient" not in resource_pool.keys():
-
         from functional_preproc import func_preproc_workflow
 
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             func_preproc_workflow(workflow, resource_pool, config, name)
-
+        if new_resource_pool == resource_pool:
+            print "this happens A"
+            print new_resource_pool
+            print resource_pool
+            return workflow, resource_pool
+        else:
+            print "that happens B"
+            resource_pool = new_resource_pool
     
     func_get_mean_RPI = pe.Node(interface=preprocess.TStat(),
                             name='func_get_mean_RPI%s' % name)
@@ -274,7 +272,6 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
     resource_pool["func_motion_correct"] = (func_motion_correct, 'out_file')
     resource_pool["coordinate_transformation"] = \
         (func_motion_correct, 'oned_matrix_save')
-
 
     return workflow, resource_pool
 
@@ -356,9 +353,12 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
 
         from functional_preproc import func_motion_correct_workflow
 
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config, name)
-
+        if new_resource_pool == resource_pool:
+            return workflow, resource_pool
+        else:
+            resource_pool = new_resource_pool
   
     func_get_brain_mask = pe.Node(interface=preprocess.Automask(),
                                   name='func_get_brain_mask%s' % name)
@@ -445,8 +445,12 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
     if "functional_brain_mask" not in resource_pool.keys():
 
         from functional_preproc import functional_brain_mask_workflow
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             functional_brain_mask_workflow(workflow, resource_pool, config, name)
+        if new_resource_pool == resource_pool:
+            return workflow, resource_pool
+        else:
+            resource_pool = new_resource_pool
   
     # 3dcalc to invert the binary functional brain mask
     invert_mask = pe.Node(interface=preprocess.Calc(), 
@@ -530,21 +534,21 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
 
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
-
-    import nipype.interfaces.utility as util
-    
+    import nipype.interfaces.utility as util 
     from nipype.interfaces.afni import preprocess
 
     from workflow_utils import check_input_resources
-
 
     if "func_motion_correct" not in resource_pool.keys():
 
         from functional_preproc import func_motion_correct_workflow
 
-        workflow, resource_pool = \
+        workflow, new_resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config, name)
-            
+        if new_resource_pool == resource_pool:
+            return workflow, resource_pool
+        else:
+            resource_pool = new_resource_pool            
    
     func_mean_skullstrip = pe.Node(interface=preprocess.TStat(),
                            name='func_mean_skullstrip%s' % name)
@@ -565,7 +569,6 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
 
 
     return workflow, resource_pool
-
 
  
 def run_mean_functional(func_motion_correct, out_dir=None, run=True):

@@ -1,4 +1,116 @@
 
+def gather_raw_data(site_folder, include_sites=False, subject_inclusion=None):
+
+    import os
+    
+    sub_dict = {}
+    inclusion_list = []
+    
+    # create subject inclusion list
+    if subject_inclusion:
+        with open(subject_inclusion, "r") as f:
+            inclusion_list = f.readlines()
+        # remove any /n's
+        inclusion_list = map(lambda s: s.strip(), inclusion_list)      
+    
+    for root, folders, files in os.walk(site_folder):
+    
+        for filename in files:
+        
+            fullpath = os.path.join(root, filename)
+            
+            if ".nii" in fullpath:
+            
+                # /path_to_site_folder/subject_id/session_id/scan_id/..
+                second_half = fullpath.split(site_folder)[1]
+                second_half_list = second_half.split("/")
+
+                try:
+                    second_half_list.remove("")
+                except:
+                    pass
+
+                if include_sites:
+                    try:
+                        site_id = second_half_list[-5]
+                        subject_id = second_half_list[-4]
+                        session_id = second_half_list[-3]
+                        scan_id = second_half_list[-2]
+                    except:
+                        err = "\n\n[!] Could not parse the data directory " \
+                              "structure for this file - is it in the " \
+                              "correct format?\nFile path:\n%s\n\nIt should "\
+                              "be something like this:\n/site_folder/subject"\
+                              "_id/session_id/scan_id/file.nii.gz\n\n" \
+                              % second_half
+                        print err
+                else:
+                    try:
+                        subject_id = second_half_list[-4]
+                        session_id = second_half_list[-3]
+                        scan_id = second_half_list[-2]
+                    except:                    
+                        err = "\n\n[!] Could not parse the data directory " \
+                              "structure for this file - is it in the " \
+                              "correct format?\nFile path:\n%s\n\nIt should "\
+                              "be something like this:\n/site_folder/subject"\
+                              "_id/session_id/scan_id/file.nii.gz\n\n" \
+                              % second_half
+                        print err
+
+                if subject_inclusion == None:
+                    inclusion_list.append(subject_id)
+                               
+                #sub_info = (subject_id, session_id, scan_id)
+                if ("anat" in scan_id) or ("anat" in filename) or \
+                    ("mprage" in filename):
+                    resource = "anatomical_scan"
+                    
+                if ("rest" in scan_id) or ("rest" in filename) or \
+                    ("func" in scan_id) or ("func" in filename):
+                    resource = "functional_scan"
+                
+                if (resource == "anatomical_scan") and \
+                        (subject_id in inclusion_list):
+
+                    if subject_id not in sub_dict.keys():
+                        sub_dict[subject_id] = {}
+                    
+                    if session_id not in sub_dict[subject_id].keys():
+                        sub_dict[subject_id][session_id] = {}
+                    
+                    if resource not in sub_dict[subject_id][session_id].keys():
+                        sub_dict[subject_id][session_id][resource] = {}
+
+                        if include_sites:
+                            sub_dict[subject_id][session_id]["site_name"] = \
+                                site_id
+                                                       
+                    if scan_id not in sub_dict[subject_id][session_id][resource].keys():
+                        sub_dict[subject_id][session_id][resource][scan_id] = fullpath
+                        
+                if (resource == "functional_scan") and \
+                         (subject_id in inclusion_list):
+                
+                    if subject_id not in sub_dict.keys():
+                        sub_dict[subject_id] = {}
+                    
+                    if session_id not in sub_dict[subject_id].keys():
+                        sub_dict[subject_id][session_id] = {}
+                    
+                    if resource not in sub_dict[subject_id][session_id].keys():
+                        sub_dict[subject_id][session_id][resource] = {}
+                        
+                        if include_sites:
+                            sub_dict[subject_id][session_id]["site_name"] = \
+                                site_id
+                                    
+                    if scan_id not in sub_dict[subject_id][session_id][resource].keys():
+                        sub_dict[subject_id][session_id][resource][scan_id] = fullpath
+ 
+    return sub_dict
+
+
 def pull_S3_sublist(bucket_name, bucket_prefix, creds_path):
 
     import os
@@ -164,19 +276,25 @@ def create_subdict_from_s3_list(s3_list, bucket_prefix, session_list=None,
               "the S3 bucket!\n"
         raise Exception(err)
 
+    dict_len = len(s3_dict)
+    print "Total number of subject-session-scans: %d\n" % dict_len
+
     return s3_dict
 
 
-def write_s3_dict_to_yaml_file(s3_dict, yaml_outpath):
+def write_inputs_dict_to_yaml_file(input_dict, yaml_outpath):
 
-    import yaml
+    import os
+    import yaml         
 
-    dict_len = len(s3_dict)            
-           
+    yaml_outpath = os.path.abspath(yaml_outpath)
+    if (".yml" not in yaml_outpath) and (".yaml" not in yaml_outpath):
+        yaml_outpath += ".yml"
+
     # write yaml file
     try:
         with open(yaml_outpath,"wt") as f:
-            f.write(yaml.dump(s3_dict))
+            f.write(yaml.dump(input_dict))
     except:
         err = "\n\n[!] Error writing YAML file output.\n1. Do you have " \
               "write permissions for the output path provided?\n2. Did you " \
@@ -185,10 +303,10 @@ def write_s3_dict_to_yaml_file(s3_dict, yaml_outpath):
         raise Exception(err)
         
     if os.path.isfile(yaml_outpath):
-        print "\nS3 dictionary file successfully created: %s\n" % yaml_outpath
-        print "Total number of subject-session-scans: %d\n" % dict_len
+        print "\nInputs dictionary file successfully created: %s\n" \
+              % yaml_outpath
     else:
-        err = "\n[!] Filepaths from the S3 bucket have not been " \
-              "successfully saved to the YAML file!\nOutput filepath: %s\n" \
+        err = "\n[!] Filepaths from the have not been successfully " \
+              "saved to the YAML file!\nOutput filepath: %s\n" \
               % yaml_outpath
         raise Exception(err)

@@ -646,12 +646,11 @@ class QAProtocolCLI:
         config = self._config
 
         check_config_settings(config, "num_subjects_per_bundle")
-        check_config_settings(config, "num_bundles_at_once")
         check_config_settings(config, "output_directory")
         check_config_settings(config, "working_directory")
 
         self._num_subjects_per_bundle = config.get('num_subjects_per_bundle', 1)
-        self._num_bundles_at_once = int(self._config["num_bundles_at_once"])
+        self._num_bundles_at_once = 1
         write_report = config.get('write_report', False)
 
         if "resource_manager" in config.keys():
@@ -817,7 +816,7 @@ def starter_node_func(starter):
 
 def _run_workflow(args):
 
-    # build pipeline for each subject, individually
+    # build pipeline for each bundle, individually
     # ~ 5 min 20 sec per subject
     # (roughly 320 seconds)
 
@@ -898,12 +897,12 @@ def _run_workflow(args):
 
     new_outputs = 0
 
+    # iterate over each subject in the bundle
     for sub_info in sub_info_list:
 
         resource_pool = resource_pool_dict[sub_info]
 
         # resource pool check
-
         invalid_paths = []
 
         for resource in resource_pool.keys():
@@ -924,7 +923,6 @@ def _run_workflow(args):
 
             err = err + "\n\n"
             raise Exception(err)
-
 
         # process subject info
         sub_id = str(sub_info[0])
@@ -954,9 +952,7 @@ def _run_workflow(args):
         else:
             scan_id = "scan_0"
 
-
         name = "_" + sub_id + "_" + session_id + "_" + scan_id
-
 
         # set output directory
         output_dir = op.join(config["output_directory"], run_name,
@@ -990,14 +986,25 @@ def _run_workflow(args):
         resource_pool["starter"] = (starter_node, 'starter')
 
         # start connecting the pipeline
-        if 'qap_' + qap_type not in resource_pool.keys():
-            from qap import qap_workflows as qw
-            wf_builder = getattr(qw, 'qap_' + qap_type + '_workflow')
-            workflow, resource_pool = wf_builder(workflow, resource_pool, \
-                                                 config, name)
+        qap_types = ["anatomical_spatial", "functional_spatial", "functional_temporal"]
 
+        for qap_type in qap_types:
+            if 'qap_' + qap_type not in resource_pool.keys():
+                from qap import qap_workflows as qw
+                wf_builder = getattr(qw, 'qap_' + qap_type + '_workflow')
+                workflow, resource_pool = wf_builder(workflow, resource_pool,\
+                                                     config, name)
+        print "HEY: ", resource_pool
         # set up the datasinks
-        out_list = ['qap_' + qap_type]
+        out_list = []
+        for output in resource_pool.keys():
+            print output
+            for qap_type in qap_types:
+                if qap_type in output:
+                    out_list.append("qap_" + qap_type)
+
+        print out_list
+
         if keep_outputs:
             out_list = resource_pool.keys()
 
@@ -1009,8 +1016,9 @@ def _run_workflow(args):
                 out_list += ['qap_mosaic']
 
             # The functional temporal also has an FD plot
-            if 'functional_temporal' in qap_type:
-                out_list += ['qap_fd']
+            for output in out_list:
+                if 'functional_temporal' in output:
+                    out_list += ['qap_fd']
 
         for output in out_list:
             # we use a check for len()==2 here to select those items in the

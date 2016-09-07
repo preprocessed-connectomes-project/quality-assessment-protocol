@@ -1,10 +1,11 @@
+#!/usr/bin/env python
 
 def main():
 
     import argparse
     from qap.script_utils import pull_s3_sublist, \
                                  create_subdict_from_s3_list, \
-                                 write_s3_dict_to_yaml_file
+                                 write_inputs_dict_to_yaml_file
 
     parser = argparse.ArgumentParser()
  
@@ -51,7 +52,7 @@ def main():
     s3_dict = create_subdict_from_s3_list(s3_list, args.bucket_prefix, \
         args.session_list, args.series_list, args.BIDS)
 
-    write_s3_dict_to_yaml_file(s3_dict, args.outfile_path)
+    write_inputs_dict_to_yaml_file(s3_dict, args.outfile_path)
 
 
 if __name__ == "__main__":
