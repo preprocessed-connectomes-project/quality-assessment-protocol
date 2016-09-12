@@ -258,6 +258,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
     import os
     import sys
 
+    import qap
     from qap.spatial_qc import summary_mask, snr, fber, efc, fwhm, \
         ghost_direction
     from qap.qap_utils import load_image, load_mask
@@ -317,6 +318,7 @@ def qap_functional_temporal(
     import nibabel as nb
     import numpy as np
 
+    import qap
     from qap.temporal_qc import outlier_timepoints, quality_timepoints, \
                                 global_correlation, calculate_percent_outliers
     from qap.dvars import calc_dvars
