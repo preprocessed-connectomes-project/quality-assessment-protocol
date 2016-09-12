@@ -173,6 +173,7 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     import os
     import sys
 
+    import qap
     from qap.spatial_qc import summary_mask, snr, cnr, fber, efc, \
         artifacts, fwhm, cortical_contrast
     from qap.qap_utils import load_image, load_mask, \
@@ -182,7 +183,7 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     anat_data = load_image(anatomical_reorient)
 
     fg_mask = load_mask(qap_head_mask_path, anatomical_reorient)
-    bg_mask = create_anatomical_background_mask(fg_mask, anat_data)
+    bg_mask, no_zeroes = create_anatomical_background_mask(fg_mask, anat_data)
 
     whole_head_mask = load_mask(whole_head_mask_path, anatomical_reorient)
     skull_mask = load_mask(skull_mask_path, anatomical_reorient)
@@ -193,6 +194,8 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
 
     # Initialize QC
     qc = dict()
+
+    qc['_QAP Version %s' % qap.__version__] = ""
 
     qc['Participant'] = subject_id
 
@@ -240,7 +243,6 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     # Cortical contrast
     qc['Cortical Contrast'] = cortical_contrast(gm_mean, wm_mean)
 
-
     return qc
 
 
@@ -251,6 +253,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
     import os
     import sys
 
+    import qap
     from qap.spatial_qc import summary_mask, snr, fber, efc, fwhm, \
         ghost_direction
     from qap.qap_utils import load_image, load_mask
@@ -262,6 +265,8 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
     # Initialize QC
     qc = dict(Participant=subject_id, Session=session_id, Series=scan_id)
+
+    qc['_QAP Version %s' % qap.__version__] = ""
 
     if site_name:
         qc['Site'] = site_name
@@ -308,6 +313,7 @@ def qap_functional_temporal(
     import nibabel as nb
     import numpy as np
 
+    import qap
     from qap.temporal_qc import outlier_timepoints, quality_timepoints, \
                                 global_correlation, calculate_percent_outliers
     from qap.dvars import calc_dvars
@@ -343,6 +349,7 @@ def qap_functional_temporal(
 
     # Compile
     qc = {
+        "_QAP Version %s" % qap.__version__: ""
         "Participant": subject_id,
         "Session": session_id,
         "Series": scan_id,

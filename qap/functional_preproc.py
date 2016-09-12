@@ -50,7 +50,6 @@ def get_idx(in_files, stop_idx=None, start_idx=None):
     return stopidx, startidx
 
 
-
 def func_preproc_workflow(workflow, resource_pool, config, name="_"):
 
     # resource pool should have:
