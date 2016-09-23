@@ -43,7 +43,6 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     return workflow, resource_pool
 
 
-
 def run_anatomical_reorient(anatomical_scan, out_dir=None, run=True):
 
     # stand-alone runner for anatomical reorient workflow
@@ -91,7 +90,6 @@ def run_anatomical_reorient(anatomical_scan, out_dir=None, run=True):
         return outpath
     else:
         return workflow, workflow.base_dir
-
 
 
 def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
@@ -163,7 +161,6 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
     return workflow, resource_pool
 
 
-
 def run_anatomical_skullstrip(anatomical_reorient, out_dir=None, run=True):
 
     # stand-alone runner for anatomical skullstrip workflow
@@ -214,7 +211,6 @@ def run_anatomical_skullstrip(anatomical_reorient, out_dir=None, run=True):
     else:
 
         return workflow, workflow.base_dir
-
 
 
 def afni_anatomical_linear_registration(workflow, resource_pool, \

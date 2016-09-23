@@ -107,15 +107,17 @@ def create_anatomical_background_mask(fg_mask_data, anatomical_data):
               "list.\n\nError details: %s\n\n" % e
         raise Exception(err)
 
+    # note we are checking for less than 60% of zero voxels within the ENTIRE
+    # image, not just in the background
     anat_zeroes = np.asarray(anatomical_data)
     anat_zeroes[anat_zeroes > 0] = 1
     ratio_zeroes = float(anat_zeroes.sum()) / float(anatomical_data.size)
 
     no_zeroes = False
     if ratio_zeroes < 0.60:
-        # modify the mask to exclude zeroes in the background of the anatomical
-        # image, as these are often introduced artificially and can skew the
-        # QAP metric results
+        # modify the mask to exclude zeroes in the background of the
+        # anatomical image, as these are often introduced artificially and can
+        # skew the QAP metric results
         bool_anat_data = anatomical_data > 0
         bg_mask_data = bg_mask_data * bool_anat_data
         no_zeroes = True

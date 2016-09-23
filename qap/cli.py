@@ -110,7 +110,6 @@ class QAProtocolCLI:
             self._config = yaml.load(f)
 
         self._config['pipeline_config_yaml'] = os.path.realpath(args.config)
-        self._config['qap_type'] = parser.prog[4:-3]
 
         if args.with_reports:
             self._config['write_report'] = True
@@ -120,7 +119,6 @@ class QAProtocolCLI:
 
         if "num_bundles_at_once" not in self._config.keys():
             self._config["num_bundles_at_once"] = 1
-
 
         self._cloudify = False
 
@@ -348,7 +346,6 @@ class QAProtocolCLI:
                 site_info["site_name"] = sites_dict[sub_info_tuple[0]]
                 flat_sub_dict_dict[sub_info_tuple].update(site_info)
 
-
         return flat_sub_dict_dict
 
 
@@ -372,14 +369,12 @@ class QAProtocolCLI:
                   "not be read properly!"
             raise_smart_exception(locals(),msg)
 
-
         # Generate flat_sub_dict_dict
 
         # flat_sub_dict_dict is a dictionary of dictionaries. format:
         #   { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
         #                                "anatomical_brain": <filepath>} }
         flat_sub_dict_dict = self.create_flat_sub_dict_dict(subdict)
-
 
         return flat_sub_dict_dict
 
@@ -519,7 +514,7 @@ class QAProtocolCLI:
 
                 for idx in range(first_subj_idx, last_subj_idx):
                     single_sub_dict = dl_subj_from_s3(idx, self._config["pipeline_config_yaml"], \
-                                                          self._s3_dict_yml)
+                                                           self._s3_dict_yml)
                     self._sub_dict.update(single_sub_dict)
 
             elif self._subj_idx:
@@ -527,13 +522,11 @@ class QAProtocolCLI:
                 self._sub_dict = dl_subj_from_s3(self._subj_idx, \
                     self._config, self._s3_dict_yml)
 
-
             if len(self._sub_dict) == 0:
                 err = "\n[!] Subject dictionary was not successfully " \
                       "downloaded from the S3 bucket!\n"
                 raise RuntimeError(err)
 
-            
             try:
                 # integrate site information into the subject list
                 #   it was separate in the first place to circumvent the fact
@@ -553,7 +546,6 @@ class QAProtocolCLI:
 
             except:
                 pass
-            
 
         elif self._config["subject_list"]:
 
@@ -592,7 +584,6 @@ class QAProtocolCLI:
                 subj_key = sd_keys[self._subj_idx-1]
                 self._sub_dict = flat_sub_dict_dict[subj_key]
         
-
         # let's go!
         rt = _run_workflow((self._sub_dict, self._sub_dict.keys(), \
                                self._config, run_name, self.runargs))
@@ -632,7 +623,6 @@ class QAProtocolCLI:
             results = pool.map(self._run_one_bundle,run_name,range(1,num_bundles+1))
             pool.close()
             pool.terminate()
-
 
         return results    
         
@@ -696,7 +686,6 @@ class QAProtocolCLI:
 
         results = None
 
-
         # set up callback logging
         import logging
         from nipype.pipeline.plugins.callback_log import log_nodes_cb
@@ -709,7 +698,6 @@ class QAProtocolCLI:
         handler = logging.FileHandler(cb_log_filename)
         cb_logger.addHandler(handler)
 
-
         # settle run arguments (plugins)
         self.runargs = {'plugin': 'Linear', \
                         'plugin_args': {'memory_gb' : 8.0, \
@@ -718,7 +706,6 @@ class QAProtocolCLI:
             self.runargs['plugin'] = 'MultiProc'
             n_procs = {'n_procs': self._num_subjects_per_bundle}
             self.runargs['plugin_args'].update(n_procs)
-
 
         # Start the magic
         if self._cloudify:
@@ -776,7 +763,6 @@ class QAProtocolCLI:
 
                 num_bundles = \
                     float(len(flat_sub_dict_dict)) / float(bundle_size)
-
 
             # round up if it is a float
             num_bundles = int(math.ceil(num_bundles))
@@ -840,8 +826,6 @@ def _run_workflow(args):
     # unpack args
     resource_pool_dict, sub_info_list, config, run_name, runargs = args
 
-    qap_type = config['qap_type']
-
     # Read and apply general settings in config
     keep_outputs = config.get('write_all_outputs', False)
 
@@ -873,9 +857,7 @@ def _run_workflow(args):
     logger.info("QAP version %s" % qap.__version__)
     logger.info("Pipeline start time: %s" % pipeline_start_stamp)
 
-
     workflow = pe.Workflow(name=run_name)
-
     workflow.base_dir = op.join(config["working_directory"])
 
     # set up crash directory

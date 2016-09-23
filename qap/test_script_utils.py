@@ -94,8 +94,214 @@ BIDS_s3_list = [
 
 
 @pytest.mark.quick
-def test_gather_raw_data():
-    raise Exception
+def test_parse_raw_data_list_with_sites():
+
+    from qap.script_utils import parse_raw_data_list
+
+    # we are starting in the directory containing the site folders!
+    site_folder = "/home/data"
+
+    filepath_list = [
+      "/home/data/site01/sub01/sess01/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub01/sess02/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub02/sess01/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub02/sess02/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub01/sess01/rest_1/rest.nii.gz",
+      "/home/data/site01/sub01/sess01/rest_2/rest.nii.gz",
+      "/home/data/site01/sub01/sess02/rest_1/func.nii.gz",
+      "/home/data/site01/sub02/sess01/rest_1/rest.nii.gz",
+      "/home/data/site01/sub02/sess01/rest_2/rest.nii.gz",
+      "/home/data/site01/sub02/sess02/rest_1/func.nii.gz",
+    ]
+
+    # include sites
+    ref_sub_dict = {
+      'sub01': {'sess01': {'anatomical_scan': {'anat_1': '/home/data/site01/sub01/sess01/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub01/sess01/rest_1/rest.nii.gz',
+                                               'rest_2': '/home/data/site01/sub01/sess01/rest_2/rest.nii.gz'},
+                           'site_name': 'site01'},
+                'sess02': {'anatomical_scan': {'anat_1': '/home/data/site01/sub01/sess02/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub01/sess02/rest_1/func.nii.gz'},
+                           'site_name': 'site01'}},
+      'sub02': {'sess01': {'anatomical_scan': {'anat_1': '/home/data/site01/sub02/sess01/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub02/sess01/rest_1/rest.nii.gz',
+                                               'rest_2': '/home/data/site01/sub02/sess01/rest_2/rest.nii.gz'},
+                           'site_name': 'site01'},
+                'sess02': {'anatomical_scan': {'anat_1': '/home/data/site01/sub02/sess02/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub02/sess02/rest_1/func.nii.gz'},
+                           'site_name': 'site01'}}}
+
+    sub_dict = parse_raw_data_list(filepath_list, site_folder, include_sites=True)
+
+    assert ref_sub_dict == sub_dict
+
+
+@pytest.mark.quick
+def test_parse_raw_data_list_no_sites():
+
+    from qap.script_utils import parse_raw_data_list
+
+    # we are starting in the directory containing the participants' folders!
+    site_folder = "/home/data/site01"
+
+    filepath_list = [
+      "/home/data/site01/sub01/sess01/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub01/sess02/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub02/sess01/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub02/sess02/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub01/sess01/rest_1/rest.nii.gz",
+      "/home/data/site01/sub01/sess01/rest_2/rest.nii.gz",
+      "/home/data/site01/sub01/sess02/rest_1/func.nii.gz",
+      "/home/data/site01/sub02/sess01/rest_1/rest.nii.gz",
+      "/home/data/site01/sub02/sess01/rest_2/rest.nii.gz",
+      "/home/data/site01/sub02/sess02/rest_1/func.nii.gz",
+    ]
+
+    # no sites information here!
+    ref_sub_dict = {
+      'sub01': {'sess01': {'anatomical_scan': {'anat_1': '/home/data/site01/sub01/sess01/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub01/sess01/rest_1/rest.nii.gz',
+                                               'rest_2': '/home/data/site01/sub01/sess01/rest_2/rest.nii.gz'}},
+                'sess02': {'anatomical_scan': {'anat_1': '/home/data/site01/sub01/sess02/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub01/sess02/rest_1/func.nii.gz'}}},
+      'sub02': {'sess01': {'anatomical_scan': {'anat_1': '/home/data/site01/sub02/sess01/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub02/sess01/rest_1/rest.nii.gz',
+                                               'rest_2': '/home/data/site01/sub02/sess01/rest_2/rest.nii.gz'}},
+                'sess02': {'anatomical_scan': {'anat_1': '/home/data/site01/sub02/sess02/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub02/sess02/rest_1/func.nii.gz'}}}}
+
+    sub_dict = parse_raw_data_list(filepath_list, site_folder, 
+        include_sites=False)
+
+    assert ref_sub_dict == sub_dict
+
+
+@pytest.mark.quick
+def test_parse_raw_data_list_no_sites_wrong_folder():
+
+    from qap.script_utils import parse_raw_data_list
+
+    # we are (incorrectly) starting in the directory containing the site
+    # folders, when we are doing no sites (i.e. only one site)!
+    site_folder = "/home/data"
+
+    filepath_list = [
+      "/home/data/site01/sub01/sess01/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub01/sess02/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub02/sess01/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub02/sess02/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub01/sess01/rest_1/rest.nii.gz",
+      "/home/data/site01/sub01/sess01/rest_2/rest.nii.gz",
+      "/home/data/site01/sub01/sess02/rest_1/func.nii.gz",
+      "/home/data/site01/sub02/sess01/rest_1/rest.nii.gz",
+      "/home/data/site01/sub02/sess01/rest_2/rest.nii.gz",
+      "/home/data/site01/sub02/sess02/rest_1/func.nii.gz",
+    ]
+
+    with pytest.raises(Exception) as excinfo:
+        sub_dict = parse_raw_data_list(filepath_list, site_folder, 
+            include_sites=False)
+
+    assert "multiple site or data folders" in str(excinfo.value)
+
+
+@pytest.mark.quick
+def test_gather_custom_raw_data():
+
+    from qap.script_utils import gather_custom_raw_data
+
+    # we are starting in the directory containing the site folders!
+    site_folder = "/home/data"
+
+    format = "/{site}/{participant}/{session}/{series}"
+
+    anatomical_keywords = "mprage"
+    functional_keywords = "rest func"
+
+    filepath_list = [
+      "/home/data/site01/sub01/sess01/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub01/sess02/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub02/sess01/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub02/sess02/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub01/sess01/rest_1/rest.nii.gz",
+      "/home/data/site01/sub01/sess01/rest_2/rest.nii.gz",
+      "/home/data/site01/sub01/sess02/rest_1/func.nii.gz",
+      "/home/data/site01/sub02/sess01/rest_1/rest.nii.gz",
+      "/home/data/site01/sub02/sess01/rest_2/rest.nii.gz",
+      "/home/data/site01/sub02/sess02/rest_1/func.nii.gz",
+    ]
+
+    # include sites
+    ref_sub_dict = {
+      'sub01': {'sess01': {'anatomical_scan': {'anat_1': '/home/data/site01/sub01/sess01/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub01/sess01/rest_1/rest.nii.gz',
+                                               'rest_2': '/home/data/site01/sub01/sess01/rest_2/rest.nii.gz'},
+                           'site_name': 'site01'},
+                'sess02': {'anatomical_scan': {'anat_1': '/home/data/site01/sub01/sess02/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub01/sess02/rest_1/func.nii.gz'},
+                           'site_name': 'site01'}},
+      'sub02': {'sess01': {'anatomical_scan': {'anat_1': '/home/data/site01/sub02/sess01/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub02/sess01/rest_1/rest.nii.gz',
+                                               'rest_2': '/home/data/site01/sub02/sess01/rest_2/rest.nii.gz'},
+                           'site_name': 'site01'},
+                'sess02': {'anatomical_scan': {'anat_1': '/home/data/site01/sub02/sess02/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub02/sess02/rest_1/func.nii.gz'},
+                           'site_name': 'site01'}}}
+
+    sub_dict = gather_custom_raw_data(filepath_list, site_folder, format, 
+        anatomical_keywords, functional_keywords)
+
+    assert ref_sub_dict == sub_dict
+
+
+@pytest.mark.quick
+def test_gather_custom_raw_data_scans_folder():
+
+    from qap.script_utils import gather_custom_raw_data
+
+    # we are starting in the directory containing the site folders!
+    site_folder = "/home/data"
+
+    format = "/{site}/{participant}/{session}/scans/{series}"
+
+    anatomical_keywords = "mprage"
+    functional_keywords = "rest func"
+
+    # inclusion of a "scans" folder in between the session and scan folders
+    filepath_list = [
+      "/home/data/site01/sub01/sess01/scans/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub01/sess02/scans/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub02/sess01/scans/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub02/sess02/scans/anat_1/mprage.nii.gz",
+      "/home/data/site01/sub01/sess01/scans/rest_1/rest.nii.gz",
+      "/home/data/site01/sub01/sess01/scans/rest_2/rest.nii.gz",
+      "/home/data/site01/sub01/sess02/scans/rest_1/func.nii.gz",
+      "/home/data/site01/sub02/sess01/scans/rest_1/rest.nii.gz",
+      "/home/data/site01/sub02/sess01/scans/rest_2/rest.nii.gz",
+      "/home/data/site01/sub02/sess02/scans/rest_1/func.nii.gz",
+    ]
+
+    # include sites
+    ref_sub_dict = {
+      'sub01': {'sess01': {'anatomical_scan': {'anat_1': '/home/data/site01/sub01/sess01/scans/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub01/sess01/scans/rest_1/rest.nii.gz',
+                                               'rest_2': '/home/data/site01/sub01/sess01/scans/rest_2/rest.nii.gz'},
+                           'site_name': 'site01'},
+                'sess02': {'anatomical_scan': {'anat_1': '/home/data/site01/sub01/sess02/scans/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub01/sess02/scans/rest_1/func.nii.gz'},
+                           'site_name': 'site01'}},
+      'sub02': {'sess01': {'anatomical_scan': {'anat_1': '/home/data/site01/sub02/sess01/scans/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub02/sess01/scans/rest_1/rest.nii.gz',
+                                               'rest_2': '/home/data/site01/sub02/sess01/scans/rest_2/rest.nii.gz'},
+                           'site_name': 'site01'},
+                'sess02': {'anatomical_scan': {'anat_1': '/home/data/site01/sub02/sess02/scans/anat_1/mprage.nii.gz'},
+                           'functional_scan': {'rest_1': '/home/data/site01/sub02/sess02/scans/rest_1/func.nii.gz'},
+                           'site_name': 'site01'}}}
+
+    sub_dict = gather_custom_raw_data(filepath_list, site_folder, format, 
+        anatomical_keywords, functional_keywords)
+
+    assert ref_sub_dict == sub_dict
 
 
 @pytest.mark.quick
@@ -159,7 +365,8 @@ def test_create_subdict_from_s3_list_nonBIDS():
 @pytest.mark.quick
 def test_create_subdict_from_s3_list_nonBIDS_BIDSdata():
 	# todo
-	raise Exception
+    # pass in BIDS_s3_list with BIDS=false, check for exception
+	pass
 
 
 @pytest.mark.quick

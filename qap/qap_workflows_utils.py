@@ -349,7 +349,7 @@ def qap_functional_temporal(
 
     # Compile
     qc = {
-        "_QAP Version %s" % qap.__version__: ""
+        "_QAP Version %s" % qap.__version__: "",
         "Participant": subject_id,
         "Session": session_id,
         "Series": scan_id,

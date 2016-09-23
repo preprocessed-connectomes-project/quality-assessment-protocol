@@ -2,7 +2,8 @@
 
 def main():
 
-    from qap.script_utils import gather_custom_raw_data, \
+    from qap.script_utils import gather_filepath_list, \
+                                 gather_custom_raw_data, \
                                  write_inputs_dict_to_yaml_file
 
     import argparse
@@ -39,7 +40,9 @@ def main():
     args = parser.parse_args()
 
     # run the thing
-    data_dict = gather_custom_raw_data(args.base_directory, 
+    filepath_list = gather_filepath_list(args.base_directory)
+
+    data_dict = gather_custom_raw_data(filepath_list, args.base_directory, 
         args.directory_format, args.anatomical_keywords, 
         args.functional_keywords)
 
