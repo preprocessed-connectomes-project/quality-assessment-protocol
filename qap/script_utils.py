@@ -169,6 +169,7 @@ def create_subdict_from_s3_list(s3_list, bucket_prefix, session_list=None,
 
 def write_s3_dict_to_yaml_file(s3_dict, yaml_outpath):
 
+    import os
     import yaml
 
     dict_len = len(s3_dict)            
