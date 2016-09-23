@@ -364,9 +364,17 @@ def test_create_subdict_from_s3_list_nonBIDS():
 
 @pytest.mark.quick
 def test_create_subdict_from_s3_list_nonBIDS_BIDSdata():
-	# todo
+
+    from qap.script_utils import create_subdict_from_s3_list
+
+    bucket_prefix = "data/RawData"
+
     # pass in BIDS_s3_list with BIDS=false, check for exception
-	pass
+
+    with pytest.raises(Exception) as excinfo:
+        s3_dict = create_subdict_from_s3_list(BIDS_s3_list, bucket_prefix)
+
+	assert "Please use the --BIDS" in str(excinfo.value)
 
 
 @pytest.mark.quick
@@ -415,4 +423,10 @@ def test_create_subdict_from_s3_list_BIDS_nonBIDS_data():
     	    BIDS=True)
 
     assert "dataset provided" in str(excinfo.value)
+
+
+@pytest.mark.quick
+def test_create_subdict_from_s3_list_session_series_inclusions():
+    # todo
+    raise Exception
 

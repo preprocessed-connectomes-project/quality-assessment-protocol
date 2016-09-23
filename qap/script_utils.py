@@ -7,10 +7,11 @@ def read_txt_file(txt_file):
 
 def gather_filepath_list(site_folder):
 
+    # gathers all of the NIFTI files under the provided directory
+
     import os
 
     filepath_list = []
-
     for root, folders, files in os.walk(site_folder):
         for filename in files:
             fullpath = os.path.join(root, filename)
@@ -370,6 +371,13 @@ def create_subdict_from_s3_list(s3_list, bucket_prefix, session_list=None,
             scan_id = ssplit[-2]
             filename = ssplit[-1]
 
+            if ("sub-" in filename) and ("_ses-" in filename):
+                err = "\n\n[!] You selected to create a data list from a " \
+                      "a data directory that isn't in BIDS format, but the " \
+                      "data is in BIDS format!\n\nPlease use the --BIDS " \
+                      "flag for BIDS datasets.\n\n"
+                raise Exception(err)
+
             if ("anat" in scan_id) or ("anat" in filename) or \
                 ("mprage" in filename):
                 scan_type = "anat"
@@ -423,6 +431,10 @@ def create_subdict_from_s3_list(s3_list, bucket_prefix, session_list=None,
 
 
 def create_CPAC_outputs_dict(cpac_outdir, qap_type, session_format):
+
+    # for script 'qap_cpac_output_sublist_generator.py'
+
+    ''' WARNING: OUT OF DATE!!! '''
 
     import os
     import glob
