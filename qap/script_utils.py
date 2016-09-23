@@ -254,7 +254,7 @@ def gather_custom_raw_data(filepath_list, base_folder, directory_format,
     return data_dict
 
 
-def pull_S3_sublist(bucket_name, bucket_prefix, creds_path):
+def pull_s3_sublist(bucket_name, bucket_prefix, creds_path):
 
     import os
     from indi_aws import fetch_creds
