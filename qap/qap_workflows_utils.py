@@ -335,7 +335,7 @@ def qap_functional_temporal(
     meanfd_outliers, meanfd_IQR = calculate_percent_outliers(fd)
 
     # 3dTout
-    outliers = outlier_timepoints(func_timeseries, mask_file=func_brain_mask)
+    outliers = outlier_timepoints(func_timeseries) #, mask_file=func_brain_mask)
     # calculate the outliers of the outliers! AAHH!
     outlier_perc_out, outlier_IQR = calculate_percent_outliers(outliers)
 
