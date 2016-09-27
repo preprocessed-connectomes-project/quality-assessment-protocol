@@ -99,40 +99,31 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
 
     import os
     import sys
-
+    import copy
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
-
     import nipype.interfaces.utility as util
 
     from nipype.interfaces.afni import preprocess
 
-
     if "anatomical_reorient" not in resource_pool.keys():
         
         from anatomical_preproc import anatomical_reorient_workflow
-
+        old_rp = copy.copy(resource_pool)
         workflow, new_resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config, name)
 
-        if new_resource_pool == resource_pool:
+        if resource_pool == old_rp:
             return workflow, resource_pool
-        else:
-            resource_pool = new_resource_pool
-
 
     anat_skullstrip = pe.Node(interface=preprocess.SkullStrip(),
                               name='anat_skullstrip%s' % name)
-    
     anat_skullstrip.inputs.outputtype = 'NIFTI_GZ'
-    
 
     anat_skullstrip_orig_vol = pe.Node(interface=preprocess.Calc(),
                                        name='anat_skullstrip_orig_vol%s' % name)
-
     anat_skullstrip_orig_vol.inputs.expr = 'a*step(b)'
     anat_skullstrip_orig_vol.inputs.outputtype = 'NIFTI_GZ'
-
 
     if len(resource_pool["anatomical_reorient"]) == 2:
         node, out_file = resource_pool["anatomical_reorient"]
@@ -140,7 +131,6 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
     else:
         anat_skullstrip.inputs.in_file = \
             resource_pool["anatomical_reorient"]
-
 
     if len(resource_pool["anatomical_reorient"]) == 2:
         node, out_file = resource_pool["anatomical_reorient"]
@@ -150,13 +140,10 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
         anat_skullstrip_orig_vol.inputs.in_file_a = \
             resource_pool["anatomical_reorient"]
 
-
     workflow.connect(anat_skullstrip, 'out_file',
                         anat_skullstrip_orig_vol, 'in_file_b')
 
-
     resource_pool["anatomical_brain"] = (anat_skullstrip_orig_vol, 'out_file')
-
 
     return workflow, resource_pool
 
@@ -221,7 +208,7 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
 
     import os
     import sys
-
+    import copy
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
 
@@ -237,21 +224,18 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
                                     name='calc_3dAllineate_warp%s' % name)
     calc_allineate_warp.inputs.outputtype = "NIFTI_GZ"
 
-
     if config["skull_on_registration"]:
 
         if "anatomical_reorient" not in resource_pool.keys():
 
             from anatomical_preproc import anatomical_reorient_workflow
-
+            old_rp = copy.copy(resource_pool)
             workflow, new_resource_pool = \
                 anatomical_reorient_workflow(workflow, resource_pool, \
                                              config, name)
 
-            if new_resource_pool == resource_pool:
+            if resource_pool == old_rp:
                 return workflow, resource_pool
-            else:
-                resource_pool = new_resource_pool
 
         if len(resource_pool["anatomical_reorient"]) == 2:
             node, out_file = resource_pool["anatomical_reorient"]
@@ -270,15 +254,13 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
         if "anatomical_brain" not in resource_pool.keys():
 
             from anatomical_preproc import anatomical_skullstrip_workflow
-
+            old_rp = copy.copy(resource_pool)
             workflow, new_resource_pool = \
                 anatomical_skullstrip_workflow(workflow, resource_pool, \
                                                config, name)
 
-            if new_resource_pool == resource_pool:
+            if resource_pool == old_rp:
                 return workflow, resource_pool
-            else:
-                resource_pool = new_resource_pool
 
         if len(resource_pool["anatomical_brain"]) == 2:
             node, out_file = resource_pool["anatomical_brain"]
@@ -381,7 +363,7 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
 
     import os
     import sys
-
+    import copy
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as util
@@ -394,14 +376,12 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
     if "anatomical_brain" not in resource_pool.keys():
 
         from anatomical_preproc import anatomical_skullstrip_workflow
-
+        old_rp = copy.copy(resource_pool)
         workflow, new_resource_pool = \
             anatomical_skullstrip_workflow(workflow, resource_pool, config, name)
 
-        if new_resource_pool == resource_pool:
+        if resource_pool == old_rp:
             return workflow, resource_pool
-        else:
-            resource_pool = new_resource_pool
 
     segment = pe.Node(interface=preprocess.Seg(), name='segmentation%s' % name)
 
@@ -452,14 +432,13 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
     return workflow, resource_pool
 
 
-
 def run_afni_segmentation(anatomical_brain, out_dir=None, run=True):
 
     # stand-alone runner for segmentation workflow
 
     import os
     import sys
-
+    import copy
     import glob
 
     import nipype.interfaces.io as nio

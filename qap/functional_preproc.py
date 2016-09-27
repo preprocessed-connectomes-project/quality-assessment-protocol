@@ -196,7 +196,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
 
     import os
     import sys
-
+    import copy
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
 
@@ -206,20 +206,14 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
 
     from workflow_utils import check_input_resources, \
                                check_config_settings
-    print "wait a second...", resource_pool
+
     if "func_reorient" not in resource_pool.keys():
         from functional_preproc import func_preproc_workflow
-
-        workflow, new_resource_pool = \
+        old_rp = copy.copy(resource_pool)
+        workflow, resource_pool = \
             func_preproc_workflow(workflow, resource_pool, config, name)
-        if new_resource_pool == resource_pool:
-            print "this happens A"
-            print new_resource_pool
-            print resource_pool
+        if resource_pool == old_rp:
             return workflow, resource_pool
-        else:
-            print "that happens B"
-            resource_pool = new_resource_pool
     
     func_get_mean_RPI = pe.Node(interface=preprocess.TStat(),
                             name='func_get_mean_RPI%s' % name)
@@ -247,7 +241,6 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
     else:
         get_func_volume.inputs.in_file_a = resource_pool["func_reorient"]
         
-
     # calculate motion parameters
     func_motion_correct = pe.Node(interface=preprocess.Volreg(),
                              name='func_motion_correct%s' % name)
@@ -255,7 +248,6 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
     func_motion_correct.inputs.args = '-Fourier -twopass'
     func_motion_correct.inputs.zpad = 4
     func_motion_correct.inputs.outputtype = 'NIFTI_GZ'
-
     
     if len(resource_pool["func_reorient"]) == 2:
         node, out_file = resource_pool["func_reorient"]
@@ -267,13 +259,11 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
     workflow.connect(get_func_volume, 'out_file',
                      func_motion_correct, 'basefile')
 
-
     resource_pool["func_motion_correct"] = (func_motion_correct, 'out_file')
     resource_pool["coordinate_transformation"] = \
         (func_motion_correct, 'oned_matrix_save')
 
     return workflow, resource_pool
-
 
 
 def run_func_motion_correct(func_reorient, out_dir=None, run=True):
@@ -342,7 +332,7 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
 
     import os
     import sys
-
+    import copy
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as util   
@@ -351,20 +341,16 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
     if "func_motion_correct" not in resource_pool.keys():
 
         from functional_preproc import func_motion_correct_workflow
-
-        workflow, new_resource_pool = \
+        old_rp = copy.copy(resource_pool)
+        workflow, resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config, name)
-        if new_resource_pool == resource_pool:
+        if resource_pool == old_rp:
             return workflow, resource_pool
-        else:
-            resource_pool = new_resource_pool
   
     func_get_brain_mask = pe.Node(interface=preprocess.Automask(),
                                   name='func_get_brain_mask%s' % name)
-
     func_get_brain_mask.inputs.outputtype = 'NIFTI_GZ'
 
-        
     if len(resource_pool["func_motion_correct"]) == 2:
         node, out_file = resource_pool["func_motion_correct"]
         workflow.connect(node, out_file, func_get_brain_mask, 'in_file')
@@ -435,7 +421,7 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
 
     import os
     import sys
-
+    import copy
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as util   
@@ -444,12 +430,11 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
     if "functional_brain_mask" not in resource_pool.keys():
 
         from functional_preproc import functional_brain_mask_workflow
-        workflow, new_resource_pool = \
+        old_rp = copy.copy(resource_pool)
+        workflow, resource_pool = \
             functional_brain_mask_workflow(workflow, resource_pool, config, name)
-        if new_resource_pool == resource_pool:
+        if resource_pool == old_rp:
             return workflow, resource_pool
-        else:
-            resource_pool = new_resource_pool
   
     # 3dcalc to invert the binary functional brain mask
     invert_mask = pe.Node(interface=preprocess.Calc(), 
@@ -530,7 +515,7 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
 
     import os
     import sys
-
+    import copy
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as util 
@@ -541,13 +526,11 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
     if "func_motion_correct" not in resource_pool.keys():
 
         from functional_preproc import func_motion_correct_workflow
-
-        workflow, new_resource_pool = \
+        old_rp = copy.copy(resource_pool)
+        workflow, resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config, name)
-        if new_resource_pool == resource_pool:
-            return workflow, resource_pool
-        else:
-            resource_pool = new_resource_pool            
+        if resource_pool == old_rp:
+            return workflow, resource_pool        
    
     func_mean_skullstrip = pe.Node(interface=preprocess.TStat(),
                            name='func_mean_skullstrip%s' % name)
@@ -555,17 +538,14 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
     func_mean_skullstrip.inputs.options = '-mean'
     func_mean_skullstrip.inputs.outputtype = 'NIFTI_GZ'
 
-
     if len(resource_pool["func_motion_correct"]) == 2:
         node, out_file = resource_pool["func_motion_correct"]
         workflow.connect(node, out_file, func_mean_skullstrip, 'in_file')
     else:
         func_mean_skullstrip.inputs.in_file = \
             resource_pool["func_motion_correct"]
- 
 
     resource_pool["mean_functional"] = (func_mean_skullstrip, 'out_file')
-
 
     return workflow, resource_pool
 

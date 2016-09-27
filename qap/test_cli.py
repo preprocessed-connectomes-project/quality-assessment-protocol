@@ -3,6 +3,13 @@ import pytest
 
 
 @pytest.mark.quick
+def test_cli():
+
+    err = "some minor refactoring needed! no proper error message when you send in an S3 list as a subject list. flatten sublist, run_here, etc. seems convoluted"
+    raise Exception(err)
+
+
+@pytest.mark.quick
 def init_cli_obj():
 
     import os

@@ -24,8 +24,9 @@ def test_summary_mask():
 
     summary_tuple = summary_mask(anat_data, mask_data)
 
-    assert summary_tuple == (230.34472886830682, 233.13835676355924, 157221)
-    
+    assert int(summary_tuple[0]) == 230
+    assert int(summary_tuple[1]) == 233
+    assert int(summary_tuple[2]) == 157221
     
 
 @pytest.mark.quick
@@ -60,7 +61,6 @@ def test_check_datatype():
 
     assert assert_list == [1,1]
     
-    
 
 @pytest.mark.quick
 def test_snr():
@@ -72,8 +72,7 @@ def test_snr():
 
     snr_out = snr(fg_mean, bg_std)
 
-    assert snr_out == 53.137621254928689
-
+    assert int(snr_out) == 53
 
 
 @pytest.mark.quick
@@ -87,9 +86,8 @@ def test_cnr():
 
     cnr_out = cnr(mean_gm, mean_wm, std_bg)
 
-    assert cnr_out == 32.902489383240514
+    assert int(cnr_out) == 32
     
-
 
 @pytest.mark.quick
 def test_cortical_contrast():
@@ -102,7 +100,6 @@ def test_cortical_contrast():
     cort_out = cortical_contrast(mean_gm, mean_wm)
 
     assert cort_out == 0.5075190453873176
-
 
 
 @pytest.mark.quick
@@ -132,8 +129,7 @@ def test_fber():
 
     fber_out = fber(anat_data, head_data, bg_data)
 
-    assert fber_out == 341.75712385016595
-
+    assert int(fber_out) == 341
 
 
 @pytest.mark.quick
@@ -154,7 +150,6 @@ def test_efc():
     efc_out = efc(anat_data)
 
     assert efc_out == 0.36522517588147252
-
 
 
 @pytest.mark.quick
@@ -179,7 +174,6 @@ def test_artifacts_no_qi2():
     art_out = artifacts(anat_data, mask_data, calculate_qi2=False)
 
     assert art_out == (0.10064793870393487, None)
-
 
 
 @pytest.mark.skip()
@@ -215,7 +209,6 @@ def test_artifacts_with_qi2():
     assert art_out == 0
 
 
-
 @pytest.mark.quick
 def test_fwhm_out_vox():
 
@@ -237,7 +230,6 @@ def test_fwhm_out_vox():
                         4.4016999999999999, 3.997033333333333)
 
 
-
 @pytest.mark.quick
 def test_fwhm_no_out_vox():
 
@@ -255,7 +247,6 @@ def test_fwhm_no_out_vox():
     fwhm_out = fwhm(anat_file, mask_file, out_vox=False)
 
     assert fwhm_out == (11.1622, 11.6973, 13.2051, 11.991099999999999)
-
 
 
 @pytest.mark.quick

@@ -38,7 +38,7 @@ def parse_raw_data_list(filepath_list, site_folder, include_sites=False,
     
     # create subject inclusion list
     if subject_inclusion:
-        inclusion_list = read_txt_file(subject_inclusion)    
+        inclusion_list = read_txt_file(subject_inclusion)
     
     for fullpath in filepath_list:
             

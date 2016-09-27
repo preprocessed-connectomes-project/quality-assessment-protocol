@@ -414,11 +414,12 @@ class QAProtocolCLI:
             msg = "No bundles created."
             raise_smart_exception(locals(),msg)
 
-
         return bundles
 
 
     def _run_here(self, run_name):
+
+        # this runs if a sublist is provided (instead of an s3 dict yml)
 
         # input
         #   run_name: the filename of the pipeline config YAML file
@@ -444,13 +445,14 @@ class QAProtocolCLI:
         results = []
 
         # skip parallel machinery if we are running only one bundle at once
+        # NOTE: this will almost always be the case! multiple bundles at once
+        #       are only for the sake of testing/experimentation
         if self._num_bundles_at_once == 1:
             for a in wfargs:
                 results.append(_run_workflow(a))
         # or use Pool if running multiple bundles simultaneously
         else:
             from multiprocessing import Pool
-
             try:
                 pool = Pool(processes=self._num_bundles_at_once, \
                             masktasksperchild=50)
@@ -464,7 +466,7 @@ class QAProtocolCLI:
         return results
 
 
-    def _run_one_bundle(self, run_name, bundle_idx=None):
+    def _run_one_bundle_on_node(self, run_name, bundle_idx=None):
 
         # kick off a single-bundle run
         #   this will be called multiple times throughout the execution of
@@ -609,7 +611,7 @@ class QAProtocolCLI:
         # skip parallel machinery if we are running only one bundle at once
         if self._num_bundles_at_once == 1:
             for idx in range(1,num_bundles+1):
-                results.append(self._run_one_bundle(run_name, bundle_idx=idx))
+                results.append(self._run_one_bundle_on_node(run_name, bundle_idx=idx))
         # or use Pool if running multiple bundles simultaneously
         else:
             from multiprocessing import Pool
@@ -620,7 +622,7 @@ class QAProtocolCLI:
             except TypeError:  # Make python <2.7 compatible
                 pool = Pool(processes=self._num_bundles_at_once)
 
-            results = pool.map(self._run_one_bundle,run_name,range(1,num_bundles+1))
+            results = pool.map(self._run_one_bundle_on_node,run_name,range(1,num_bundles+1))
             pool.close()
             pool.terminate()
 
@@ -710,7 +712,7 @@ class QAProtocolCLI:
         # Start the magic
         if self._cloudify:
 
-            results = self._run_one_bundle(run_name)
+            results = self._run_one_bundle_on_node(run_name)
 
         elif not self._platform:
 
@@ -976,7 +978,7 @@ def _run_workflow(args):
                 wf_builder = getattr(qw, 'qap_' + qap_type + '_workflow')
                 workflow, resource_pool = wf_builder(workflow, resource_pool,\
                                                      config, name)
-        print "HEY: ", resource_pool
+
         # set up the datasinks
         out_list = []
         for output in resource_pool.keys():
@@ -984,8 +986,6 @@ def _run_workflow(args):
             for qap_type in qap_types:
                 if qap_type in output:
                     out_list.append("qap_" + qap_type)
-
-        print out_list
 
         if keep_outputs:
             out_list = resource_pool.keys()
