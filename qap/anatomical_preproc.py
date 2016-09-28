@@ -26,19 +26,15 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     anat_deoblique.inputs.in_file = resource_pool["anatomical_scan"]
     anat_deoblique.inputs.deoblique = True
 
-
     anat_reorient = pe.Node(interface=preprocess.Resample(),
                             name='anat_reorient%s' % name)
 
     anat_reorient.inputs.orientation = 'RPI'
     anat_reorient.inputs.outputtype = 'NIFTI_GZ'
 
-
     workflow.connect(anat_deoblique, 'out_file', anat_reorient, 'in_file')
-
    
     resource_pool["anatomical_reorient"] = (anat_reorient, 'out_file')
-
 
     return workflow, resource_pool
 

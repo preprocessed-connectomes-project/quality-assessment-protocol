@@ -349,13 +349,7 @@ class QAProtocolCLI:
         return flat_sub_dict_dict
 
 
-    def _load_and_flatten_sublist(self):
-
-        import yaml
-
-        if "subject_list" in self._config.keys():
-            with open(self._config["subject_list"], "r") as f:
-                subdict = yaml.load(f)
+    def _load_sublist(self):
 
         # subdict is in the format:
         #   {'sub_01': {'session_01': 
@@ -364,19 +358,21 @@ class QAProtocolCLI:
         #                   'site_name': 'Site_1'} },
         #    'sub_02': {..} }
 
+        import yaml
+
+        if "subject_list" in self._config.keys():
+            with open(self._config["subject_list"], "r") as f:
+                subdict = yaml.load(f)
+        else:
+            msg = "\n\n[!] There is no participant list YML to read.\n\n"
+            raise_smart_exception(locals(),msg)
+
         if len(subdict) == 0:
             msg = "The participant list provided is either empty or could " \
                   "not be read properly!"
             raise_smart_exception(locals(),msg)
 
-        # Generate flat_sub_dict_dict
-
-        # flat_sub_dict_dict is a dictionary of dictionaries. format:
-        #   { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
-        #                                "anatomical_brain": <filepath>} }
-        flat_sub_dict_dict = self.create_flat_sub_dict_dict(subdict)
-
-        return flat_sub_dict_dict
+        return subdict
 
 
     def _create_bundles(self, flat_sub_dict_dict):
@@ -425,7 +421,11 @@ class QAProtocolCLI:
         #   run_name: the filename of the pipeline config YAML file
 
         # get flattened sublist
-        flat_sub_dict_dict = self._load_and_flatten_sublist()
+        # flat_sub_dict_dict is a dictionary of dictionaries. format:
+        #   { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
+        #                                "anatomical_brain": <filepath>} }
+        subdict = self._load_sublist()
+        flat_sub_dict_dict = self.create_flat_sub_dict_dict(subdict)
 
         logger.info('There are %d subjects in the pool' %
                     len(flat_sub_dict_dict.keys()))
@@ -554,7 +554,11 @@ class QAProtocolCLI:
             # run on a cluster without pulling data from S3
 
             # get flat sublist
-            flat_sub_dict_dict = self._load_and_flatten_sublist()
+            # flat_sub_dict_dict is a dictionary of dictionaries. format:
+            #   { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
+            #                                "anatomical_brain": <filepath>} }
+            subdict = self._load_sublist()
+            flat_sub_dict_dict = self.create_flat_sub_dict_dict(subdict)
 
             if bundle_idx:
 
@@ -761,7 +765,8 @@ class QAProtocolCLI:
             elif self._config["subject_list"]:
 
                 # get flattened sublist
-                flat_sub_dict_dict = self._load_and_flatten_sublist()
+                subdict = self._load_sublist()
+                flat_sub_dict_dict = self.create_flat_sub_dict_dict(subdict)
 
                 num_bundles = \
                     float(len(flat_sub_dict_dict)) / float(bundle_size)
@@ -787,15 +792,19 @@ class QAProtocolCLI:
         if write_report:
             from qap.viz.reports import workflow_report
             logger.info('Writing PDF reports')
-            qap_type = 'qap_' + config['qap_type']
-            in_csv = op.join(config['output_directory'], '%s.csv' % qap_type)
+            qap_types = ["anatomical_spatial", 
+                     "functional_spatial", 
+                     "functional_temporal"]
+            for qap_type in qap_types:
+                qap_type = 'qap_' + qap_type
+                in_csv = op.join(config['output_directory'], '%s.csv' % qap_type)
 
-            reports = workflow_report(in_csv, qap_type, run_name, results,
-                                      out_dir=config['output_directory'])
-
-            for k, v in reports.iteritems():
-                if v['success']:
-                    logger.info('Written report (%s) in %s' % (k, v['path']))
+                reports = workflow_report(in_csv, qap_type, run_name, results,
+                                          out_dir=config['output_directory'])
+  
+                for k, v in reports.iteritems():
+                    if v['success']:
+                        logger.info('Written report (%s) in %s' % (k, v['path']))
 
 
 def starter_node_func(starter):
@@ -805,8 +814,6 @@ def starter_node_func(starter):
 def _run_workflow(args):
 
     # build pipeline for each bundle, individually
-    # ~ 5 min 20 sec per subject
-    # (roughly 320 seconds)
 
     import os
     import os.path as op
@@ -868,7 +875,6 @@ def _run_workflow(args):
 
     # individual workflow and logger setup
     logger.info("Contents of resource pool:\n" + str(resource_pool_dict))
-    logger.info("Configuration settings:\n" + str(config))
 
     # create the one node all participants will start from
     starter_node = pe.Node(niu.Function(input_names=['starter'], 
@@ -959,6 +965,8 @@ def _run_workflow(args):
         if "site_name" in resource_pool:
             config.update({"site_name": resource_pool["site_name"]})
 
+        logger.info("Configuration settings:\n" + str(config))
+
         # update that resource pool with what's already in the output
         # directory
         for resource in os.listdir(output_dir):
@@ -970,7 +978,9 @@ def _run_workflow(args):
         resource_pool["starter"] = (starter_node, 'starter')
 
         # start connecting the pipeline
-        qap_types = ["anatomical_spatial", "functional_spatial", "functional_temporal"]
+        qap_types = ["anatomical_spatial", 
+                     "functional_spatial", 
+                     "functional_temporal"]
 
         for qap_type in qap_types:
             if 'qap_' + qap_type not in resource_pool.keys():
@@ -982,7 +992,6 @@ def _run_workflow(args):
         # set up the datasinks
         out_list = []
         for output in resource_pool.keys():
-            print output
             for qap_type in qap_types:
                 if qap_type in output:
                     out_list.append("qap_" + qap_type)
@@ -998,8 +1007,9 @@ def _run_workflow(args):
                 out_list += ['qap_mosaic']
 
             # The functional temporal also has an FD plot
-            for output in out_list:
-                if 'functional_temporal' in output:
+            if 'qap_functional_temporal' in resource_pool.keys():
+                if ("qap_fd" in resource_pool.keys()) and \
+                    ("qap_fd" not in out_list):
                     out_list += ['qap_fd']
 
         for output in out_list:
