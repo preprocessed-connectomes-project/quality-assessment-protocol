@@ -258,6 +258,9 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
 
     check_config_settings(config, "template_skull_for_anat")
 
+    if "exclude_zeros" not in config.keys():
+        config["exclude_zeros"] = False
+
     if 'qap_head_mask' not in resource_pool.keys():
 
         from qap_workflows import qap_mask_workflow
@@ -294,8 +297,8 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         input_names=['anatomical_reorient', 'qap_head_mask_path',
                      'whole_head_mask_path', 'skull_mask_path',
                      'anatomical_gm_mask', 'anatomical_wm_mask',
-                     'anatomical_csf_mask', 'subject_id',
-                     'session_id', 'scan_id', 'site_name',
+                     'anatomical_csf_mask', 'subject_id', 'session_id',
+                     'scan_id', 'site_name', 'exclude_zeroes',
                      'starter'],
         output_names=['qc'], function=qap_anatomical_spatial),
         name='qap_anatomical_spatial%s' % name)
@@ -304,6 +307,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     spatial.inputs.subject_id = config['subject_id']
     spatial.inputs.session_id = config['session_id']
     spatial.inputs.scan_id = config['scan_id']
+    spatial.inputs.exclude_zeroes = config['exclude_zeros']
 
     node, out_file = resource_pool['starter']
     workflow.connect(node, out_file, spatial, 'starter')

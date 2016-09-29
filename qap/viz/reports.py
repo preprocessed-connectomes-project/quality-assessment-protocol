@@ -126,7 +126,8 @@ def workflow_report(in_csv, qap_type, run_name, res_dict,
         plots.insert(0, out_sum)
 
         # Summary (violinplots) of QC measures
-        qc_ms = op.join(out_dir, run_name, subid, 'qc_measures.pdf')
+        qc_ms = op.join(out_dir, run_name, subid, 
+            '%s_measures.pdf' % qap_type)
 
         func(df, subject=subid, out_file=qc_ms)
         plots.append(qc_ms)

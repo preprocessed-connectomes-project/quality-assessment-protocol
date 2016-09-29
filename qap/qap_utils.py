@@ -23,9 +23,7 @@ def load_image(image_file):
 
     # Ensure that data is cast as at least 32-bit
     if np.issubdtype(dat.dtype, float):
-
         dat = dat.astype('float32')
-
         # Check for negative values
         if (dat < 0).any():
             print "found negative values, setting to zero (see file: %s)" \
@@ -33,15 +31,12 @@ def load_image(image_file):
             dat[dat<0] = 0
 
     elif np.issubdtype(dat.dtype, int):
-
         dat = dat.astype('int32')
 
     elif np.issubdtype(dat.dtype, np.uint8):
-
         dat = dat.astype(np.uint8)
 
     else:
-
         msg = "Error: Unknown datatype %s" % dat.dtype
         raise_smart_exception(locals(),msg)
 
@@ -95,7 +90,8 @@ def load_mask(mask_file, ref_file):
     return mask_dat
 
 
-def create_anatomical_background_mask(fg_mask_data, anatomical_data):
+def create_anatomical_background_mask(anatomical_data, fg_mask_data, 
+    exclude_zeroes=False):
 
     import numpy as np
 
@@ -107,21 +103,13 @@ def create_anatomical_background_mask(fg_mask_data, anatomical_data):
               "list.\n\nError details: %s\n\n" % e
         raise Exception(err)
 
-    # note we are checking for less than 60% of zero voxels within the ENTIRE
-    # image, not just in the background
-    anat_zeroes = np.asarray(anatomical_data)
-    anat_zeroes[anat_zeroes > 0] = 1
-    ratio_zeroes = float(anat_zeroes.sum()) / float(anatomical_data.size)
-
-    no_zeroes = False
-    if ratio_zeroes < 0.60:
+    if exclude_zeroes:
         # modify the mask to exclude zeroes in the background of the
         # anatomical image, as these are often introduced artificially and can
         # skew the QAP metric results
         bool_anat_data = anatomical_data > 0
         bg_mask_data = bg_mask_data * bool_anat_data
-        no_zeroes = True
 
-    return bg_mask_data, no_zeroes
+    return bg_mask_data
 
     

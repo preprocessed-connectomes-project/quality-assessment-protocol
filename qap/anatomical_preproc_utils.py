@@ -22,7 +22,6 @@ def pick_seg_type(probability_maps, seg_type):
     import os
     import sys
 
-
     if(isinstance(probability_maps, list)):
 
         if(len(probability_maps) == 1):
@@ -45,7 +44,6 @@ def pick_seg_type(probability_maps, seg_type):
 
                 if filename.endswith("_2.nii.gz"):
                     return filename
-
 
     return None
 

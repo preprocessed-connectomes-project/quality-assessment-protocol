@@ -167,8 +167,8 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
                            whole_head_mask_path, skull_mask_path,
                            anatomical_gm_mask, anatomical_wm_mask,
                            anatomical_csf_mask, subject_id, session_id,
-                           scan_id, site_name=None, out_vox=True,
-                           starter=None):
+                           scan_id, site_name=None, exclude_zeroes=False,
+                           out_vox=True, starter=None):
 
     import os
     import sys
@@ -183,7 +183,8 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     anat_data = load_image(anatomical_reorient)
 
     fg_mask = load_mask(qap_head_mask_path, anatomical_reorient)
-    bg_mask, no_zeroes = create_anatomical_background_mask(fg_mask, anat_data)
+    bg_mask = create_anatomical_background_mask(anat_data, fg_mask,
+        exclude_zeroes)
 
     whole_head_mask = load_mask(whole_head_mask_path, anatomical_reorient)
     skull_mask = load_mask(skull_mask_path, anatomical_reorient)
@@ -196,6 +197,9 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     qc = dict()
 
     qc['_QAP Version %s' % qap.__version__] = ""
+
+    if exclude_zeroes:
+        qc['_zeros_excluded'] = "True"
 
     qc['Participant'] = subject_id
 
@@ -213,7 +217,7 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     qc['EFC'] = efc(anat_data)
 
     # Artifact
-    qc['Qi1'], _ = artifacts(anat_data, fg_mask, calculate_qi2=False)
+    qc['Qi1'], _ = artifacts(anat_data, fg_mask, bg_mask, calculate_qi2=False)
 
     # Smoothness in voxels
     tmp = fwhm(anatomical_reorient, whole_head_mask_path, out_vox=out_vox)

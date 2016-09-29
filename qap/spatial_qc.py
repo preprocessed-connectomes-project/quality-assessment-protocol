@@ -8,7 +8,6 @@ import scipy.ndimage as nd
 import scipy.stats as stats
 
 
-
 def summary_mask(anat_data, mask_data):
 
     """
@@ -38,22 +37,6 @@ def summary_mask(anat_data, mask_data):
     size        = len(anat_masked)
     
     return (mean, std, size)
-
-
-
-def get_background(anat_data, fg_mask_data):
-
-    # Define the image background by taking the inverse of the
-    # foreground mask.
-    bg_mask = (fg_mask_data == 0) * 1
-
-    # Create an image containing only background voxels (everything 
-    # outside bg_mask set to 0)
-    background = anat_data.copy()
-    background[bg_mask != 1] = 0
-
-    return background, bg_mask
-
 
 
 def check_datatype(background):
@@ -87,7 +70,6 @@ def check_datatype(background):
     return background
 
 
-
 def convert_negatives(img_data):
 
     # convert any negative voxel values to zero, provide warning
@@ -99,7 +81,6 @@ def convert_negatives(img_data):
             break
 
     return img_data
-
 
 
 def snr(mean_fg, std_bg):
@@ -119,7 +100,6 @@ def snr(mean_fg, std_bg):
     return snr
 
 
-
 def cnr(mean_gm, mean_wm, std_bg):
 
     """
@@ -136,7 +116,6 @@ def cnr(mean_gm, mean_wm, std_bg):
     return cnr
 
 
-
 def cortical_contrast(mean_gm, mean_wm):
 
     """
@@ -150,7 +129,6 @@ def cortical_contrast(mean_gm, mean_wm):
 
     return cort_con
 
-    
     
 def fber(anat_data, skull_mask_data, bg_mask_data):
 
@@ -167,7 +145,6 @@ def fber(anat_data, skull_mask_data, bg_mask_data):
     fber    = mean_fg / mean_bg
 
     return fber
-
 
 
 def efc(anat_data):
@@ -201,8 +178,7 @@ def efc(anat_data):
     return efc
 
 
-
-def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
+def artifacts(anat_data, fg_mask_data, bg_mask_data, calculate_qi2=False):
 
     # Detect artifacts in the anatomical image using the method described in
     # Mortamet et al. 2009 (MRM)
@@ -214,7 +190,10 @@ def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
 
     import numpy as np
 
-    background, bg_mask = get_background(anat_data, fg_mask_data)
+    # Create an image containing only background voxels (everything 
+    # outside bg_mask set to 0)
+    background = anat_data.copy()
+    background[bg_mask_data != 1] = 0
     
     # make sure the datatype is an int
     background = check_datatype(background)
@@ -241,7 +220,7 @@ def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
 
     # Count the number of voxels that remain after the opening operation. 
     # These are artifacts.
-    QI1             = background.sum() / float(bg_mask.sum())
+    QI1             = background.sum() / float(bg_mask_data.sum())
     
     ''' "bg" in code below not defined- need to ascertain what that should '''
     '''      be, and correct it- unit test for this part disabled for now  '''
@@ -277,7 +256,6 @@ def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
         QI2         = None
 
     return (QI1,QI2)
-
 
 
 def fwhm(anat_file, mask_file, out_vox=False):
@@ -325,7 +303,6 @@ def fwhm(anat_file, mask_file, out_vox=False):
         vals    = vals / pixdim
     
     return tuple(vals)
-
 
 
 def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
@@ -397,7 +374,6 @@ def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
 
     
     return gsr
-
 
 
 def ghost_all(epi_data, mask_data):
