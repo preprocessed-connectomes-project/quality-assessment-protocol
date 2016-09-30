@@ -65,6 +65,7 @@ def test_check_datatype():
 @pytest.mark.quick
 def test_snr():
 
+    import numpy.testing as nt
     from qap.spatial_qc import snr
 
     fg_mean = 419.6682196897284
@@ -72,12 +73,13 @@ def test_snr():
 
     snr_out = snr(fg_mean, bg_std)
 
-    assert int(snr_out) == 53
+    nt.assert_almost_equal(snr_out, 53.13762125492869, decimal=4)
 
 
 @pytest.mark.quick
 def test_cnr():
 
+    import numpy.testing as nt
     from qap.spatial_qc import cnr
 
     mean_gm = 382.08429670720869
@@ -86,12 +88,13 @@ def test_cnr():
 
     cnr_out = cnr(mean_gm, mean_wm, std_bg)
 
-    assert int(cnr_out) == 32
+    nt.assert_almost_equal(cnr_out, 32.902489383240514, decimal=4)
     
 
 @pytest.mark.quick
 def test_cortical_contrast():
 
+    import numpy.testing as nt
     from qap.spatial_qc import cortical_contrast
 
     mean_gm = 382.08429670720869
@@ -99,7 +102,7 @@ def test_cortical_contrast():
 
     cort_out = cortical_contrast(mean_gm, mean_wm)
 
-    assert cort_out == 0.5075190453873176
+    nt.assert_almost_equal(cort_out, 0.5075190453873176, decimal=4)
 
 
 @pytest.mark.quick
@@ -109,6 +112,8 @@ def test_fber():
     import pickle
     import pkg_resources as p
     
+    import numpy.testing as nt
+
     from qap.spatial_qc import fber
     from qap.qap_utils import load_image, load_mask
 
@@ -129,7 +134,7 @@ def test_fber():
 
     fber_out = fber(anat_data, head_data, bg_data)
 
-    assert int(fber_out) == 341
+    nt.assert_almost_equal(fber_out, 341.72165992685609, decimal=4)
 
 
 @pytest.mark.quick
@@ -139,6 +144,8 @@ def test_efc():
     import pickle
     import pkg_resources as p
     
+    import numpy.testing as nt
+
     from qap.spatial_qc import efc
     from qap.qap_utils import load_image
 
@@ -149,7 +156,7 @@ def test_efc():
 
     efc_out = efc(anat_data)
 
-    assert efc_out == 0.36522517588147252
+    nt.assert_almost_equal(efc_out, 0.36522517588147252, decimal=3)
 
 
 @pytest.mark.quick
@@ -158,6 +165,8 @@ def test_artifacts_no_qi2():
     import os
     import pickle
     import pkg_resources as p
+
+    import numpy.testing as nt
 
     from qap.spatial_qc import artifacts
     from qap.qap_utils import load_image, load_mask
@@ -168,12 +177,16 @@ def test_artifacts_no_qi2():
     head_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                     "qap_head_mask.nii.gz"))
 
+    bg_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                  "anat_bg_mask.nii.gz"))
+
     anat_data = load_image(anat_reorient)
     mask_data = load_mask(head_mask, anat_reorient)
+    bg_data = load_mask(bg_mask, anat_reorient)
 
-    art_out = artifacts(anat_data, mask_data, calculate_qi2=False)
+    art_out = artifacts(anat_data, mask_data, bg_data, calculate_qi2=False)
 
-    assert art_out == (0.10064793870393487, None)
+    nt.assert_almost_equal(art_out[0], 0.10064793870393487, decimal=4)
 
 
 @pytest.mark.skip()
@@ -215,6 +228,8 @@ def test_fwhm_out_vox():
     import os
     import pkg_resources as p
     
+    import numpy.testing as nt
+
     from qap.spatial_qc import fwhm
 
     anat_file = p.resource_filename("qap", os.path.join(test_sub_dir, \
@@ -226,8 +241,10 @@ def test_fwhm_out_vox():
 
     fwhm_out = fwhm(anat_file, mask_file, out_vox=True)
 
-    assert fwhm_out == (3.7207333333333334, 3.8991000000000002, \
-                        4.4016999999999999, 3.997033333333333)
+    nt.assert_almost_equal(fwhm_out[0], 3.7207333333333334, decimal=4)
+    nt.assert_almost_equal(fwhm_out[1], 3.8991000000000002, decimal=4)
+    nt.assert_almost_equal(fwhm_out[2], 4.4016999999999999, decimal=4)
+    nt.assert_almost_equal(fwhm_out[3], 3.997033333333333, decimal=4)
 
 
 @pytest.mark.quick
@@ -236,6 +253,8 @@ def test_fwhm_no_out_vox():
     import os
     import pkg_resources as p
     
+    import numpy.testing as nt
+
     from qap.spatial_qc import fwhm
 
     anat_file = p.resource_filename("qap", os.path.join(test_sub_dir, \
@@ -246,7 +265,10 @@ def test_fwhm_no_out_vox():
 
     fwhm_out = fwhm(anat_file, mask_file, out_vox=False)
 
-    assert fwhm_out == (11.1622, 11.6973, 13.2051, 11.991099999999999)
+    nt.assert_almost_equal(fwhm_out[0], 11.1622, decimal=4)
+    nt.assert_almost_equal(fwhm_out[1], 11.6973, decimal=4)
+    nt.assert_almost_equal(fwhm_out[2], 13.2051, decimal=4)
+    nt.assert_almost_equal(fwhm_out[3], 11.991099999999999, decimal=4)
 
 
 @pytest.mark.quick
@@ -256,6 +278,8 @@ def test_ghost_direction():
     import pickle
     import pkg_resources as p
     
+    import numpy.testing as nt
+
     from qap.spatial_qc import ghost_direction
     from qap.qap_utils import load_image, load_mask
 
@@ -275,6 +299,7 @@ def test_ghost_direction():
 
     gsr_out_all = (gsr_out_x, gsr_out_y, gsr_out_z)
 
-    assert gsr_out_all == (-0.018987976014614105, 0.020795321092009544, \
-        0.06708560138940811)  
+    nt.assert_almost_equal(gsr_out_all[0], -0.018987976014614105, decimal=4)
+    nt.assert_almost_equal(gsr_out_all[1], 0.020795321092009544, decimal=4)
+    nt.assert_almost_equal(gsr_out_all[2], 0.06708560138940811, decimal=4)  
     

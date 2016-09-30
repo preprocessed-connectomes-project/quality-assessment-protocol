@@ -179,10 +179,23 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     from qap.qap_utils import load_image, load_mask, \
                               create_anatomical_background_mask
 
+    # qap_head_mask_path
+    #   mask of the head, plus the slice covering the region below the nose
+    #   and in front of the mouth
+
+    # whole_head_mask_path
+    #   mask of the entire head only (no slice covering in front of the mouth)
+
+    # skull_mask_path
+    #   mask of the upper portion of the head only (qap_head_mask subtracted
+    #   by the slice mask)
+
     # Load the data
     anat_data = load_image(anatomical_reorient)
 
     fg_mask = load_mask(qap_head_mask_path, anatomical_reorient)
+
+    # bg_mask is the inversion of the "qap_head_mask"
     bg_mask = create_anatomical_background_mask(anat_data, fg_mask,
         exclude_zeroes)
 

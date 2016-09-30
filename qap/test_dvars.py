@@ -19,8 +19,7 @@ def test_remove_zero_variance_voxels():
                                         "func_reorient.nii.gz"))
                                       
     func_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "functional_brain_mask_3dAutoMask" \
-                                    ".nii.gz"))
+                                    "functional_brain_mask.nii.gz"))
                                     
     ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                   "no_zero_variance_voxels_mask.p"))
@@ -56,8 +55,7 @@ def test_load():
                                         "func_reorient.nii.gz"))
                                       
     func_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "functional_brain_mask_3dAutoMask" \
-                                    ".nii.gz"))
+                                    "functional_brain_mask.nii.gz"))
                                     
     ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                   "loaded_func.p"))
@@ -130,5 +128,5 @@ def test_ar1():
         
     func_out_data = ar1(func_data)
         
-    np.testing.assert_array_equal(ref_out_data, func_out_data)                           
+    np.testing.assert_array_almost_equal(ref_out_data, func_out_data)                           
                                     
