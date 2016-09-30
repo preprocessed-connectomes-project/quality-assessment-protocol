@@ -5,6 +5,14 @@ def read_txt_file(txt_file):
     return strings
 
 
+def read_yml_file(yml_file):
+    import os
+    import yaml
+    with open(os.path.realpath(yml_file), "r") as f:
+        config = yaml.load(f)
+    return config
+
+
 def gather_filepath_list(site_folder):
 
     # gathers all of the NIFTI files under the provided directory

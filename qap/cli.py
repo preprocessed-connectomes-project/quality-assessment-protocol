@@ -24,6 +24,11 @@ class QAProtocolCLI:
 
         if parse_args:
             self._parse_args()
+        else:
+            self._cloudify = False
+            self._s3_dict_yml = None
+            self._subj_idx = None
+            self._bundle_idx = None
 
 
     def _parse_args(self):
@@ -106,8 +111,8 @@ class QAProtocolCLI:
         '''
 
         # Load config
-        with open(os.path.realpath(args.config), "r") as f:
-            self._config = yaml.load(f)
+        from qap.script_utils import read_yml_file
+        self._config = read_yml_file(args.config)
 
         self._config['pipeline_config_yaml'] = os.path.realpath(args.config)
 
@@ -242,32 +247,6 @@ class QAProtocolCLI:
 
         return batch_file_contents, batch_filepath, exec_cmd, \
                    confirm_str, cluster_files_dir
-
-
-    def _run_on_cluster(self, batch_file_contents, batch_filepath, exec_cmd, \
-                            confirm_str, cluster_files_dir):
-
-        import os
-        import re
-        import commands
-
-        with open(batch_filepath, 'w') as f:
-            f.write(batch_file_contents)
-
-        # Get output response from job submission
-        out = commands.getoutput('%s %s' % (exec_cmd, batch_filepath))
-
-        # Check for successful qsub submission
-        if re.search(confirm_str, out) == None:
-            err_msg = 'Error submitting QAP pipeline run to %s queue' \
-                      % self._platform
-            raise Exception(err_msg)
-
-        # Get pid and send to pid file
-        pid = re.search(confirm_str, out).group(0)
-        pid_file = os.path.join(cluster_files_dir, 'pid.txt')
-        with open(pid_file, 'w') as f:
-            f.write(pid)
 
 
     def create_flat_sub_dict_dict(self, subdict):
@@ -413,57 +392,30 @@ class QAProtocolCLI:
         return bundles
 
 
-    def _run_here(self, run_name):
+    def _run_on_cluster(self, batch_file_contents, batch_filepath, exec_cmd, \
+                            confirm_str, cluster_files_dir):
 
-        # this runs if a sublist is provided (instead of an s3 dict yml)
+        import os
+        import re
+        import commands
 
-        # input
-        #   run_name: the filename of the pipeline config YAML file
+        with open(batch_filepath, 'w') as f:
+            f.write(batch_file_contents)
 
-        # get flattened sublist
-        # flat_sub_dict_dict is a dictionary of dictionaries. format:
-        #   { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
-        #                                "anatomical_brain": <filepath>} }
-        subdict = self._load_sublist()
-        flat_sub_dict_dict = self.create_flat_sub_dict_dict(subdict)
+        # Get output response from job submission
+        out = commands.getoutput('%s %s' % (exec_cmd, batch_filepath))
 
-        logger.info('There are %d subjects in the pool' %
-                    len(flat_sub_dict_dict.keys()))
+        # Check for successful qsub submission
+        if re.search(confirm_str, out) == None:
+            err_msg = 'Error submitting QAP pipeline run to %s queue' \
+                      % self._platform
+            raise Exception(err_msg)
 
-        # Create bundles
-        # bundles is a list of "bundles" - each bundle being a dictionary that
-        # is a starting resource pool for N sub-session-scan combos with N
-        # being the number of subjects per bundle (set by the user)
-        bundles = self._create_bundles(flat_sub_dict_dict)
-
-        # Stack workflow args, make a list of tuples containing run args
-        #     one tuple for each bundle
-        #     len(wfargs) = number of bundles
-        wfargs = [(data_bundle, data_bundle.keys(), self._config, run_name,
-                   self.runargs) for data_bundle in bundles]
-
-        results = []
-
-        # skip parallel machinery if we are running only one bundle at once
-        # NOTE: this will almost always be the case! multiple bundles at once
-        #       are only for the sake of testing/experimentation
-        if self._num_bundles_at_once == 1:
-            for a in wfargs:
-                results.append(_run_workflow(a))
-        # or use Pool if running multiple bundles simultaneously
-        else:
-            from multiprocessing import Pool
-            try:
-                pool = Pool(processes=self._num_bundles_at_once, \
-                            masktasksperchild=50)
-            except TypeError:  # Make python <2.7 compatible
-                pool = Pool(processes=self._num_bundles_at_once)
-
-            results = pool.map(_run_workflow, wfargs)
-            pool.close()
-            pool.terminate()
-
-        return results
+        # Get pid and send to pid file
+        pid = re.search(confirm_str, out).group(0)
+        pid_file = os.path.join(cluster_files_dir, 'pid.txt')
+        with open(pid_file, 'w') as f:
+            f.write(pid)
 
 
     def _run_one_bundle_on_node(self, run_name, bundle_idx=None):
@@ -605,6 +557,59 @@ class QAProtocolCLI:
         return rt
 
 
+    def _run_here(self, run_name):
+
+        # this runs if a sublist is provided (instead of an s3 dict yml)
+
+        # input
+        #   run_name: the filename of the pipeline config YAML file
+
+        # get flattened sublist
+        # flat_sub_dict_dict is a dictionary of dictionaries. format:
+        #   { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
+        #                                "anatomical_brain": <filepath>} }
+        subdict = self._load_sublist()
+        flat_sub_dict_dict = self.create_flat_sub_dict_dict(subdict)
+
+        logger.info('There are %d subjects in the pool' %
+                    len(flat_sub_dict_dict.keys()))
+
+        # Create bundles
+        # bundles is a list of "bundles" - each bundle being a dictionary that
+        # is a starting resource pool for N sub-session-scan combos with N
+        # being the number of subjects per bundle (set by the user)
+        bundles = self._create_bundles(flat_sub_dict_dict)
+
+        # Stack workflow args, make a list of tuples containing run args
+        #     one tuple for each bundle
+        #     len(wfargs) = number of bundles
+        wfargs = [(data_bundle, data_bundle.keys(), self._config, run_name,
+                   self.runargs) for data_bundle in bundles]
+
+        results = []
+
+        # skip parallel machinery if we are running only one bundle at once
+        # NOTE: this will almost always be the case! multiple bundles at once
+        #       are only for the sake of testing/experimentation
+        if self._num_bundles_at_once == 1:
+            for a in wfargs:
+                results.append(_run_workflow(a))
+        # or use Pool if running multiple bundles simultaneously
+        else:
+            from multiprocessing import Pool
+            try:
+                pool = Pool(processes=self._num_bundles_at_once, \
+                            masktasksperchild=50)
+            except TypeError:  # Make python <2.7 compatible
+                pool = Pool(processes=self._num_bundles_at_once)
+
+            results = pool.map(_run_workflow, wfargs)
+            pool.close()
+            pool.terminate()
+
+        return results
+
+
     def _run_here_from_s3(self, run_name, num_bundles):
 
         results = []
@@ -633,14 +638,22 @@ class QAProtocolCLI:
         return results    
         
 
-    def run(self):
+    def run(self, config_file=None, partic_list=None):
 
         from qap.workflow_utils import raise_smart_exception, \
                                        check_config_settings
 
+        # in case we are overloading
+        if config_file:
+            from qap.script_utils import read_yml_file
+            self._config = read_yml_file(config_file)
+            self._config["pipeline_config_yaml"] = config_file
+       
+        if partic_list:
+            self._config["subject_list"] = partic_list
+
         # Get configurations and settings
         config = self._config
-
         check_config_settings(config, "num_subjects_per_bundle")
         check_config_settings(config, "output_directory")
         check_config_settings(config, "working_directory")
