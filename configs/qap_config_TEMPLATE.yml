@@ -1,0 +1,66 @@
+# how many participants to run per workflow
+num_subjects_per_bundle: 1
+
+# which resource manager being used, if any
+resource_manager: None
+
+# where to place output files
+output_directory: /path/to/output/directory
+
+# where to place Nipype workflow working files
+working_directory: /path/to/working/directory
+
+# path to skull template
+# only required if you have anatomical scans
+template_skull_for_anat: /path/to/skull/template
+
+# exclude zero-value voxels from the background of the anatomical scan
+# this is meant for images that have been manually altered (ex. ears removed
+# for privacy considerations), where the artificial inclusion of zeros into
+# the image would skew the QAP metric results
+# (optional) will default to False if not included in this config file
+exclude_zeros: False
+
+# for functional timeseries, do not include timepoints before this
+# (optional) will default to 0 if not included in this config file
+start_idx: 0
+
+# for functional timeseries, only include timepoints up to this
+# "End" means it will include all of the timepoints up until the scan's end
+# (optional) will default to "End" if not included in this config file
+stop_idx: End
+
+# produce PDF reports visualizing the results of the QAP metrics
+# (optional) will default to False if not included in this config file
+write_report: False
+
+# produce workflow dependency graphs
+# (optional) will default to False if not included in this config file
+write_graph: False
+
+# whether or not to keep all output files, or only the QAP numbers CSVs
+# (optional) will default to False if not included in this config file
+write_all_outputs: False
+
+# AWS Cloud Settings
+####################
+
+# all optional
+
+# whether or not to upload output files to S3 bucket
+upload_to_s3: False
+
+# bucket prefix (where to pull data from in S3, if applicable)
+bucket_prefix: bucket/prefix/path
+
+# bucket output prefix (where to push output files to S3, if applicable)
+bucket_out_prefix: bucket/prefix/output/destination
+
+# where to download input files to, locally, from S3
+local_prefix: /path/to/local/dir
+
+# name of your S3 bucket
+bucket_name: bucket_name
+
+# local path to your AWS credentials
+creds_path: /path/to/AWS/creds.csv
