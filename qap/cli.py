@@ -9,9 +9,9 @@ import time
 import argparse
 import yaml
 
-from nipype import config 
+from nipype import config as niconfig
 log_dir=os.path.join("tmp","nipype","logs")
-config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
+niconfig.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
 
 from nipype import logging
 logger = logging.getLogger('workflow')
@@ -875,7 +875,7 @@ def _run_workflow(args):
     # set up logging
     nyconfig.update_config(
         {'logging': {'log_directory': log_dir, 'log_to_file': True}})
-    nipype.logging.update_logging(nyconfig)
+    logging.update_logging(nyconfig)
 
     # take date+time stamp for run identification purposes
     unique_pipeline_id = strftime("%Y%m%d%H%M%S")
