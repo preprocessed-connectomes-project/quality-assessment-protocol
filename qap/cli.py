@@ -9,9 +9,10 @@ import time
 import argparse
 import yaml
 
-from nipype import logging
-logger = logging.getLogger('workflow')
-
+import nipype
+log_dir=os.path.join("tmp","nipype","logs")
+nipype.config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
+logger = nipype.logging.getLogger('workflow')
 
 class QAProtocolCLI:
 
@@ -648,7 +649,11 @@ class QAProtocolCLI:
             from qap.script_utils import read_yml_file
             self._config = read_yml_file(config_file)
             self._config["pipeline_config_yaml"] = config_file
-       
+      
+        # make sure that we were configured by at least one of the two mechanism
+        if not self._config:
+             raise Exception("config not found!")
+
         if partic_list:
             self._config["subject_list"] = partic_list
 
@@ -868,7 +873,7 @@ def _run_workflow(args):
     # set up logging
     nyconfig.update_config(
         {'logging': {'log_directory': log_dir, 'log_to_file': True}})
-    logging.update_logging(nyconfig)
+    nipype.logging.update_logging(nyconfig)
 
     # take date+time stamp for run identification purposes
     unique_pipeline_id = strftime("%Y%m%d%H%M%S")
