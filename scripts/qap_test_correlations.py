@@ -33,6 +33,8 @@ def main():
 
     if args.replacements:
     	replacements = read_txt_file(args.replacements)
+    else:
+        replacements = None
 
     correlations_dict = qap_csv_correlations(old_data, new_data, replacements)
 
