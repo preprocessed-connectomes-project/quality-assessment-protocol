@@ -197,7 +197,7 @@ class QAProtocolCLI:
                        'num_tasks' : num_bundles,
                        'queue' : "all.q",
                        'par_env' : "mpi_smp",
-                       'cores_per_task' : self._num_subjects_per_bundle,
+                       'cores_per_task' : self._num_processors,
                        'user' : user_account,
                        'work_dir' : cluster_files_dir}
 
@@ -654,10 +654,13 @@ class QAProtocolCLI:
 
         # Get configurations and settings
         config = self._config
+        check_config_settings(config, "num_processors")
         check_config_settings(config, "num_subjects_per_bundle")
+        check_config_settings(config, "memory_allocated")
         check_config_settings(config, "output_directory")
         check_config_settings(config, "working_directory")
 
+        self._num_processors = config["num_processors"]
         self._num_subjects_per_bundle = config.get('num_subjects_per_bundle', 1)
         self._num_bundles_at_once = 1
         write_report = config.get('write_report', False)
@@ -718,13 +721,12 @@ class QAProtocolCLI:
         cb_logger.addHandler(handler)
 
         # settle run arguments (plugins)
-        self.runargs = {'plugin': 'Linear', \
-                        'plugin_args': {'memory_gb' : 8.0, \
-                                        'status_callback' : log_nodes_cb}}
-        if self._num_subjects_per_bundle > 1:
-            self.runargs['plugin'] = 'MultiProc'
-            n_procs = {'n_procs': self._num_subjects_per_bundle}
-            self.runargs['plugin_args'].update(n_procs)
+        self.runargs = {}
+        self.runargs['plugin'] = 'MultiProc'
+        self.runargs['plugin_args'] = {'memory_gb': config["memory_allocated"], \
+                                       'status_callback': log_nodes_cb}
+        n_procs = {'n_procs': self._num_processors}
+        self.runargs['plugin_args'].update(n_procs)
 
         # Start the magic
         if self._cloudify:
