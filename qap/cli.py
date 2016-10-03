@@ -9,10 +9,12 @@ import time
 import argparse
 import yaml
 
-import nipype
+from nipype import config 
 log_dir=os.path.join("tmp","nipype","logs")
-nipype.config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
-logger = nipype.logging.getLogger('workflow')
+config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
+
+from nipype import logging
+logger = logging.getLogger('workflow')
 
 class QAProtocolCLI:
 
