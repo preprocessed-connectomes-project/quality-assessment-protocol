@@ -33,7 +33,7 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     anat_reorient.inputs.outputtype = 'NIFTI_GZ'
 
     workflow.connect(anat_deoblique, 'out_file', anat_reorient, 'in_file')
-   
+
     resource_pool["anatomical_reorient"] = (anat_reorient, 'out_file')
 
     return workflow, resource_pool
@@ -66,13 +66,13 @@ def run_anatomical_reorient(anatomical_scan, out_dir=None, run=True):
     num_cores_per_subject = 1
 
     resource_pool["anatomical_scan"] = anatomical_scan
-    
+
     workflow, resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config)
 
     ds = pe.Node(nio.DataSink(), name='datasink_anatomical_reorient')
     ds.inputs.base_directory = workflow_dir
-    
+
     node, out_file = resource_pool["anatomical_reorient"]
 
     workflow.connect(node, out_file, ds, 'anatomical_reorient')
@@ -103,7 +103,7 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
     from nipype.interfaces.afni import preprocess
 
     if "anatomical_reorient" not in resource_pool.keys():
-        
+
         from anatomical_preproc import anatomical_reorient_workflow
         old_rp = copy.copy(resource_pool)
         workflow, new_resource_pool = \
@@ -171,14 +171,14 @@ def run_anatomical_skullstrip(anatomical_reorient, out_dir=None, run=True):
     num_cores_per_subject = 1
 
     resource_pool["anatomical_reorient"] = anatomical_reorient
-    
+
     workflow, resource_pool = \
             anatomical_skullstrip_workflow(workflow, resource_pool, config)
 
 
     ds = pe.Node(nio.DataSink(), name='datasink_anatomical_skullstrip')
     ds.inputs.base_directory = workflow_dir
-    
+
     node, out_file = resource_pool["anatomical_brain"]
 
     workflow.connect(node, out_file, ds, 'anatomical_brain')
@@ -320,12 +320,10 @@ def run_afni_anatomical_linear_registration(input_image, reference_image,
 
     if skull_on:
         resource_pool["anatomical_reorient"] = input_image
-        config["template_skull_for_anat"] = reference_image
     else:
         resource_pool["anatomical_brain"] = input_image
-        config["template_brain_for_anat"] = reference_image
 
-    
+
     workflow, resource_pool = \
             afni_anatomical_linear_registration(workflow, resource_pool, \
                                                 config)
@@ -333,7 +331,7 @@ def run_afni_anatomical_linear_registration(input_image, reference_image,
 
     ds = pe.Node(nio.DataSink(), name='datasink_3dallineate')
     ds.inputs.base_directory = workflow_dir
-    
+
     node, out_file = resource_pool["afni_linear_warped_image"]
     workflow.connect(node, out_file, ds, 'afni_linear_warped_image')
 
@@ -394,7 +392,7 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
                           name="segment_AFNItoNIFTI%s" % name)
 
     AFNItoNIFTI.inputs.out_file = "classes.nii.gz"
-    
+
 
     workflow.connect(segment, 'out_file', AFNItoNIFTI, 'in_file')
 
@@ -455,20 +453,20 @@ def run_afni_segmentation(anatomical_brain, out_dir=None, run=True):
     num_cores_per_subject = 1
 
 
-    resource_pool["anatomical_brain"] = anatomical_brain  
-    
+    resource_pool["anatomical_brain"] = anatomical_brain
+
     workflow, resource_pool = \
             afni_segmentation_workflow(workflow, resource_pool, config)
 
 
     ds = pe.Node(nio.DataSink(), name='datasink_afni_segmentation')
     ds.inputs.base_directory = workflow_dir
-    
-    
+
+
     seg_types = ["gm", "wm", "csf"]
 
     for seg in seg_types:
-    
+
         node, out_file = resource_pool["anatomical_%s_mask" % seg]
 
         workflow.connect(node, out_file, ds, 'anatomical_%s_mask' % seg)
@@ -486,4 +484,3 @@ def run_afni_segmentation(anatomical_brain, out_dir=None, run=True):
     else:
 
         return workflow, workflow.base_dir
-

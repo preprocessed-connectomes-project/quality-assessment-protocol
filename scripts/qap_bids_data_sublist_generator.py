@@ -1,66 +1,11 @@
 #!/usr/bin/env python
-
-def gather_bids_data(dataset_folder, yaml_outpath, subject_inclusion=None,
-                     scan_type=None):
-
-    import os
-    import os.path as op
-    import yaml
-    from glob import glob
-
-    sub_dict = {}
-    inclusion_list = []
-
-    subject_ids = [x for x in next(os.walk(dataset_folder))[1] if x.startswith("sub-")]
-
-    if scan_type is None:
-        scan_type = 'functional anatomical'
-
-    get_anat = 'anatomical' in scan_type
-    get_func = 'functional' in scan_type
-
-    if not subject_ids:
-        raise Exception("This does not appear to be a BIDS dataset.")
-
-    # create subject inclusion list
-    if subject_inclusion is not None:
-        with open(subject_inclusion, "r") as f:
-            inclusion_list = f.readlines()
-        # remove any /n's
-        inclusion_list = map(lambda s: s.strip(), inclusion_list)
-
-        subject_ids = set(subject_ids).intersection(inclusion_list)
-
-    for subject_id in subject_ids:
-        # TODO: implement multisession support
-        session_name = 'session_1'
-
-        anatomical_scans = sorted(glob(op.join(
-            dataset_folder, subject_id, "anat",
-            "%s_*T1w.nii.gz" % subject_id, )))
-
-        functional_scans = sorted(glob(op.join(
-            dataset_folder, subject_id, "func",
-            "%s_*bold.nii.gz" % subject_id, )))
-
-        if anatomical_scans or functional_scans:
-            sub_dict[subject_id] = {session_name: {}}
-            if anatomical_scans and get_anat:
-                sub_dict[subject_id][session_name]["anatomical_scan"] = {}
-                for i, anatomical_scan in enumerate(anatomical_scans):
-                    sub_dict[subject_id][session_name]["anatomical_scan"]["anat_%d"%(i+1)] = op.abspath(anatomical_scan)
-            if functional_scans and get_func:
-                sub_dict[subject_id][session_name]["functional_scan"] = {}
-                for i, anatomical_scan in enumerate(functional_scans):
-                    sub_dict[subject_id][session_name]["functional_scan"]["func_%d"%(i+1)] = op.abspath(anatomical_scan)
-
-    with open(yaml_outpath, "wt") as f:
-        f.write(yaml.dump(sub_dict))
+from qap.bids_utils import gather_nifti_file_paths, extract_bids_data
 
 
 def main():
 
     import argparse
+    import yaml
 
     parser = argparse.ArgumentParser()
 
@@ -83,10 +28,21 @@ def main():
 
     args = parser.parse_args()
 
-    # run it!
-    gather_bids_data(args.dataset_folder, args.outfile_path, args.include,
-                     args.type)
+    # create subject inclusion list
+    inclusion_list=[]
+    if args.include is not None:
+        with open(args.include, "r") as f:
+            inclusion_list = f.readlines()
+        # remove any /n's
+        inclusion_list = map(lambda s: s.strip(), inclusion_list)
 
+    file_path_list = gather_nifti_file_paths(args.dataset_folder)
+
+    # run it!
+    sub_dict = extract_bids_data(file_path_list, inclusion_list)
+
+    with open(args.outfile_path, "wt") as f:
+        f.write(yaml.dump(sub_dict))
 
 if __name__ == "__main__":
     main()

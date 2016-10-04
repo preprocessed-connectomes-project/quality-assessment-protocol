@@ -659,8 +659,9 @@ def qap_csv_correlations(data_old, data_new, replacements=None):
     # mistakenly read in as ints or floats)
     if data_old["Participant"].dtype != str:
         data_old["Participant"] = data_old["Participant"].astype(int).astype(str)
-    #if data_new[partic_label_new].dtype != str:
-    #    data_new[partic_label_new] = data_new[partic_label_new].astype(int).astype(str)
+
+    if data_new["Participant"].dtype != str:
+        data_new["Participant"] = data_new["Participant"].astype(int).astype(str)
 
     # make sure both DFs match
     data_merged = pd.merge(data_old, data_new, 

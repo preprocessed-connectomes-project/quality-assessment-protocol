@@ -7,7 +7,7 @@ def create_expr_string(clip_level_value):
     return expr_string
 
 
-def slice_head_mask(infile, transform, standard):
+def slice_head_mask(infile, transform):
 
     import os
     import sys
@@ -55,7 +55,7 @@ def slice_head_mask(infile, transform, standard):
 
     coords_list = []
 
-    for inpoint in inpoint_coords:      
+    for inpoint in inpoint_coords:
 
         # using the transform, calculate what the three coordinates are in
         # native space, as it corresponds to the anatomical scan
