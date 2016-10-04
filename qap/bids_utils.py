@@ -70,9 +70,15 @@ def extract_bids_data( file_path_list, inclusion_list=None ):
             print u"Error (missing 'sub-' key): {0:s} does not appear to be in BIDS format".format(filename)
             continue
 
+        # add sub- onto the front of subject name to preserve bids-ness
+        f_dict["sub"] = "-".join(["sub",f_dict["sub"]])
+
         # straighten out the session
         if "ses" not in f_dict.keys():
-            f_dict["ses"] = 1
+            f_dict["ses"] = "1"
+
+        # add ses- onto the front of session name to preserve bids-ness
+        f_dict["ses"] = "-".join(["ses",f_dict["ses"]])
 
         # determine whether the scan is anatomical or functional, we don't know how to handle anything but T1w
         # and BOLD for now
@@ -97,14 +103,14 @@ def extract_bids_data( file_path_list, inclusion_list=None ):
             # calculate a key for the scan file
             f_key=f_dict["series"]
             if "functional_scan" in scan_type:
-                try:
-                    f_key = "_".join([f_key,f_dict["task"]])
-                except Exception as e:
+                if not "task" in f_dict:
                     print "Error (missing 'task-' key), Functional scan {0:s}".format(filename) + \
                           " does not appear to be in BIDS format"
                     continue
-            if "acq" in f_dict.keys():
-                f_key = "_".join([f_key,f_dict["acq"]])
+                else:
+                    f_key = "_".join([f_key,"-".join(["task",f_dict["task"]])])
+            if "acq" in f_dict:
+                f_key = "_".join([f_key,"-".join(["acq",f_dict["acq"]])])
 
             # insert the full path to the scan into dictionary
             sub_dict[f_dict["sub"]][f_dict["ses"]][scan_type][f_key] = file_path
