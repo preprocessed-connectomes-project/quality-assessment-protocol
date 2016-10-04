@@ -1,3 +1,6 @@
+# name for this run
+pipeline_name: qap_run
+
 # how many processors you wish to use in the run
 num_processors: 1
 

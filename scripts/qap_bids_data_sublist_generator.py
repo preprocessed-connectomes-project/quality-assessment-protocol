@@ -22,10 +22,6 @@ def main():
                              "subjects you want to include - leave "
                              "this out if you want to run all of them")
 
-    parser.add_argument(
-        '-t', '--type', type=str, choices=['functional', 'anatomical'],
-        help='include only functional or anatomical')
-
     args = parser.parse_args()
 
     # create subject inclusion list

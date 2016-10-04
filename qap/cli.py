@@ -711,7 +711,7 @@ class QAProtocolCLI:
             else:
                 pass
 
-        run_name = config['pipeline_config_yaml'].split("/")[-1].split(".")[0]
+        run_name = config['pipeline_name']
 
         results = None
 
@@ -877,7 +877,7 @@ def _run_workflow(args):
     # set up logging
     nyconfig.update_config(
         {'logging': {'log_directory': log_dir, 'log_to_file': True}})
-    nipype.logging.update_logging(nyconfig)
+    logging.update_logging(nyconfig)
 
     # take date+time stamp for run identification purposes
     unique_pipeline_id = strftime("%Y%m%d%H%M%S")
