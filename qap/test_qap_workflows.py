@@ -130,7 +130,6 @@ def test_run_whole_single_qap_anatomical_spatial():
     out_graph = os.path.join(out_workflow_dir, "graph.dot")
     out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
 
-
     # load the both the reference and the to-test dependency graphs
     with open(ref_graph,"r") as f:
         ref_graph_lines = sorted(f.readlines())

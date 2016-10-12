@@ -559,7 +559,7 @@ def create_CPAC_outputs_dict(cpac_outdir, qap_type, session_format):
 
                     if qap_type == "func":
 
-                        fullscan = "_scan_" + scan + "_rest"
+                        fullscan = "_".join(["_scan", scan, "rest"])
 
                         resource_paths = glob.glob(os.path.join(resource_folder, fullscan, "*"))
 
@@ -671,8 +671,8 @@ def qap_csv_correlations(data_old, data_new, replacements=None):
     # correlate the numbers!
     correlations_dict = {}
     for metric in metric_list:
-        metric_old = metric + "_OLD"
-        metric_new = metric + "_NEW"
+        metric_old = "_".join([metric, "OLD"])
+        metric_new = "_".join([metric, "NEW"])
         if (metric_old in data_merged) and (metric_new in data_merged):
             metric_old_val = data_merged[metric_old]#.flatten()
             metric_new_val = data_merged[metric_new]#.flatten()

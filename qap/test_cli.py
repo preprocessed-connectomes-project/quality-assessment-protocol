@@ -21,7 +21,7 @@ def init_cli_obj():
     cli_obj._config = {}
     cli_obj._config["output_directory"] = out_dir
     cli_obj._config["qap_type"] = "anatomical_spatial"
-    cli_obj._num_subjects_per_bundle = 4
+    cli_obj._num_processors = 4
 
     return cli_obj
 

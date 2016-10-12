@@ -7,38 +7,116 @@ def create_expr_string(clip_level_value):
     return expr_string
 
 
-def slice_head_mask(infile, transform):
+def read_nifti_image(nifti_infile):
+    """Read a NIFTI file into Nibabel-format image data.
 
-    import os
-    import sys
+    Keyword arguments:
+    nifti_infile -- the filepath of the NIFTI image to read in
+    """
 
     import nibabel as nb
+    from qap.workflow_utils import raise_smart_exception
+
+    try:
+        nifti_img = nb.load(nifti_infile)
+    except:
+        err = "\n\n[!] Could not load the NIFTI image using Nibabel:\n" \
+              "%s\n\n" % nifti_infile
+        raise_smart_exception(locals(), err)
+
+    return nifti_img
+
+
+def write_nifti_image(nifti_img, file_path):
+    """Write image data in Nibabel format into a NIFTI file.
+
+    Keyword arguments:
+    nifti_img -- the image data Nibabel object to write out
+    file_path -- the filepath of the NIFTI image to create
+    """
+
+    import nibabel as nb
+    from qap.workflow_utils import raise_smart_exception
+
+    try:
+        nb.save(nifti_img, file_path)
+    except:
+        err = "\n\n[!] Could not save the NIFTI image using Nibabel:\n" \
+              "%s\n\n" % file_path
+        raise_smart_exception(locals(), err)
+
+
+def read_json(json_filename):
+    """Read the contents of a JSON file.
+
+    Keyword arguments:
+    json_filename -- the path to the JSON file
+    """
+
+    import os
+    import json
+    from qap.workflow_utils import raise_smart_exception
+
+    if not os.path.exists(json_filename):
+        err = "\n\n[!] The JSON file provided does not exist.\nFilepath: " \
+              "%s\n\n" % json_filename
+        raise_smart_exception(locals(),err)
+
+    with open(json_filename, "r") as f:
+        json_dict = json.load(f)
+
+    return json_dict
+
+
+def write_json(output_dict, json_file):
+    """Either update or write a dictionary to a JSON file.
+
+    Keyword arguments:
+    output_dict -- the dictionary to write or append to the JSON file
+    json_file -- the filepath of the JSON file to write or update
+    """
+
+    import os
+    import json
+    from lockfile import FileLock
+
+    from qap.qap_workflows_utils import read_json
+
+    if os.path.exists(json_file):
+        current_dict = read_json(json_file)
+        for key in output_dict.keys():
+            try:
+                current_dict[key].update(output_dict[key])
+            except KeyError:
+                current_dict[key] = output_dict[key]
+    else:
+        current_dict = output_dict
+
+    lock = FileLock(json_file)
+    lock.acquire()
+    with open(json_file, "wt") as f:
+        json.dump(current_dict, f, indent=2, sort_keys=True)
+    lock.release()
+
+    if os.path.exists(json_file):
+        return json_file
+
+
+def convert_allineate_xfm(mat_list):
+    """Convert the affine transform output of AFNI's 3dAllineate into an
+    equivalent 4x4 matrix.
+
+    Keyword arguments:
+    mat_list -- a vector (list) of the flattened affine matrix
+
+    Takes the 3x3 + offset format of the input matrix and turns it into a
+    4x4 with the last row being 0,0,0,1
+    """
+
+    # re-arranges the affine transform from 3dAllineate to allow for easier
+    # matrix multiplication later when calculating the new points
+
     import numpy as np
-    import numpy.linalg as npl
-    import subprocess
-    import pkg_resources as p
-
-    # get file info
-    infile_img = nb.load(infile)
-    infile_header = infile_img.get_header()
-    infile_affine = infile_img.get_affine()
-
-    infile_dims = infile_header.get_data_shape()
-
-    # these coordinates correspond to the points of defining the slice plane
-    # on the MNI template
-    inpoint_a = [78, -110, -72, 0]
-    inpoint_b = [-78, -110, -72, 0]
-    inpoint_c = [-1, 91, -29, 0]  # nose
-
-    inpoint_coords = [inpoint_a, inpoint_b, inpoint_c]
-
-    # get the affine output matrix of 3dallineate
-    with open(transform,"r") as f:
-        allineate_mat_list = f.readlines()
-
-    # get the 3dAllineate output affine matrix into a list
-    mat_list = filter(None,allineate_mat_list[1].rstrip("\n").split(" "))
 
     # put together the 4x4 matrix
     #   (encode the offset as the fourth row and include the 0,0,0,1
@@ -53,57 +131,74 @@ def slice_head_mask(infile, transform):
 
     allineate_mat = np.asarray([row1,row2,row3,row4])
 
-    coords_list = []
+    return allineate_mat
 
-    for inpoint in inpoint_coords:
 
-        # using the transform, calculate what the three coordinates are in
-        # native space, as it corresponds to the anatomical scan
-        coord_out = \
-            list(np.dot(np.linalg.inv(allineate_mat),inpoint))
+def warp_coordinates(inpoint, allineate_mat, infile_affine, infile_dims):
+    """Warp spatial coordinates using a 4x4 affine matrix.
 
-        # remove the one resulting zero at the end
-        coord_out = coord_out[:-1]
+    Keyword arguments:
+    inpoint -- a list of three numbers describing a coordinate in 3D space
+    allineate_mat -- a NumPy array describing the 4x4 affine transform
+    infile_affine -- a NiBabel NIFTI affine info object
+    infile_dims -- the dimensions of the NIFTI file the coordinates pertain to
+    """
 
-        # convert the coordinates from mm to voxels
-        coord_out = \
-            nb.affines.apply_affine(npl.inv(infile_affine),coord_out)
+    import numpy as np
+    import numpy.linalg as npl
+    import nibabel as nb
 
-        coords_list.append(coord_out)
+    # using the transform, calculate what the three coordinates are in
+    # native space, as it corresponds to the anatomical scan
+    coord_out = \
+        list(np.dot(np.linalg.inv(allineate_mat),inpoint))
+
+    # remove the one resulting zero at the end
+    coord_out = coord_out[:-1]
+
+    # convert the coordinates from mm to voxels
+    coord_out = \
+        nb.affines.apply_affine(npl.inv(infile_affine),coord_out)
 
     # make sure converted coordinates are not "out of bounds"
-    new_coords = []
+    co_nums_newlist = []
 
-    for coords in coords_list:
+    for num in coord_out:
+        if num != "":
+            co_nums_newlist.append(int(num))
 
-        co_nums_newlist = []
+    for ind in range(0, 3):
 
-        for num in coords:
+        if co_nums_newlist[ind] > infile_dims[ind]:
+            co_nums_newlist[ind] = infile_dims[ind]
 
-            if num != "":
-                co_nums_newlist.append(int(num)) #.split(".")[0]))
+        elif co_nums_newlist[ind] < 1:
+            co_nums_newlist[ind] = 1
 
-        for ind in range(0, 3):
+    return co_nums_newlist
 
-            if co_nums_newlist[ind] > infile_dims[ind]:
-                co_nums_newlist[ind] = infile_dims[ind]
 
-            elif co_nums_newlist[ind] < 1:
-                co_nums_newlist[ind] = 1
+def calculate_plane_coords(coords_list, infile_dims):
+    """Calculate the coordinates of the triangular plane spanning from roughly
+    around the participant's nose, down to roughly below the rear of the neck.
 
-        new_coords.append(co_nums_newlist)
+    Keyword arguments:
+    coords_list -- a list of lists, describing the three coordinate points of
+                   the triangular plane
+    infile_dims -- a list of the NIFTI file's dimensions
+    """
+
+    import numpy as np
 
     # get the vectors connecting the points
     u = []
 
-    for a_pt, c_pt in zip(new_coords[0], new_coords[2]):
-
+    for a_pt, c_pt in zip(coords_list[0], coords_list[2]):
         u.append(int(a_pt - c_pt))
 
     v = []
 
-    for b_pt, c_pt in zip(new_coords[1], new_coords[2]):
-
+    for b_pt, c_pt in zip(coords_list[1], coords_list[2]):
         v.append(int(b_pt - c_pt))
 
     u_vector = np.asarray(u)
@@ -114,8 +209,7 @@ def slice_head_mask(infile, transform):
 
     # normalize the vector
     n = n / np.linalg.norm(n, 2)
-
-    constant = np.dot(n, np.asarray(new_coords[0]))
+    constant = np.dot(n, np.asarray(coords_list[0]))
 
     # now determine the z-coordinate for each pair of x,y
     plane_dict = {}
@@ -135,7 +229,21 @@ def slice_head_mask(infile, transform):
 
             plane_dict[(xvox, yvox)] = zvox
 
-    # create the mask
+    return plane_dict
+
+
+def create_slice_mask(plane_dict, infile_dims):
+    """Create a binary array defining a mask covering the area below a given
+    plane in the 3D image.
+
+    Keyword arguments:
+    plane_dict -- a dictionary matching z voxel coordinates to corresponding
+                  (x, y) coordinates
+    infile_dims -- a list of the NIFTI file's dimensions
+    """
+
+    import numpy as np
+
     mask_array = np.zeros(infile_dims)
 
     for x in range(0, infile_dims[0]):
@@ -147,20 +255,126 @@ def slice_head_mask(infile, transform):
                 if plane_dict[(x, y)] > z:
                     mask_array[x, y, z] = 1
 
+    return mask_array
+
+
+def slice_head_mask(infile, transform):
+
+    import os
+    import sys
+
+    import nibabel as nb
+    import numpy as np
+    import numpy.linalg as npl
+    import subprocess
+    import pkg_resources as p
+
+    from qap.script_utils import read_txt_file
+    from qap.qap_workflows_utils import read_nifti_image, \
+                                        convert_allineate_xfm, \
+                                        warp_coordinates, \
+                                        calculate_plane_coords, \
+                                        create_slice_mask, \
+                                        write_nifti_image
+
+    # get file info
+    infile_img = read_nifti_image(infile)
+
+    infile_header = infile_img.get_header()
+    infile_affine = infile_img.get_affine()
+    infile_dims = infile_header.get_data_shape()
+
+    # get the affine output matrix of 3dallineate
+    allineate_mat_list = read_txt_file(transform)
+
+    # get the 3dAllineate output affine matrix into a list
+    mat_list = filter(None,allineate_mat_list[1].rstrip("\n").split(" "))
+
+    # convert 3dAllineate's affine transform
+    allineate_mat = convert_allineate_xfm(mat_list)
+
+    # get participant-specific coordinates
+    #   these coordinates correspond to the points of defining the slice plane
+    #   on the MNI template
+    inpoint_a = [78, -110, -72, 0]
+    inpoint_b = [-78, -110, -72, 0]
+    inpoint_c = [-1, 91, -29, 0]  # nose
+    inpoint_coords = [inpoint_a, inpoint_b, inpoint_c]
+
+    coords_list = map(warp_coordinates, inpoint_coords, 
+        [allineate_mat] * 3, [infile_affine] * 3, [infile_dims] * 3)
+
+    # calculate normalized vector and get z coordinate for each x,y pair
+    plane_dict = calculate_plane_coords(coords_list, infile_dims)
+
+    # create the mask
+    mask_array = create_slice_mask(plane_dict, infile_dims)
+
+    # create new slice mask img file
     new_mask_img = nb.Nifti1Image(mask_array, infile_affine, infile_header)
 
     infile_filename = infile.split("/")[-1].split(".")[0]
 
-    outfile_name = infile_filename + "_slice_mask.nii.gz"
+    outfile_name = "_".join([infile_filename, "slice_mask.nii.gz"])
     outfile_path = os.path.join(os.getcwd(), outfile_name)
 
-    try:
-        nb.save(new_mask_img, outfile_path)
-    except:
-        raise_smart_exception(locals())
-
+    write_nifti_image(new_mask_img, outfile_path)
 
     return outfile_path
+
+
+def add_header_to_qap_dict(in_file, subject, session, scan, type):
+
+    import nibabel
+    from qap.workflow_utils import raise_smart_exception
+
+    try:
+        img = nibabel.load(in_file)
+        img_header = img.header
+    except:
+        err = "You may not have an up-to-date installation of the Python " \
+              "Nibabel package.\nYour Nibabel version: %s" % \
+              str(nb.__version__)
+        raise_smart_exception(locals(),err)
+
+    subkey = "%s_header_info" % type
+    id_string = "%s %s %s" % (subject, session, scan)
+    qap_dict = {id_string: {subkey: {}}}
+
+    info_labels = ["descrip", "db_name", "bitpix", "slice_start", \
+                   "scl_slope", "scl_inter", "slice_end", "slice_duration", \
+                   "toffset", "quatern_b", "quatern_c", "quatern_d", \
+                   "qoffset_x", "qoffset_y", "qoffset_z", "srow_x", "srow_y",\
+                   "srow_z", "aux_file", "intent_name", "slice_code", \
+                   "data_type", "qform_code", "sform_code"]
+
+    for info_label in info_labels:
+        try:
+            qap_dict[id_string][subkey][info_label] = str(img_header[info_label])
+        except:
+            print "\n\n%s field not in NIFTI header of %s\n\n" % \
+                  (info_label, in_file)
+            qap_dict[id_string][subkey][info_label] = ""
+            pass
+
+    try:
+        pixdim = img_header['pixdim']
+        qap_dict[id_string][subkey]["pix_dimx"] = str(pixdim[1])
+        qap_dict[id_string][subkey]["pix_dimy"] = str(pixdim[2])
+        qap_dict[id_string][subkey]["pix_dimz"] = str(pixdim[3])
+        qap_dict[id_string][subkey]["tr"] = str(pixdim[4])
+    except:
+        print "\n\npix_dim/TR fields not in NIFTI header of %s\n\n" % in_file
+        pass
+
+    try:
+        qap_dict[id_string][subkey]["extensions"] = \
+            len(img.header.extensions.get_codes())
+    except:
+        print "\n\nExtensions not in NIFTI header of %s\n\n" % in_file
+        pass
+
+    return qap_dict
 
 
 def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
@@ -172,6 +386,7 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
 
     import os
     import sys
+    from time import strftime
 
     import qap
     from qap.spatial_qc import summary_mask, snr, cnr, fber, efc, \
@@ -206,35 +421,18 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     wm_mask = load_mask(anatomical_wm_mask, anatomical_reorient)
     csf_mask = load_mask(anatomical_csf_mask, anatomical_reorient)
 
-    # Initialize QC
-    qc = dict()
-
-    qc['_QAP Version %s' % qap.__version__] = ""
-
-    if exclude_zeroes:
-        qc['_zeros_excluded'] = "True"
-
-    qc['Participant'] = subject_id
-
-    qc['Session'] = session_id
-
-    qc['Series'] = scan_id
-
-    if site_name:
-        qc['Site'] = site_name
-
     # FBER
-    qc['FBER'] = fber(anat_data, skull_mask, bg_mask)
+    fber_out = fber(anat_data, skull_mask, bg_mask)
 
     # EFC
-    qc['EFC'] = efc(anat_data)
+    efc_out = efc(anat_data)
 
     # Artifact
-    qc['Qi1'], _ = artifacts(anat_data, fg_mask, bg_mask, calculate_qi2=False)
+    qi1, _ = artifacts(anat_data, fg_mask, bg_mask, calculate_qi2=False)
 
     # Smoothness in voxels
     tmp = fwhm(anatomical_reorient, whole_head_mask_path, out_vox=out_vox)
-    qc['FWHM_x'], qc['FWHM_y'], qc['FWHM_z'], qc['FWHM'] = tmp
+    fwhm_x, fwhm_y, fwhm_z, fwhm_out = tmp
 
     # Summary Measures
     fg_mean, fg_std, fg_size = summary_mask(anat_data, whole_head_mask)
@@ -243,8 +441,6 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     gm_mean, gm_std, gm_size = (None, None, None)
     wm_mean, wm_std, wm_size = (None, None, None)
     csf_mean, csf_std, csf_size = (None, None, None)
-    qc['CNR'] = None
-    qc['SNR'] = None
 
     # More Summary Measures
     gm_mean, gm_std, gm_size = summary_mask(anat_data, gm_mask)
@@ -252,13 +448,48 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     csf_mean, csf_std, csf_size = summary_mask(anat_data, csf_mask)
 
     # SNR
-    qc['SNR'] = snr(fg_mean, bg_std)
+    snr_out = snr(fg_mean, bg_std)
 
     # CNR
-    qc['CNR'] = cnr(gm_mean, wm_mean, bg_std)
+    cnr_out = cnr(gm_mean, wm_mean, bg_std)
 
     # Cortical contrast
-    qc['Cortical Contrast'] = cortical_contrast(gm_mean, wm_mean)
+    cort_out = cortical_contrast(gm_mean, wm_mean)
+
+    id_string = "%s %s %s" % (subject_id, session_id, scan_id)
+    qc = {
+            id_string:
+            {
+               "QAP_pipeline_id": "QAP version %s" % qap.__version__,
+               "Time": strftime("%Y-%m-%d %H:%M:%S"),
+               "Participant": subject_id,
+               "Session": session_id,
+               "Series": scan_id,
+               "anatomical_spatial":
+               { 
+                  "FBER": fber_out,
+                  "EFC": efc_out,
+                  "Qi1": qi1,
+                  "FWHM_x": fwhm_x,
+                  "FWHM_y": fwhm_y,
+                  "FWHM_z": fwhm_z,
+                  "FWHM": fwhm_out,
+                  "CNR": cnr_out,
+                  "SNR": snr_out,
+                  "Cortical Contrast": cort_out
+               }
+            }
+    }
+
+    if site_name:
+        qc[id_string]['Site'] = site_name
+
+    if exclude_zeroes:
+        qc[id_string]['_zeros_excluded'] = "True"
+
+    for key in qc[id_string]["anatomical_spatial"].keys():
+        qc[id_string]["anatomical_spatial"][key] = \
+            str(qc[id_string]["anatomical_spatial"][key])
 
     return qc
 
@@ -269,6 +500,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
     import os
     import sys
+    from time import strftime
 
     import qap
     from qap.spatial_qc import summary_mask, snr, fber, efc, fwhm, \
@@ -280,43 +512,64 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
     fg_mask = load_mask(func_brain_mask, mean_epi)
     bg_mask = 1 - fg_mask
 
-    # Initialize QC
-    qc = dict(Participant=subject_id, Session=session_id, Series=scan_id)
-
-    qc['_QAP Version %s' % qap.__version__] = ""
-
-    if site_name:
-        qc['Site'] = site_name
-
     # FBER
-    qc['FBER'] = fber(anat_data, fg_mask, bg_mask)
+    fber_out = fber(anat_data, fg_mask, bg_mask)
 
     # EFC
-    qc['EFC'] = efc(anat_data)
-
+    efc_out = efc(anat_data)
+    
     # Smoothness in voxels
     tmp = fwhm(mean_epi, func_brain_mask, out_vox=out_vox)
-    qc['FWHM_x'], qc['FWHM_y'], qc['FWHM_z'], qc['FWHM'] = tmp
-
-    # Ghosting
-    if (direction == "all"):
-        qc['Ghost_x'] = ghost_direction(anat_data, fg_mask, "x")
-        qc['Ghost_y'] = ghost_direction(anat_data, fg_mask, "y")
-        qc['Ghost_z'] = ghost_direction(anat_data, fg_mask, "z")
-
-    else:
-        qc['Ghost_%s' % direction] = ghost_direction(anat_data, fg_mask,
-                                                     direction)
+    fwhm_x, fwhm_y, fwhm_z, fwhm_out = tmp
 
     # Summary Measures
     fg_mean, fg_std, fg_size = summary_mask(anat_data, fg_mask)
     bg_mean, bg_std, bg_size = summary_mask(anat_data, bg_mask)
 
-    qc['SNR'] = None
-
     # SNR
-    qc['SNR'] = snr(fg_mean, bg_std)
+    snr_out = snr(fg_mean, bg_std)
 
+    id_string = "%s %s %s" % (subject_id, session_id, scan_id)
+    qc = {
+            id_string:
+            {
+               "QAP_pipeline_id": "QAP version %s" % qap.__version__,
+               "Time": strftime("%Y-%m-%d %H:%M:%S"),
+               "Participant": subject_id,
+               "Session": session_id,
+               "Series": scan_id,
+               "functional_spatial":
+               {
+                  "FBER": fber_out,
+                  "EFC": efc_out,
+                  "FWHM": fwhm_out,
+                  "FWHM_x": fwhm_x,
+                  "FWHM_y": fwhm_y,
+                  "FWHM_z": fwhm_z,
+                  "SNR": snr_out
+               }
+            }
+        }
+
+    # Ghosting
+    if (direction == "all"):
+        qc[id_string]["functional_spatial"]['Ghost_x'] = \
+            ghost_direction(anat_data, fg_mask, "x")
+        qc[id_string]["functional_spatial"]['Ghost_y'] = \
+            ghost_direction(anat_data, fg_mask, "y")
+        qc[id_string]["functional_spatial"]['Ghost_z'] = \
+            ghost_direction(anat_data, fg_mask, "z")
+
+    else:
+        qc[id_string]["functional_spatial"]['Ghost_%s' % direction] = \
+            ghost_direction(anat_data, fg_mask, direction)
+
+    if site_name:
+        qc[id_string]['Site'] = site_name
+
+    for key in qc[id_string]["functional_spatial"].keys():
+        qc[id_string]["functional_spatial"][key] = \
+            str(qc[id_string]["functional_spatial"][key])
 
     return qc
 
@@ -329,6 +582,7 @@ def qap_functional_temporal(
     import sys
     import nibabel as nb
     import numpy as np
+    from time import strftime
 
     import qap
     from qap.temporal_qc import outlier_timepoints, quality_timepoints, \
@@ -365,41 +619,52 @@ def qap_functional_temporal(
     gcor = global_correlation(func_timeseries, func_brain_mask)
 
     # Compile
+    id_string = "%s %s %s" % (subject_id, session_id, scan_id)
     qc = {
-        "_QAP Version %s" % qap.__version__: "",
-        "Participant": subject_id,
-        "Session": session_id,
-        "Series": scan_id,
-        "Std. DVARS (Mean)": mean_dvars,
-        "Std. DVARS (Std Dev)": np.std(dvars),
-        "Std. DVARS (Median)": np.median(dvars),
-        "Std. DVARs IQR": dvars_IQR,
-        "Std. DVARS percent outliers": dvars_outliers,
-        "RMSD (Mean)": np.mean(fd),
-        "RMSD (Std Dev)": np.std(fd),
-        "RMSD (Median)": np.median(fd),
-        "RMSD IQR": meanfd_IQR,
-        "RMSD percent outliers": meanfd_outliers,
-        "Fraction of Outliers (Mean)": np.mean(outliers),
-        "Fraction of Outliers (Std Dev)": np.std(outliers),
-        "Fraction of Outliers (Median)": np.median(outliers),
-        "Fraction of Outliers IQR": outlier_IQR,
-        "Fraction of Outliers percent outliers": outlier_perc_out,
-        "Fraction of OOB Outliers (Mean)": np.mean(oob_outliers),
-        "Fraction of OOB Outliers (Std Dev)": np.std(oob_outliers),
-        "Fraction of OOB Outliers (Median)": np.median(oob_outliers),
-        "Fraction of OOB Outliers IQR": oob_outlier_IQR,
-        "Fraction of OOB Outliers percent outliers": oob_outlier_perc_out,
-        "Quality (Mean)": np.mean(quality),
-        "Quality (Std Dev)": np.std(quality),
-        "Quality (Median)": np.median(quality),
-        "Quality IQR": quality_IQR,
-        "Quality percent outliers": quality_outliers,
-        "GCOR": gcor
+            id_string:
+            {
+              "QAP_pipeline_id": "QAP version %s" % qap.__version__,
+              "Time": strftime("%Y-%m-%d %H:%M:%S"),
+              "Participant": subject_id,
+              "Session": session_id,
+              "Series": scan_id,
+              "functional_temporal":
+              {
+                 "Std. DVARS (Mean)": mean_dvars,
+                 "Std. DVARS (Std Dev)": np.std(dvars),
+                 "Std. DVARS (Median)": np.median(dvars),
+                 "Std. DVARs IQR": dvars_IQR,
+                 "Std. DVARS percent outliers": dvars_outliers,
+                 "RMSD (Mean)": np.mean(fd),
+                 "RMSD (Std Dev)": np.std(fd),
+                 "RMSD (Median)": np.median(fd),
+                 "RMSD IQR": meanfd_IQR,
+                 "RMSD percent outliers": meanfd_outliers,
+                 "Fraction of Outliers (Mean)": np.mean(outliers),
+                 "Fraction of Outliers (Std Dev)": np.std(outliers),
+                 "Fraction of Outliers (Median)": np.median(outliers),
+                 "Fraction of Outliers IQR": outlier_IQR,
+                 "Fraction of Outliers percent outliers": outlier_perc_out,
+                 "Fraction of OOB Outliers (Mean)": np.mean(oob_outliers),
+                 "Fraction of OOB Outliers (Std Dev)": np.std(oob_outliers),
+                 "Fraction of OOB Outliers (Median)": np.median(oob_outliers),
+                 "Fraction of OOB Outliers IQR": oob_outlier_IQR,
+                 "Fraction of OOB Outliers percent outliers": oob_outlier_perc_out,
+                 "Quality (Mean)": np.mean(quality),
+                 "Quality (Std Dev)": np.std(quality),
+                 "Quality (Median)": np.median(quality),
+                 "Quality IQR": quality_IQR,
+                 "Quality percent outliers": quality_outliers,
+                 "GCOR": gcor
+              }
+            }
     }
 
     if site_name:
-        qc['Site'] = site_name
+        qc[id_string]['Site'] = site_name
 
+    for key in qc[id_string]["functional_temporal"].keys():
+        qc[id_string]["functional_temporal"][key] = \
+            str(qc[id_string]["functional_temporal"][key])
 
     return qc

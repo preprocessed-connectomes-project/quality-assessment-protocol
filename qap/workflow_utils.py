@@ -6,7 +6,7 @@ def raise_smart_exception(local_vars, msg=None):
     e = "\n\nLocal variables:\n%s\n\n%s\n\n" \
         % (str(local_vars), str(traceback.format_exc()))
     if msg:
-        e = e + "\n\n%s\n\n" % str(msg)
+        e = "%s\n\n%s\n\n" % (e, str(msg))
     raise Exception(e)
 
 

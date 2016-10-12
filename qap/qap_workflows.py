@@ -174,56 +174,47 @@ def run_qap_mask(anatomical_reorient, allineate_out_xfm,
         return workflow, workflow.base_dir
 
 
-def add_header_to_qap_dict(in_file, qap_dict=None):
+def qap_gather_header_info(workflow, resource_pool, config, name="_", 
+    data_type="anatomical"):
 
-    import nibabel
-    from qap.workflow_utils import raise_smart_exception
+    import os
+    import nipype.pipeline.engine as pe
+    import nipype.interfaces.utility as niu
+    from qap_workflows_utils import add_header_to_qap_dict, write_json
 
-    try:
-        img = nibabel.load(in_file)
-        img_header = img.header
-    except:
-        err = "You may not have an up-to-date installation of the Python " \
-              "Nibabel package.\nYour Nibabel version: %s" % \
-              str(nb.__version__)
-        raise_smart_exception(locals(),err)
+    gather_header = pe.Node(niu.Function(
+                             input_names=['in_file', 'subject', 'session', 'scan', 'type'],
+                             output_names=['qap_dict'],
+                             function=add_header_to_qap_dict),
+                             name="gather_header_info%s" % name)
+    gather_header.inputs.subject = config["subject_id"]
+    gather_header.inputs.session = config["session_id"]
+    gather_header.inputs.scan = config["scan_id"]
 
-    if not qap_dict:
-        qap_dict = {}
+    if data_type == "anatomical":
+        if "anatomical_scan" in resource_pool.keys():
+            gather_header.inputs.in_file = resource_pool["anatomical_scan"]
+            gather_header.inputs.type = data_type
+    elif data_type == "functional":
+        if "functional_scan" in resource_pool.keys():
+            gather_header.inputs.in_file = resource_pool["functional_scan"]
+            gather_header.inputs.type = data_type
 
-    info_labels = ["descrip", "db_name", "bitpix", "slice_start", \
-                   "scl_slope", "scl_inter", "slice_end", "slice_duration", \
-                   "toffset", "quatern_b", "quatern_c", "quatern_d", \
-                   "qoffset_x", "qoffset_y", "qoffset_z", "srow_x", "srow_y",\
-                   "srow_z", "aux_file", "intent_name", "slice_code", \
-                   "data_type", "qform_code", "sform_code"]
+    out_json = os.path.join(config['output_directory'], 
+                           'qap_%s.json' % data_type)
 
+    header_to_json = pe.Node(niu.Function(
+                                 input_names=["output_dict",
+                                              "json_file"],
+                                 output_names=["json_file"],
+                                 function=write_json),
+                             name="qap_header_to_json%s" % name)
+    header_to_json.inputs.json_file = out_json
 
-    for info_label in info_labels:
-        try:
-            qap_dict[info_label] = str(img_header[info_label])
-        except:
-            print "\n\n%s field not in NIFTI header of %s\n\n" % \
-                  (info_label, in_file)
-            pass
+    workflow.connect(gather_header, 'qap_dict', header_to_json, 'output_dict')
+    resource_pool['%s_header_info' % data_type] = out_json
 
-    try:
-        pixdim = img_header['pixdim']
-        qap_dict["pix_dimx"] = str(pixdim[1])
-        qap_dict["pix_dimy"] = str(pixdim[2])
-        qap_dict["pix_dimz"] = str(pixdim[3])
-        qap_dict["tr"] = str(pixdim[4])
-    except:
-        print "\n\npix_dim/TR fields not in NIFTI header of %s\n\n" % in_file
-        pass
-
-    try:
-        qap_dict["extensions"] = len(img.header.extensions.get_codes())
-    except:
-        print "\n\nExtensions not in NIFTI header of %s\n\n" % in_file
-        pass
-
-    return qap_dict
+    return workflow, resource_pool
 
 
 def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
@@ -243,7 +234,9 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
     import nipype.algorithms.misc as nam
-    from qap_workflows_utils import qap_anatomical_spatial
+    from qap_workflows_utils import qap_anatomical_spatial, \
+                                    add_header_to_qap_dict, \
+                                    write_json
     from qap.viz.interfaces import PlotMosaic
     from workflow_utils import check_config_settings
 
@@ -378,26 +371,18 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
 
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
-    add_header = pe.Node(niu.Function(
-                             input_names=['in_file', 'qap_dict'],
-                             output_names=['qap_dict'],
-                             function=add_header_to_qap_dict),
-                     name="add_header_to_anatomical_spatial_csv%s" % name)
+    out_json = op.join(config['output_directory'], 'qap_anatomical.json')
 
-    if len(resource_pool['anatomical_reorient']) == 2:
-        node, out_file = resource_pool['anatomical_reorient']
-        workflow.connect(node, out_file, add_header, 'in_file')
-    else:
-        add_header.inputs.in_file = resource_pool['anatomical_reorient']
+    spatial_to_json = pe.Node(niu.Function(
+                                  input_names=["output_dict",
+                                               "json_file"],
+                                  output_names=["json_file"],
+                                  function=write_json),
+                              name="qap_anatomical_spatial_to_json%s" % name)
+    spatial_to_json.inputs.json_file = out_json
 
-    out_csv = op.join(config['output_directory'], 'qap_anatomical_spatial.csv')
-    spatial_to_csv = pe.Node(
-        nam.AddCSVRow(in_file=out_csv),
-        name='qap_anatomical_spatial_to_csv%s' % name)
-
-    workflow.connect(spatial, 'qc', add_header, 'qap_dict')
-    workflow.connect(add_header, 'qap_dict', spatial_to_csv, '_outputs')
-    resource_pool['qap_anatomical_spatial'] = (spatial_to_csv, 'csv_file')
+    workflow.connect(spatial, 'qc', spatial_to_json, 'output_dict')
+    resource_pool['qap_anatomical_spatial'] = out_json
 
     return workflow, resource_pool
 
@@ -560,7 +545,9 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
     import nipype.interfaces.utility as niu
     import nipype.algorithms.misc as nam
 
-    from qap_workflows_utils import qap_functional_spatial
+    from qap_workflows_utils import qap_functional_spatial, \
+                                    add_header_to_qap_dict, \
+                                    write_json
     from qap.viz.interfaces import PlotMosaic
 
     from workflow_utils import check_input_resources
@@ -637,28 +624,20 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
         #     plot.inputs.in_mask = resource_pool['functional_brain_mask']
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
-    add_header = pe.Node(niu.Function(
-                             input_names=['in_file', 'qap_dict'],
-                             output_names=['qap_dict'],
-                             function=add_header_to_qap_dict),
-                     name="add_header_to_functional_spatial_csv%s" % name)
+    out_json = op.join(
+        config['output_directory'], 'qap_functional.json')
 
-    if len(resource_pool['mean_functional']) == 2:
-        node, out_file = resource_pool['mean_functional']
-        workflow.connect(node, out_file, add_header, 'in_file')
-    else:
-        add_header.inputs.in_file = resource_pool['mean_functional']
+    spatial_epi_to_json = pe.Node(niu.Function(
+                                  input_names=["output_dict",
+                                               "json_file"],
+                                  output_names=["json_file"],
+                                  function=write_json),
+                              name="qap_functional_spatial_to_json%s" % name)
+    spatial_epi_to_json.inputs.json_file = out_json
 
-    out_csv = op.join(
-        config['output_directory'], 'qap_functional_spatial.csv')
-    spatial_epi_to_csv = pe.Node(
-        nam.AddCSVRow(in_file=out_csv),
-        name='qap_functional_spatial_to_csv%s' % name)
+    workflow.connect(spatial_epi, 'qc', spatial_epi_to_json, 'output_dict')
 
-    workflow.connect(spatial_epi, 'qc', add_header, 'qap_dict')
-    workflow.connect(add_header, 'qap_dict', spatial_epi_to_csv, '_outputs')
-
-    resource_pool['qap_functional_spatial'] = (spatial_epi_to_csv, 'csv_file')
+    resource_pool['qap_functional_spatial'] = (spatial_epi_to_json, 'json_file')
 
     return workflow, resource_pool
 
@@ -818,7 +797,9 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     import nipype.interfaces.utility as niu
     import nipype.algorithms.misc as nam
 
-    from qap_workflows_utils import qap_functional_temporal
+    from qap_workflows_utils import qap_functional_temporal, \
+                                    add_header_to_qap_dict, \
+                                    write_json
     from temporal_qc import fd_jenkinson
     from qap.viz.interfaces import PlotMosaic, PlotFD
 
@@ -927,28 +908,19 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         workflow.connect(fd, 'out_file', fdplot, 'in_file')
         resource_pool['qap_fd'] = (fdplot, 'out_file')
 
-    add_header = pe.Node(niu.Function(
-                             input_names=['in_file', 'qap_dict'],
-                             output_names=['qap_dict'],
-                             function=add_header_to_qap_dict),
-                             name="add_header_to_functional_temporal_csv%s" % name)
+    out_json = op.join(
+        config['output_directory'], 'qap_functional.json')
 
-    if len(resource_pool['func_reorient']) == 2:
-        node, out_file = resource_pool['func_reorient']
-        workflow.connect(node, out_file, add_header, 'in_file')
-    else:
-        add_header.inputs.in_file = resource_pool['func_reorient']
+    temporal_to_json = pe.Node(niu.Function(
+                                  input_names=["output_dict",
+                                               "json_file"],
+                                  output_names=["json_file"],
+                                  function=write_json),
+                              name="qap_functional_temporal_to_json%s" % name)
+    temporal_to_json.inputs.json_file = out_json
 
-    out_csv = op.join(
-        config['output_directory'], 'qap_functional_temporal.csv')
-    temporal_to_csv = pe.Node(
-        nam.AddCSVRow(in_file=out_csv),
-        name='qap_functional_temporal_to_csv%s' % name)
-
-    workflow.connect(temporal, 'qc', add_header, 'qap_dict')
-    workflow.connect(add_header, 'qap_dict', temporal_to_csv, '_outputs')
-
-    resource_pool['qap_functional_temporal'] = (temporal_to_csv, 'csv_file')
+    workflow.connect(temporal, 'qc', temporal_to_json, 'output_dict')
+    resource_pool['qap_functional_temporal'] = (temporal_to_json, 'json_file')
 
     return workflow, resource_pool
 
