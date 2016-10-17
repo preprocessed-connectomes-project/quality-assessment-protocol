@@ -815,12 +815,12 @@ class QAProtocolCLI:
             from qap.viz.reports import workflow_report
             logger.info('Writing PDF reports')
             qap_types = ["anatomical_spatial", 
-                     "functional_spatial", 
-                     "functional_temporal"]
+                         "functional_spatial", 
+                         "functional_temporal"]
             for qap_type in qap_types:
                 qap_type = "_".join(["qap", qap_type])
                 in_json = op.join(config['output_directory'], 
-                                      '%s.json' % qap_type)
+                                      'qap_%s.json' % qap_type.split("_")[1])
 
                 reports = workflow_report(in_json, qap_type, run_name, results,
                                           out_dir=config['output_directory'])

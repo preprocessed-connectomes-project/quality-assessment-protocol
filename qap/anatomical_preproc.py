@@ -2,6 +2,32 @@ base_test_dir = "/tdata/QAP/qc_test"
 
 
 def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
+    """Build and run a Nipype workflow to deoblique and reorient an
+    anatomical scan from a NIFTI file.
+
+    Keyword arguments:
+      workflow -- a Nipype workflow object which can already contain other
+                  connected nodes; this function will insert the following
+                  workflow into this one provided
+      resource_pool -- a dictionary defining input files and pointers to
+                       Nipype node outputs / workflow connections; the keys
+                       are the resource names
+      config -- a dictionary defining the configuration settings for the
+                workflow, such as directory paths or toggled options
+      name -- (default: "_") a string to append to the end of each node name
+
+    Returns:
+      workflow -- the Nipype workflow originally provided, but with the
+                  following sub-workflow connected into it
+      resource_pool -- the resource pool originally provided, but updated
+                       (if applicable) with the newest outputs and connections
+
+    Notes:
+      - If any resources/outputs required by this workflow are not in the
+        resource pool, this workflow will call pre-requisite workflow builder
+        functions to further populate the pipeline with workflows which will
+        calculate/generate these necessary pre-requisites.
+    """
 
     # resource pool should have:
     #     anatomical_scan
@@ -89,6 +115,32 @@ def run_anatomical_reorient(anatomical_scan, out_dir=None, run=True):
 
 
 def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
+    """Build and run a Nipype workflow to skullstrip an anatomical image using
+    AFNI's 3dSkullStrip.
+
+    Keyword arguments:
+      workflow -- a Nipype workflow object which can already contain other
+                  connected nodes; this function will insert the following
+                  workflow into this one provided
+      resource_pool -- a dictionary defining input files and pointers to
+                       Nipype node outputs / workflow connections; the keys
+                       are the resource names
+      config -- a dictionary defining the configuration settings for the
+                workflow, such as directory paths or toggled options
+      name -- (default: "_") a string to append to the end of each node name
+
+    Returns:
+      workflow -- the Nipype workflow originally provided, but with the
+                  following sub-workflow connected into it
+      resource_pool -- the resource pool originally provided, but updated
+                       (if applicable) with the newest outputs and connections
+
+    Notes:
+      - If any resources/outputs required by this workflow are not in the
+        resource pool, this workflow will call pre-requisite workflow builder
+        functions to further populate the pipeline with workflows which will
+        calculate/generate these necessary pre-requisites.
+    """
 
     # resource pool should have:
     #     anatomical_reorient
@@ -198,6 +250,32 @@ def run_anatomical_skullstrip(anatomical_reorient, out_dir=None, run=True):
 
 def afni_anatomical_linear_registration(workflow, resource_pool, \
     config, name="_"):
+    """Build and run a Nipype workflow to calculate the linear registration 
+    (participant to template) of an anatomical image using AFNI's 3dAllineate.
+
+    Keyword arguments:
+      workflow -- a Nipype workflow object which can already contain other
+                  connected nodes; this function will insert the following
+                  workflow into this one provided
+      resource_pool -- a dictionary defining input files and pointers to
+                       Nipype node outputs / workflow connections; the keys
+                       are the resource names
+      config -- a dictionary defining the configuration settings for the
+                workflow, such as directory paths or toggled options
+      name -- (default: "_") a string to append to the end of each node name
+
+    Returns:
+      workflow -- the Nipype workflow originally provided, but with the
+                  following sub-workflow connected into it
+      resource_pool -- the resource pool originally provided, but updated
+                       (if applicable) with the newest outputs and connections
+
+    Notes:
+      - If any resources/outputs required by this workflow are not in the
+        resource pool, this workflow will call pre-requisite workflow builder
+        functions to further populate the pipeline with workflows which will
+        calculate/generate these necessary pre-requisites.
+    """
 
     # resource pool should have:
     #     anatomical_brain
@@ -351,6 +429,32 @@ def run_afni_anatomical_linear_registration(input_image, reference_image,
 
 
 def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
+    """Build and run a Nipype workflow to generate anatomical tissue 
+    segmentation maps using AFNI's 3dSeg.
+
+    Keyword arguments:
+      workflow -- a Nipype workflow object which can already contain other
+                  connected nodes; this function will insert the following
+                  workflow into this one provided
+      resource_pool -- a dictionary defining input files and pointers to
+                       Nipype node outputs / workflow connections; the keys
+                       are the resource names
+      config -- a dictionary defining the configuration settings for the
+                workflow, such as directory paths or toggled options
+      name -- (default: "_") a string to append to the end of each node name
+
+    Returns:
+      workflow -- the Nipype workflow originally provided, but with the
+                  following sub-workflow connected into it
+      resource_pool -- the resource pool originally provided, but updated
+                       (if applicable) with the newest outputs and connections
+
+    Notes:
+      - If any resources/outputs required by this workflow are not in the
+        resource pool, this workflow will call pre-requisite workflow builder
+        functions to further populate the pipeline with workflows which will
+        calculate/generate these necessary pre-requisites.
+    """
 
     # resource pool should have:
     #     anatomical_brain

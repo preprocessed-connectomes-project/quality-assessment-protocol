@@ -6,6 +6,31 @@ import os.path as op
 
 
 def qap_mask_workflow(workflow, resource_pool, config, name="_"):
+    """Build and run a Nipype workflow to create the QAP anatomical head mask.
+
+    Keyword arguments:
+      workflow -- a Nipype workflow object which can already contain other
+                  connected nodes; this function will insert the following
+                  workflow into this one provided
+      resource_pool -- a dictionary defining input files and pointers to
+                       Nipype node outputs / workflow connections; the keys
+                       are the resource names
+      config -- a dictionary defining the configuration settings for the
+                workflow, such as directory paths or toggled options
+      name -- (default: "_") a string to append to the end of each node name
+
+    Returns:
+      workflow -- the Nipype workflow originally provided, but with the
+                  following sub-workflow connected into it
+      resource_pool -- the resource pool originally provided, but updated
+                       (if applicable) with the newest outputs and connections
+
+    Notes:
+      - If any resources/outputs required by this workflow are not in the
+        resource pool, this workflow will call pre-requisite workflow builder
+        functions to further populate the pipeline with workflows which will
+        calculate/generate these necessary pre-requisites.
+    """
 
     import os
     import sys
@@ -176,16 +201,42 @@ def run_qap_mask(anatomical_reorient, allineate_out_xfm,
 
 def qap_gather_header_info(workflow, resource_pool, config, name="_", 
     data_type="anatomical"):
+    """Build and run a Nipype workflow to extract the NIFTI header information
+    from an input file and insert it into a dictionary.
+
+    Keyword arguments:
+      workflow -- a Nipype workflow object which can already contain other
+                  connected nodes; this function will insert the following
+                  workflow into this one provided
+      resource_pool -- a dictionary defining input files and pointers to
+                       Nipype node outputs / workflow connections; the keys
+                       are the resource names
+      config -- a dictionary defining the configuration settings for the
+                workflow, such as directory paths or toggled options
+      name -- (default: "_") a string to append to the end of each node name
+
+    Returns:
+      workflow -- the Nipype workflow originally provided, but with the
+                  following sub-workflow connected into it
+      resource_pool -- the resource pool originally provided, but updated
+                       (if applicable) with the newest outputs and connections
+
+    Notes:
+      - If any resources/outputs required by this workflow are not in the
+        resource pool, this workflow will call pre-requisite workflow builder
+        functions to further populate the pipeline with workflows which will
+        calculate/generate these necessary pre-requisites.
+    """
 
     import os
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
-    from qap_workflows_utils import add_header_to_qap_dict, write_json
+    from qap_workflows_utils import create_header_dict_entry, write_json
 
     gather_header = pe.Node(niu.Function(
                              input_names=['in_file', 'subject', 'session', 'scan', 'type'],
                              output_names=['qap_dict'],
-                             function=add_header_to_qap_dict),
+                             function=create_header_dict_entry),
                              name="gather_header_info%s" % name)
     gather_header.inputs.subject = config["subject_id"]
     gather_header.inputs.session = config["session_id"]
@@ -219,13 +270,32 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
 
 def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
                                     report=False):
+    """Build and run a Nipype workflow to calculate the QAP anatomical spatial
+    quality measures.
 
-    # resource pool should have:
-    #     anatomical_reorient
-    #     qap_head_mask
-    #     anatomical_gm_mask
-    #     anatomical_wm_mask
-    #     anatomical_csf_mask
+    Keyword arguments:
+      workflow -- a Nipype workflow object which can already contain other
+                  connected nodes; this function will insert the following
+                  workflow into this one provided
+      resource_pool -- a dictionary defining input files and pointers to
+                       Nipype node outputs / workflow connections; the keys
+                       are the resource names
+      config -- a dictionary defining the configuration settings for the
+                workflow, such as directory paths or toggled options
+      name -- (default: "_") a string to append to the end of each node name
+
+    Returns:
+      workflow -- the Nipype workflow originally provided, but with the
+                  following sub-workflow connected into it
+      resource_pool -- the resource pool originally provided, but updated
+                       (if applicable) with the newest outputs and connections
+
+    Notes:
+      - If any resources/outputs required by this workflow are not in the
+        resource pool, this workflow will call pre-requisite workflow builder
+        functions to further populate the pipeline with workflows which will
+        calculate/generate these necessary pre-requisites.
+    """
 
     import os
     import sys
@@ -235,9 +305,9 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     import nipype.interfaces.utility as niu
     import nipype.algorithms.misc as nam
     from qap_workflows_utils import qap_anatomical_spatial, \
-                                    add_header_to_qap_dict, \
                                     write_json
     from qap.viz.interfaces import PlotMosaic
+    from qap_utils import json_to_csv
     from workflow_utils import check_config_settings
 
     check_config_settings(config, "template_skull_for_anat")
@@ -384,10 +454,19 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     workflow.connect(spatial, 'qc', spatial_to_json, 'output_dict')
     resource_pool['qap_anatomical_spatial'] = out_json
 
+    # write/update CSV
+    json_to_csv = pe.Node(niu.Function(
+                                  input_names=["json_file"],
+                                  output_names=["csv_file"],
+                                  function=json_to_csv),
+                              name="qap_anatomical_spatial_to_csv%s" % name)
+    workflow.connect(spatial_to_json, 'json_file', json_to_csv, 'json_file')
+    resource_pool['anat_spat_csv'] = (json_to_csv, 'csv_file')
+
     return workflow, resource_pool
 
 
-def run_single_qap_anatomical_spatial(
+def run_only_qap_anatomical_spatial(
         anatomical_reorient, qap_head_mask, anatomical_csf_mask,
         anatomical_gm_mask, anatomical_wm_mask, subject_id, session_id=None,
         scan_id=None, site_name=None, out_dir=None, run=True):
@@ -447,7 +526,7 @@ def run_single_qap_anatomical_spatial(
         return workflow, workflow.base_dir
 
 
-def run_whole_single_qap_anatomical_spatial(
+def run_everything_qap_anatomical_spatial(
         anatomical_scan, template_head, subject_id, session_id=None,
         scan_id=None, site_name=None, out_dir=None, run=True):
 
@@ -530,6 +609,32 @@ def run_whole_single_qap_anatomical_spatial(
 
 
 def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
+    """Build and run a Nipype workflow to calculate the QAP functional spatial
+    quality measures.
+
+    Keyword arguments:
+      workflow -- a Nipype workflow object which can already contain other
+                  connected nodes; this function will insert the following
+                  workflow into this one provided
+      resource_pool -- a dictionary defining input files and pointers to
+                       Nipype node outputs / workflow connections; the keys
+                       are the resource names
+      config -- a dictionary defining the configuration settings for the
+                workflow, such as directory paths or toggled options
+      name -- (default: "_") a string to append to the end of each node name
+
+    Returns:
+      workflow -- the Nipype workflow originally provided, but with the
+                  following sub-workflow connected into it
+      resource_pool -- the resource pool originally provided, but updated
+                       (if applicable) with the newest outputs and connections
+
+    Notes:
+      - If any resources/outputs required by this workflow are not in the
+        resource pool, this workflow will call pre-requisite workflow builder
+        functions to further populate the pipeline with workflows which will
+        calculate/generate these necessary pre-requisites.
+    """
 
     # resource pool should have:
     #     mean_functional
@@ -546,9 +651,9 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
     import nipype.algorithms.misc as nam
 
     from qap_workflows_utils import qap_functional_spatial, \
-                                    add_header_to_qap_dict, \
                                     write_json
     from qap.viz.interfaces import PlotMosaic
+    from qap_utils import json_to_csv
 
     from workflow_utils import check_input_resources
 
@@ -639,10 +744,20 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
 
     resource_pool['qap_functional_spatial'] = (spatial_epi_to_json, 'json_file')
 
+    # write/update CSV
+    json_to_csv = pe.Node(niu.Function(
+                                  input_names=["json_file"],
+                                  output_names=["csv_file"],
+                                  function=json_to_csv),
+                              name="qap_functional_spatial_to_csv%s" % name)
+    workflow.connect(spatial_epi_to_json, 'json_file', 
+        json_to_csv, 'json_file')
+    resource_pool['func_spat_csv'] = (json_to_csv, 'csv_file')
+
     return workflow, resource_pool
 
 
-def run_single_qap_functional_spatial(
+def run_only_qap_functional_spatial(
         mean_functional, functional_brain_mask, subject_id, session_id,
         scan_id, site_name=None, ghost_direction=None, out_dir=None,
         run=True):
@@ -700,7 +815,7 @@ def run_single_qap_functional_spatial(
         return workflow, workflow.base_dir
 
 
-def run_whole_single_qap_functional_spatial(
+def run_everything_qap_functional_spatial(
         functional_scan, subject_id, session_id=None, scan_id=None,
         site_name=None, out_dir=None, run=True):
 
@@ -783,6 +898,32 @@ def run_whole_single_qap_functional_spatial(
 
 
 def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
+    """Build and run a Nipype workflow to calculate the QAP functional 
+    temporal quality measures.
+
+    Keyword arguments:
+      workflow -- a Nipype workflow object which can already contain other
+                  connected nodes; this function will insert the following
+                  workflow into this one provided
+      resource_pool -- a dictionary defining input files and pointers to
+                       Nipype node outputs / workflow connections; the keys
+                       are the resource names
+      config -- a dictionary defining the configuration settings for the
+                workflow, such as directory paths or toggled options
+      name -- (default: "_") a string to append to the end of each node name
+
+    Returns:
+      workflow -- the Nipype workflow originally provided, but with the
+                  following sub-workflow connected into it
+      resource_pool -- the resource pool originally provided, but updated
+                       (if applicable) with the newest outputs and connections
+
+    Notes:
+      - If any resources/outputs required by this workflow are not in the
+        resource pool, this workflow will call pre-requisite workflow builder
+        functions to further populate the pipeline with workflows which will
+        calculate/generate these necessary pre-requisites.
+    """
 
     # resource pool should have:
     #     functional_brain_mask
@@ -798,10 +939,10 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     import nipype.algorithms.misc as nam
 
     from qap_workflows_utils import qap_functional_temporal, \
-                                    add_header_to_qap_dict, \
                                     write_json
     from temporal_qc import fd_jenkinson
     from qap.viz.interfaces import PlotMosaic, PlotFD
+    from qap_utils import json_to_csv
 
     def _getfirst(inlist):
         if isinstance(inlist, list):
@@ -922,10 +1063,19 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     workflow.connect(temporal, 'qc', temporal_to_json, 'output_dict')
     resource_pool['qap_functional_temporal'] = (temporal_to_json, 'json_file')
 
+    # write/update CSV
+    json_to_csv = pe.Node(niu.Function(
+                                  input_names=["json_file"],
+                                  output_names=["csv_file"],
+                                  function=json_to_csv),
+                              name="qap_functional_temporal_to_csv%s" % name)
+    workflow.connect(temporal_to_json, 'json_file', json_to_csv, 'json_file')
+    resource_pool['func_temp_csv'] = (json_to_csv, 'csv_file')
+
     return workflow, resource_pool
 
 
-def run_single_qap_functional_temporal(func_reorient, functional_brain_mask,
+def run_only_qap_functional_temporal(func_reorient, functional_brain_mask,
                                        subject_id, session_id, scan_id,
                                        site_name=None, mcflirt_rel_rms=None,
                                        coordinate_transformation=None,
@@ -988,8 +1138,7 @@ def run_single_qap_functional_temporal(func_reorient, functional_brain_mask,
         return workflow, workflow.base_dir
 
 
-
-def run_whole_single_qap_functional_temporal(
+def run_everything_qap_functional_temporal(
         functional_scan, subject_id, session_id=None, scan_id=None,
         site_name=None, out_dir=None, run=True):
 

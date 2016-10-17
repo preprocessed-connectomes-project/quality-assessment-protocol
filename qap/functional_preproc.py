@@ -51,6 +51,32 @@ def get_idx(in_files, stop_idx=None, start_idx=None):
 
 
 def func_preproc_workflow(workflow, resource_pool, config, name="_"):
+    """Build and run a Nipype workflow to deoblique and reorient a functional
+    scan from a NIFTI file.
+
+    Keyword arguments:
+      workflow -- a Nipype workflow object which can already contain other
+                  connected nodes; this function will insert the following
+                  workflow into this one provided
+      resource_pool -- a dictionary defining input files and pointers to
+                       Nipype node outputs / workflow connections; the keys
+                       are the resource names
+      config -- a dictionary defining the configuration settings for the
+                workflow, such as directory paths or toggled options
+      name -- (default: "_") a string to append to the end of each node name
+
+    Returns:
+      workflow -- the Nipype workflow originally provided, but with the
+                  following sub-workflow connected into it
+      resource_pool -- the resource pool originally provided, but updated
+                       (if applicable) with the newest outputs and connections
+
+    Notes:
+      - If any resources/outputs required by this workflow are not in the
+        resource pool, this workflow will call pre-requisite workflow builder
+        functions to further populate the pipeline with workflows which will
+        calculate/generate these necessary pre-requisites.
+    """
 
     # resource pool should have:
     #     functional_scan
@@ -190,6 +216,32 @@ def run_func_preproc(functional_scan, start_idx=None, stop_idx=None, \
 
 
 def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
+    """Build and run a Nipype workflow to calculate the motion correction
+    parameters of a functional timeseries using AFNI's 3dvolreg.
+
+    Keyword arguments:
+      workflow -- a Nipype workflow object which can already contain other
+                  connected nodes; this function will insert the following
+                  workflow into this one provided
+      resource_pool -- a dictionary defining input files and pointers to
+                       Nipype node outputs / workflow connections; the keys
+                       are the resource names
+      config -- a dictionary defining the configuration settings for the
+                workflow, such as directory paths or toggled options
+      name -- (default: "_") a string to append to the end of each node name
+
+    Returns:
+      workflow -- the Nipype workflow originally provided, but with the
+                  following sub-workflow connected into it
+      resource_pool -- the resource pool originally provided, but updated
+                       (if applicable) with the newest outputs and connections
+
+    Notes:
+      - If any resources/outputs required by this workflow are not in the
+        resource pool, this workflow will call pre-requisite workflow builder
+        functions to further populate the pipeline with workflows which will
+        calculate/generate these necessary pre-requisites.
+    """
 
     # resource pool should have:
     #     func_reorient
@@ -326,6 +378,32 @@ def run_func_motion_correct(func_reorient, out_dir=None, run=True):
 
 
 def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
+    """Build and run a Nipype workflow to generate a functional brain mask
+    using AFNI's 3dAutomask.
+
+    Keyword arguments:
+      workflow -- a Nipype workflow object which can already contain other
+                  connected nodes; this function will insert the following
+                  workflow into this one provided
+      resource_pool -- a dictionary defining input files and pointers to
+                       Nipype node outputs / workflow connections; the keys
+                       are the resource names
+      config -- a dictionary defining the configuration settings for the
+                workflow, such as directory paths or toggled options
+      name -- (default: "_") a string to append to the end of each node name
+
+    Returns:
+      workflow -- the Nipype workflow originally provided, but with the
+                  following sub-workflow connected into it
+      resource_pool -- the resource pool originally provided, but updated
+                       (if applicable) with the newest outputs and connections
+
+    Notes:
+      - If any resources/outputs required by this workflow are not in the
+        resource pool, this workflow will call pre-requisite workflow builder
+        functions to further populate the pipeline with workflows which will
+        calculate/generate these necessary pre-requisites.
+    """
 
     # resource pool should have:
     #     func_motion_correct
@@ -415,6 +493,33 @@ def run_functional_brain_mask(func_motion_correct, out_dir=None, run=True):
 
 def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
     name="_"):
+    """Build and run a Nipype workflow to generate a background mask of a
+    functional scan (the inversion of the functional brain mask) using AFNI's
+    3dCalc.
+
+    Keyword arguments:
+      workflow -- a Nipype workflow object which can already contain other
+                  connected nodes; this function will insert the following
+                  workflow into this one provided
+      resource_pool -- a dictionary defining input files and pointers to
+                       Nipype node outputs / workflow connections; the keys
+                       are the resource names
+      config -- a dictionary defining the configuration settings for the
+                workflow, such as directory paths or toggled options
+      name -- (default: "_") a string to append to the end of each node name
+
+    Returns:
+      workflow -- the Nipype workflow originally provided, but with the
+                  following sub-workflow connected into it
+      resource_pool -- the resource pool originally provided, but updated
+                       (if applicable) with the newest outputs and connections
+
+    Notes:
+      - If any resources/outputs required by this workflow are not in the
+        resource pool, this workflow will call pre-requisite workflow builder
+        functions to further populate the pipeline with workflows which will
+        calculate/generate these necessary pre-requisites.
+    """
 
     # resource pool should have:
     #     functional_brain_mask
@@ -507,11 +612,38 @@ def run_invert_functional_brain_mask(functional_brain_mask, out_dir=None,
 
 
 def mean_functional_workflow(workflow, resource_pool, config, name="_"):
+    """Build and run a Nipype workflow to generate a one-volume image from a
+    functional timeseries comprising of the mean of its timepoint values,
+    using AFNI's 3dTstat.
+
+    Keyword arguments:
+      workflow -- a Nipype workflow object which can already contain other
+                  connected nodes; this function will insert the following
+                  workflow into this one provided
+      resource_pool -- a dictionary defining input files and pointers to
+                       Nipype node outputs / workflow connections; the keys
+                       are the resource names
+      config -- a dictionary defining the configuration settings for the
+                workflow, such as directory paths or toggled options
+      name -- (default: "_") a string to append to the end of each node name
+
+    Returns:
+      workflow -- the Nipype workflow originally provided, but with the
+                  following sub-workflow connected into it
+      resource_pool -- the resource pool originally provided, but updated
+                       (if applicable) with the newest outputs and connections
+
+    Notes:
+      - If any resources/outputs required by this workflow are not in the
+        resource pool, this workflow will call pre-requisite workflow builder
+        functions to further populate the pipeline with workflows which will
+        calculate/generate these necessary pre-requisites.
+      - This workflow will NOT remove background noise from the image, to
+        maintain as accurate of a quality metric as possible.
+    """
 
     # resource pool should have:
     #     func_motion_correct
-
-    ''' this version does NOT remove background noise '''
 
     import os
     import sys
