@@ -72,14 +72,33 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
                        (if applicable) with the newest outputs and connections
 
     Notes:
-      - If any resources/outputs required by this workflow are not in the
-        resource pool, this workflow will call pre-requisite workflow builder
-        functions to further populate the pipeline with workflows which will
-        calculate/generate these necessary pre-requisites.
+      - This is a seminal workflow that can only take an input directly from
+        disk (i.e. no Nipype workflow connections/pointers, and this is where
+        the pipeline will actually begin). For the sake of building the  
+        pipeine in reverse, if this workflow is called when there is no input 
+        file available, this function will return the unmodified workflow and 
+        resource pool directly back.
+      - In conjunction with the other workflow-building functions, if this
+        function returns the workflow and resource pool unmodified, each
+        function up will do the same until it reaches the top level, allowing
+        the pipeline builder to continue "searching" for a base-level input
+        without crashing at this one.
+
+    Expected Resources in Resource Pool:
+      functional_scan -- the raw functional 4D timeseries in a NIFTI file
+
+    New Resources Added to Resource Pool:
+      func_reorient -- the deobliqued, reoriented functional timeseries
+
+    Workflow Steps:
+      1. get_idx function node (if a start_idx and/or stop_idx is set in the
+         configuration) to generate the volume range to keep in the timeseries
+      2. AFNI 3dcalc to drop volumes not included in the range (if a start_idx
+         and/or stop_idx has been set in the configuration only)
+      3. AFNI 3drefit to deoblique the file
+      4. AFNI 3dresample to reorient the file to RPI
     """
 
-    # resource pool should have:
-    #     functional_scan
     import os
     import sys
 
@@ -241,10 +260,20 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
         resource pool, this workflow will call pre-requisite workflow builder
         functions to further populate the pipeline with workflows which will
         calculate/generate these necessary pre-requisites.
-    """
 
-    # resource pool should have:
-    #     func_reorient
+    Expected Resources in Resource Pool:
+      func_reorient - the deobliqued, reoriented functional timeseries
+
+    New Resources Added to Resource Pool:
+      func_motion_correct -- the motion-corrected functional timeseries
+      coordinate_transformation -- the matrix transformation from AFNI's
+                                   3dvolreg (--1Dmatrix_save option)
+
+    Workflow Steps:
+      1. AFNI 3dcalc to extract the first volume of the functional timeseries
+         for the basefile for 3dvolreg
+      2. AFNI 3dvolreg to calculate the motion correction parameters
+    """
 
     import os
     import sys
@@ -267,6 +296,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
         if resource_pool == old_rp:
             return workflow, resource_pool
     
+    '''
     func_get_mean_RPI = pe.Node(interface=preprocess.TStat(),
                             name='func_get_mean_RPI%s' % name)
     func_get_mean_RPI.inputs.options = '-mean'
@@ -277,7 +307,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
         workflow.connect(node, out_file, func_get_mean_RPI, 'in_file')
     else:
         func_get_mean_RPI.inputs.in_file = resource_pool["func_reorient"]
-
+    '''
 
     # get the first volume of the time series
     get_func_volume = pe.Node(interface=preprocess.Calc(),
@@ -307,7 +337,6 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
     else:
         func_motion_correct.inputs.in_file = resource_pool["func_reorient"]
 
-    #workflow.connect(func_get_mean_RPI, 'out_file',
     workflow.connect(get_func_volume, 'out_file',
                      func_motion_correct, 'basefile')
 
@@ -638,8 +667,8 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
         resource pool, this workflow will call pre-requisite workflow builder
         functions to further populate the pipeline with workflows which will
         calculate/generate these necessary pre-requisites.
-      - This workflow will NOT remove background noise from the image, to
-        maintain as accurate of a quality metric as possible.
+      - For QAP: This workflow will NOT remove background noise from the
+        image, to maintain as accurate of a quality metric as possible.
     """
 
     # resource pool should have:

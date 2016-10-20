@@ -1048,7 +1048,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
       inverted_functional_brain_mask -- a binary mask of the inversion of the
                                         functional brain mask
       coordinate_transformation -- the matrix transformation from AFNI's
-                                   3dvolreg
+                                   3dvolreg (--1Dmatrix_save option)
       mcflirt_rel_rms -- (if no coordinate_transformation) the matrix
                          transformation from FSL's Mcflirt
 
