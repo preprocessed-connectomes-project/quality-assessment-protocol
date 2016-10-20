@@ -23,10 +23,27 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
                        (if applicable) with the newest outputs and connections
 
     Notes:
-      - If any resources/outputs required by this workflow are not in the
-        resource pool, this workflow will call pre-requisite workflow builder
-        functions to further populate the pipeline with workflows which will
-        calculate/generate these necessary pre-requisites.
+      - This is a seminal workflow that can only take an input directly from
+        disk (i.e. no Nipype workflow connections/pointers, and this is where
+        the pipeline will actually begin). For the sake of building the  
+        pipeine in reverse, if this workflow is called when there is no input 
+        file available, this function will return the unmodified workflow and 
+        resource pool directly back.
+      - In conjunction with the other workflow-building functions, if this
+        function returns the workflow and resource pool unmodified, each
+        function up will do the same until it reaches the top level, allowing
+        the pipeline builder to continue "searching" for a base-level input
+        without crashing at this one.
+
+    Expected Resources in Resource Pool:
+      anatomical_scan -- the raw anatomical scan in a NIFTI image
+
+    New Resources Added to Resource Pool:
+      anatomical_reorient -- the deobliqued, reoriented anatomical scan
+
+    Workflow Steps:
+      1. AFNI's 3drefit to deoblique the anatomical scan
+      2. AFNI's 3dresample to reorient the deobliqued anatomical scan to RPI
     """
 
     # resource pool should have:
@@ -140,6 +157,16 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
         resource pool, this workflow will call pre-requisite workflow builder
         functions to further populate the pipeline with workflows which will
         calculate/generate these necessary pre-requisites.
+
+    Expected Resources in Resource Pool:
+      anatomical_reorient -- the deobliqued, reoriented anatomical scan
+
+    New Resources Added to Resource Pool:
+      anatomical_brain -- the skull-stripped anatomical image (brain only)
+
+    Workflow Steps:
+      1. AFNI 3dSkullStrip to create a binary mask selecting only the brain
+      2. AFNI 3dcalc to multiply the anatomical image with this mask
     """
 
     # resource pool should have:
@@ -275,10 +302,26 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
         resource pool, this workflow will call pre-requisite workflow builder
         functions to further populate the pipeline with workflows which will
         calculate/generate these necessary pre-requisites.
-    """
 
-    # resource pool should have:
-    #     anatomical_brain
+    Expected Resources in Resource Pool:
+      anatomical_reorient -- the deobliqued, reoriented anatomical scan
+        OR
+      anatomical_brain -- the skull-stripped anatomical image (brain only)
+
+    Expected Settings in Configuration:
+      skull_on_registration -- (optional- default: True) whether or not to
+                               accept anatomical_reorient or anatomical_brain
+                               as the input for registration
+
+    New Resources Added to Resource Pool:
+      afni_linear_warped_image -- the anatomical image transformed to the
+                                  template (using linear warps)
+      allineate_linear_xfm -- the text file containing the linear warp matrix
+                              produced by AFNI's 3dAllineate
+
+    Workflow Steps:
+      1. AFNI's 3dAllineate to calculate the linear registration
+    """
 
     import os
     import sys
@@ -349,9 +392,7 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
         calc_allineate_warp.inputs.out_file = \
             "allineate_warped_brain.nii.gz"
 
-
     calc_allineate_warp.inputs.out_matrix = "3dallineate_warp"
-
 
     resource_pool["allineate_linear_xfm"] = \
         (calc_allineate_warp, 'matrix')
@@ -359,9 +400,7 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
     resource_pool["afni_linear_warped_image"] = \
         (calc_allineate_warp, 'out_file')
 
-
     return workflow, resource_pool
-
 
 
 def run_afni_anatomical_linear_registration(input_image, reference_image,
@@ -454,10 +493,23 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
         resource pool, this workflow will call pre-requisite workflow builder
         functions to further populate the pipeline with workflows which will
         calculate/generate these necessary pre-requisites.
-    """
 
-    # resource pool should have:
-    #     anatomical_brain
+    Expected Resources in Resource Pool:
+      anatomical_brain -- the skull-stripped anatomical image (brain only)
+
+    New Resources Added to Resource Pool:
+      anatomical_csf_mask -- the binary mask mapping the CSF voxels
+      anatomical_gm_mask -- the binary mask mapping the gray matter voxels
+      anatomical_wm_mask -- the binary mask mapping the white matter voxels
+
+    Workflow Steps:
+      1. AFNI 3dSeg to run tissue segmentation on the anatomical brain
+      2. AFNI 3dAFNItoNIFTI to convert the AFNI-format 3dSeg output into a
+         NIFTI file (as of Oct 2016 3dSeg cannot be configured to write to
+         NIFTI)
+      3. AFNI 3dcalc to separate the three masks within the output file into
+         three separate images
+    """
 
     import os
     import sys
@@ -521,11 +573,9 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
     workflow.connect(AFNItoNIFTI, 'out_file', extract_GM, 'in_file_a')
     workflow.connect(AFNItoNIFTI, 'out_file', extract_WM, 'in_file_a')
 
-
     resource_pool["anatomical_csf_mask"] = (extract_CSF, 'out_file')
     resource_pool["anatomical_gm_mask"] = (extract_GM, 'out_file')
     resource_pool["anatomical_wm_mask"] = (extract_WM, 'out_file')
-
 
     return workflow, resource_pool
 

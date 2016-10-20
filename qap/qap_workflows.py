@@ -8,7 +8,7 @@ import os.path as op
 def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to create the QAP anatomical head mask.
 
-    Keyword arguments:
+    Keyword Arguments:
       workflow -- a Nipype workflow object which can already contain other
                   connected nodes; this function will insert the following
                   workflow into this one provided
@@ -30,6 +30,29 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
         resource pool, this workflow will call pre-requisite workflow builder
         functions to further populate the pipeline with workflows which will
         calculate/generate these necessary pre-requisites.
+
+    Expected Resources in Resource Pool:
+      anatomical_reorient -- the deobliqued, reoriented anatomical scan
+      allineate_linear_xfm -- the linear registration transform matrix from
+                              AFNI's 3dAllineate
+
+    New Resources Added to Resource Pool:
+      qap_head_mask -- a binary mask of the head and the region in front of
+                       the mouth and below the nose
+      whole_head_mask -- a binary mask of only the head
+      skull_only_mask -- a binary mask of the head minus the slice mask
+
+    Workflow Steps:
+      1. AFNI 3dClipLevel on anatomical reorient to get a threshold value
+      2. create_expr_string function node to generate the arg for AFNI 3dcalc
+      3. AFNI 3dcalc to create a binary mask of anatomical reorient using the
+         threshold value from 3dClipLevel
+      4. AFNI 3dmask_tool to dilate and erode the binary mask six times each
+         way to remove gaps and holes
+      5. slice_head_mask function node to create the binary mask for the nose/
+         mouth region
+      6. 3dcalc to add the slice mask to the head mask, and to also subtract
+         the slice mask from the head mask, to create the "skull_only_mask"
     """
 
     import os
@@ -149,6 +172,23 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
 
 def run_qap_mask(anatomical_reorient, allineate_out_xfm,
                  out_dir=None, run=True):
+    """Run the qap_mask_workflow workflow with the provided inputs.
+
+    Keyword arguments:
+      anatomical_reorient -- the deobliqued, reoriented anatomical scan
+      allineate_out_xfm -- the linear anatomical-to-template registration 
+                           transform matrix from AFNI's 3dAllineate
+      out_dir -- (default: None) the output directory to write the results to;
+                 if left as None, will write to the current directory
+      run -- (default: True) will run the workflow; if set to False, will 
+             connect the Nipype workflow and return the workflow object only
+
+    Returns:
+      outpath -- (if run=True) the filepath of the generated mask file
+      workflow -- (if run=False) the Nipype workflow object
+      workflow.base_dir -- (if run=False) the base directory of the workflow
+                           if it were to be run
+    """
 
     # stand-alone runner for anatomical reorient workflow
 
@@ -204,7 +244,7 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
     """Build and run a Nipype workflow to extract the NIFTI header information
     from an input file and insert it into a dictionary.
 
-    Keyword arguments:
+    Keyword Arguments:
       workflow -- a Nipype workflow object which can already contain other
                   connected nodes; this function will insert the following
                   workflow into this one provided
@@ -226,6 +266,22 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
         resource pool, this workflow will call pre-requisite workflow builder
         functions to further populate the pipeline with workflows which will
         calculate/generate these necessary pre-requisites.
+
+    Expected Resources in Resource Pool:
+      anatomical_scan -- (optional) the raw anatomical scan
+      functional_scan -- (optional) the raw functional scan
+
+    New Resources Added to Resource Pool:
+      anatomical_header_info -- (if anatomical scan provided) dictionary of
+                                NIFTI file's header information
+      functional_header_info -- (if functional scan provided) dictionary of
+                                NIFTI file's header information
+
+    Workflow Steps:
+      1. create_header_dict_entry function node to generate the header info
+         dictionary
+      2. write_json function node to write the information to the output JSON
+         file (or update an already existing output JSON file)
     """
 
     import os
@@ -295,6 +351,30 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         resource pool, this workflow will call pre-requisite workflow builder
         functions to further populate the pipeline with workflows which will
         calculate/generate these necessary pre-requisites.
+
+    Expected Resources in Resource Pool:
+      anatomical_reorient -- the deobliqued, reoriented anatomical scan
+      qap_head_mask -- a binary mask of the head and the region in front of
+                       the mouth and below the nose
+      anatomical_gm_mask -- the binary tissue segmentation map for gray matter
+      anatomical_wm_mask -- the binary tissue segmentation map for white
+                            matter
+      anatomical_csf_mask -- the binary tissue segmentation map for CSF
+
+    New Resources Added to Resource Pool:
+      qap_anatomical_spatial -- the path to the output JSON file containing
+                                the participant's QAP measure values
+      anat_spat_csv -- the path to the CSV file containing the QAP measure
+                       values
+      qap_mosaic -- (if enabled) the path to the mosaic QC report file
+
+    Workflow Steps:
+      1. qap_anatomical_spatial function node to calculate the QAP measures
+      2. PlotMosaic() node (if enabled) to generate QC mosaic
+      3. qap_anatomical_spatial_to_json function node to write/update numbers
+         to the output JSON file
+      4. qap_anatomical_spatial_to_csv function node to populate the output
+         CSV file with data from the JSON file
     """
 
     import os
@@ -529,8 +609,29 @@ def run_only_qap_anatomical_spatial(
 def run_everything_qap_anatomical_spatial(
         anatomical_scan, template_head, subject_id, session_id=None,
         scan_id=None, site_name=None, out_dir=None, run=True):
+    """Run the 'qap_anatomical_spatial_workflow' workflow with the provided 
+    inputs.
 
-    # stand-alone runner for anatomical spatial QAP workflow
+    Keyword arguments:
+      anatomical_scan -- the filepath to the NIFTI image of the raw anatomical
+                         scan
+      template_head -- the filepath to the NIFTI image of the anatomical 
+                       template image (with skull)
+      subject_id -- the participant ID
+      session_id -- (default: None) the session ID
+      scan_id -- (default: None) the series/scan ID
+      site_name -- (default: None) the site name/ID
+      out_dir -- (default: None) the output directory to write the results to;
+                 if left as None, will write to the current directory
+      run -- (default: True) will run the workflow; if set to False, will 
+             connect the Nipype workflow and return the workflow object only
+
+    Returns:
+      outpath -- (if run=True) the path to the JSON output file
+      workflow -- (if run=False) the Nipype workflow object
+      workflow.base_dir -- (if run=False) the base directory of the workflow
+                           if it were to be run
+    """
 
     import os
     import sys
@@ -634,11 +735,27 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
         resource pool, this workflow will call pre-requisite workflow builder
         functions to further populate the pipeline with workflows which will
         calculate/generate these necessary pre-requisites.
-    """
 
-    # resource pool should have:
-    #     mean_functional
-    #     functional_brain_mask
+    Expected Resources in Resource Pool:
+      mean_functional -- the one-volume averaged functional timeseries image
+      functional_brain_mask -- a binary mask of the brain in the functional
+                               image
+
+    New Resources Added to Resource Pool:
+      qap_functional_spatial -- the path to the output JSON file containing
+                                the participant's QAP measure values
+      func_spat_csv -- the path to the CSV file containing the QAP measure
+                       values
+      qap_mosaic -- (if enabled) the path to the mosaic QC report file
+
+    Workflow Steps:
+      1. qap_functional_spatial function node to calculate the QAP measures
+      2. PlotMosaic() node (if enabled) to generate QC mosaic
+      3. qap_functional_spatial_to_json function node to write/update numbers
+         to the output JSON file
+      4. qap_functional_spatial_to_csv function node to populate the output
+         CSV file with data from the JSON file
+    """
 
     import os
     import sys
@@ -923,12 +1040,34 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         resource pool, this workflow will call pre-requisite workflow builder
         functions to further populate the pipeline with workflows which will
         calculate/generate these necessary pre-requisites.
-    """
 
-    # resource pool should have:
-    #     functional_brain_mask
-    #     func_motion_correct
-    #     coordinate_transformation
+    Expected Resources in Resource Pool:
+      func_reorient -- the deobliqued, reoriented 4D functional timeseries
+      functional_brain_mask -- a binary mask of the brain in the functional
+                               image
+      inverted_functional_brain_mask -- a binary mask of the inversion of the
+                                        functional brain mask
+      coordinate_transformation -- the matrix transformation from AFNI's
+                                   3dvolreg
+      mcflirt_rel_rms -- (if no coordinate_transformation) the matrix
+                         transformation from FSL's Mcflirt
+
+    New Resources Added to Resource Pool:
+      qap_functional_temporal -- the path to the output JSON file containing
+                                the participant's QAP measure values
+      func_temp_csv -- the path to the CSV file containing the QAP measure
+                       values
+      qap_mosaic -- (if enabled) the path to the mosaic QC report file
+
+    Workflow Steps:
+      1. fd_jenkinson function node to calculate RMSD
+      2. qap_functional_temporal function node to calculate the QAP measures
+      3. PlotMosaic() node (if enabled) to generate QC mosaic
+      4. qap_functional_temporal_to_json function node to write/update numbers
+         to the output JSON file
+      5. qap_functional_temporal_to_csv function node to populate the output
+         CSV file with data from the JSON file
+    """
 
     import os
     import sys
