@@ -1,6 +1,15 @@
 
 
 def create_expr_string(clip_level_value):
+    """Create the expression arg string to run AFNI 3dcalc via Nipype.
+
+    Keyword Arguments:
+      clip_level_value -- the integer of the clipping threshold
+
+    Returns:
+      expr_string -- the string intended for the Nipype AFNI 3dcalc "expr" arg
+                     inputs
+    """
 
     expr_string = "step(a-%s)" % clip_level_value
 

@@ -4,6 +4,17 @@ from scipy import stats
 
 
 def remove_zero_variance_voxels(func_timeseries, mask):
+    """Modify a head mask to exclude timeseries voxels which have zero 
+    variance.
+
+    Keyword Arguments:
+      func_timeseries -- (Nibabel data) the 4D functional timeseries
+      mask -- (Nibabel data) the binary head mask
+
+    Returns:
+      mask -- (Nibabel data) the binary head mask, but with voxels of zero 
+              variance excluded
+    """
 
     for i in range(0, len(func_timeseries)):
 
@@ -21,6 +32,21 @@ def remove_zero_variance_voxels(func_timeseries, mask):
 
 
 def load(func_file, mask_file, check4d=True):
+    """Load the functional timeseries data from a NIFTI file into Nibabel data
+    format, check/validate the data, and remove voxels with zero variance.
+
+    Keyword Arguments:
+      func_file -- filepath to the NIFTI file containing the 4D functional
+                   timeseries
+      mask_file -- filepath to the NIFTI file containing the binary functional
+                   brain mask
+      check4d -- (default: True) check the timeseries data to ensure it is
+                 four dimensional
+
+    Returns:
+      func - (Nibabel data) the validated functional timeseries data with 
+             voxels of zero variance excluded
+    """
 
     import nibabel as nib
     from workflow_utils import raise_smart_exception
@@ -46,9 +72,16 @@ def load(func_file, mask_file, check4d=True):
 
 
 def robust_stdev(func, interp="fraction"):
+    """Compute robust estimation of standard deviation.
+
+    Keyword Arguments:
+      func -- (Nibabel data) the functional timeseries data
+      interp -- (default: fraction)
+
+    Returns:
+      stdev -- the standard deviation
     """
-    Compute robust estimation of standard deviation
-    """
+
     lower_qs    = np.percentile(func, 25, axis=0)
     upper_qs    = np.percentile(func, 75, axis=0)
     # note: won't work on roxy with scipy == 0.9
@@ -60,11 +93,13 @@ def robust_stdev(func, interp="fraction"):
 
 def ar_nitime(x, order=1, center=False):
     """
-    Borrowed from nipy.algorithms.AR_est_YW.
-    aka from nitime import algorithms as alg.
-    
-    We could speed this up by having the autocorr only compute lag1.
+
+    Notes:
+    - Borrowed from nipy.algorithms.AR_est_YW.
+        aka from nitime import algorithms as alg.
+    - We could speed this up by having the autocorr only compute lag1.
     """
+
     from nitime.lazy import scipy_linalg as linalg
     import nitime.utils as utils
     if center:
@@ -77,13 +112,11 @@ def ar_nitime(x, order=1, center=False):
     return ak[0]
 
 
-
 def ar_statsmodels(x, order=(1,0), trend='nc'):
     import statsmodels.api as sm
     arma_mod = sm.tsa.ARMA(x)
     arma_res = arma_mod.fit(order=order, trend=trend, disp=False)
     return arma_res.arparams[0]
-
 
 
 def ar1(func, method=ar_nitime):
@@ -94,8 +127,20 @@ def ar1(func, method=ar_nitime):
     return ar_vals
 
 
-
 def calc_dvars(func_file, mask_file, output_all=False, interp="fraction"):
+    """Calculate the standardized DVARS metric.
+
+    Keyword Arguments:
+      func_file -- the filepath to the NIFTI file containing the functional 
+                   timeseries
+      mask_file -- the filepath to the NIFTI file containing the binary 
+                   functional brain mask
+      output_all -- (default: False)   ????????????????????
+      interp -- (default: fraction)  ???????????????????
+
+    Returns:
+      out -- the DVARS output
+    """
 
     from workflow_utils import raise_smart_exception
 
@@ -138,14 +183,12 @@ def calc_dvars(func_file, mask_file, output_all=False, interp="fraction"):
     return out
 
 
-
 def test():
     func    = load("sample_func.nii.gz", "sample_func_mask.nii.gz")
     dvars   = calc_dvars(func)
     mean_d  = calc_mean_dvars(dvars)
     ref_dvars = np.loadtxt("sample_dvars.txt")
     ref_dvars = ref_dvars[:,[1,0,2]]
-    
 
 
 def specific_tests():

@@ -1,5 +1,16 @@
 
 def gather_nifti_file_paths(dataset_folder, creds_path=None):
+    """Gather the NIFTI filepaths present on either an Amazon S3 bucket, or
+    on the local filesystem.
+
+    Keyword Arguments:
+      dataset_folder -- the path to the directory containing the data
+      creds_path -- (default: None) the path to the file containing your AWS 
+                    credentials
+
+    Returns:
+      file_path_list -- a list of the gathered filepaths
+    """
 
     import os
 
@@ -47,6 +58,22 @@ def gather_nifti_file_paths(dataset_folder, creds_path=None):
 
 
 def extract_bids_data( file_path_list, inclusion_list=None ):
+    """Parse the BIDS-formatted data from a list of filepaths and create a
+    dictionary mapping the data to participant, session, series, etc.
+
+    Keyword Arguments:
+      file_path_list -- a list of existing NIFTI filepaths
+      inclusion_list -- (default: None) a list of participant IDs, to prune
+                        down the dictionary to only include these participants
+
+    Returns:
+      sub_dict -- a dictionary containing the NIFTI filepaths mapped to their
+                  participant information and type of scan
+
+    Notes:
+      - For more information on the BIDS data structure format, visit:
+          http://bids.neuroimaging.io/
+    """
 
     import os
 

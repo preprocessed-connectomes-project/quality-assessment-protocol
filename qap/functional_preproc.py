@@ -178,8 +178,31 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
 
 def run_func_preproc(functional_scan, start_idx=None, stop_idx=None, \
                          out_dir=None, run=True):
+    """Run the 'func_preproc_workflow' function to execute the modular
+    workflow with the provided inputs.
 
-    # stand-alone runner for functional preproc workflow
+    Keyword Arguments:
+      functional_scan -- the raw functional timeseries image in a NIFTI file
+      start_idx -- (default: None) the timeseries timepoint/volume to start 
+                   with - i.e. will only include this timepoint and the ones 
+                   after it - setting this to None will include all timepoints
+                   from the beginning
+      stop_idx -- (default: None) the timeseries timepoint/volume to end with
+                  - i.e. will only include this timepoint and the ones before
+                  it - setting this to None will include all timepoints up 
+                  until the end of the timeseries
+      out_dir -- (default: None) the output directory to write the results to;
+                 if left as None, will write to the current directory
+      run -- (default: True) will run the workflow; if set to False, will 
+             connect the Nipype workflow and return the workflow object only
+
+    Returns:
+      outpath -- (if run=True) the filepath of the generated 
+                 anatomical_reorient file
+      workflow -- (if run=False) the Nipype workflow object
+      workflow.base_dir -- (if run=False) the base directory of the workflow
+                           if it were to be run
+    """
 
     import os
     import sys
@@ -219,20 +242,16 @@ def run_func_preproc(functional_scan, start_idx=None, stop_idx=None, \
 
     workflow.connect(node, out_file, ds, 'func_reorient')
 
-
     if run == True:
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
         outpath = glob.glob(os.path.join(workflow_dir, "func_reorient",\
                                          "*"))[0]
-
         return outpath
         
     else:
-    
         return workflow, workflow.base_dir
     
-
 
 def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to calculate the motion correction
@@ -348,8 +367,23 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
 
 
 def run_func_motion_correct(func_reorient, out_dir=None, run=True):
+    """Run the 'func_motion_correct_workflow' function to execute the modular
+    workflow with the provided inputs.
 
-    # stand-alone runner for functional motion correct workflow
+    Keyword Arguments:
+      func_reorient -- the deobliqued, reoriented functional timeseries
+      out_dir -- (default: None) the output directory to write the results to;
+                 if left as None, will write to the current directory
+      run -- (default: True) will run the workflow; if set to False, will 
+             connect the Nipype workflow and return the workflow object only
+
+    Returns:
+      outpath -- (if run=True) the filepath of the generated 
+                 anatomical_reorient file
+      workflow -- (if run=False) the Nipype workflow object
+      workflow.base_dir -- (if run=False) the base directory of the workflow
+                           if it were to be run
+    """
 
     import os
     import sys
@@ -403,7 +437,6 @@ def run_func_motion_correct(func_reorient, out_dir=None, run=True):
         return outpath      
     else:
         return workflow, workflow.base_dir
-
 
 
 def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
@@ -471,8 +504,23 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
 
 
 def run_functional_brain_mask(func_motion_correct, out_dir=None, run=True):
+    """Run the 'functional_brain_mask_workflow' function to execute the 
+    modular workflow with the provided inputs.
 
-    # stand-alone runner for functional brain mask workflow
+    Keyword Arguments:
+      func_motion_correct - the motion-corrected functional timeseries
+      out_dir -- (default: None) the output directory to write the results to;
+                 if left as None, will write to the current directory
+      run -- (default: True) will run the workflow; if set to False, will 
+             connect the Nipype workflow and return the workflow object only
+
+    Returns:
+      outpath -- (if run=True) the filepath of the generated 
+                 anatomical_reorient file
+      workflow -- (if run=False) the Nipype workflow object
+      workflow.base_dir -- (if run=False) the base directory of the workflow
+                           if it were to be run
+    """
 
     import os
     import sys
@@ -492,7 +540,6 @@ def run_functional_brain_mask(func_motion_correct, out_dir=None, run=True):
 
     workflow.base_dir = workflow_dir
 
-
     resource_pool = {}
     config = {}
     num_cores_per_subject = 1
@@ -501,7 +548,6 @@ def run_functional_brain_mask(func_motion_correct, out_dir=None, run=True):
     
     workflow, resource_pool = \
             functional_brain_mask_workflow(workflow, resource_pool, config)
-
 
     ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
     ds.inputs.base_directory = workflow_dir
@@ -550,9 +596,6 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
         calculate/generate these necessary pre-requisites.
     """
 
-    # resource pool should have:
-    #     functional_brain_mask
-
     import os
     import sys
     import copy
@@ -591,8 +634,23 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
 
 def run_invert_functional_brain_mask(functional_brain_mask, out_dir=None,
     run=True):
+    """Run the 'invert_functional_brain_mask_workflow' function to execute the
+    modular workflow with the provided inputs.
 
-    # stand-alone runner for inverted functional brain mask workflow
+    Keyword Arguments:
+      functional_brain_mask -- the binary functional brain mask
+      out_dir -- (default: None) the output directory to write the results to;
+                 if left as None, will write to the current directory
+      run -- (default: True) will run the workflow; if set to False, will 
+             connect the Nipype workflow and return the workflow object only
+
+    Returns:
+      outpath -- (if run=True) the filepath of the generated 
+                 anatomical_reorient file
+      workflow -- (if run=False) the Nipype workflow object
+      workflow.base_dir -- (if run=False) the base directory of the workflow
+                           if it were to be run
+    """
 
     import os
     import sys
@@ -712,10 +770,26 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
 
  
 def run_mean_functional(func_motion_correct, out_dir=None, run=True):
+    """Run the 'mean_functional_workflow' function to execute the modular
+    workflow with the provided inputs.
 
-    # stand-alone runner for mean functional workflow
+    Keyword Arguments:
+      func_motion_correct -- the motion-corrected functional timeseries
+      out_dir -- (default: None) the output directory to write the results to;
+                 if left as None, will write to the current directory
+      run -- (default: True) will run the workflow; if set to False, will 
+             connect the Nipype workflow and return the workflow object only
 
-    ''' this version does NOT remove background noise '''
+    Returns:
+      outpath -- (if run=True) the filepath of the generated 
+                 anatomical_reorient file
+      workflow -- (if run=False) the Nipype workflow object
+      workflow.base_dir -- (if run=False) the base directory of the workflow
+                           if it were to be run
+
+    Notes:
+      - This workflow will NOT remove background noise.
+    """
 
     import os
     import sys
@@ -762,4 +836,3 @@ def run_mean_functional(func_motion_correct, out_dir=None, run=True):
     else:
         return workflow, workflow.base_dir
         
-

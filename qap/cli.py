@@ -167,17 +167,32 @@ class QAProtocolCLI:
 
 
     def _prepare_cluster_batch_file(self, run_name, num_bundles):
+        """Write the cluster batch file for the appropriate scheduler.
 
+        Keyword Arguments:
+          run_name -- the name of the pipeline or run being executed
+          num_bundles -- the number of bundles total being run
+
+        Returns:
+          N/A
+
+        Notes:
+          - Batch file setup code borrowed from dclark87's CPAC cluster setup
+            code:
+              https://github.com/FCP-INDI/C-PAC/blob/0.4.0_development/CPAC/..
+                  ..pipeline/cpac_runner.py
+              https://github.com/dclark87
+          - This function will write the batch file appropriate for the 
+            scheduler being used, and then this CLI will be run again on each
+            node/slot through the _run_one_bundle_on_node function.
+        """
+
+        import os
+        import re
         import getpass
         import commands
         from time import strftime
         from indi_schedulers import cluster_templates
-
-        # Cluster batch file setup code borrowed from dclark87's CPAC cluster
-        # setup code
-        #     https://github.com/FCP-INDI/C-PAC/blob/0.4.0_development/CPAC/..
-        #         ..pipeline/cpac_runner.py
-        #     https://github.com/dclark87
 
         # Create cluster log dir
         cluster_files_dir = \
@@ -247,29 +262,51 @@ class QAProtocolCLI:
         batch_filepath = os.path.join(cluster_files_dir, 'cpac_submit_%s.%s' \
                                       % (timestamp, self._platform))
 
+        with open(batch_filepath, 'w') as f:
+            f.write(batch_file_contents)
 
-        return batch_file_contents, batch_filepath, exec_cmd, \
-                   confirm_str, cluster_files_dir
+        # Get output response from job submission
+        out = commands.getoutput('%s %s' % (exec_cmd, batch_filepath))
+
+        # Check for successful qsub submission
+        if re.search(confirm_str, out) == None:
+            err_msg = 'Error submitting QAP pipeline run to %s queue' \
+                      % self._platform
+            raise Exception(err_msg)
+
+        # Get pid and send to pid file
+        pid = re.search(confirm_str, out).group(0)
+        pid_file = os.path.join(cluster_files_dir, 'pid.txt')
+        with open(pid_file, 'w') as f:
+            f.write(pid)
 
 
     def create_flat_sub_dict_dict(self, subdict):
+        """Collapse the participant resource pools so that each participant-
+        session-scan combination has its own entry.
 
-        # "collapses" the subject resource pools so that each sub-session-scan
-        # combination has its own entry
+        Keyword Arguments:
+          subdict -- a dictionary containing the filepaths of input files for
+                     each participant, sorted by session and scan
 
-        # input
-        #   subdict: resource pool dictionary loaded from a sublist YAML
-        #   format:  
-        #     {'sub_01': {'session_01': 
-        #                    {'anatomical_scan': {'scan_01': <filepath>,
-        #                                         'scan_02': <filepath>},
-        #                     'site_name': 'Site_1'} },
-        #      'sub_02': {..} }
+        Returns:
+          flat_sub_dict_dict -- a dictionary of dictionaries where each 
+                                participant-session-scan combination has its
+                                own entry, and input file filepaths are
+                                defined
 
-        # output
-        #   flat_sub_dict_dict is a dictionary of dictionaries. format:
-        #     { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
-        #                                  "anatomical_brain": <filepath>} }
+        Notes:
+          input subdict format:
+            {'sub_01': {'session_01': 
+                           {'anatomical_scan': {'scan_01': <filepath>,
+                                                'scan_02': <filepath>},
+                            'site_name': 'Site_1'} },
+             'sub_02': {..} }
+
+          output dict format:
+            { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
+                                         "anatomical_brain": <filepath>} }
+        """
 
         flat_sub_dict_dict = {}
         sites_dict = {}
@@ -332,13 +369,19 @@ class QAProtocolCLI:
 
 
     def _load_sublist(self):
+        """Load the participant list YAML file into a dictionary and check.
 
-        # subdict is in the format:
-        #   {'sub_01': {'session_01': 
-        #                  {'anatomical_scan': {'scan_01': <filepath>,
-        #                                       'scan_02': <filepath>},
-        #                   'site_name': 'Site_1'} },
-        #    'sub_02': {..} }
+        Returns:
+          subdict -- the participant list in a dictionary
+
+        Notes:
+          - subdict format:
+            {'sub_01': {'session_01': 
+                          {'anatomical_scan': {'scan_01': <filepath>,
+                                               'scan_02': <filepath>},
+                           'site_name': 'Site_1'} },
+            'sub_02': {..} }
+        """
 
         import yaml
 
@@ -358,17 +401,20 @@ class QAProtocolCLI:
 
 
     def _create_bundles(self, flat_sub_dict_dict):
+        """Create a list of participant "bundles".
 
-        # input
-        #   flat_sub_dict_dict is a dictionary of dictionaries. format:
-        #     { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
-        #                                  "anatomical_brain": <filepath>} }
+        Keyword Arguments:
+          flat_sub_dict_dict -- a dictionary of dictionaries where each 
+                                participant-session-scan combination has its
+                                own entry, and input file filepaths are
+                                defined
 
-        # output
-        #   bundles: a list of bundles - each bundle being a dictionary that
-        #            is a starting resource pool for N sub-session-scan combos
-        #            with N being the number of subjects per bundle
-        #            (set by the user)
+        Returns:
+          bundles -- a list of bundles - each bundle being a dictionary that
+                     is a starting resource pool for N sub-session-scan combos
+                     with N being the number of participants per bundle
+                     (set by the user)
+        """
 
         i = 0
         bundles = []
@@ -395,33 +441,21 @@ class QAProtocolCLI:
         return bundles
 
 
-    def _run_on_cluster(self, batch_file_contents, batch_filepath, exec_cmd, \
-                            confirm_str, cluster_files_dir):
-
-        import os
-        import re
-        import commands
-
-        with open(batch_filepath, 'w') as f:
-            f.write(batch_file_contents)
-
-        # Get output response from job submission
-        out = commands.getoutput('%s %s' % (exec_cmd, batch_filepath))
-
-        # Check for successful qsub submission
-        if re.search(confirm_str, out) == None:
-            err_msg = 'Error submitting QAP pipeline run to %s queue' \
-                      % self._platform
-            raise Exception(err_msg)
-
-        # Get pid and send to pid file
-        pid = re.search(confirm_str, out).group(0)
-        pid_file = os.path.join(cluster_files_dir, 'pid.txt')
-        with open(pid_file, 'w') as f:
-            f.write(pid)
-
-
     def _run_one_bundle_on_node(self, run_name, bundle_idx=None):
+        """Execute one bundle's workflow on one node/slot of a cluster/grid.
+
+        Keyword Arguments:
+          run_name -- the pipeline ID for identification
+          bundle_idx -- (default: None) the current bundle's index in the list
+                        of bundles- only used when running this manually
+
+        Returns:
+          rt -- a dictionary with information about the workflow run, its
+                status, and results
+
+        Notes:
+          - Compatible with Amazon AWS cluster runs, and S3 buckets.
+        """
 
         # kick off a single-bundle run
         #   this will be called multiple times throughout the execution of
@@ -561,6 +595,21 @@ class QAProtocolCLI:
 
 
     def _run_here(self, run_name):
+        """Run the workflow on the local machine with locally stored data (via
+           a participant list).
+
+        Keyword Arguments:
+          run_name -- the pipeline ID name
+
+        Returns:
+          results -- a list of "rt" dictionaries, each dictionary containing
+                     information about the workflow run, its status, and 
+                     results
+
+        Notes:
+          - Creates a list of bundles of participants from the input files in
+            the participant list.
+        """
 
         # this runs if a sublist is provided (instead of an s3 dict yml)
 
@@ -614,6 +663,23 @@ class QAProtocolCLI:
 
 
     def _run_here_from_s3(self, run_name, num_bundles):
+        """Run the workflow on the local machine with data stored on the
+        Amazon S3 cloud.
+
+        Keyword Arguments:
+          run_name -- the pipeline ID name
+          num_bundles -- the number of bundles of data (based on the number of
+                         participants and the bundle size denoted by the user)
+
+        Returns:
+          results -- a list of "rt" dictionaries, each dictionary containing
+                     information about the workflow run, its status, and 
+                     results
+
+        Notes:
+          - Creates a list of bundles of participants from the input files in
+            the participant list.  
+        """
 
         results = []
 
@@ -642,6 +708,21 @@ class QAProtocolCLI:
         
 
     def run(self, config_file=None, partic_list=None):
+        """Establish where and how we're running the pipeline and set up the
+        run. (Entry point)
+
+        Keyword Arguments:
+          config_file -- the pipeline configuration file in YAML format
+          partic_list -- the participant list file in YAML format
+
+        Returns:
+          N/A
+
+        Notes:
+          - This is the entry point for pipeline building and connecting.
+            Depending on the inputs, the appropriate workflow runner will
+            be selected and executed.
+        """
 
         from qap.workflow_utils import raise_smart_exception, \
                                        check_config_settings
@@ -831,10 +912,46 @@ class QAProtocolCLI:
 
 
 def starter_node_func(starter):
+    """Pass a dummy string through to provide a basic function for the first
+    Nipype workflow node.
+
+    Keyword Arguments:
+      starter -- a dummy string
+
+    Returns:
+      starter -- the same string
+
+    Notes:
+      - This is used for a Nipype utility function node to serve as a starting
+        node to connect to multiple unrelated Nipype workflows. Each of these
+        workflows runs QAP for one participant in the current bundle being 
+        run.
+      - Connecting the multiple non-interdependent participant workflows as
+        one workflow allows the Nipype resource scheduler to maximize 
+        performance.
+    """
     return starter
 
 
 def _run_workflow(args):
+    """Connect and execute the QAP Nipype workflow for one bundle of data.
+
+    Keyword Arguments:
+      args -- a 5-element tuple of information comprising of the bundle's
+              resource pool, a list of participant info, the configuration
+              options, the pipeline ID run name and miscellaneous run args
+
+    Returns:
+      rt - a dictionary with information about the workflow run, its
+           status, and results
+
+    Notes:
+      - This function will update the resource pool with what is found in the
+        output directory (if it already exists). If the final expected output
+        of the pipeline is already found, the pipeline will not run and it
+        will move onto the next bundle. If the final expected output is not
+        present, the pipeline begins to build itself backwards.
+    """
 
     # build pipeline for each bundle, individually
 

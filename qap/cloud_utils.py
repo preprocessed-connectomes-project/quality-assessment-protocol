@@ -2,17 +2,22 @@
 #
 # Contributing authors: Daniel Clark, Steve Giavasis, 2015
 
-'''
-'''
-
 def pull_S3_sublist(yaml_outpath, img_type, cfg_file):
+    """Return a YAML file describing S3 filepaths of files stored on an Amazon
+    S3 bucket.
 
-    # function example use:
-    #
-    # yamlpath = os.path.join(os.getcwd(), "s3dict.yml")
-    #
-    # # Build entire filepath dictionary from S3
-    # s3_dict_yml = pull_S3_sublist(yamlpath, 'anat', args.config)
+    Keyword Arguments:
+      yaml_outpath -- the output file path for the YAML file of filepaths that
+                      will be written
+      img_type -- specify whether you are looking for anatomical or functional
+                  scans ("anat" or "rest")
+      cfg_file -- the pipeline configuration file (in this case, containing
+                  S3 bucket and AWS credentials information)
+
+    Returns:
+      yaml_outpath -- the output file path for the YAML file once it has been
+                      written
+    """
 
     import os
     from indi_aws import fetch_creds
@@ -31,13 +36,11 @@ def pull_S3_sublist(yaml_outpath, img_type, cfg_file):
 
     bucket = fetch_creds.return_bucket(creds_path, bucket_name)
 
-
     # Filter for anat/rest
     if img_type == 'anat':
         subkey_type = 'anatomical_scan'
     elif img_type == 'rest':
         subkey_type = 'functional_scan'
-
 
     # Build S3-subjects to download
     for bk in bucket.list(prefix=bucket_prefix):
@@ -70,21 +73,17 @@ def pull_S3_sublist(yaml_outpath, img_type, cfg_file):
                 s3_dict[(sub_id, session_id, scan_id)].update(resource_dict)         
 
         else:
-
             continue
     
-            
     if len(s3_dict) == 0:
         err = "\n[!] Filepaths have not been successfully gathered from " \
               "the S3 bucket!\n"
         raise Exception(err)
-            
            
     # write yaml file
     with open(yaml_outpath,"wt") as f:
         f.write(yaml.dump(s3_dict))
         
-    
     if os.path.isfile(yaml_outpath):
         return yaml_outpath
     else:
@@ -94,11 +93,20 @@ def pull_S3_sublist(yaml_outpath, img_type, cfg_file):
         raise Exception(err)
 
 
-
-# Function to build, select, and download subject data
 def dl_subj_from_s3(subj_idx, cfg_file, s3_dict_yaml):
-    '''
-    '''
+    """Download a single participant's data from the Amazon S3 bucket.
+
+    Keyword Arguments:
+      subj_idx -- the participant's index within the list of S3 bucket 
+                  filepaths
+      cfg_file -- the pipeline configuration file containing S3 bucket and AWS
+                  credentials information
+      s3_dict_yaml -- the YAML file containing the AWS S3 filepaths
+
+    Returns:
+      sub_dict -- a dictionary with one entry mapping the participant's ID
+                  info to local filepath of the newly-downloaded data file
+    """
 
     # Import packages
     from indi_aws import fetch_creds, aws_utils
@@ -119,7 +127,6 @@ def dl_subj_from_s3(subj_idx, cfg_file, s3_dict_yaml):
     s3_list = []
     s3_dict = {}
 
-
     # pull in S3 dict yaml
     with open(s3_dict_yaml,'r') as f:
         s3_dict = yaml.load(f)
@@ -128,7 +135,6 @@ def dl_subj_from_s3(subj_idx, cfg_file, s3_dict_yaml):
         err = "\n[!] Filepaths have not been successfully gathered from " \
               "the filepath YAML dictionary!\n"
         raise Exception(err)
-
 
     # Get list of subject keys for indexing
     sd_keys = s3_dict.keys()
@@ -154,10 +160,16 @@ def dl_subj_from_s3(subj_idx, cfg_file, s3_dict_yaml):
     return sub_dict
 
 
-
 def upl_qap_output(cfg_file):
-    '''
-    '''
+    """Upload a pipeline output file back to the AWS S3 bucket.
+
+    Keyword Arguments:
+      cfg_file -- the pipeline configuration file containing S3 bucket and AWS
+                  credentials information
+
+    Returns:
+      N/A
+    """
 
     # Import packages
     from indi_aws import aws_utils, fetch_creds

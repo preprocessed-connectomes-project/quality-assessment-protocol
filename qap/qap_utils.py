@@ -3,10 +3,10 @@ def load_image(image_file):
     """Load a raw scan image from a NIFTI file and check it.
 
     Keyword arguments:
-    image_file -- path to the image, usually a structural or functional scan
+      image_file -- path to the image, usually a structural or functional scan
 
     Returns:
-    dat -- image data in Nibabel format
+      dat -- image data in Nibabel format
     """
 
     import nibabel as nib
@@ -96,13 +96,13 @@ def create_anatomical_background_mask(anatomical_data, fg_mask_data,
     inverting a provided foreground mask.
 
     Keyword arguments:
-    anatomical_data -- a NumPy array of the raw anatomical data
-    fg_mask_data -- a NumPy array of the binary foreground mask data
-    exclude_zeroes -- (default: False) flag to exclude pure zero values when
-                      creating the background mask
+      anatomical_data -- a NumPy array of the raw anatomical data
+      fg_mask_data -- a NumPy array of the binary foreground mask data
+      exclude_zeroes -- (default: False) flag to exclude pure zero values when
+                        creating the background mask
 
     Returns:
-    bg_mask_data -- background mask data in Nibabel format
+      bg_mask_data -- background mask data in Nibabel format
     """
 
     import numpy as np
@@ -135,7 +135,7 @@ def json_to_csv(json_file, csv_output_dir=None):
                         file into
 
     Returns:
-      N/A
+      csv_file -- the CSV file path
     """
 
     import os
