@@ -1,11 +1,30 @@
 
 def read_txt_file(txt_file):
+    """Read in a text file into a list of strings.
+
+    Keyword Arguments:
+      txt_file -- [string] filepath to the text file
+
+    Returns:
+      strings -- [Python list] a list of strings, the lines in the text file
+    """
+
     with open(txt_file,"r") as f:
         strings = f.read().splitlines()
     return strings
 
 
 def read_yml_file(yml_file):
+    """Read in a YAML file into a dictionary.
+
+    Keyword Arguments:
+      yml_file -- [string] filepath to the YAML file
+
+    Returns:
+      config -- [Python dictionary] dictionary of the data stored in the YAML 
+                file
+    """
+
     import os
     import yaml
     with open(os.path.realpath(yml_file), "r") as f:
@@ -14,8 +33,16 @@ def read_yml_file(yml_file):
 
 
 def gather_filepath_list(site_folder):
+    """Gather all of the NIFTI files under a provided directory.
 
-    # gathers all of the NIFTI files under the provided directory
+    Keyword Arguments:
+      site_folder -- [string] path to the base directory containing all of the 
+                     NIFTI files you wish to gather
+
+    Returns:
+      filepath_list -- [Python list] a list of filepaths to the NIFTI files 
+                       found within and under the provided site folder
+    """
 
     import os
 
@@ -30,16 +57,54 @@ def gather_filepath_list(site_folder):
 
 
 def csv_to_pandas_df(csv_file):
+    """Convert the data in a CSV file into a Pandas DataFrame.
+
+    Keyword Arguments:
+      csv_file -- [string] the filepath to the CSV file to be loaded
+
+    Returns:
+      data -- [Pandas DataFrame] a dataFrame object with the data from the CSV 
+              file
+    """
+
     import pandas as pd
-    data = pd.read_csv(csv_file)
+    from qap.workflow_utils import raise_smart_exception
+
+    try:
+        data = pd.read_csv(csv_file)
+    except Exception as e:
+        err = "Could not load the CSV file into a DataFrame using Pandas." \
+              "\n\nCSV file: %s\n\nError details: %s\n\n" % (csv_file, e)
+        raise_smart_exception(locals(),err)
 
     return data
 
 
 def parse_raw_data_list(filepath_list, site_folder, include_sites=False, 
     subject_inclusion=None):
-    
-    # for script 'qap_raw_data_sublist_generator.py'
+    """Parse a list of NIFTI filepaths into a participant data dictionary for
+    the 'qap_raw_data_sublist_generator.py' script.
+
+    Keyword Arguments:
+      filepath_list -- [string] a list of input file NIFTI filepaths
+      site_folder -- [string] the root directory containing the NIFTI 
+                     filepaths in the list
+      include_sites -- [boolean] (default: False) whether or not to include 
+                       the site ID of each participant in the dictionary 
+                       entries
+      subject_inclusion -- [string] (default: None) a filepath to a text file 
+                           describing which participants to include in the
+                           dictionary (each line should have a participant ID)
+
+    Returns:
+      subdict -- [Python dictionary] a dictionary containing the NIFTI files 
+                 indexed by participant information
+
+    Notes:
+      - This is for the 'qap_raw_data_sublist_generator.py' script.
+      - This is designed for data directories formatted as such:
+          /site_folder/participant_ID/session_ID/scan_ID/filename.nii.gz 
+    """
 
     sub_dict = {}
     inclusion_list = []
@@ -154,8 +219,28 @@ def parse_raw_data_list(filepath_list, site_folder, include_sites=False,
 
 def populate_custom_data_dict(data_dict, filepath, part_id, session_id, series_id,
     site_id, resource, default_series_label=None):
+    """Update a participant data dictionary with a NIFTI filepath keyed to
+    a participant's information, for the 'gather_custom_raw_data.py' script.
 
-    # used in 'gather_custom_raw_data'
+    Keyword Arguments:
+      data_dict -- [Python dictionary] the participant data dictionary
+      filepath -- [string] the new NIFTI filepath to add to the dictionary
+      part_id -- [string] the participant ID
+      session_id -- [string] the session ID
+      series_id -- [string] the series/scan ID
+      site_id -- [string] the site name/ID
+      resource -- [string] the name of the type of data/file the NIFTI file is
+      default_series_label -- [string] (default: None) a default to use for 
+                              series/scan names/IDs
+
+    Returns:
+      data_dict -- [Python dictionary] the updated version of the data_dict 
+                   provided in the inputs
+
+    Notes:
+      - This is for the 'gather_custom_raw_data.py' script, but is called in
+        the 'gather_custom_raw_data' function, one NIFTI file at a time.
+    """
 
     new_dict = data_dict
 
@@ -185,8 +270,36 @@ def populate_custom_data_dict(data_dict, filepath, part_id, session_id, series_i
 
 def gather_custom_raw_data(filepath_list, base_folder, directory_format, 
     anatomical_keywords=None, functional_keywords=None):
+    """Parse a list of NIFTI filepaths into a participant data dictionary 
+    when the NIFTI filepaths are based on a custom data directory format, for
+    the 'qap_flexible_sublist_generator.py' script.
 
-    # for script 'qap_flexible_sublist_generator.py'
+    Keyword Arguments:
+      filepath_list -- [Python list] a list of NIFTI filepaths
+      base_folder -- [string] the root directory containing all of the NIFTI 
+                     filepaths in the list
+      directory_format -- [string] a string describing the data directory 
+                          layout in the format '/{site}/{participant}/..'
+                          '..{session}/..' etc. where the order of the {} 
+                          items can vary
+      anatomical_keywords -- [string] (default: None) a string of space- 
+                             delimited keywords that may be in the NIFTI 
+                             filepath or filename that denotes the file is 
+                             anatomical
+      functional_keywords -- [string] (default: None) a string of space-
+                             delimited keywords that may be in the NIFTI 
+                             filepath or filename that denotes the file is 
+                             functional
+
+    Returns:
+      data_dict -- [Python dictionary] the participant data dictionary
+
+    Notes:
+      - This is for the 'qap_flexible_sublist_generator.py' script.
+      - This is to facilitate participant dictionary generation for data 
+        directory formats that are neither BIDS-format nor conventional 
+        (/site/participant/session/scan/file).
+    """
 
     import os
     from qap.script_utils import populate_custom_data_dict
@@ -263,6 +376,18 @@ def gather_custom_raw_data(filepath_list, base_folder, directory_format,
 
 
 def pull_s3_sublist(bucket_name, bucket_prefix, creds_path):
+    """Create a list of filepaths stored on the Amazon S3 bucket.
+
+    Keyword Arguments:
+      bucket_name -- [string] the name of the Amazon S3 bucket
+      bucket_prefix -- [string] the directory path of the root directory of
+                       your data on the S3 bucket
+      creds_path -- [string] the filepath to your Amazon AWS keys
+
+    Returns:
+      s3_list -- [Python list] a list of Amazon S3 filepaths from the bucket
+                 and bucket directory you provided
+    """
 
     import os
     from indi_aws import fetch_creds
@@ -279,8 +404,33 @@ def pull_s3_sublist(bucket_name, bucket_prefix, creds_path):
 
 def create_subdict_from_s3_list(s3_list, bucket_prefix, session_list=None,
     series_list=None, BIDS=False):
+    """Populate a participant data dictionary parsed from the NIFTI filepaths
+    extracted from an Amazon S3 bucket, for the 'qap_aws_s3_dict_generator.py'
+    script.
 
-    # for script 'qap_aws_s3_dict_generator.py'
+    Keyword Arguments:
+      s3_list -- [Python list] a list of Amazon S3 filepaths from an Amazon
+                 S3 bucket
+      bucket_prefix -- [string] the directory path of the root directory of
+                       your data on the S3 bucket
+      session_list -- [string] (default: None) the filepath of a text file 
+                      listing the session IDs of sessions you want to include 
+                      in the dictionary
+      series_list -- [string] (default: None) the filepath of a text file 
+                     listing the series/scan IDs of series/scans you want to  
+                     include in the dictionary
+      BIDS -- [boolean] (default: False) whether or not the S3 filepaths are
+              organized in the BIDS standard data format
+
+    Returns:
+      s3_dict -- [Python dictionary] the participant data dictionary keyed by
+                 the participant information
+
+    Notes:
+      - This is for the 'qap_aws_s3_dict_generator.py' script.
+      - This can support either BIDS or conventional data formats.
+      - The s3_list can be generated using the 'pull_s3_sublist' function.
+    """
 
     s3_dict = {}
 
@@ -617,8 +767,30 @@ def create_CPAC_outputs_dict(cpac_outdir, qap_type, session_format):
 
 
 def qap_csv_correlations(data_old, data_new, replacements=None):
+    """Create a dictionary of correlations between old and new versions of 
+    each QAP measure for the purpose of regression testing, for the 
+    'qap_test_correlations.py' script.
 
-    # for script 'qap_test_correlations.py'
+    Keyword Arguments:
+      data_old -- [Pandas DataFrame] a dataframe of QAP output measures from
+                  the older-version run
+      data_new -- [Pandas DataFrame] a dataframe of QAP output measures from
+                  the newer-version run
+      replacements -- [Python list] a list of strings describing column name
+                      replacements, in case column names have changed; these
+                      strings are in the format "old_name,new_name"
+
+    Returns:
+      correlations_dict -- [Python dictionary] a dictionary of correlations 
+                           values keyed by each QAP metric
+
+    Notes:
+      - This is for the 'qap_test_correlations.py' script.
+      - This is intended for regression testing between versions of the QAP
+        software.
+      - The 'metric_list' below must be kept current with changes to metrics
+        and their titles.
+    """
 
     import numpy as np
     import pandas as pd
@@ -682,6 +854,20 @@ def qap_csv_correlations(data_old, data_new, replacements=None):
 
 
 def write_inputs_dict_to_yaml_file(input_dict, yaml_outpath):
+    """Write a participant data dictionary to a YAML file.
+
+    Keyword Arguments:
+      input_dict -- [Python dictionary] a participant data dictionary keyed by
+                    participant information
+      yaml_outpath -- [string] the filepath where to write the YAML file to
+
+    Returns:
+      N/A
+
+    Notes:
+      - This is used across the participant list generator scripts.
+      - yaml_outpath should also include the YAML filename.
+    """
 
     import os
     import yaml         

@@ -1,38 +1,21 @@
 
 
 def get_idx(in_files, stop_idx=None, start_idx=None):
-
-    """
-    Method to get the first and the last volume for
-    the functional run. It verifies the user specified
-    first and last volume. If the values are not valid, it 
-    calculates and returns the very first and the last slice 
+    """Validate and return the first and the last volume of the functional 
+    timeseries (if selected).
     
-    Parameters
-    ----------
-    in_file : string (nifti file)
-       Path to input functional run
-        
-    stop_idx : int
-        Last volume to be considered, specified by user
-        in the configuration file 
+    Keyword Arguments:
+      in_files -- the filepath to the NIFTI image of the functional timeseries        
+      stop_idx -- (default: None) last volume to be considered, specified by 
+                  user in the configuration file     
+      start_idx -- (default: None) first volume to be considered, specified by
+                   user in the configuration file 
     
-    stop_idx : int
-        First volume to be considered, specified by user 
-        in the configuration file 
-    
-    Returns
-    -------
-    stop_idx :  int
-        Value of first volume to consider for the functional run 
-        
-    start_idx : int 
-        Value of last volume to consider for the functional run
-        
+    Returns:
+      stopidx -- value of last volume to consider for the functional run 
+      startidx -- value of first volume to consider for the functional run
     """
 
-    #stopidx = None
-    #startidx = None
     from nibabel import load
 
     nvols = load(in_files).shape[3]
@@ -465,10 +448,17 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
         resource pool, this workflow will call pre-requisite workflow builder
         functions to further populate the pipeline with workflows which will
         calculate/generate these necessary pre-requisites.
-    """
 
-    # resource pool should have:
-    #     func_motion_correct
+    Expected Resources in Resource Pool:
+      func_reorient -- the deobliqued, reoriented functional timeseries
+
+    New Resources Added to Resource Pool:
+      functional_brain_mask -- the binary brain mask of the functional time
+                               series
+
+    Workflow Steps:
+      1. AFNI's 3dAutomask to generate the mask
+    """
 
     import os
     import sys
@@ -478,12 +468,12 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
     import nipype.interfaces.utility as util   
     from nipype.interfaces.afni import preprocess
 
-    if "func_motion_correct" not in resource_pool.keys():
+    if "func_reorient" not in resource_pool.keys():
 
-        from functional_preproc import func_motion_correct_workflow
+        from functional_preproc import func_preproc_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
-            func_motion_correct_workflow(workflow, resource_pool, config, name)
+            func_preproc_workflow(workflow, resource_pool, config, name)
         if resource_pool == old_rp:
             return workflow, resource_pool
   
@@ -491,24 +481,24 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
                                   name='func_get_brain_mask%s' % name)
     func_get_brain_mask.inputs.outputtype = 'NIFTI_GZ'
 
-    if len(resource_pool["func_motion_correct"]) == 2:
-        node, out_file = resource_pool["func_motion_correct"]
+    if len(resource_pool["func_reorient"]) == 2:
+        node, out_file = resource_pool["func_reorient"]
         workflow.connect(node, out_file, func_get_brain_mask, 'in_file')
     else:
         func_get_brain_mask.inputs.in_file = \
-            resource_pool["func_motion_correct"]
+            resource_pool["func_reorient"]
 
     resource_pool["functional_brain_mask"] = (func_get_brain_mask, 'out_file')
 
     return workflow, resource_pool
 
 
-def run_functional_brain_mask(func_motion_correct, out_dir=None, run=True):
+def run_functional_brain_mask(func_reorient, out_dir=None, run=True):
     """Run the 'functional_brain_mask_workflow' function to execute the 
     modular workflow with the provided inputs.
 
     Keyword Arguments:
-      func_motion_correct - the motion-corrected functional timeseries
+      func_reorient - the deobliqued, reoriented functional timeseries
       out_dir -- (default: None) the output directory to write the results to;
                  if left as None, will write to the current directory
       run -- (default: True) will run the workflow; if set to False, will 
@@ -544,7 +534,7 @@ def run_functional_brain_mask(func_motion_correct, out_dir=None, run=True):
     config = {}
     num_cores_per_subject = 1
 
-    resource_pool["func_motion_correct"] = func_motion_correct
+    resource_pool["func_reorient"] = func_reorient
     
     workflow, resource_pool = \
             functional_brain_mask_workflow(workflow, resource_pool, config)
@@ -594,6 +584,19 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
         resource pool, this workflow will call pre-requisite workflow builder
         functions to further populate the pipeline with workflows which will
         calculate/generate these necessary pre-requisites.
+
+    Expected Resources in Resource Pool:
+      functional_brain_mask -- the binary brain mask of the functional time
+                               series
+
+    New Resources Added to Resource Pool:
+      inverted_functional_brain_mask -- the inversion of the functional brain
+                                        mask, a binary brain mask of the
+                                        background of the functional time
+                                        series
+
+    Workflow Steps:
+      1. AFNI's 3dcalc to invert the functional brain mask
     """
 
     import os
@@ -727,10 +730,16 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
         calculate/generate these necessary pre-requisites.
       - For QAP: This workflow will NOT remove background noise from the
         image, to maintain as accurate of a quality metric as possible.
-    """
 
-    # resource pool should have:
-    #     func_motion_correct
+    Expected Resources in Resource Pool:
+      func_reorient -- the deobliqued, reoriented functional timeseries
+
+    New Resources Added to Resource Pool:
+      mean_functional -- the one-volume image of the averaged timeseries
+
+    Workflow Steps:
+      1. AFNI 3dTstat to calculate the mean of the functional timeseries
+    """
 
     import os
     import sys
@@ -742,39 +751,39 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
 
     from workflow_utils import check_input_resources
 
-    if "func_motion_correct" not in resource_pool.keys():
+    if "func_reorient" not in resource_pool.keys():
 
-        from functional_preproc import func_motion_correct_workflow
+        from functional_preproc import func_preproc_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
-            func_motion_correct_workflow(workflow, resource_pool, config, name)
+            func_preproc_workflow(workflow, resource_pool, config, name)
         if resource_pool == old_rp:
             return workflow, resource_pool        
    
-    func_mean_skullstrip = pe.Node(interface=preprocess.TStat(),
-                           name='func_mean_skullstrip%s' % name)
+    func_mean_tstat = pe.Node(interface=preprocess.TStat(),
+                           name='func_mean_tstat%s' % name)
 
-    func_mean_skullstrip.inputs.options = '-mean'
-    func_mean_skullstrip.inputs.outputtype = 'NIFTI_GZ'
+    func_mean_tstat.inputs.options = '-mean'
+    func_mean_tstat.inputs.outputtype = 'NIFTI_GZ'
 
-    if len(resource_pool["func_motion_correct"]) == 2:
-        node, out_file = resource_pool["func_motion_correct"]
-        workflow.connect(node, out_file, func_mean_skullstrip, 'in_file')
+    if len(resource_pool["func_reorient"]) == 2:
+        node, out_file = resource_pool["func_reorient"]
+        workflow.connect(node, out_file, func_mean_tstat, 'in_file')
     else:
-        func_mean_skullstrip.inputs.in_file = \
-            resource_pool["func_motion_correct"]
+        func_mean_tstat.inputs.in_file = \
+            resource_pool["func_reorient"]
 
-    resource_pool["mean_functional"] = (func_mean_skullstrip, 'out_file')
+    resource_pool["mean_functional"] = (func_mean_tstat, 'out_file')
 
     return workflow, resource_pool
 
  
-def run_mean_functional(func_motion_correct, out_dir=None, run=True):
+def run_mean_functional(func_reorient, out_dir=None, run=True):
     """Run the 'mean_functional_workflow' function to execute the modular
     workflow with the provided inputs.
 
     Keyword Arguments:
-      func_motion_correct -- the motion-corrected functional timeseries
+      func_reorient -- the deobliqued, reoriented functional timeseries
       out_dir -- (default: None) the output directory to write the results to;
                  if left as None, will write to the current directory
       run -- (default: True) will run the workflow; if set to False, will 
@@ -813,7 +822,7 @@ def run_mean_functional(func_motion_correct, out_dir=None, run=True):
     config = {}
     num_cores_per_subject = 1
 
-    resource_pool["func_motion_correct"] = func_motion_correct
+    resource_pool["func_reorient"] = func_reorient
 
     
     workflow, resource_pool = \

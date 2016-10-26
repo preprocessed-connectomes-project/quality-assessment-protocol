@@ -1,7 +1,7 @@
 
 import pytest
 
-
+@pytest.mark.skip()
 @pytest.mark.quick
 def test_cli():
 
@@ -46,6 +46,7 @@ def init_flat_sub_dict_dict():
     return ref_flat_dict
 
 
+@pytest.mark.skip()
 @pytest.mark.quick
 def test_prepare_cluster_batch_file_for_SGE_with_s3_dict():
 
@@ -86,6 +87,7 @@ def test_prepare_cluster_batch_file_for_SGE_with_s3_dict():
     assert cluster_files_dir == os.path.join(out_dir, "cluster_files")
 
 
+@pytest.mark.skip()
 @pytest.mark.quick
 def test_prepare_cluster_batch_file_for_SGE_with_sublist():
 
@@ -128,6 +130,7 @@ def test_prepare_cluster_batch_file_for_SGE_with_sublist():
     assert cluster_files_dir == os.path.join(out_dir, "cluster_files")
 
 
+@pytest.mark.skip()
 @pytest.mark.quick
 def test_prepare_cluster_batch_file_for_PBS_with_sublist():
 
@@ -170,6 +173,7 @@ def test_prepare_cluster_batch_file_for_PBS_with_sublist():
     assert cluster_files_dir == os.path.join(out_dir, "cluster_files")
 
 
+@pytest.mark.skip()
 @pytest.mark.quick
 def test_prepare_cluster_batch_file_for_SLURM_with_sublist():
 

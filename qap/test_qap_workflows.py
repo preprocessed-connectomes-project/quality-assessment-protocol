@@ -2,9 +2,11 @@
 import pytest
 test_sub_dir = "test_data"
 
-
 @pytest.mark.quick
-def test_run_qap_mask_workflow_graph():
+def test_run_everything_qap_anatomical_spatial_workflow_graph():
+
+    # this tests the workflow builder, not the end results (these have their
+    # own unit tests)
 
     import os
     import numpy as np
@@ -13,27 +15,26 @@ def test_run_qap_mask_workflow_graph():
 
     import pkg_resources as p
 
-    from qap.qap_workflows import run_qap_mask
+    from qap.qap_workflows import run_everything_qap_anatomical_spatial
 
-    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                        "anat_reorient.nii.gz"))
-
-    allineate_xfm = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                        "3dallineate_warp_head.aff12.1D"))
+    anatomical_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
+                                          "anatomical_scan.nii.gz"))
 
     template_head = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                         "MNI152_T1_3mm.nii.gz"))
 
     ref_graph = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "qap_mask_graph.dot"))
+                                    "anatomical_spatial_graph.dot"))
 
     out_dir = os.path.join(os.getcwd(), "unit_tests_qap_workflows")
+    out_workflow = run_everything_qap_anatomical_spatial(anatomical_scan, \
+                                                         template_head, \
+                                                         "participant_1",
+                                                         out_dir=out_dir, \
+                                                         run=False)
 
-    workflow = run_qap_mask(anat_reorient, allineate_xfm, template_head, \
-                   out_dir=out_dir, run=False)
-
-    out_workflow_obj = workflow[0]
-    out_workflow_dir = workflow[1]
+    out_workflow_obj = out_workflow[0]
+    out_workflow_dir = out_workflow[1]
 
     # write the dependency graph of the workflow we are testing
     out_graph = os.path.join(out_workflow_dir, "graph.dot")
@@ -54,46 +55,8 @@ def test_run_qap_mask_workflow_graph():
     assert ref_graph_lines == out_graph_lines
 
 
-
-@pytest.mark.slow
-def test_run_qap_mask():
-
-    import os
-    import numpy as np
-    import nibabel as nb
-    import shutil
-
-    import pkg_resources as p
-
-    from qap.qap_workflows import run_qap_mask
-
-    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                        "anat_reorient.nii.gz"))
-
-    allineate_xfm = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                        "3dallineate_warp_head.aff12.1D"))
-
-    ref_output = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                     "qap_head_mask.nii.gz"))
-
-    out_dir = os.path.join(os.getcwd(), "unit_tests_qap_workflows")
-    output = run_qap_mask(anat_reorient, allineate_xfm, \
-                 out_dir=out_dir)
-
-    ref_out_data = nb.load(ref_output).get_data()
-    out_data = nb.load(output).get_data()
-
-    try:
-        shutil.rmtree(out_dir)
-    except:
-        pass
-
-    np.testing.assert_array_equal(ref_out_data, out_data)
-
-
-
 @pytest.mark.quick
-def test_run_whole_single_qap_anatomical_spatial():
+def test_run_everything_qap_functional_spatial_workflow_graph():
 
     # this tests the workflow builder, not the end results (these have their
     # own unit tests)
@@ -105,61 +68,7 @@ def test_run_whole_single_qap_anatomical_spatial():
 
     import pkg_resources as p
 
-    from qap.qap_workflows import run_whole_single_qap_anatomical_spatial
-
-    anatomical_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                          "anatomical_scan.nii.gz"))
-
-    template_head = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                        "MNI152_T1_3mm.nii.gz"))
-
-    ref_graph = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "anatomical_spatial_graph.dot"))
-
-    out_dir = os.path.join(os.getcwd(), "unit_tests_qap_workflows")
-    out_workflow = run_whole_single_qap_anatomical_spatial(anatomical_scan, \
-                                                           template_head, \
-                                                           "participant_1",
-                                                           out_dir=out_dir, \
-                                                           run=False)
-
-    out_workflow_obj = out_workflow[0]
-    out_workflow_dir = out_workflow[1]
-
-        # write the dependency graph of the workflow we are testing
-    out_graph = os.path.join(out_workflow_dir, "graph.dot")
-    out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
-
-    # load the both the reference and the to-test dependency graphs
-    with open(ref_graph,"r") as f:
-        ref_graph_lines = sorted(f.readlines())
-
-    with open(out_graph,"r") as f:
-        out_graph_lines = sorted(f.readlines())
-
-    try:
-        shutil.rmtree(out_dir)
-    except:
-        pass
-
-    assert ref_graph_lines == out_graph_lines
-
-
-
-@pytest.mark.quick
-def test_run_whole_single_qap_functional_spatial():
-
-    # this tests the workflow builder, not the end results (these have their
-    # own unit tests)
-
-    import os
-    import numpy as np
-    import nibabel as nb
-    import shutil
-
-    import pkg_resources as p
-
-    from qap.qap_workflows import run_whole_single_qap_functional_spatial
+    from qap.qap_workflows import run_everything_qap_functional_spatial
 
     functional_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                           "functional_scan.nii.gz"))
@@ -168,10 +77,10 @@ def test_run_whole_single_qap_functional_spatial():
                                     "functional_spatial_graph.dot"))
 
     out_dir = os.path.join(os.getcwd(), "unit_tests_qap_workflows")
-    out_workflow = run_whole_single_qap_functional_spatial(functional_scan, \
-                                                           "participant_1",
-                                                           out_dir=out_dir, \
-                                                           run=False)
+    out_workflow = run_everything_qap_functional_spatial(functional_scan, \
+                                                         "participant_1",
+                                                         out_dir=out_dir, \
+                                                         run=False)
 
     out_workflow_obj = out_workflow[0]
     out_workflow_dir = out_workflow[1]
@@ -196,9 +105,8 @@ def test_run_whole_single_qap_functional_spatial():
     assert ref_graph_lines == out_graph_lines
 
 
-
 @pytest.mark.quick
-def test_run_whole_single_qap_functional_temporal():
+def test_run_everything_qap_functional_temporal_workflow_graph():
 
     # this tests the workflow builder, not the end results (these have their
     # own unit tests)
@@ -210,7 +118,7 @@ def test_run_whole_single_qap_functional_temporal():
 
     import pkg_resources as p
 
-    from qap.qap_workflows import run_whole_single_qap_functional_temporal
+    from qap.qap_workflows import run_everything_qap_functional_temporal
 
     functional_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                           "functional_scan.nii.gz"))
@@ -219,10 +127,10 @@ def test_run_whole_single_qap_functional_temporal():
                                     "functional_temporal_graph.dot"))
 
     out_dir = os.path.join(os.getcwd(), "unit_tests_qap_workflows")
-    out_workflow = run_whole_single_qap_functional_temporal(functional_scan, \
-                                                            "participant_1",
-                                                            out_dir=out_dir, \
-                                                            run=False)
+    out_workflow = run_everything_qap_functional_temporal(functional_scan, \
+                                                          "participant_1",
+                                                          out_dir=out_dir, \
+                                                          run=False)
 
     out_workflow_obj = out_workflow[0]
     out_workflow_dir = out_workflow[1]

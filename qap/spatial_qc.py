@@ -9,24 +9,16 @@ import scipy.stats as stats
 
 
 def summary_mask(anat_data, mask_data):
-
-    """
-    Will calculate the three values (mean, stdev, and size).
-    Output as a tuple.
+    """Will calculate the three values (mean, stdev, and size) and return them
+    as a tuple.
     
-    Paramaters
-    ----------
-    anat_data: np.array
-    mask_data: np.array
+    Keyword Arguments:
+      anat_data -- [Numpy array] the anatomical scan data
+      mask_data -- [Numpy array] the binary mask to mask the anatomical data 
+                                 with
     
-    Returns (tuple)
-    -------
-    mean: float
-        mean of anatomical data in the mask
-    std: float
-        standard deviation of anatomical data in the mask
-    size: int
-        size of the mask (i.e., number of non-zero voxels)
+    Returns:
+      (mean, std, size) -- [Python tuple] the summary values of the scan
     """
     
     import numpy as np
@@ -40,6 +32,16 @@ def summary_mask(anat_data, mask_data):
 
 
 def check_datatype(background):
+    """Process the image data to only include non-negative integer values.
+
+    Keyword Arguments:
+      background -- [Numpy array] the voxel values of the background (outside 
+                    the head) of the anatomical image
+
+    Returns:
+      background -- [Numpy array] the input array with floats converted to 
+                    integers and negative values set to zero
+    """
 
     import numpy as np
 
@@ -71,8 +73,16 @@ def check_datatype(background):
 
 
 def convert_negatives(img_data):
+    """Convert any negative voxel values to zero and provide a warning.
 
-    # convert any negative voxel values to zero, provide warning
+    Keyword Arguments:
+      img_data -- [Numpy array] the anatomical image's voxel values
+
+    Return:
+      img_data -- [Numpy array] the input array with negative values set to 
+                  zero
+    """
+
     for vox in img_data.flatten():
         if vox < 0:
             print "\nWARNING: Negative voxel values in anatomical scan " \
@@ -84,15 +94,22 @@ def convert_negatives(img_data):
 
 
 def snr(mean_fg, std_bg):
+    """Calculate the Signal-to-Noise Ratio (SNR) of an image.
 
-    """
-    Calculate Signal-to-Noise Ratio (SNR)
+    Keyword Arguments:
+      mean_fg -- [float] the mean value of voxel intensities in the foreground
+                 (either within the head or a particular tissue) of the image
+      std_bg -- [float] the standard deviation of the voxel intensities of the
+                background (outside the head) voxels
     
-    _For anatomical images:_ 
-        SNR = (mean GM intensity) / (std of background intensities)
-    
-    _For functional images:_
-        SNR = (mean brain intensity) / (std of background intensities)    
+    Returns:
+      snr -- [float] the signal-to-noise ratio
+
+    Notes:
+      - For anatomical images:
+          SNR = (mean GM intensity) / (std of background intensities)
+      - For functional images:
+          SNR = (mean brain intensity) / (std of background intensities)    
     """
 
     snr     = mean_fg / std_bg
@@ -131,11 +148,19 @@ def cortical_contrast(mean_gm, mean_wm):
 
     
 def fber(anat_data, skull_mask_data, bg_mask_data):
+    """Calculate the Foreground-to-Background Energy Ratio (FBER) of an image.
 
-    """
-    Calculate Foreground:Background Energy Ratio
-    
-    FBER = (mean foreground energy) / (mean background energy)
+    Keyword Arguments:
+      anat_data -- [Numpy array] the anatomical/spatial data of the image
+      skull_mask_data -- [Numpy array] the binary mask defining the head
+      bg_mask_data -- [Numpy array] the binary mask defining the background 
+                      (outside of the head)
+
+    Returns:
+      fber -- [float] the foreground-to-background energy ratio
+
+    Notes:
+      - FBER = (mean foreground energy) / (mean background energy)
     """
 
     import numpy as np

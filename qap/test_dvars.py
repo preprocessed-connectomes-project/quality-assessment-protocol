@@ -38,7 +38,6 @@ def test_remove_zero_variance_voxels():
     np.testing.assert_array_equal(ref_mask_data, out_mask_data)
 
 
-
 @pytest.mark.quick
 def test_load():
 
@@ -70,7 +69,6 @@ def test_load():
 
     np.testing.assert_array_equal(ref_out_data, func_out_data)
     
-    
 
 @pytest.mark.quick
 def test_robust_stdev():
@@ -99,7 +97,6 @@ def test_robust_stdev():
     func_out_data = robust_stdev(func_data)
         
     np.testing.assert_array_equal(ref_mask_data, func_out_data)
-
 
 
 @pytest.mark.quick

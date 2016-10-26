@@ -3,10 +3,11 @@ def load_image(image_file):
     """Load a raw scan image from a NIFTI file and check it.
 
     Keyword arguments:
-      image_file -- path to the image, usually a structural or functional scan
+      image_file -- [string] path to the image, usually a structural or 
+                    functional scan
 
     Returns:
-      dat -- image data in Nibabel format
+      dat -- [Nibabel data] image data in Nibabel format
     """
 
     import nibabel as nib
@@ -47,11 +48,11 @@ def load_mask(mask_file, ref_file):
     """Load a mask from a NIFTI file and check the shape and dimensions.
 
     Keyword arguments:
-      mask_file -- binarized mask file
-      ref_file -- anatomical file the mask is meant for
+      mask_file -- [string] filepath to binarized mask file
+      ref_file -- [string] filepath to anatomical file the mask is meant for
 
     Returns:
-      mask_dat -- the mask data in Nibabel format
+      mask_dat -- [Nibabel data] the mask data in Nibabel format
     """
 
     import nibabel as nib
@@ -96,13 +97,13 @@ def create_anatomical_background_mask(anatomical_data, fg_mask_data,
     inverting a provided foreground mask.
 
     Keyword arguments:
-      anatomical_data -- a NumPy array of the raw anatomical data
-      fg_mask_data -- a NumPy array of the binary foreground mask data
-      exclude_zeroes -- (default: False) flag to exclude pure zero values when
-                        creating the background mask
+      anatomical_data -- [Numpy array] an array of the raw anatomical data
+      fg_mask_data -- [Numpy array] an array of binary foreground mask data
+      exclude_zeroes -- [boolean] (default: False) flag to exclude pure zero 
+                        values when creating the background mask
 
     Returns:
-      bg_mask_data -- background mask data in Nibabel format
+      bg_mask_data -- [Nibabel data] background mask data in Nibabel format
     """
 
     import numpy as np
@@ -130,12 +131,12 @@ def json_to_csv(json_file, csv_output_dir=None):
     """Extract the data from the JSON output file and write it to a CSV file.
 
     Keyword arguments:
-      json_file -- filepath to the JSON file to be written to a CSV
-      csv_output_dir -- (default: None) path to the directory to write the CSV
-                        file into
+      json_file -- [string] filepath to the JSON file to be written to a CSV
+      csv_output_dir -- [string] (default: None) path to the directory to 
+                        write the CSV file into
 
     Returns:
-      csv_file -- the CSV file path
+      csv_file -- [string] the CSV file path
     """
 
     import os

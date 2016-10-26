@@ -4,7 +4,6 @@
 
 import os.path as op
 
-
 def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to create the QAP anatomical head mask.
 
@@ -178,19 +177,20 @@ def run_qap_mask(anatomical_reorient, allineate_out_xfm,
       anatomical_reorient -- the deobliqued, reoriented anatomical scan
       allineate_out_xfm -- the linear anatomical-to-template registration 
                            transform matrix from AFNI's 3dAllineate
-      out_dir -- (default: None) the output directory to write the results to;
-                 if left as None, will write to the current directory
-      run -- (default: True) will run the workflow; if set to False, will 
-             connect the Nipype workflow and return the workflow object only
+      out_dir -- [string] (default: None) the output directory to write the 
+                 results to; if left as None, will write to the current 
+                 directory
+      run -- [boolean] (default: True) will run the workflow; if set to False, 
+             will connect the Nipype workflow and return the workflow object 
+             only
 
     Returns:
-      outpath -- (if run=True) the filepath of the generated mask file
-      workflow -- (if run=False) the Nipype workflow object
-      workflow.base_dir -- (if run=False) the base directory of the workflow
-                           if it were to be run
+      outpath -- [string] (if run=True) the filepath of the generated mask 
+                 file
+      workflow -- [Nipype workflow] (if run=False) the workflow object
+      workflow.base_dir -- [string] (if run=False) the base directory of the 
+                           workflow if it were to be run
     """
-
-    # stand-alone runner for anatomical reorient workflow
 
     import os
     import sys
@@ -548,10 +548,38 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
 
 def run_only_qap_anatomical_spatial(
         anatomical_reorient, qap_head_mask, anatomical_csf_mask,
-        anatomical_gm_mask, anatomical_wm_mask, subject_id, session_id=None,
+        anatomical_gm_mask, anatomical_wm_mask, partic_id, session_id=None,
         scan_id=None, site_name=None, out_dir=None, run=True):
+    """Run the qap_anatomical_spatial workflow with the provided inputs.
 
-    # stand-alone runner for anatomical spatial QAP workflow
+    Keyword arguments:
+      anatomical_reorient -- [string] filepath to the deobliqued, reoriented 
+                             anatomical scan
+      qap_head_mask -- [string] filepath to the QAP binary head mask
+      anatomical_csf_mask -- [string] filepath to the binary mask of the 
+                             CSF anatomical tissue segmentation map
+      anatomical_gm_mask -- [string] filepath to the binary mask of the gray 
+                            matter anatomical tissue segmentation map
+      anatomical_wm_mask -- [string] filepath to the binary mask of the white
+                            matter anatomical tissue segmentation map
+      partic_id -- [string] the participant ID
+      session_id -- [string] (default: None) the session name/ID
+      scan_id -- [string] (default: None) the scan name/ID
+      site_name -- [string] (default: None) the site name/ID
+      out_dir -- [string] (default: None) the output directory to write the 
+                 results to; if left as None, will write to the current 
+                 directory
+      run -- [boolean] (default: True) will run the workflow; if set to False, 
+             will connect the Nipype workflow and return the workflow object 
+             only
+
+    Returns:
+      outpath -- [string] (if run=True) the filepath of the generated mask 
+                 file
+      workflow -- [Nipype workflow] (if run=False) the workflow object
+      workflow.base_dir -- [string] (if run=False) the base directory of the 
+                           workflow if it were to be run
+    """
 
     import os
     import sys
@@ -578,7 +606,7 @@ def run_only_qap_anatomical_spatial(
     }
 
     config = {
-        'subject_id': subject_id,
+        'subject_id': partic_id,
         'session_id': session_id,
         'scan_id': scan_id
     }
@@ -591,46 +619,43 @@ def run_only_qap_anatomical_spatial(
 
     ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
     ds.inputs.base_directory = workflow_dir
-
-    node, out_file = resource_pool[output]
-
-    workflow.connect(node, out_file, ds, output)
+    ds.inputs.output = resource_pool[output]
 
     if run:
         workflow.run(
             plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
         outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
         return outpath
-
     else:
         return workflow, workflow.base_dir
 
 
 def run_everything_qap_anatomical_spatial(
-        anatomical_scan, template_head, subject_id, session_id=None,
+        anatomical_scan, template_head, partic_id, session_id=None,
         scan_id=None, site_name=None, out_dir=None, run=True):
-    """Run the 'qap_anatomical_spatial_workflow' workflow with the provided 
-    inputs.
+    """Run the entire QAP pipeline for anatomical spatial measures with the 
+    provided inputs.
 
     Keyword arguments:
-      anatomical_scan -- the filepath to the NIFTI image of the raw anatomical
-                         scan
-      template_head -- the filepath to the NIFTI image of the anatomical 
-                       template image (with skull)
-      subject_id -- the participant ID
-      session_id -- (default: None) the session ID
-      scan_id -- (default: None) the series/scan ID
-      site_name -- (default: None) the site name/ID
+      anatomical_scan -- [string] the filepath to the NIFTI image of the raw 
+                         anatomical scan
+      template_head -- [string] the filepath to the NIFTI image of the  
+                       anatomical template image (with skull)
+      partic_id -- [string] the participant ID
+      session_id -- [string] (default: None) the session name/ID
+      scan_id -- [string] (default: None) the scan name/ID
+      site_name -- [string] (default: None) the site name/ID
       out_dir -- (default: None) the output directory to write the results to;
                  if left as None, will write to the current directory
       run -- (default: True) will run the workflow; if set to False, will 
              connect the Nipype workflow and return the workflow object only
 
     Returns:
-      outpath -- (if run=True) the path to the JSON output file
-      workflow -- (if run=False) the Nipype workflow object
-      workflow.base_dir -- (if run=False) the base directory of the workflow
-                           if it were to be run
+      outpath -- [string] (if run=True) the filepath of the generated mask 
+                 file
+      workflow -- [Nipype workflow] (if run=False) the workflow object
+      workflow.base_dir -- [string] (if run=False) the base directory of the 
+                           workflow if it were to be run
     """
 
     import os
@@ -650,10 +675,10 @@ def run_everything_qap_anatomical_spatial(
 
     if site_name:
         workflow_dir = os.path.join(out_dir, "workflow_output", output, \
-            site_name, subject_id)
+            site_name, partic_id)
     else:
         workflow_dir = os.path.join(out_dir, "workflow_output", output, \
-            subject_id)
+            partic_id)
 
     if session_id:
         workflow_dir = os.path.join(workflow_dir, session_id)
@@ -669,10 +694,11 @@ def run_everything_qap_anatomical_spatial(
     }
 
     config = {
-        'subject_id': subject_id,
+        'subject_id': partic_id,
         'session_id': session_id,
         'scan_id': scan_id,
-        'output_directory': workflow_dir
+        'output_directory': workflow_dir,
+        'template_skull_for_anat': template_head
     }
 
     if site_name:
@@ -694,10 +720,7 @@ def run_everything_qap_anatomical_spatial(
 
     ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
     ds.inputs.base_directory = workflow_dir
-
-    node, out_file = resource_pool[output]
-
-    workflow.connect(node, out_file, ds, output)
+    ds.inputs.output = resource_pool[output]
 
     if run:
         workflow.run(
@@ -875,11 +898,35 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
 
 
 def run_only_qap_functional_spatial(
-        mean_functional, functional_brain_mask, subject_id, session_id,
+        mean_functional, functional_brain_mask, partic_id, session_id,
         scan_id, site_name=None, ghost_direction=None, out_dir=None,
         run=True):
+    """Run the 'qap_functional_spatial' workflow with the provided inputs.
 
-    # stand-alone runner for functional spatial QAP workflow
+    Keyword arguments:
+      mean_functional -- [string] filepath to the one-volume average of the 
+                         functional timeseries
+      functional_brain_mask -- [string] filepath to the binary functional 
+                               brain mask
+      partic_id -- [string] the participant ID
+      session_id -- [string] the session name/ID
+      scan_id -- [string] the scan name/ID
+      site_name -- [string] (default: None) the site name/ID
+      out_dir -- [string] (default: None) the output directory to write the 
+                 results to; if left as None, will write to the current 
+                 directory
+      run -- [boolean] (default: True) will run the workflow; if set to False, 
+             will connect the Nipype workflow and return the workflow object 
+             only
+
+    Returns:
+      outpath -- [string] (if run=True) the filepath of the generated mask 
+                 file
+      workflow -- [Nipype workflow] (if run=False) the workflow object
+      workflow.base_dir -- [string] (if run=False) the base directory of the 
+                           workflow if it were to be run
+    """
+
     import os
     import sys
     import glob
@@ -902,7 +949,7 @@ def run_only_qap_functional_spatial(
     resource_pool['mean_functional'] = mean_functional
     resource_pool['functional_brain_mask'] = functional_brain_mask
 
-    config['subject_id'] = subject_id
+    config['subject_id'] = partic_id
     config['session_id'] = session_id
     config['scan_id'] = scan_id
 
@@ -917,10 +964,7 @@ def run_only_qap_functional_spatial(
 
     ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
     ds.inputs.base_directory = workflow_dir
-
-    node, out_file = resource_pool[output]
-
-    workflow.connect(node, out_file, ds, output)
+    ds.inputs.output = resource_pool[output]
 
     if run:
         workflow.run(
@@ -933,10 +977,31 @@ def run_only_qap_functional_spatial(
 
 
 def run_everything_qap_functional_spatial(
-        functional_scan, subject_id, session_id=None, scan_id=None,
+        functional_scan, partic_id, session_id=None, scan_id=None,
         site_name=None, out_dir=None, run=True):
+    """Run the entire QAP functional spatial pipeline with the provided 
+    inputs.
 
-    # stand-alone runner for functional spatial QAP workflow
+    Keyword arguments:
+      functional_scan -- [string] filepath to the 4D functional timeseries
+      partic_id -- [string] the participant ID
+      session_id -- [string] (default: None) the session name/ID
+      scan_id -- [string] (default: None) the scan name/ID
+      site_name -- [string] (default: None) the site name/ID
+      out_dir -- [string] (default: None) the output directory to write the 
+                 results to; if left as None, will write to the current 
+                 directory
+      run -- [boolean] (default: True) will run the workflow; if set to False, 
+             will connect the Nipype workflow and return the workflow object 
+             only
+
+    Returns:
+      outpath -- [string] (if run=True) the filepath of the generated mask 
+                 file
+      workflow -- [Nipype workflow] (if run=False) the workflow object
+      workflow.base_dir -- [string] (if run=False) the base directory of the 
+                           workflow if it were to be run
+    """
 
     import os
     import sys
@@ -955,10 +1020,10 @@ def run_everything_qap_functional_spatial(
 
     if site_name != None:
         workflow_dir = os.path.join(out_dir, "workflow_output", output, \
-            site_name, subject_id)
+            site_name, partic_id)
     else:
         workflow_dir = os.path.join(out_dir, "workflow_output", output, \
-            subject_id)
+            partic_id)
 
     if session_id != None:
         workflow_dir = os.path.join(workflow_dir, session_id)
@@ -974,7 +1039,7 @@ def run_everything_qap_functional_spatial(
     }
 
     config = {
-        'subject_id': subject_id,
+        'subject_id': partic_id,
         'session_id': session_id,
         'scan_id': scan_id,
         'output_directory': workflow_dir
@@ -999,17 +1064,13 @@ def run_everything_qap_functional_spatial(
 
     ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
     ds.inputs.base_directory = workflow_dir
-
-    node, out_file = resource_pool[output]
-
-    workflow.connect(node, out_file, ds, output)
+    ds.inputs.output = resource_pool[output]
 
     if run:
         workflow.run(
             plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
         outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
         return outpath
-
     else:
         return workflow, workflow.base_dir
 
@@ -1215,12 +1276,35 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
 
 
 def run_only_qap_functional_temporal(func_reorient, functional_brain_mask,
-                                       subject_id, session_id, scan_id,
+                                       partic_id, session_id, scan_id,
                                        site_name=None, mcflirt_rel_rms=None,
                                        coordinate_transformation=None,
                                        out_dir=None, run=True):
+    """Run the 'qap_functional_temporal' workflow with the provided inputs.
 
-    # stand-alone runner for functional temporal QAP workflow
+    Keyword arguments:
+      func_reorient -- [string] filepath to the deobliqued, reoriented 
+                       functional scan
+      functional_brain_mask -- [string] filepath to the binary functional 
+                               brain mask
+      partic_id -- [string] the participant ID
+      session_id -- [string] (default: None) the session name/ID
+      scan_id -- [string] (default: None) the scan name/ID
+      site_name -- [string] (default: None) the site name/ID
+      out_dir -- [string] (default: None) the output directory to write the 
+                 results to; if left as None, will write to the current 
+                 directory
+      run -- [boolean] (default: True) will run the workflow; if set to False, 
+             will connect the Nipype workflow and return the workflow object 
+             only
+
+    Returns:
+      outpath -- [string] (if run=True) the filepath of the generated mask 
+                 file
+      workflow -- [Nipype workflow] (if run=False) the workflow object
+      workflow.base_dir -- [string] (if run=False) the base directory of the 
+                           workflow if it were to be run
+    """
 
     import os
     import sys
@@ -1251,7 +1335,7 @@ def run_only_qap_functional_temporal(func_reorient, functional_brain_mask,
     elif coordinate_transformation:
         resource_pool['coordinate_transformation'] = coordinate_transformation
 
-    config['subject_id'] = subject_id
+    config['subject_id'] = partic_id
     config['session_id'] = session_id
     config['scan_id'] = scan_id
 
@@ -1263,10 +1347,7 @@ def run_only_qap_functional_temporal(func_reorient, functional_brain_mask,
 
     ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
     ds.inputs.base_directory = workflow_dir
-
-    node, out_file = resource_pool[output]
-
-    workflow.connect(node, out_file, ds, output)
+    ds.inputs.output = resource_pool[output]
 
     if run:
         workflow.run(
@@ -1278,10 +1359,31 @@ def run_only_qap_functional_temporal(func_reorient, functional_brain_mask,
 
 
 def run_everything_qap_functional_temporal(
-        functional_scan, subject_id, session_id=None, scan_id=None,
+        functional_scan, partic_id, session_id=None, scan_id=None,
         site_name=None, out_dir=None, run=True):
+    """Run the entire QAP functional temporal pipeline with the provided 
+    inputs.
 
-    # stand-alone runner for functional temporal QAP workflow
+    Keyword arguments:
+      functional_scan -- [string] the filepath to the 4D functional timeseries
+      partic_id -- [string] the participant ID
+      session_id -- [string] (default: None) the session name/ID
+      scan_id -- [string] (default: None) the scan name/ID
+      site_name -- [string] (default: None) the site name/ID
+      out_dir -- [string] (default: None) the output directory to write the 
+                 results to; if left as None, will write to the current 
+                 directory
+      run -- [boolean] (default: True) will run the workflow; if set to False, 
+             will connect the Nipype workflow and return the workflow object 
+             only
+
+    Returns:
+      outpath -- [string] (if run=True) the filepath of the generated mask 
+                 file
+      workflow -- [Nipype workflow] (if run=False) the workflow object
+      workflow.base_dir -- [string] (if run=False) the base directory of the 
+                           workflow if it were to be run
+    """
 
     import os
     import sys
@@ -1300,10 +1402,10 @@ def run_everything_qap_functional_temporal(
 
     if site_name:
         workflow_dir = os.path.join(out_dir, "workflow_output", output, \
-            site_name, subject_id)
+            site_name, partic_id)
     else:
         workflow_dir = os.path.join(out_dir, "workflow_output", output, \
-            subject_id)
+            partic_id)
 
     if session_id:
         workflow_dir = os.path.join(workflow_dir, session_id)
@@ -1319,7 +1421,7 @@ def run_everything_qap_functional_temporal(
     }
 
     config = {
-        'subject_id': subject_id,
+        'subject_id': partic_id,
         'session_id': session_id,
         'scan_id': scan_id,
         'output_directory': workflow_dir
@@ -1344,10 +1446,7 @@ def run_everything_qap_functional_temporal(
 
     ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
     ds.inputs.base_directory = workflow_dir
-
-    node, out_file = resource_pool[output]
-
-    workflow.connect(node, out_file, ds, output)
+    ds.inputs.output = resource_pool[output]
 
     if run:
         workflow.run(
