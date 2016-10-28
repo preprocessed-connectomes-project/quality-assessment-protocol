@@ -170,8 +170,8 @@ class QAProtocolCLI:
         """Write the cluster batch file for the appropriate scheduler.
 
         Keyword Arguments:
-          run_name -- the name of the pipeline or run being executed
-          num_bundles -- the number of bundles total being run
+          run_name -- [string] the name of the pipeline or run being executed
+          num_bundles -- [integer] the number of bundles total being run
 
         Returns:
           N/A
@@ -286,26 +286,27 @@ class QAProtocolCLI:
         session-scan combination has its own entry.
 
         Keyword Arguments:
-          subdict -- a dictionary containing the filepaths of input files for
-                     each participant, sorted by session and scan
+          subdict -- [Python dictionary] a dictionary containing the filepaths
+                     of input files for each participant, sorted by session 
+                     and scan
 
         Returns:
-          flat_sub_dict_dict -- a dictionary of dictionaries where each 
-                                participant-session-scan combination has its
-                                own entry, and input file filepaths are
-                                defined
+          flat_sub_dict_dict -- [Python dictionary] a dictionary of 
+                                dictionaries where each participant-session-
+                                scan combination has its own entry, and input 
+                                file filepaths are defined
 
         Notes:
-          input subdict format:
-            {'sub_01': {'session_01': 
-                           {'anatomical_scan': {'scan_01': <filepath>,
-                                                'scan_02': <filepath>},
-                            'site_name': 'Site_1'} },
-             'sub_02': {..} }
+          - input subdict format:
+              {'sub_01': {'session_01': 
+                             {'anatomical_scan': {'scan_01': <filepath>,
+                                                  'scan_02': <filepath>},
+                              'site_name': 'Site_1'} },
+               'sub_02': {..} }
 
-          output dict format:
-            { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
-                                         "anatomical_brain": <filepath>} }
+          - output dict format:
+              { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
+                                           "anatomical_brain": <filepath>} }
         """
 
         flat_sub_dict_dict = {}
@@ -372,15 +373,15 @@ class QAProtocolCLI:
         """Load the participant list YAML file into a dictionary and check.
 
         Returns:
-          subdict -- the participant list in a dictionary
+          subdict -- [Python dictionary] the participant list in a dictionary
 
         Notes:
           - subdict format:
-            {'sub_01': {'session_01': 
-                          {'anatomical_scan': {'scan_01': <filepath>,
-                                               'scan_02': <filepath>},
-                           'site_name': 'Site_1'} },
-            'sub_02': {..} }
+              {'sub_01': {'session_01': 
+                            {'anatomical_scan': {'scan_01': <filepath>,
+                                                 'scan_02': <filepath>},
+                             'site_name': 'Site_1'} },
+              'sub_02': {..} }
         """
 
         import yaml
@@ -404,16 +405,16 @@ class QAProtocolCLI:
         """Create a list of participant "bundles".
 
         Keyword Arguments:
-          flat_sub_dict_dict -- a dictionary of dictionaries where each 
-                                participant-session-scan combination has its
-                                own entry, and input file filepaths are
-                                defined
+          flat_sub_dict_dict -- [Python dictionary] a dictionary of 
+                                dictionaries where each participant-session-
+                                scan combination has its own entry, and input 
+                                file filepaths are defined
 
         Returns:
-          bundles -- a list of bundles - each bundle being a dictionary that
-                     is a starting resource pool for N sub-session-scan combos
-                     with N being the number of participants per bundle
-                     (set by the user)
+          bundles -- [Python list] a list of bundles - each bundle being a 
+                     dictionary that is a starting resource pool for N 
+                     sub-session-scan combos with N being the number of 
+                     participants per bundle (set by the user)
         """
 
         i = 0
@@ -445,13 +446,14 @@ class QAProtocolCLI:
         """Execute one bundle's workflow on one node/slot of a cluster/grid.
 
         Keyword Arguments:
-          run_name -- the pipeline ID for identification
-          bundle_idx -- (default: None) the current bundle's index in the list
-                        of bundles- only used when running this manually
+          run_name -- [string] the pipeline ID for identification
+          bundle_idx -- [integer] (default: None) the current bundle's index 
+                        in the list of bundles- only used when running this 
+                        manually
 
         Returns:
-          rt -- a dictionary with information about the workflow run, its
-                status, and results
+          rt -- [Python dictionary] a dictionary with information about the 
+                workflow run, its status, and results
 
         Notes:
           - Compatible with Amazon AWS cluster runs, and S3 buckets.
@@ -599,12 +601,12 @@ class QAProtocolCLI:
            a participant list).
 
         Keyword Arguments:
-          run_name -- the pipeline ID name
+          run_name -- [string] the pipeline ID name
 
         Returns:
-          results -- a list of "rt" dictionaries, each dictionary containing
-                     information about the workflow run, its status, and 
-                     results
+          results -- [Python list] a list of "rt" dictionaries, each 
+                     dictionary containing information about the workflow run,
+                     its status, and results
 
         Notes:
           - Creates a list of bundles of participants from the input files in
@@ -667,14 +669,15 @@ class QAProtocolCLI:
         Amazon S3 cloud.
 
         Keyword Arguments:
-          run_name -- the pipeline ID name
-          num_bundles -- the number of bundles of data (based on the number of
-                         participants and the bundle size denoted by the user)
+          run_name -- [string] the pipeline ID name
+          num_bundles -- [integer] the number of bundles of data (based on the
+                         number of participants and the bundle size denoted by
+                         the user)
 
         Returns:
-          results -- a list of "rt" dictionaries, each dictionary containing
-                     information about the workflow run, its status, and 
-                     results
+          results -- [Python list] a list of "rt" dictionaries, each 
+                     dictionary containing information about the workflow run,
+                     its status, and results
 
         Notes:
           - Creates a list of bundles of participants from the input files in
@@ -712,8 +715,10 @@ class QAProtocolCLI:
         run. (Entry point)
 
         Keyword Arguments:
-          config_file -- the pipeline configuration file in YAML format
-          partic_list -- the participant list file in YAML format
+          config_file -- [string] filepath to the pipeline configuration file 
+                         in YAML format
+          partic_list -- [string] filepath to the participant list file in 
+                         YAML format
 
         Returns:
           N/A
@@ -916,10 +921,10 @@ def starter_node_func(starter):
     Nipype workflow node.
 
     Keyword Arguments:
-      starter -- a dummy string
+      starter -- [string] a dummy string
 
     Returns:
-      starter -- the same string
+      starter -- [string] the same string
 
     Notes:
       - This is used for a Nipype utility function node to serve as a starting
@@ -937,13 +942,14 @@ def _run_workflow(args):
     """Connect and execute the QAP Nipype workflow for one bundle of data.
 
     Keyword Arguments:
-      args -- a 5-element tuple of information comprising of the bundle's
-              resource pool, a list of participant info, the configuration
-              options, the pipeline ID run name and miscellaneous run args
+      args -- [Python tuple] a 5-element tuple of information comprising of 
+              the bundle's resource pool, a list of participant info, the 
+              configuration options, the pipeline ID run name and 
+              miscellaneous run args
 
     Returns:
-      rt - a dictionary with information about the workflow run, its
-           status, and results
+      rt - [Python dictionary] a dictionary with information about the 
+           workflow run, its status, and results
 
     Notes:
       - This function will update the resource pool with what is found in the
@@ -952,8 +958,6 @@ def _run_workflow(args):
         will move onto the next bundle. If the final expected output is not
         present, the pipeline begins to build itself backwards.
     """
-
-    # build pipeline for each bundle, individually
 
     import os
     import os.path as op

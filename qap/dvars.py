@@ -8,24 +8,20 @@ def remove_zero_variance_voxels(func_timeseries, mask):
     variance.
 
     Keyword Arguments:
-      func_timeseries -- (Nibabel data) the 4D functional timeseries
-      mask -- (Nibabel data) the binary head mask
+      func_timeseries -- [Nibabel data] the 4D functional timeseries
+      mask -- [Nibabel data] the binary head mask
 
     Returns:
-      mask -- (Nibabel data) the binary head mask, but with voxels of zero 
+      mask -- [Nibabel data] the binary head mask, but with voxels of zero 
               variance excluded
     """
 
+    # this needs optimization/refactoring
     for i in range(0, len(func_timeseries)):
-
         for j in range(0, len(func_timeseries[0])):
-
             for k in range(0, len(func_timeseries[0][0])):
-
                 var = func_timeseries[i][j][k].var()
-
                 if int(var) == 0:
-
                     mask[i][j][k] = mask[i][j][k] * 0
 
     return mask
@@ -36,15 +32,15 @@ def load(func_file, mask_file, check4d=True):
     format, check/validate the data, and remove voxels with zero variance.
 
     Keyword Arguments:
-      func_file -- filepath to the NIFTI file containing the 4D functional
-                   timeseries
-      mask_file -- filepath to the NIFTI file containing the binary functional
-                   brain mask
-      check4d -- (default: True) check the timeseries data to ensure it is
-                 four dimensional
+      func_file -- [string] filepath to the NIFTI file containing the 4D 
+                   functional timeseries
+      mask_file -- [string] filepath to the NIFTI file containing the binary 
+                   functional brain mask
+      check4d -- [boolean] (default: True) check the timeseries data to ensure
+                 it is four dimensional
 
     Returns:
-      func - (Nibabel data) the validated functional timeseries data with 
+      func - [Nibabel data] the validated functional timeseries data with 
              voxels of zero variance excluded
     """
 
@@ -71,33 +67,40 @@ def load(func_file, mask_file, check4d=True):
     return func
 
 
-def robust_stdev(func, interp="fraction"):
+def robust_stdev(func):
     """Compute robust estimation of standard deviation.
 
     Keyword Arguments:
-      func -- (Nibabel data) the functional timeseries data
-      interp -- (default: fraction)
+      func -- [Nibabel data] the functional timeseries data
 
     Returns:
-      stdev -- the standard deviation
+      stdev -- [float] the standard deviation
     """
 
     lower_qs    = np.percentile(func, 25, axis=0)
     upper_qs    = np.percentile(func, 75, axis=0)
-    # note: won't work on roxy with scipy == 0.9
-    #lower_qs    = stats.scoreatpercentile(func, 25, interpolation_method=interp, axis=0)
-    #upper_qs    = stats.scoreatpercentile(func, 75, interpolation_method=interp, axis=0)
     stdev       = (upper_qs - lower_qs)/1.349
     return stdev
 
 
 def ar_nitime(x, order=1, center=False):
-    """
+    """Derive a model of the noise present in the functional timeseries for 
+    the calculation of the standardized DVARS.
+
+    Keyword Arguments:
+      x -- [Nibabel data] the vector of one voxel's timeseries
+      order -- [integer] (default: 1) which lag of the autocorrelation of the
+               timeseries to use in the calculation
+      center -- [boolean] (default: False) whether to center the timeseries 
+                (to demean it)
+
+    Returns:
+      ak[0] -- [float] the modeled noise value for the current voxel's 
+               timeseries
 
     Notes:
-    - Borrowed from nipy.algorithms.AR_est_YW.
-        aka from nitime import algorithms as alg.
-    - We could speed this up by having the autocorr only compute lag1.
+    - Borrowed from nipy.algorithms.AR_est_YW. aka "from nitime import 
+      algorithms as alg".
     """
 
     from nitime.lazy import scipy_linalg as linalg
@@ -112,34 +115,37 @@ def ar_nitime(x, order=1, center=False):
     return ak[0]
 
 
-def ar_statsmodels(x, order=(1,0), trend='nc'):
-    import statsmodels.api as sm
-    arma_mod = sm.tsa.ARMA(x)
-    arma_res = arma_mod.fit(order=order, trend=trend, disp=False)
-    return arma_res.arparams[0]
-
-
 def ar1(func, method=ar_nitime):
+    """Apply the 'ar_nitime' function across the centered functional 
+    timeseries.
+
+    Keyword Arguments:
+      func -- [Nibabel data] the functional timeseries data
+      method -- [Python function] (default: ar_nitime) the algorithm to use 
+                to calculate AR1
+
+    Returns:
+      ar_vals -- [Numpy array] the vector of AR1 values
+    """
     func_centered = func - func.mean(0)
-    #import code
-    #code.interact(local=locals())
     ar_vals = np.apply_along_axis(method, 0, func_centered)
     return ar_vals
 
 
-def calc_dvars(func_file, mask_file, output_all=False, interp="fraction"):
+def calc_dvars(func_file, mask_file, output_all=False):
     """Calculate the standardized DVARS metric.
 
     Keyword Arguments:
-      func_file -- the filepath to the NIFTI file containing the functional 
-                   timeseries
-      mask_file -- the filepath to the NIFTI file containing the binary 
-                   functional brain mask
-      output_all -- (default: False)   ????????????????????
-      interp -- (default: fraction)  ???????????????????
+      func_file -- [string] the filepath to the NIFTI file containing the  
+                   functional timeseries
+      mask_file -- [string] the filepath to the NIFTI file containing the  
+                   binary functional brain mask
+      output_all -- [boolean] (default: False) whether to output all versions  
+                    of the DVARS measure (non-standardized, standardized, and 
+                    voxelwise standardized)
 
     Returns:
-      out -- the DVARS output
+      out -- [Numpy array] the output DVARS values vector
     """
 
     from workflow_utils import raise_smart_exception
@@ -148,7 +154,7 @@ def calc_dvars(func_file, mask_file, output_all=False, interp="fraction"):
     func = load(func_file, mask_file)
 
     # Robust standard deviation
-    func_sd     = robust_stdev(func, interp)
+    func_sd     = robust_stdev(func)
     
     # AR1
     func_ar1    = ar1(func)
@@ -181,86 +187,3 @@ def calc_dvars(func_file, mask_file, output_all=False, interp="fraction"):
             raise_smart_exception(locals())
     
     return out
-
-
-def test():
-    func    = load("sample_func.nii.gz", "sample_func_mask.nii.gz")
-    dvars   = calc_dvars(func)
-    mean_d  = calc_mean_dvars(dvars)
-    ref_dvars = np.loadtxt("sample_dvars.txt")
-    ref_dvars = ref_dvars[:,[1,0,2]]
-
-
-def specific_tests():
-    import numpy.testing
-    
-    ffile   = "sample_func.nii.gz"
-    mfile   = "sample_func_mask.nii.gz"
-    func    = load(ffile, mfile)
-    
-    # Robust Standard Deviation
-    ## Differences in the two approaches exist because python will handle
-    ## ties via averaging
-    func_sd     = robust_stdev(func)
-    ref_sd      = load("ref_dvars/DVARS-1033--SD.nii.gz", mfile, False)
-    print np.abs(func_sd - ref_sd).mean()
-    ## so we can fix this issue by changing the interpolation/ties approach
-    ## note however that normally we will use interp="fraction"
-    func_sd     = robust_stdev(func, interp="higher")
-    ## test
-    assert_allclose(func_sd, ref_sd)
-    print np.abs(func_sd - ref_sd).mean()
-    
-    # AR1
-    func_ar1    = ar1(func)
-    ref_ar1     = load("ref_dvars/DVARS-1033--AR1.nii.gz", mfile, False)
-    ## test
-    assert_allclose(func_ar1, ref_ar1, 1e-6, 1e-6)
-    print np.abs(func_ar1 - ref_ar1).mean()
-    
-    # Predicted standard deviation of temporal derivative
-    func_sd_pd  = np.sqrt(2 * (1 - func_ar1)) * func_sd
-    diff_sd_mean= func_sd_pd.mean()
-    ref_sd_pd   = load("ref_dvars/DVARS-1033--DiffSDhat.nii.gz", mfile, False)
-    ## test
-    assert_allclose(func_sd_pd, ref_sd_pd, 1e-5, 1e-5)
-    print np.abs(func_sd_pd - ref_sd_pd).mean()
-    
-    # Compute temporal difference time series
-    func_deriv  = np.diff(func, axis=0)
-    ref_deriv   = load("ref_dvars/DVARS-1033--Diff.nii.gz", mfile)
-    ## test (these should be flipped in sign)
-    assert_equal(func_deriv, -1*ref_deriv)
-    print np.abs(func_deriv - (-1*ref_deriv)).mean()
-    
-    # DVARS (no standardization)
-    dvars_plain = func_deriv.std(1, ddof=1)
-    ref_plain   = np.loadtxt("ref_dvars/DVARS-1033--DiffSD.dat")
-    print np.abs(dvars_plain - ref_plain).mean()
-    print np.vstack((dvars_plain[:10], ref_plain[:10])).T
-    print np.vstack((func_deriv.std(1, ddof=1)[:10], ref_plain[:10])).T
-    ## it seems like the differences above stem from an incorrect averaging by my modication of DVARS
-    func_img    = nib.load("ref_dvars/DVARS-1033--Diff.nii.gz")
-    func_all    = func_img.get_data().astype(np.float)
-    func_all    = func_all.reshape(np.prod(func_all.shape[:3]), func_all.shape[-1])
-    func_all    = func_all.T
-    print func_all[0,func_all[0,:].nonzero()].std(ddof=1) - ref_plain[0]
-    
-    # DVARS
-    ## (no standardization)
-    dvars_plain = func_deriv.std(1, ddof=1) # TODO: Why are we not ^2 this & getting the sqrt?
-    ## standardization
-    dvars_stdz  = dvars_plain/diff_sd_mean
-    ## voxelwise standardization
-    diff_vx_stdz= func_deriv/func_sd_pd
-    dvars_vx_stdz = diff_vx_stdz.std(1, ddof=1)
-    ## reference
-    ref_dvars = np.loadtxt("sample_dvars.txt")
-    ref_dvars = ref_dvars[:,[1,0,2]]
-    ## test
-    print np.abs(dvars_plain - ref_dvars[:,0]).mean()
-    
-## Below tests show that ar_nitime is much faster
-## so we will use that
-# %timeit ar_nitime(func_centered[:,0])
-# %timeit ar_statsmodels(func_centered[:,0])

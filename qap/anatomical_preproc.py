@@ -6,21 +6,24 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     from a NIFTI file.
 
     Keyword arguments:
-      workflow -- a Nipype workflow object which can already contain other
-                  connected nodes; this function will insert the following
-                  workflow into this one provided
-      resource_pool -- a dictionary defining input files and pointers to
-                       Nipype node outputs / workflow connections; the keys
-                       are the resource names
-      config -- a dictionary defining the configuration settings for the
-                workflow, such as directory paths or toggled options
-      name -- (default: "_") a string to append to the end of each node name
+      workflow -- [Nipype workflow] a Nipype workflow object which can already
+                  contain other connected nodes; this function will insert the
+                  following workflow into this one provided
+      resource_pool -- [Python dictionary] a dictionary defining input files 
+                       and pointers to Nipype node outputs / workflow 
+                       connections; the keys are the resource names
+      config -- [Python dictionary] a dictionary defining the configuration 
+                settings for the workflow, such as directory paths or toggled 
+                options
+      name -- [string] (default: "_") a string to append to the end of each 
+              node name
 
     Returns:
-      workflow -- the Nipype workflow originally provided, but with the
-                  following sub-workflow connected into it
-      resource_pool -- the resource pool originally provided, but updated
-                       (if applicable) with the newest outputs and connections
+      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
+                  but with the following sub-workflow connected into it
+      resource_pool -- [Python dictionary] the resource pool originally 
+                       provided, but updated (if applicable) with the newest 
+                       outputs and connections
 
     Notes:
       - This is a seminal workflow that can only take an input directly from
@@ -84,18 +87,21 @@ def run_anatomical_reorient(anatomical_scan, out_dir=None, run=True):
     workflow with the provided inputs.
 
     Keyword Arguments:
-      anatomical_scan -- the raw anatomical image in a NIFTI file
-      out_dir -- (default: None) the output directory to write the results to;
-                 if left as None, will write to the current directory
-      run -- (default: True) will run the workflow; if set to False, will 
-             connect the Nipype workflow and return the workflow object only
+      anatomical_scan -- [string] filepath to the raw anatomical image in a 
+                         NIFTI file
+      out_dir -- [string] (default: None) the output directory to write the 
+                 results to; if left as None, will write to the current 
+                 directory
+      run -- [boolean] (default: True) will run the workflow; if set to False,
+             will connect the Nipype workflow and return the workflow object 
+             instead
 
     Returns:
-      outpath -- (if run=True) the filepath of the generated 
+      outpath -- [string] (if run=True) the filepath of the generated 
                  anatomical_reorient file
-      workflow -- (if run=False) the Nipype workflow object
-      workflow.base_dir -- (if run=False) the base directory of the workflow
-                           if it were to be run
+      workflow -- [Nipype workflow] (if run=False) the Nipype workflow object
+      workflow.base_dir -- [string] (if run=False) the base directory of the 
+                           workflow if it were to be run
     """
 
     import os
@@ -147,21 +153,24 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
     3dSkullStrip.
 
     Keyword arguments:
-      workflow -- a Nipype workflow object which can already contain other
-                  connected nodes; this function will insert the following
-                  workflow into this one provided
-      resource_pool -- a dictionary defining input files and pointers to
-                       Nipype node outputs / workflow connections; the keys
-                       are the resource names
-      config -- a dictionary defining the configuration settings for the
-                workflow, such as directory paths or toggled options
-      name -- (default: "_") a string to append to the end of each node name
+      workflow -- [Nipype workflow] a Nipype workflow object which can already
+                  contain other connected nodes; this function will insert the
+                  following workflow into this one provided
+      resource_pool -- [Python dictionary] a dictionary defining input files 
+                       and pointers to Nipype node outputs / workflow 
+                       connections; the keys are the resource names
+      config -- [Python dictionary] a dictionary defining the configuration 
+                settings for the workflow, such as directory paths or toggled 
+                options
+      name -- [string] (default: "_") a string to append to the end of each 
+              node name
 
     Returns:
-      workflow -- the Nipype workflow originally provided, but with the
-                  following sub-workflow connected into it
-      resource_pool -- the resource pool originally provided, but updated
-                       (if applicable) with the newest outputs and connections
+      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
+                  but with the following sub-workflow connected into it
+      resource_pool -- [Python dictionary] the resource pool originally 
+                       provided, but updated (if applicable) with the newest 
+                       outputs and connections
 
     Notes:
       - If any resources/outputs required by this workflow are not in the
@@ -236,19 +245,21 @@ def run_anatomical_skullstrip(anatomical_reorient, out_dir=None, run=True):
     modular workflow with the provided inputs.
 
     Keyword Arguments:
-      anatomical_reorient -- the filepath of the deobliqued, reoriented
-                             anatomical image NIFTI file
-      out_dir -- (default: None) the output directory to write the results to;
-                 if left as None, will write to the current directory
-      run -- (default: True) will run the workflow; if set to False, will 
-             connect the Nipype workflow and return the workflow object only
+      anatomical_reorient -- [string] the filepath of the deobliqued, 
+                             reoriented anatomical image NIFTI file
+      out_dir -- [string] (default: None) the output directory to write the 
+                 results to; if left as None, will write to the current 
+                 directory
+      run -- [boolean] (default: True) will run the workflow; if set to False,
+             will connect the Nipype workflow and return the workflow object 
+             instead
 
     Returns:
-      outpath -- (if run=True) the filepath of the generated anatomical_brain
-                 file
-      workflow -- (if run=False) the Nipype workflow object
-      workflow.base_dir -- (if run=False) the base directory of the workflow
-                           if it were to be run
+      outpath -- [string] (if run=True) the filepath of the generated 
+                 anatomical_brain file
+      workflow -- [Nipype workflow] (if run=False) the Nipype workflow object
+      workflow.base_dir -- [string] (if run=False) the base directory of the 
+                           workflow if it were to be run
     """
 
     import os
@@ -301,21 +312,24 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
     to template) of an anatomical image using AFNI's 3dAllineate.
 
     Keyword arguments:
-      workflow -- a Nipype workflow object which can already contain other
-                  connected nodes; this function will insert the following
-                  workflow into this one provided
-      resource_pool -- a dictionary defining input files and pointers to
-                       Nipype node outputs / workflow connections; the keys
-                       are the resource names
-      config -- a dictionary defining the configuration settings for the
-                workflow, such as directory paths or toggled options
-      name -- (default: "_") a string to append to the end of each node name
+      workflow -- [Nipype workflow] a Nipype workflow object which can already
+                  contain other connected nodes; this function will insert the
+                  following workflow into this one provided
+      resource_pool -- [Python dictionary] a dictionary defining input files 
+                       and pointers to Nipype node outputs / workflow 
+                       connections; the keys are the resource names
+      config -- [Python dictionary] a dictionary defining the configuration 
+                settings for the workflow, such as directory paths or toggled 
+                options
+      name -- [string] (default: "_") a string to append to the end of each 
+              node name
 
     Returns:
-      workflow -- the Nipype workflow originally provided, but with the
-                  following sub-workflow connected into it
-      resource_pool -- the resource pool originally provided, but updated
-                       (if applicable) with the newest outputs and connections
+      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
+                  but with the following sub-workflow connected into it
+      resource_pool -- [Python dictionary] the resource pool originally 
+                       provided, but updated (if applicable) with the newest 
+                       outputs and connections
 
     Notes:
       - If any resources/outputs required by this workflow are not in the
@@ -430,23 +444,26 @@ def run_afni_anatomical_linear_registration(input_image, reference_image,
     modular workflow with the provided inputs.
 
     Keyword Arguments:
-      input_image -- either the deobliqued, reoriented anatomical image with
-                     skull, or the skullstripped brain
-      reference_image -- the template image to calculate the registration
-                         towards
-      skull_on -- (default: True) whether to run the registration using the
-                  whole head or just the brain (use this to mark which type
-                  of input_image you are providing)
-      out_dir -- (default: None) the output directory to write the results to;
-                 if left as None, will write to the current directory
-      run -- (default: True) will run the workflow; if set to False, will 
-             connect the Nipype workflow and return the workflow object only
+      input_image -- [string] filepath to either the deobliqued, reoriented 
+                     anatomical image with skull, or the skullstripped brain
+      reference_image -- [string] filepath to the template image to calculate 
+                         the registration towards
+      skull_on -- [boolean] (default: True) whether to run the registration 
+                  using the whole head or just the brain (use this to mark 
+                  which type of input_image you are providing)
+      out_dir -- [string] (default: None) the output directory to write the 
+                 results to; if left as None, will write to the current 
+                 directory
+      run -- [boolean] (default: True) will run the workflow; if set to False,
+             will connect the Nipype workflow and return the workflow object 
+             instead
 
     Returns:
-      outpath -- (if run=True) the filepath of the warped anatomical image
-      workflow -- (if run=False) the Nipype workflow object
-      workflow.base_dir -- (if run=False) the base directory of the workflow
-                           if it were to be run
+      outpath -- [string] (if run=True) the filepath of the generated 
+                 warped anatomical file
+      workflow -- [Nipype workflow] (if run=False) the Nipype workflow object
+      workflow.base_dir -- [string] (if run=False) the base directory of the 
+                           workflow if it were to be run
     """
 
     import os
@@ -510,21 +527,24 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
     using AFNI's 3dSeg.
 
     Keyword arguments:
-      workflow -- a Nipype workflow object which can already contain other
-                  connected nodes; this function will insert the following
-                  workflow into this one provided
-      resource_pool -- a dictionary defining input files and pointers to
-                       Nipype node outputs / workflow connections; the keys
-                       are the resource names
-      config -- a dictionary defining the configuration settings for the
-                workflow, such as directory paths or toggled options
-      name -- (default: "_") a string to append to the end of each node name
+      workflow -- [Nipype workflow] a Nipype workflow object which can already
+                  contain other connected nodes; this function will insert the
+                  following workflow into this one provided
+      resource_pool -- [Python dictionary] a dictionary defining input files 
+                       and pointers to Nipype node outputs / workflow 
+                       connections; the keys are the resource names
+      config -- [Python dictionary] a dictionary defining the configuration 
+                settings for the workflow, such as directory paths or toggled 
+                options
+      name -- [string] (default: "_") a string to append to the end of each 
+              node name
 
     Returns:
-      workflow -- the Nipype workflow originally provided, but with the
-                  following sub-workflow connected into it
-      resource_pool -- the resource pool originally provided, but updated
-                       (if applicable) with the newest outputs and connections
+      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
+                  but with the following sub-workflow connected into it
+      resource_pool -- [Python dictionary] the resource pool originally 
+                       provided, but updated (if applicable) with the newest 
+                       outputs and connections
 
     Notes:
       - If any resources/outputs required by this workflow are not in the
@@ -623,18 +643,21 @@ def run_afni_segmentation(anatomical_brain, out_dir=None, run=True):
     workflow with the provided inputs.
 
     Keyword Arguments:
-      anatomical_brain -- the skull-stripped brain image in a NIFTI file
-      out_dir -- (default: None) the output directory to write the results to;
-                 if left as None, will write to the current directory
-      run -- (default: True) will run the workflow; if set to False, will 
-             connect the Nipype workflow and return the workflow object only
+      anatomical_brain -- [string] filepath to the skull-stripped brain image 
+                          in a NIFTI file
+      out_dir -- [string] (default: None) the output directory to write the 
+                 results to; if left as None, will write to the current 
+                 directory
+      run -- [boolean] (default: True) will run the workflow; if set to False,
+             will connect the Nipype workflow and return the workflow object 
+             instead
 
     Returns:
-      outpath -- (if run=True) the filepaths of the generated segmentation map
-                 mask files
-      workflow -- (if run=False) the Nipype workflow object
-      workflow.base_dir -- (if run=False) the base directory of the workflow
-                           if it were to be run
+      outpath -- [string] (if run=True) the filepaths of the generated 
+                 anatomical segmentation map files
+      workflow -- [Nipype workflow] (if run=False) the Nipype workflow object
+      workflow.base_dir -- [string] (if run=False) the base directory of the 
+                           workflow if it were to be run
     """
 
     import os

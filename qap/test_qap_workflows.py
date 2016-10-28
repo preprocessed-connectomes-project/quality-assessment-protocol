@@ -85,10 +85,9 @@ def test_run_everything_qap_functional_spatial_workflow_graph():
     out_workflow_obj = out_workflow[0]
     out_workflow_dir = out_workflow[1]
 
-        # write the dependency graph of the workflow we are testing
+    # write the dependency graph of the workflow we are testing
     out_graph = os.path.join(out_workflow_dir, "graph.dot")
     out_workflow_obj.write_graph(dotfilename=out_graph, simple_form=False)
-
 
     # load the both the reference and the to-test dependency graphs
     with open(ref_graph,"r") as f:

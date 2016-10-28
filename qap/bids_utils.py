@@ -4,12 +4,12 @@ def gather_nifti_file_paths(dataset_folder, creds_path=None):
     on the local filesystem.
 
     Keyword Arguments:
-      dataset_folder -- the path to the directory containing the data
-      creds_path -- (default: None) the path to the file containing your AWS 
-                    credentials
+      dataset_folder -- [string] the path to the directory containing the data
+      creds_path -- [string] (default: None) the path to the file containing 
+                    your AWS credentials
 
     Returns:
-      file_path_list -- a list of the gathered filepaths
+      file_path_list -- [Python list] a list of the gathered filepaths
     """
 
     import os
@@ -62,13 +62,15 @@ def extract_bids_data( file_path_list, inclusion_list=None ):
     dictionary mapping the data to participant, session, series, etc.
 
     Keyword Arguments:
-      file_path_list -- a list of existing NIFTI filepaths
-      inclusion_list -- (default: None) a list of participant IDs, to prune
-                        down the dictionary to only include these participants
+      file_path_list -- [Python list] a list of existing NIFTI filepaths
+      inclusion_list -- [Python list] (default: None) a list of participant 
+                        IDs, to prune down the dictionary to only include 
+                        these participants
 
     Returns:
-      sub_dict -- a dictionary containing the NIFTI filepaths mapped to their
-                  participant information and type of scan
+      sub_dict -- [Python dictionary] a dictionary containing the NIFTI 
+                  filepaths mapped to their participant information and type 
+                  of scan
 
     Notes:
       - For more information on the BIDS data structure format, visit:

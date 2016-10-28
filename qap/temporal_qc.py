@@ -100,8 +100,7 @@ def fd_jenkinson(in_file, rmax=80., out_file=None, out_array=False):
     Notes:
       - Method to calculate Framewise Displacement (FD) calculations
         (Jenkinson et al., 2002).
-      - CITE PAPER HERE
-      - Written by @ Krsna, May 2013.
+      - Implementation written by @ Krsna, May 2013.
       - Jenkinson FD from 3dvolreg's *.affmat12.1D file from -1Dmatrix_save
         option input: subject ID, rest_number, name of 6 parameter motion
         correction file (an output of 3dvolreg) output: FD_J.1D file

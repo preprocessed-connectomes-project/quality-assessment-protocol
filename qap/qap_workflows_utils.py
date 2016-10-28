@@ -4,11 +4,11 @@ def create_expr_string(clip_level_value):
     """Create the expression arg string to run AFNI 3dcalc via Nipype.
 
     Keyword Arguments:
-      clip_level_value -- the integer of the clipping threshold
+      clip_level_value -- [integer] the integer of the clipping threshold
 
     Returns:
-      expr_string -- the string intended for the Nipype AFNI 3dcalc "expr" arg
-                     inputs
+      expr_string -- [string] the string intended for the Nipype AFNI 3dcalc 
+                     "expr" arg inputs
     """
 
     expr_string = "step(a-%s)" % clip_level_value
@@ -20,10 +20,10 @@ def read_nifti_image(nifti_infile):
     """Read a NIFTI file into Nibabel-format image data.
 
     Keyword arguments:
-      nifti_infile -- the filepath of the NIFTI image to read in
+      nifti_infile -- [string] the filepath of the NIFTI image to read in
 
     Returns:
-      nifti_img -- image data in NIFTI format
+      nifti_img -- [Nibabel image] image data in NIFTI format
     """
 
     import nibabel as nb
@@ -43,8 +43,8 @@ def write_nifti_image(nifti_img, file_path):
     """Write image data in Nibabel format into a NIFTI file.
 
     Keyword arguments:
-      nifti_img -- the image data Nibabel object to write out
-      file_path -- the filepath of the NIFTI image to create
+      nifti_img -- [Nibabel image] the image data Nibabel object to write out
+      file_path -- [string] the filepath of the NIFTI image to create
 
     Returns:
       N/A
@@ -65,10 +65,11 @@ def read_json(json_filename):
     """Read the contents of a JSON file.
 
     Keyword arguments:
-      json_filename -- the path to the JSON file
+      json_filename -- [string] the path to the JSON file
 
     Returns:
-      json_dict -- dictionary containing the info from the JSON file
+      json_dict -- [Python dictionary] dictionary containing the info from the
+                   JSON file
     """
 
     import os
@@ -90,11 +91,12 @@ def write_json(output_dict, json_file):
     """Either update or write a dictionary to a JSON file.
 
     Keyword arguments:
-      output_dict -- the dictionary to write or append to the JSON file
-      json_file -- the filepath of the JSON file to write or update
+      output_dict -- [Python dictionary] the dictionary to write or append to 
+                     the JSON file
+      json_file -- [string] the filepath of the JSON file to write or update
 
     Returns:
-      json_file -- filepath of the JSON file written to
+      json_file -- [string] filepath of the JSON file written to
     """
 
     import os
@@ -135,10 +137,11 @@ def convert_allineate_xfm(mat_list):
     equivalent 4x4 matrix.
 
     Keyword arguments:
-      mat_list -- a vector (list) of the flattened affine matrix
+      mat_list -- [Python list] a vector (list) of the flattened affine matrix
 
     Returns:
-      allineate_mat -- a NumPy array of the converted affine matrix
+      allineate_mat -- [Numpy array] a NumPy array of the converted affine 
+                       matrix
 
     Notes:
       - Takes the 3x3 + offset format of the input matrix and turns it into a
@@ -170,14 +173,16 @@ def warp_coordinates(inpoint, allineate_mat, infile_affine, infile_dims):
     """Warp spatial coordinates using a 4x4 affine matrix.
 
     Keyword arguments:
-      inpoint -- a list of three numbers describing a coordinate in 3D space
-      allineate_mat -- a NumPy array describing the 4x4 affine transform
-      infile_affine -- a NiBabel NIFTI affine info object
-      infile_dims -- a tuple containing the dimensions of the NIFTI file the 
-                     coordinates pertain to
+      inpoint -- [Python list] a list of three numbers describing a coordinate 
+                 in 3D space
+      allineate_mat -- [Numpy array] a NumPy array describing the 4x4 affine 
+                       transform
+      infile_affine -- [Nibabel affine] a NiBabel NIFTI affine info object
+      infile_dims -- [Python tuple] a tuple containing the dimensions of the 
+                     NIFTI file the coordinates pertain to
 
     Returns:
-      co_nums_newlist -- a list of three warped coordinates
+      co_nums_newlist -- [Python list] a list of three warped coordinates
     """
 
     import numpy as np
@@ -219,13 +224,13 @@ def calculate_plane_coords(coords_list, infile_dims):
     around the participant's nose, down to roughly below the rear of the neck.
 
     Keyword arguments:
-      coords_list -- a list of lists, describing the three coordinate points
-                     of the triangular plane
-      infile_dims -- a list of the NIFTI file's dimensions
+      coords_list -- [Python list] a list of lists, describing the three 
+                     coordinate points of the triangular plane
+      infile_dims -- [Python list] a list of the NIFTI file's dimensions
 
     Returns:
-      plane_dict -- a dictionary mapping the z coordinates to the (x,y)
-                    coordinate pairs
+      plane_dict -- [Python dictionary] a dictionary mapping the z coordinates
+                    to the (x,y) coordinate pairs
     """
 
     import numpy as np
@@ -277,12 +282,13 @@ def create_slice_mask(plane_dict, infile_dims):
     plane in the 3D image.
 
     Keyword arguments:
-      plane_dict -- a dictionary matching z voxel coordinates to corresponding
-                    (x, y) coordinates
-      infile_dims -- a list of the NIFTI file's dimensions
+      plane_dict -- [Python dictionary] a dictionary matching z voxel 
+                    coordinates to corresponding (x, y) coordinates
+      infile_dims -- [Python list] a list of the NIFTI file's dimensions
 
     Returns:
-      mask_array -- a NumPy array defining the binary mask of the slice
+      mask_array -- [Numpy array] a NumPy array defining the binary mask of 
+                    the slice
     """
 
     import numpy as np
@@ -306,12 +312,13 @@ def slice_head_mask(infile, transform):
     the region below the nose and mouth.
 
     Keyword arguments:
-      infile -- filepath to the participant's anatomical scan
-      transform -- affine matrix output of AFNI's 3dAllineate describing the
-                   warp from the anatomical scan to a template
+      infile -- [string] filepath to the participant's anatomical scan
+      transform -- [string] filepath to the text file containing the affine 
+                   matrix output of AFNI's 3dAllineate describing the warp 
+                   from the anatomical scan to a template
 
     Returns:
-      outfile_path -- filepath to the new head mask NIFTI file
+      outfile_path -- [string] filepath to the new head mask NIFTI file
     """
 
     import os
@@ -382,15 +389,15 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
     Python dictionary.
 
     Keyword arguments:
-      in_file -- filepath to the NIFTI raw data scan
-      subject -- the participant ID
-      session -- the session ID
-      scan -- the scan ID
-      type -- the data type ("anatomical" or "functional")
+      in_file -- [string] filepath to the NIFTI raw data scan
+      subject -- [string] the participant ID
+      session -- [string] the session ID
+      scan -- [string] the scan ID
+      type -- [string] the data type ("anatomical" or "functional")
 
     Returns:
-      qap_dict -- a dictionary with the header information of the file
-                  assigned to the participant's data
+      qap_dict -- [Python dictionary] a dictionary with the header information
+                  of the file assigned to the participant's data
     """
 
     import nibabel
@@ -454,31 +461,37 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     """ Calculate the anatomical spatial QAP measures for an anatomical scan.
 
     Keyword arguments:
-      anatomical_reorient -- the reoriented anatomical scan
-      qap_head_mask_path -- mask of the head, plus the slice covering the
-                            region below the nose and in front of the mouth
-      whole_head_mask_path -- mask of the entire head only (no slice in front
-                              of the mouth)
-      skull_mask_path -- mask of the upper portion of the head only (the
-                         whole head mask subtracted by the slice mask)
-      anatomical_gm_mask -- a binary mask of the gray matter
-      anatomical_wm_mask -- a binary mask of the white matter
-      anatomical_csf_mask -- a binary mask of the CSF
-      subject_id -- the participant ID
-      session_id -- the session ID
-      scan_id -- the scan ID
-      site_name -- (default: None) the name of the site where the scan was
-                   acquired
-      exclude_zeroes -- (default: False) whether or not to exclude the pure
-                        zero values when defining the background mask
-      out_vox -- (default: True) for FWHM measure: output the FWHM as # of
-                 voxels (otherwise as mm)
-      starter -- (default: None) if this function is being pulled into a
-                 Nipype pipeline, this is the starting node of the pipeline
+      anatomical_reorient -- [string] filepath to the reoriented anatomical 
+                             scan
+      qap_head_mask_path -- [string] filepath to mask of the head, plus the 
+                            slice covering the region below the nose and in 
+                            front of the mouth
+      whole_head_mask_path -- [string] filepath to mask of the entire head 
+                              only (no slice in front of the mouth)
+      skull_mask_path -- [string] filepath to the mask of the upper portion of
+                         the head only (the whole head mask subtracted by the 
+                         slice mask)
+      anatomical_gm_mask -- [string] filepath to the binary mask of the gray 
+                            matter
+      anatomical_wm_mask -- [string] filepath to the binary mask of the white 
+                            matter
+      anatomical_csf_mask -- [string] filepath to the binary mask of the CSF
+      subject_id -- [string] the participant ID
+      session_id -- [string] the session ID
+      scan_id -- [string] the scan ID
+      site_name -- [string] (default: None) the name of the site where the 
+                   scan was acquired
+      exclude_zeroes -- [boolean] (default: False) whether or not to exclude 
+                        the pure zero values when defining the background mask
+      out_vox -- [boolean] (default: True) for FWHM measure: output the FWHM 
+                 as # of voxels (otherwise as mm)
+      starter -- [string] (default: None) if this function is being pulled 
+                 into a Nipype pipeline, this is the dummy input for the 
+                 function node
 
     Returns:
-      qc -- a dictionary mapping out the QAP measure values for the current
-            participant
+      qc -- [Python dictionary] a dictionary mapping out the QAP measure 
+            values for the current participant
 
     Notes:
       - The exclude_zeroes flag is useful for when a large amount of zero
@@ -598,24 +611,26 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
     """ Calculate the functional spatial QAP measures for a functional scan.
 
     Keyword arguments:
-      mean_epi -- the mean of the functional timeseries image (should be 3D)
-      func_brain_mask -- a binary mask defining the brain within the
-                         functional image
-      direction -- for ghost-to-signal ratio; the phase encoding direction of
-                   the image - this is often "y"
-      subject_id -- the participant ID
-      session_id -- the session ID
-      scan_id -- the scan ID
-      site_name -- (default: None) the name of the site where the scan was
-                   acquired
-      out_vox -- (default: True) for FWHM measure: output the FWHM as # of
-                 voxels (otherwise as mm)
-      starter -- (default: None) if this function is being pulled into a
-                 Nipype pipeline, this is the starting node of the pipeline
+      mean_epi -- [string] filepath to the mean of the functional timeseries 
+                  image (should be 3D)
+      func_brain_mask -- [string] filepath to the binary mask defining the 
+                         brain within the functional image
+      direction -- [string] for ghost-to-signal ratio; the phase encoding 
+                   direction of the image - this is often "y"
+      subject_id -- [string] the participant ID
+      session_id -- [string] the session ID
+      scan_id -- [string] the scan ID
+      site_name -- [string] (default: None) the name of the site where the 
+                   scan was acquired
+      out_vox -- [boolean] (default: True) for FWHM measure: output the FWHM 
+                 as # of voxels (otherwise as mm)
+      starter -- [string] (default: None) if this function is being pulled 
+                 into a Nipype pipeline, this is the dummy input for the
+                 function node
 
     Returns:
-      qc -- a dictionary mapping out the QAP measure values for the current
-            participant
+      qc -- [Python dictionary] a dictionary mapping out the QAP measure 
+            values for the current participant
 
     Notes:
       - The inclusion of the starter node allows several QAP measure pipelines
@@ -705,22 +720,25 @@ def qap_functional_temporal(
     """ Calculate the functional temporal QAP measures for a functional scan.
 
     Keyword arguments:
-      func_timeseries -- the 4D functional timeseries
-      func_brain_mask -- a binary mask defining the brain within the
-                         functional image
-      bg_func_brain_mask -- the inversion of the functional brain mask
-      fd_file -- file containing the RMSD values (calculated previously)
-      subject_id -- the participant ID
-      session_id -- the session ID
-      scan_id -- the scan ID
-      site_name -- (default: None) the name of the site where the scan was
-                   acquired
-      starter -- (default: None) if this function is being pulled into a
-                 Nipype pipeline, this is the starting node of the pipeline
+      func_timeseries -- [string] filepath to the 4D functional timeseries
+      func_brain_mask -- [string] filepath to the binary mask defining the 
+                         brain within the functional image
+      bg_func_brain_mask -- [string] filepath to the inversion of the 
+                            functional brain mask
+      fd_file -- [string] file containing the RMSD values (calculated 
+                 previously)
+      subject_id -- [string] the participant ID
+      session_id -- [string] the session ID
+      scan_id -- [string] the scan ID
+      site_name -- [string] (default: None) the name of the site where the 
+                   scan was acquired
+      starter -- [string] (default: None) if this function is being pulled 
+                 into a Nipype pipeline, this is the dummy input for the 
+                 function node
 
     Returns:
-      qc -- a dictionary mapping out the QAP measure values for the current
-            participant
+      qc -- [Python dictionary] a dictionary mapping out the QAP measure 
+            values for the current participant
 
     Notes:
       - The inclusion of the starter node allows several QAP measure pipelines

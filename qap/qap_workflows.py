@@ -7,22 +7,25 @@ import os.path as op
 def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to create the QAP anatomical head mask.
 
-    Keyword Arguments:
-      workflow -- a Nipype workflow object which can already contain other
-                  connected nodes; this function will insert the following
-                  workflow into this one provided
-      resource_pool -- a dictionary defining input files and pointers to
-                       Nipype node outputs / workflow connections; the keys
-                       are the resource names
-      config -- a dictionary defining the configuration settings for the
-                workflow, such as directory paths or toggled options
-      name -- (default: "_") a string to append to the end of each node name
+    Keyword arguments:
+      workflow -- [Nipype workflow] a Nipype workflow object which can already
+                  contain other connected nodes; this function will insert the
+                  following workflow into this one provided
+      resource_pool -- [Python dictionary] a dictionary defining input files 
+                       and pointers to Nipype node outputs / workflow 
+                       connections; the keys are the resource names
+      config -- [Python dictionary] a dictionary defining the configuration 
+                settings for the workflow, such as directory paths or toggled 
+                options
+      name -- [string] (default: "_") a string to append to the end of each 
+              node name
 
     Returns:
-      workflow -- the Nipype workflow originally provided, but with the
-                  following sub-workflow connected into it
-      resource_pool -- the resource pool originally provided, but updated
-                       (if applicable) with the newest outputs and connections
+      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
+                  but with the following sub-workflow connected into it
+      resource_pool -- [Python dictionary] the resource pool originally 
+                       provided, but updated (if applicable) with the newest 
+                       outputs and connections
 
     Notes:
       - If any resources/outputs required by this workflow are not in the
@@ -174,9 +177,11 @@ def run_qap_mask(anatomical_reorient, allineate_out_xfm,
     """Run the qap_mask_workflow workflow with the provided inputs.
 
     Keyword arguments:
-      anatomical_reorient -- the deobliqued, reoriented anatomical scan
-      allineate_out_xfm -- the linear anatomical-to-template registration 
-                           transform matrix from AFNI's 3dAllineate
+      anatomical_reorient -- [string] filepath to the deobliqued, reoriented 
+                             anatomical scan
+      allineate_out_xfm -- [string] filepath to the linear anatomical-to-
+                           template registration transform matrix from AFNI's 
+                           3dAllineate
       out_dir -- [string] (default: None) the output directory to write the 
                  results to; if left as None, will write to the current 
                  directory
@@ -244,22 +249,25 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
     """Build and run a Nipype workflow to extract the NIFTI header information
     from an input file and insert it into a dictionary.
 
-    Keyword Arguments:
-      workflow -- a Nipype workflow object which can already contain other
-                  connected nodes; this function will insert the following
-                  workflow into this one provided
-      resource_pool -- a dictionary defining input files and pointers to
-                       Nipype node outputs / workflow connections; the keys
-                       are the resource names
-      config -- a dictionary defining the configuration settings for the
-                workflow, such as directory paths or toggled options
-      name -- (default: "_") a string to append to the end of each node name
+    Keyword arguments:
+      workflow -- [Nipype workflow] a Nipype workflow object which can already
+                  contain other connected nodes; this function will insert the
+                  following workflow into this one provided
+      resource_pool -- [Python dictionary] a dictionary defining input files 
+                       and pointers to Nipype node outputs / workflow 
+                       connections; the keys are the resource names
+      config -- [Python dictionary] a dictionary defining the configuration 
+                settings for the workflow, such as directory paths or toggled 
+                options
+      name -- [string] (default: "_") a string to append to the end of each 
+              node name
 
     Returns:
-      workflow -- the Nipype workflow originally provided, but with the
-                  following sub-workflow connected into it
-      resource_pool -- the resource pool originally provided, but updated
-                       (if applicable) with the newest outputs and connections
+      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
+                  but with the following sub-workflow connected into it
+      resource_pool -- [Python dictionary] the resource pool originally 
+                       provided, but updated (if applicable) with the newest 
+                       outputs and connections
 
     Notes:
       - If any resources/outputs required by this workflow are not in the
@@ -330,21 +338,24 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     quality measures.
 
     Keyword arguments:
-      workflow -- a Nipype workflow object which can already contain other
-                  connected nodes; this function will insert the following
-                  workflow into this one provided
-      resource_pool -- a dictionary defining input files and pointers to
-                       Nipype node outputs / workflow connections; the keys
-                       are the resource names
-      config -- a dictionary defining the configuration settings for the
-                workflow, such as directory paths or toggled options
-      name -- (default: "_") a string to append to the end of each node name
+      workflow -- [Nipype workflow] a Nipype workflow object which can already
+                  contain other connected nodes; this function will insert the
+                  following workflow into this one provided
+      resource_pool -- [Python dictionary] a dictionary defining input files 
+                       and pointers to Nipype node outputs / workflow 
+                       connections; the keys are the resource names
+      config -- [Python dictionary] a dictionary defining the configuration 
+                settings for the workflow, such as directory paths or toggled 
+                options
+      name -- [string] (default: "_") a string to append to the end of each 
+              node name
 
     Returns:
-      workflow -- the Nipype workflow originally provided, but with the
-                  following sub-workflow connected into it
-      resource_pool -- the resource pool originally provided, but updated
-                       (if applicable) with the newest outputs and connections
+      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
+                  but with the following sub-workflow connected into it
+      resource_pool -- [Python dictionary] the resource pool originally 
+                       provided, but updated (if applicable) with the newest 
+                       outputs and connections
 
     Notes:
       - If any resources/outputs required by this workflow are not in the
@@ -737,21 +748,24 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
     quality measures.
 
     Keyword arguments:
-      workflow -- a Nipype workflow object which can already contain other
-                  connected nodes; this function will insert the following
-                  workflow into this one provided
-      resource_pool -- a dictionary defining input files and pointers to
-                       Nipype node outputs / workflow connections; the keys
-                       are the resource names
-      config -- a dictionary defining the configuration settings for the
-                workflow, such as directory paths or toggled options
-      name -- (default: "_") a string to append to the end of each node name
+      workflow -- [Nipype workflow] a Nipype workflow object which can already
+                  contain other connected nodes; this function will insert the
+                  following workflow into this one provided
+      resource_pool -- [Python dictionary] a dictionary defining input files 
+                       and pointers to Nipype node outputs / workflow 
+                       connections; the keys are the resource names
+      config -- [Python dictionary] a dictionary defining the configuration 
+                settings for the workflow, such as directory paths or toggled 
+                options
+      name -- [string] (default: "_") a string to append to the end of each 
+              node name
 
     Returns:
-      workflow -- the Nipype workflow originally provided, but with the
-                  following sub-workflow connected into it
-      resource_pool -- the resource pool originally provided, but updated
-                       (if applicable) with the newest outputs and connections
+      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
+                  but with the following sub-workflow connected into it
+      resource_pool -- [Python dictionary] the resource pool originally 
+                       provided, but updated (if applicable) with the newest 
+                       outputs and connections
 
     Notes:
       - If any resources/outputs required by this workflow are not in the
@@ -1080,21 +1094,24 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     temporal quality measures.
 
     Keyword arguments:
-      workflow -- a Nipype workflow object which can already contain other
-                  connected nodes; this function will insert the following
-                  workflow into this one provided
-      resource_pool -- a dictionary defining input files and pointers to
-                       Nipype node outputs / workflow connections; the keys
-                       are the resource names
-      config -- a dictionary defining the configuration settings for the
-                workflow, such as directory paths or toggled options
-      name -- (default: "_") a string to append to the end of each node name
+      workflow -- [Nipype workflow] a Nipype workflow object which can already
+                  contain other connected nodes; this function will insert the
+                  following workflow into this one provided
+      resource_pool -- [Python dictionary] a dictionary defining input files 
+                       and pointers to Nipype node outputs / workflow 
+                       connections; the keys are the resource names
+      config -- [Python dictionary] a dictionary defining the configuration 
+                settings for the workflow, such as directory paths or toggled 
+                options
+      name -- [string] (default: "_") a string to append to the end of each 
+              node name
 
     Returns:
-      workflow -- the Nipype workflow originally provided, but with the
-                  following sub-workflow connected into it
-      resource_pool -- the resource pool originally provided, but updated
-                       (if applicable) with the newest outputs and connections
+      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
+                  but with the following sub-workflow connected into it
+      resource_pool -- [Python dictionary] the resource pool originally 
+                       provided, but updated (if applicable) with the newest 
+                       outputs and connections
 
     Notes:
       - If any resources/outputs required by this workflow are not in the

@@ -7,16 +7,17 @@ def pull_S3_sublist(yaml_outpath, img_type, cfg_file):
     S3 bucket.
 
     Keyword Arguments:
-      yaml_outpath -- the output file path for the YAML file of filepaths that
-                      will be written
-      img_type -- specify whether you are looking for anatomical or functional
-                  scans ("anat" or "rest")
-      cfg_file -- the pipeline configuration file (in this case, containing
-                  S3 bucket and AWS credentials information)
+      yaml_outpath -- [string] the output file path for the YAML file of 
+                      filepaths that will be written
+      img_type -- [string] specify whether you are looking for anatomical or 
+                  functional scans ("anat" or "rest")
+      cfg_file -- [string] filepath of the pipeline configuration file (in 
+                  this case, containing S3 bucket and AWS credentials 
+                  information)
 
     Returns:
-      yaml_outpath -- the output file path for the YAML file once it has been
-                      written
+      yaml_outpath -- [string] the output file path for the YAML file once it 
+                      has been written
     """
 
     import os
@@ -97,15 +98,17 @@ def dl_subj_from_s3(subj_idx, cfg_file, s3_dict_yaml):
     """Download a single participant's data from the Amazon S3 bucket.
 
     Keyword Arguments:
-      subj_idx -- the participant's index within the list of S3 bucket 
-                  filepaths
-      cfg_file -- the pipeline configuration file containing S3 bucket and AWS
-                  credentials information
-      s3_dict_yaml -- the YAML file containing the AWS S3 filepaths
+      subj_idx -- [integer] the participant's index within the list of S3 
+                  bucket filepaths
+      cfg_file -- [string] filepath to the pipeline configuration file 
+                  containing S3 bucket and AWS credentials information
+      s3_dict_yaml -- [string] filepath to the YAML file containing the AWS S3 
+                      filepaths
 
     Returns:
-      sub_dict -- a dictionary with one entry mapping the participant's ID
-                  info to local filepath of the newly-downloaded data file
+      sub_dict -- [Python dictionary] a dictionary with one entry mapping the 
+                  participant's ID info to local filepath of the newly-
+                  downloaded data file
     """
 
     # Import packages
@@ -164,8 +167,8 @@ def upl_qap_output(cfg_file):
     """Upload a pipeline output file back to the AWS S3 bucket.
 
     Keyword Arguments:
-      cfg_file -- the pipeline configuration file containing S3 bucket and AWS
-                  credentials information
+      cfg_file -- [string] filepath to the pipeline configuration file 
+                  containing S3 bucket and AWS credentials information
 
     Returns:
       N/A

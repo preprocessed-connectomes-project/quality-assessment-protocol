@@ -118,25 +118,37 @@ def snr(mean_fg, std_bg):
 
 
 def cnr(mean_gm, mean_wm, std_bg):
-
-    """
-    Calculate Contrast-to-Noise Ratio (CNR)
+    """Calculate Contrast-to-Noise Ratio (CNR) of an image.
     
-    CNR = |(mean GM intensity) - (mean WM intensity)| / (std of 
-                                                       background intensities)    
+    Keyword Arguments:
+      mean_gm -- [float] the mean value of the gray matter voxels
+      mean_wm -- [float] the mean value of the white matter voxels
+      std_bg -- [float] the standard deviation of the voxel intensities of the
+                background (outside the head) voxels
+
+    Returns:
+      cnr -- [float] the contrast-to-noise ratio
+
+    Notes:
+      - CNR = |(mean GM intensity) - (mean WM intensity)| / 
+                                            (std of background intensities)    
     """
 
     import numpy as np
-
     cnr     = np.abs(mean_gm - mean_wm)/std_bg
 
     return cnr
 
 
 def cortical_contrast(mean_gm, mean_wm):
+    """Calculate the vertex-wise cortical contrast.
 
-    """
-    Calculate vertex-wise cortical contrast
+    Keyword Arguments:
+      mean_gm -- [float] the mean value of the gray matter voxels
+      mean_wm -- [float] the mean value of the white matter voxels
+
+    Returns:
+      cort_con -- [float] the cortical contrast value
    
     cortical contrast = (mean WM intensity) - (mean GM intensity) /
                             ( (mean WM intensity + mean GM intensity) / 2 )
@@ -173,12 +185,18 @@ def fber(anat_data, skull_mask_data, bg_mask_data):
 
 
 def efc(anat_data):
+    """Calculate the Entropy Focus Criterion of the image.
 
-    """
-    Calculate the Entropy Focus Criterion (Atkinson 1997, IEEE TMI)
-    
-    We normalize the original equation by the maximum entropy so our EFC
-    can be easily compared across images with different dimensions.
+    Keyword Arguments:
+      anat_data -- [Nibabel data] the anatomical image data
+
+    Returns:
+      efc -- [float] the entropy focus criterion value
+
+    Notes:
+      - EFC based on Atkinson 1997, IEEE TMI
+      - We normalize the original equation by the maximum entropy so our EFC
+        can be easily compared across images with different dimensions.
     """
 
     import numpy as np
@@ -204,14 +222,25 @@ def efc(anat_data):
 
 
 def artifacts(anat_data, fg_mask_data, bg_mask_data, calculate_qi2=False):
+    """Calculates QI1, the fraction of total voxels that within artifacts.
 
-    # Detect artifacts in the anatomical image using the method described in
-    # Mortamet et al. 2009 (MRM)
-    # Calculates QI1, the fraction of total voxels that within artifacts.
-    
-    # Optionally, also calculates QI2, the distance between the distribution 
-    # of noise voxel (non-artifact background voxels) intensities, and a 
-    # Ricean distribution.
+    Keyword Arguments:
+      anat_data -- [Nibabel data] the anatomical image data
+      fg_mask_data -- [Nibabel data] the binary mask of the head
+      bg_mask_data -- [Nibabel data] the binary mask of the background
+      calculate_qi2 -- [boolean] (default: False) whether to calculate Qi2
+
+    Returns:
+      (QI1,QI2) -- [Python tuple] the Qi1 and Qi2 values (Qi2 = None if not 
+                   calculated)
+
+    Notes:
+      - Detect artifacts in the anatomical image using the method described in
+        Mortamet et al. 2009 (MRM).
+      - Optionally, also calculates QI2, the distance between the distribution 
+        of noise voxel (non-artifact background voxels) intensities, and a 
+        Ricean distribution.
+    """
 
     import numpy as np
 
@@ -284,23 +313,21 @@ def artifacts(anat_data, fg_mask_data, bg_mask_data, calculate_qi2=False):
 
 
 def fwhm(anat_file, mask_file, out_vox=False):
+    """Calculate the FWHM of the input image using AFNI's 3dFWHMx.
+    
+    Keyword Arguments:
+      anat_file -- [string] the filepath to the anatomical image NIFTI file
+      mask_file -- [string] the filepath to the binary head mask NIFTI file
+      out_vox -- [boolean] (default: False) output the FWHM as # of voxels 
+                 instead of mm (the default)
 
-    """
-    Calculate the FWHM of the input image.
-    
-    Parameters
-    ----------
-    anat_file: str
-        path to anatomical file
-    mask_file: str
-        path to brain mask
-    out_vox: bool
-        output the FWHM as # of voxels (otherwise as mm)
-    
-    Returns
-    -------
-    fwhm: tuple (x,y,z,combined)
-        FWHM in the x, y, x, and combined direction
+    Returns:
+      tuple(vals) -- [Python tuple] a tuple of the FWHM values (x, y, z, and
+                     combined)
+
+    Notes:
+      - Uses AFNI 3dFWHMx. More details here:
+          https://afni.nimh.nih.gov/pub/dist/doc/program_help/3dFWHMx.html
     """
 
     import commands
@@ -332,28 +359,28 @@ def fwhm(anat_file, mask_file, out_vox=False):
 
 def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
                     out_file=None):
+    """Calculate the Ghost to Signal Ratio of EPI images.
 
-    """
-    Ghost to Signal Ratio
-    Giannelli 2010 -
-        http://www.jacmp.org/index.php/jacmp/article/view/3237/2035
-    
-    This should be used for EPI images where the phase encoding direction
-    is known.
-    
-    Parameters
-    ----------
-    epi_file: str
-        path to epi file
-    mask_file: str
-        path to brain mask
-    direction: str
-        the direction of phase encoding (x, y, z)
-    
-    Returns
-    -------
-    gsr: float
-        ghost to signal ratio
+    Keyword Arguments:
+      epi_data -- [Nibabel data] the mean of the functional timeseries
+      mask_data -- [Nibabel data] the functional brain binary mask data
+      direction -- [string] (default: 'y') the phase encoding direction of the
+                   EPI image
+      ref_file -- [string] (default: None) if you are saving the Nyquist ghost
+                  mask, this is the filepath of the reference file to use the
+                  header for the ghost mask NIFTI file
+      out_file -- [string] (default: None) if you are saving the Nyquist ghost
+                  mask, this is the filepath to the ghost mask NIFTI file to 
+                  be written
+
+    Returns:
+      gsr -- [float] the ghost-to-signal ratio value
+
+    Notes:
+      - GSR from Giannelli 2010. More details here:
+          https://www.ncbi.nlm.nih.gov/pubmed/21081879
+      - This should be used for EPI images where the phase encoding direction
+        is known.
     """
     
     import numpy as np
@@ -402,26 +429,16 @@ def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
 
 
 def ghost_all(epi_data, mask_data):
+    """Call the 'ghost_direction' function on all possible phase encoding 
+    directions.
 
-    """
-    Ghost to Signal Ratio (GSR)
-    Giannelli 2010 -
-        http://www.jacmp.org/index.php/jacmp/article/view/3237/2035
-    
-    This calls on `ghost_direction` to measure GSR in all possible phase
-    encoding directions.
-    
-    Parameters
-    ----------
-    epi_file: str
-        path to epi file
-    mask_file: str
-        path to brain mask
-    
-    Returns
-    -------
-    gsr: tuple
-        ghost to signal ratio for phase encoding in the x,y,z direction
+    Keyword Arguments:
+      epi_data -- [Nibabel data] the mean of the functional timeseries
+      mask_data -- [Nibabel data] the functional brain binary mask data
+
+    Returns:
+      tuple(gsrs + [None]) -- [Python tuple] the ghost-to-signal ratios of 
+                              each phase encoding direction
     """
     
     directions = ["x", "y"]
