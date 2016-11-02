@@ -598,7 +598,7 @@ class QAProtocolCLI:
 
     def _run_here(self, run_name):
         """Run the workflow on the local machine with locally stored data (via
-           a participant list).
+        a participant list).
 
         Keyword Arguments:
           run_name -- [string] the pipeline ID name
@@ -609,14 +609,10 @@ class QAProtocolCLI:
                      its status, and results
 
         Notes:
+          - This runs if a sublist is provided (instead of an s3 dict yml).
           - Creates a list of bundles of participants from the input files in
             the participant list.
         """
-
-        # this runs if a sublist is provided (instead of an s3 dict yml)
-
-        # input
-        #   run_name: the filename of the pipeline config YAML file
 
         # get flattened sublist
         # flat_sub_dict_dict is a dictionary of dictionaries. format:
@@ -707,7 +703,7 @@ class QAProtocolCLI:
             pool.close()
             pool.terminate()
 
-        return results    
+        return results
         
 
     def run(self, config_file=None, partic_list=None):

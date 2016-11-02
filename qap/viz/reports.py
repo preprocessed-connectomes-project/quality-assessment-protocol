@@ -85,19 +85,19 @@ def workflow_report(in_csv, qap_type, run_name, res_dict,
         result['group'] = {'success': True, 'path': out_group_file}
 
     # Generate individual reports for subjects
-    for subid in subject_list:
+    for subid in [str(sub) for sub in subject_list]:
         # Get subject-specific info
         subdf = df.loc[df['Participant'] == subid]
         sessions = sorted(pd.unique(subdf.Session.ravel()))
         plots = []
         sess_scans = []
         # Re-build mosaic location
-        for sesid in sessions:
+        for sesid in [str(sess) for sess in sessions]:
             sesdf = subdf.loc[subdf['Session'] == sesid]
             scans = sorted(pd.unique(sesdf.Series.ravel()))
 
             # Each scan has a volume and (optional) fd plot
-            for scanid in scans:
+            for scanid in [str(scan) for scan in scans]:
                 sub_info = [subid, sesid, scanid]
                 sub_path = op.join(out_dir, run_name, '/'.join(sub_info))
                 m = op.join(sub_path, 'qap_mosaic', 'mosaic.pdf')

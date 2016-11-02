@@ -148,9 +148,6 @@ def convert_allineate_xfm(mat_list):
         4x4 with the last row being 0,0,0,1
     """
 
-    # re-arranges the affine transform from 3dAllineate to allow for easier
-    # matrix multiplication later when calculating the new points
-
     import numpy as np
 
     # put together the 4x4 matrix
@@ -573,9 +570,9 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
             {
                "QAP_pipeline_id": "QAP version %s" % qap.__version__,
                "Time": strftime("%Y-%m-%d %H:%M:%S"),
-               "Participant": subject_id,
-               "Session": session_id,
-               "Series": scan_id,
+               "Participant": str(subject_id),
+               "Session": str(session_id),
+               "Series": str(scan_id),
                "anatomical_spatial":
                { 
                   "FBER": fber_out,
@@ -593,7 +590,7 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     }
 
     if site_name:
-        qc[id_string]['Site'] = site_name
+        qc[id_string]['Site'] = str(site_name)
 
     if exclude_zeroes:
         qc[id_string]['_zeros_excluded'] = "True"
@@ -676,9 +673,9 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
             {
                "QAP_pipeline_id": "QAP version %s" % qap.__version__,
                "Time": strftime("%Y-%m-%d %H:%M:%S"),
-               "Participant": subject_id,
-               "Session": session_id,
-               "Series": scan_id,
+               "Participant": str(subject_id),
+               "Session": str(session_id),
+               "Series": str(scan_id),
                "functional_spatial":
                {
                   "FBER": fber_out,
@@ -705,7 +702,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
             ghost_direction(anat_data, fg_mask, direction)
 
     if site_name:
-        qc[id_string]['Site'] = site_name
+        qc[id_string]['Site'] = str(site_name)
 
     for key in qc[id_string]["functional_spatial"].keys():
         qc[id_string]["functional_spatial"][key] = \
@@ -793,9 +790,9 @@ def qap_functional_temporal(
             {
               "QAP_pipeline_id": "QAP version %s" % qap.__version__,
               "Time": strftime("%Y-%m-%d %H:%M:%S"),
-              "Participant": subject_id,
-              "Session": session_id,
-              "Series": scan_id,
+              "Participant": str(subject_id),
+              "Session": str(session_id),
+              "Series": str(scan_id),
               "functional_temporal":
               {
                  "Std. DVARS (Mean)": mean_dvars,
@@ -829,7 +826,7 @@ def qap_functional_temporal(
     }
 
     if site_name:
-        qc[id_string]['Site'] = site_name
+        qc[id_string]['Site'] = str(site_name)
 
     for key in qc[id_string]["functional_temporal"].keys():
         qc[id_string]["functional_temporal"][key] = \
