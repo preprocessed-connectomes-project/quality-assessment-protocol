@@ -4,7 +4,8 @@ def main():
 
     import argparse
 
-    from qap.script_utils import gather_raw_data, \
+    from qap.script_utils import gather_filepath_list, \
+                                 parse_raw_data_list, \
                                  write_inputs_dict_to_yaml_file
 
     parser = argparse.ArgumentParser()
@@ -31,7 +32,9 @@ def main():
     args = parser.parse_args()
 
     # run it!
-    sub_dict = gather_raw_data(args.site_folder, args.sites, args.include)
+    filepath_list = gather_filepath_list(args.site_folder)
+    sub_dict = parse_raw_data_list(filepath_list, args.site_folder, 
+        args.sites, args.include)
 
     write_inputs_dict_to_yaml_file(sub_dict, args.outfile_path)
 

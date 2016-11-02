@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from qap.bids_utils import gather_nifti_file_paths, extract_bids_data
+from qap.script_utils import write_inputs_dict_to_yaml_file
 
 
 def main():
@@ -37,8 +38,8 @@ def main():
     # run it!
     sub_dict = extract_bids_data(file_path_list, inclusion_list)
 
-    with open(args.outfile_path, "wt") as f:
-        f.write(yaml.dump(sub_dict))
+    write_inputs_dict_to_yaml_file(sub_dict, args.outfile_path)
+
 
 if __name__ == "__main__":
     main()

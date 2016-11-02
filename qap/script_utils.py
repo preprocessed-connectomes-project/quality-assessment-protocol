@@ -46,6 +46,8 @@ def gather_filepath_list(site_folder):
 
     import os
 
+    site_folder = os.path.abspath(site_folder)
+
     filepath_list = []
     for root, folders, files in os.walk(site_folder):
         for filename in files:
@@ -106,8 +108,12 @@ def parse_raw_data_list(filepath_list, site_folder, include_sites=False,
           /site_folder/participant_ID/session_ID/scan_ID/filename.nii.gz 
     """
 
+    import os
+
     sub_dict = {}
     inclusion_list = []
+
+    site_folder = os.path.abspath(site_folder)
     
     # create subject inclusion list
     if subject_inclusion:
@@ -309,6 +315,7 @@ def gather_custom_raw_data(filepath_list, base_folder, directory_format,
 
     data_dict = {}
 
+    base_folder = os.path.abspath(base_folder)
     format_list = [x for x in directory_format.split("/") if x != ""]
 
     indices = {}
@@ -391,6 +398,8 @@ def pull_s3_sublist(bucket_name, bucket_prefix, creds_path):
 
     import os
     from indi_aws import fetch_creds
+
+    creds_path = os.path.abspath(creds_path)
 
     s3_list = []
     bucket = fetch_creds.return_bucket(creds_path, bucket_name)
@@ -596,6 +605,8 @@ def create_CPAC_outputs_dict(cpac_outdir, qap_type, session_format):
 
     import os
     import glob
+
+    cpac_outdir = os.path.abspath(cpac_outdir)
 
     if qap_type == "anat":
 

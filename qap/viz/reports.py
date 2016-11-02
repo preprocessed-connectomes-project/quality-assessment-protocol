@@ -45,12 +45,16 @@ def workflow_report(in_csv, qap_type, run_name, res_dict,
         df.drop_duplicates(['Participant', 'Session', 'Series'], take_last=True,
                            inplace=True)
 
+    df["Participant"] = df["Participant"].astype(str)
+    df["Session"] = df["Session"].astype(str)
+    df["Series"] = df["Series"].astype(str)
+
     subject_list = sorted(pd.unique(df.Participant.ravel()))
     result = {}
     func = getattr(sys.modules[__name__], qap_type)
 
     # Identify failed subjects
-    failed = ['%s (%s_%s)' % (s['id'], s['Session'], s['Series'])
+    failed = ['%s (%s_%s)' % (s['id'], s['session'], s['scan'])
               for s in res_dict if 'failed' in s['status']]
 
     pdf_group = []

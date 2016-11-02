@@ -33,9 +33,9 @@ args = parser.parse_args()
 
 from qap import qap_workflows as qw
 
-qw.run_whole_single_qap_functional_temporal(args.functional_scan,
-    	                                        str(args.participant_id),
-    	                                        args.session_id,
-    	                                        args.series_id,
-    	                                        args.site_name,
-    	                                        args.output_directory)
+qw.run_everything_qap_functional_temporal(args.functional_scan,
+                                          str(args.participant_id),
+                                          args.session_id,
+                                          args.series_id,
+                                          args.site_name,
+                                          args.output_directory)

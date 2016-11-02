@@ -75,3 +75,37 @@ def check_config_settings(config, parameter):
               "configuration .YML file. Please make sure this is specified " \
               "properly." % parameter
         raise_smart_exception(locals(),err)
+
+
+def generate_nipype_workflow_graphs(workflow, out_dir=None):
+    """Generate the Nipype workflow dependency graphs given the workflow 
+    object.
+
+    Keyword Arguments:
+      workflow -- [Nipype workflow] the connected workflow object
+      out_dir -- [string] (default: None) the directory where to write the 
+                 dependency graph .dot and .png files to
+
+    Returns:
+      N/A
+    """
+
+    if not out_dir:
+        pass
+
+    """
+    workflow.write_graph(
+        dotfilename=op.join(config["output_directory"], \
+                            "".join([run_name, ".dot"])),
+        simple_form=False)
+    workflow.write_graph(
+        graph2use="orig",
+        dotfilename=op.join(config["output_directory"], \
+                            "".join([run_name, ".dot"])),
+        simple_form=False)
+    workflow.write_graph(
+        graph2use="hierarchical",
+        dotfilename=op.join(config["output_directory"], \
+                            "".join([run_name, ".dot"])),
+        simple_form=False)
+    """

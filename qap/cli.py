@@ -901,10 +901,10 @@ class QAProtocolCLI:
                          "functional_temporal"]
             for qap_type in qap_types:
                 qap_type = "_".join(["qap", qap_type])
-                in_json = op.join(config['output_directory'], 
-                                      'qap_%s.json' % qap_type.split("_")[1])
+                in_csv = op.join(config['output_directory'], 
+                    '%s.csv' % qap_type)
 
-                reports = workflow_report(in_json, qap_type, run_name, results,
+                reports = workflow_report(in_csv, qap_type, run_name, results,
                                           out_dir=config['output_directory'])
   
                 for k, v in reports.iteritems():
@@ -1063,7 +1063,7 @@ def _run_workflow(args):
             sub_id = sub_id.replace(".","_")
 
         if sub_info[1]:
-            session_id = sub_info[1]
+            session_id = str(sub_info[1])
             # for nipype
             if "-" in session_id:
                 session_id = session_id.replace("-","_")
@@ -1073,7 +1073,7 @@ def _run_workflow(args):
             session_id = "session_0"
 
         if sub_info[2]:
-            scan_id = sub_info[2]
+            scan_id = str(sub_info[2])
             # for nipype
             if "-" in scan_id:
                 scan_id = scan_id.replace("-","_")
