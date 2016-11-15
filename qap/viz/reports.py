@@ -21,8 +21,6 @@ from .plotting import (plot_measures, plot_mosaic, plot_all,
                        plot_fd, plot_dist)
 
 # matplotlib.rc('figure', figsize=(11.69, 8.27))  # for DINA4 size
-
-
 def workflow_report(in_csv, qap_type, run_name, res_dict,
                     out_dir=None, out_file=None):
     import datetime

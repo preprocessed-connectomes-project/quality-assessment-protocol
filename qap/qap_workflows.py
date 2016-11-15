@@ -401,7 +401,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     from qap_utils import json_to_csv
     from workflow_utils import check_config_settings
 
-    check_config_settings(config, "template_skull_for_anat")
+    check_config_settings(config, "template_head_for_anat")
 
     if "exclude_zeros" not in config.keys():
         config["exclude_zeros"] = False
@@ -709,7 +709,7 @@ def run_everything_qap_anatomical_spatial(
         'session_id': session_id,
         'scan_id': scan_id,
         'output_directory': workflow_dir,
-        'template_skull_for_anat': template_head
+        'template_head_for_anat': template_head
     }
 
     if site_name:

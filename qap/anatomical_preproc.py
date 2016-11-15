@@ -5,25 +5,27 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     """Build a Nipype workflow to deoblique and reorient an anatomical scan
     from a NIFTI file.
 
-    Keyword arguments:
-      workflow -- [Nipype workflow] a Nipype workflow object which can already
-                  contain other connected nodes; this function will insert the
-                  following workflow into this one provided
-      resource_pool -- [Python dictionary] a dictionary defining input files 
-                       and pointers to Nipype node outputs / workflow 
-                       connections; the keys are the resource names
-      config -- [Python dictionary] a dictionary defining the configuration 
-                settings for the workflow, such as directory paths or toggled 
-                options
-      name -- [string] (default: "_") a string to append to the end of each 
-              node name
+    Parameters: ::
+      workflow -- [Nipype workflow]
+          a Nipype workflow object which can already contain other connected 
+          nodes; this function will insert the following workflow into this 
+          one provided
+      resource_pool -- [Python dictionary]
+          a dictionary defining input files and pointers to Nipype node 
+          outputs / workflow connections; the keys are the resource names
+      config -- [Python dictionary]
+          a dictionary defining the configuration settings for the workflow, 
+          such as directory paths or toggled options
+      name -- [string]
+          (default: "_") a string to append to the end of each node name
 
-    Returns:
-      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
-                  but with the following sub-workflow connected into it
-      resource_pool -- [Python dictionary] the resource pool originally 
-                       provided, but updated (if applicable) with the newest 
-                       outputs and connections
+    Returns: ::
+      workflow -- [Nipype workflow]
+          the Nipype workflow originally provided, but with the following 
+          sub-workflow connected into it
+      resource_pool -- [Python dictionary]
+          the resource pool originally provided, but updated (if applicable) 
+          with the newest outputs and connections
 
     Notes:
       - This is a seminal workflow that can only take an input directly from
@@ -38,13 +40,13 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
         the pipeline builder to continue "searching" for a base-level input
         without crashing at this one.
 
-    Expected Resources in Resource Pool:
+    Expected Resources in Resource Pool: ::
       anatomical_scan -- the raw anatomical scan in a NIFTI image
 
-    New Resources Added to Resource Pool:
+    New Resources Added to Resource Pool: ::
       anatomical_reorient -- the deobliqued, reoriented anatomical scan
 
-    Workflow Steps:
+    Workflow Steps: ::
       1. AFNI's 3drefit to deoblique the anatomical scan
       2. AFNI's 3dresample to reorient the deobliqued anatomical scan to RPI
     """
@@ -396,7 +398,7 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
                 resource_pool["anatomical_reorient"]
 
         calc_allineate_warp.inputs.reference = \
-            config["template_skull_for_anat"]
+            config["template_head_for_anat"]
 
         calc_allineate_warp.inputs.out_file = "allineate_warped_head.nii.gz"
 

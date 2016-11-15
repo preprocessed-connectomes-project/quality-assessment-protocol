@@ -154,7 +154,6 @@ class QAProtocolCLI:
             raise RuntimeError(
                 "\n[!] Arguments were parsed, but no appropriate run found")
 
-        
         if args.bundle_idx:
 
             self._bundle_idx = args.bundle_idx
@@ -1152,7 +1151,8 @@ def _run_workflow(args):
             if "_".join(["qap", qap_type]) not in resource_pool.keys():
                 if qw is None:
                     from qap import qap_workflows as qw
-                wf_builder = getattr(qw, "_".join(["qap", qap_type, "workflow"]))
+                wf_builder = \
+                    getattr(qw, "_".join(["qap", qap_type, "workflow"]))
                 workflow, resource_pool = wf_builder(workflow, resource_pool,\
                                                      config, name)
 

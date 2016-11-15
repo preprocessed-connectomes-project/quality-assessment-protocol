@@ -10,7 +10,7 @@ write_all_outputs: False
 
 template_brain_for_anat: /opt/afni/bin/MNI_avg152T1+tlrc.HEAD
 
-template_skull_for_anat: /opt/afni/bin/MNI_avg152T1+tlrc.HEAD
+template_head_for_anat: /opt/afni/bin/MNI_avg152T1+tlrc.HEAD
 
 write_report: False
 

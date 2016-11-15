@@ -19,9 +19,9 @@ output_directory: /path/to/output/directory
 # where to place Nipype workflow working files
 working_directory: /path/to/working/directory
 
-# path to skull template
+# path to whole head template
 # only required if you have anatomical scans
-template_skull_for_anat: /path/to/skull/template
+template_head_for_anat: /path/to/head/template
 
 # exclude zero-value voxels from the background of the anatomical scan
 # this is meant for images that have been manually altered (ex. ears removed
