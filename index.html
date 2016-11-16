@@ -91,10 +91,17 @@ apt-get install -y fsl-5.0-complete
 
 <h3 id="python-dependencies-and-qap">Python Dependencies and QAP</h3>
 
-<p>QAP depends on some visualization packages, which in turn require that some additional <a href="http://pillow.readthedocs.org/en/3.0.x/installation.html#external-libraries">system-level dependencies</a> be installed.  Under Ubuntu, you can install these system-level dependencies by typing:</p>
+<p>QAP is compatible with Python 2, so you will first want to ensure that you are not using Python 3 before proceeding any further.  The version number for Python should be visible at the top of the console window if you open a fresh Python interpreter with <code>python</code> in a Unix shell.  If you are not using Python 2, make sure that your configuration is set up so that it is used instead of Python 3.</p>
+
+<p>QAP depends on some visualization packages, which in turn require that some additional <a href="http://pillow.readthedocs.org/en/3.0.x/installation.html#external-libraries">system-level dependencies</a> be installed.  Under Ubuntu 14.04, you can install these system-level dependencies by typing:</p>
 
 <pre><code>sudo apt-get build-dep python-imaging
-sudo apt-get install libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev
+sudo apt-get install libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev xvfb
+</code></pre>
+
+<p>To install QAP you will the Python package manager, <code>pip</code>, which is included by default on many systems.  If your system does not already have this you will need to install it by following the directions <a href="https://pip.pypa.io/en/stable/installing/">here</a>.  On Debian-based systems in particular (such as Ubuntu), you may need to install pip with the following command:</p>
+
+<pre><code>sudo apt-get install python-pip
 </code></pre>
 
 <p>In addtion to the visualization packges above, QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run. If you have <code>pip</code>, you may install all of these, the visualization packages, and QAP itself by typing in the command below:</p>
@@ -174,33 +181,50 @@ sudo apt-get install libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev
 
 <p>Some examples of customizable features include segmentation thresholds for anatomical preprocessing, and the option to run slice timing correction for functional preprocessing. Computer resource allocation can also be customized using the configuration files, such as dedicating multiple cores/threads to processing.</p>
 
-<p>Templates for these files are provided in the <a href="https://github.com/preprocessed-connectomes-project/quality-assessment-protocol/tree/master/configs"><code>/configs</code> folder</a> in the QAP main repository directory. Below is a list of options which can be configured for each of the pipelines.</p>
+<p>Templates for these files are provided in the <a href="https://github.com/preprocessed-connectomes-project/quality-assessment-protocol/tree/master/configs"><code>/configs</code> folder</a> in the QAP main repository directory. Below is a list of options which can be configured for each of the pipelines.  Note that all boolean fields that are optional will default to False if they are not defined in the file.</p>
 
 <h3 id="general-both-types">General (both types)</h3>
 
 <ul>
-  <li><strong>num_cores_per_subject</strong>: Number of cores (on a single machine) or slots on a node (cluster/grid) per subject (or per instance of the pipeline). Slots are cores on a cluster/grid node. Dedicating multiple nodes allows each subject’s processing pipeline to run certain operations in parallel to save time.</li>
-  <li><strong>num_subjects_at_once</strong>: Similar to <em>num_cores_per_subject</em>, except this determines how many pipelines to run at once.</li>
+  <li><strong>pipeline_name</strong>: A descriptive name for the pipeline run.</li>
+  <li><strong>num_processors</strong>:  Number of cores (on a single machine) or slots on a node (cluster/grid) per subject (or per instance of the pipeline). Slots are cores on a cluster/grid node. Dedicating multiple nodes allows each subject’s processing pipeline to run certain operations in parallel to save time.</li>
+  <li><strong>num_subjects_per_bundle</strong>: Similar to <em>num_processors</em>, except this determines how many pipelines to run at once.</li>
+  <li><strong>num_bundles_at_once</strong>:</li>
+  <li><strong>memory_allocated</strong>: The amount of memory (in GB) to allocate to the pipeline run.</li>
+  <li><strong>resource_manager</strong>: If you are using a resource manager, you can specify which resource manager you are using here.  Potential values are ‘PBS’, ‘SGE’, and ‘SLURM’.</li>
   <li><strong>output_directory</strong>: The directory to write output files to.</li>
   <li><strong>working_directory</strong>: The directory to store intermediary processing files in.</li>
-  <li><strong>write_all_outputs</strong>: A boolean option to determine whether or not all files used in the process of calculating the QAP measures will be saved to the output directory or not.  If <em>True</em>, all outputs will be saved.  If <em>False</em>, only the csv file containing the measures will be saved.</li>
-  <li><strong>write_report</strong>: A boolean option to determine whether or not to generate report plots and a group measure CSV (<a href="#generating-reports">see below</a>).  If <em>True</em>, plots and a CSV will be produced; if <em>False</em>, QAP will not produce reports.</li>
-  <li><strong>write_graph</strong>: A boolean option to determine whether or not to write a representation of the graph that corresponds to the workflow that will be applied to each of the subjects. If <em>True</em>, it uses the <em>write_graph()</em> function of nipype Workflows to save the corresponding graph in dot format.  Note that you will need to have grapviz/pygraphviz installed (see installation section above), otherwise you will receive an error.</li>
+  <li><strong>write_report (optional)</strong>: A boolean option to determine whether or not to generate report plots and a group measure CSV (<a href="#generating-reports">see below</a>).  If <em>True</em>, plots and a CSV will be produced; if <em>False</em>, QAP will not produce reports.</li>
+  <li><strong>write_graph (optional)</strong>: A boolean option to determine whether or not to write a representation of the graph that corresponds to the workflow that will be applied to each of the subjects. If <em>True</em>, it uses the <em>write_graph()</em> function of nipype Workflows to save the corresponding graph in dot format.  Note that you will need to have grapviz/pygraphviz installed (see installation section above), otherwise you will receive an error.</li>
+  <li><strong>write_all_outputs (optional)</strong>: A boolean option to determine whether or not all files used in the process of calculating the QAP measures will be saved to the output directory or not.  If <em>True</em>, all outputs will be saved.  If <em>False</em>, only the csv file containing the measures will be saved.</li>
+</ul>
+
+<h3 id="cloud-settings-both-types">Cloud Settings (both types)</h3>
+
+<ul>
+  <li><strong>upload_to_s3 (optional)</strong>: If set to True, this will upload your output data to an Amazon Simple Storage Service bucket.  The exact location that the files will be located at in the bucket is dictated by the settings for <code>bucket_name</code> and <code>bucket_out_prefix</code>.</li>
+  <li><strong>bucket_prefix (optional)</strong>: If you are downloading your input data from an Amazon Simple Storage Service bucket, this will specify the path within the bucket to pull the data from.</li>
+  <li><strong>bucket_out_prefix (optional)</strong>: If you are saving the QAP pipeline outputs to an Amazon Simple Storage Service bucket, this will specify the path within the bucket to pull the data from.</li>
+  <li><strong>local_prefix (optional)</strong>: The local path where input files are temporarily stored when pulled down from an Amazon Simple Storage Service bucket.</li>
+  <li><strong>bucket_name (optional)</strong>: The name of the Amazon Simple Storage Service bucket.</li>
+  <li><strong>creds_path (optional)</strong>: The local path to the AWS credentials you will use to upload to a bucket.</li>
 </ul>
 
 <h3 id="anatomical-pipelines">Anatomical pipelines</h3>
 
+<h1 id="todo-figure-out-if-templatebrainforanat-is-still-valid-or-if-its-been-deprecated">TODO Figure out if template_brain_for_anat is still valid or if it’s been deprecated.</h1>
 <ul>
   <li><strong>template_brain_for_anat</strong>: Template brain to be used during anatomical registration, as a reference.</li>
+  <li><strong>template_skull_for_anat</strong>: Template brain to be used during anatomical registration, as a reference.</li>
+  <li>**exclude_zeros (optional) **: If set to True, this option will exlcude zero-valued voxels from the background of anatomical scans.  This is meant for images that have been manually altered (e.g., ears, faces removed to accommodate privacy concerns) where the empty space would skew the results of the metrics.</li>
 </ul>
 
 <h3 id="functional-pipelines">Functional pipelines</h3>
 
 <ul>
-  <li><strong>start_idx</strong>: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the first timepoint you wish to include in the analysis. Enter <em>0</em> to include the first volume.</li>
-  <li><strong>stop_idx</strong>: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the last timepoint you wish to include in the analysis. Enter <em>End</em> to include the final volume. Enter <em>0</em> in start_idx and <em>End</em> in stop_idx to include the entire timeseries.</li>
-  <li><strong>slice_timing_correction</strong>: Whether or not to run slice timing correction - <em>True</em> or <em>False</em>. Interpolates voxel timeseries so that sampling occurs at the same time.</li>
-  <li><strong>ghost_direction</strong>: Allows you to specify the phase encoding (<em>x</em> - RL/LR, <em>y</em> - AP/PA, <em>z</em> - SI/IS, or <em>all</em>) used to acquire the scan.  Omitting this option will default to <em>y</em>.</li>
+  <li><strong>start_idx (optional)</strong>: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the first timepoint you wish to include in the analysis. Enter <em>0</em> to include the first volume.</li>
+  <li><strong>stop_idx (optional)</strong>: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the last timepoint you wish to include in the analysis. Enter <em>End</em> to include the final volume. Enter <em>0</em> in start_idx and <em>End</em> in stop_idx to include the entire timeseries.</li>
+  <li><strong>ghost_direction (optional)</strong>: Allows you to specify the phase encoding (<em>x</em> - RL/LR, <em>y</em> - AP/PA, <em>z</em> - SI/IS, or <em>all</em>) used to acquire the scan.  Omitting this option will default to <em>y</em>.</li>
 </ul>
 
 <p>Make sure that you multiply <em>num_cores_per_subject</em> and <em>num_subjects_at_once</em> for the maximum amount of cores that could potentially be used during an anatomical or functional pipeline run.</p>
@@ -375,15 +399,6 @@ echo "End - TASKID " $SGE_TASK_ID " : " $(date)
 
 <pre><code>qsub {path to the text file}
 </code></pre>
-
-<h2 id="merging-outputs">Merging Outputs</h2>
-
-<p>QAP generates outputs for each subject and session separately.  To view a comprehensive summary for all the measures for all the subjects, you will need to merge these separate outputs into a single file.  You can do this by running the following command:</p>
-
-<pre><code>qap_merge_outputs.py {path to qap output directory}
-</code></pre>
-
-<p><code>qap_merge_outputs.py</code> will automatically determine if you have calculated anatomical spatial, functional spatial or functional temporal measures.  The merged outputs will appear in a file named <code>qap_anatomical_spatial_{qap output directory name}.csv</code> in the directory from which the command is run.</p>
 
 <h2 id="generating-reports">Generating Reports</h2>
 
