@@ -49,10 +49,16 @@ We do not recommend using Neurodebian's AFNI binary, as we have encountered diff
 
 ### Python Dependencies and QAP
 
-QAP depends on some visualization packages, which in turn require that some additional [system-level dependencies](http://pillow.readthedocs.org/en/3.0.x/installation.html#external-libraries) be installed.  Under Ubuntu, you can install these system-level dependencies by typing:
+QAP is compatible with Python 2, so you will first want to ensure that you are not using Python 3 before proceeding any further.  The version number for Python should be visible at the top of the console window if you open a fresh Python interpreter with `python` in a Unix shell.  If you are not using Python 2, make sure that your configuration is set up so that it is used instead of Python 3.
+
+QAP depends on some visualization packages, which in turn require that some additional [system-level dependencies](http://pillow.readthedocs.org/en/3.0.x/installation.html#external-libraries) be installed.  Under Ubuntu 14.04, you can install these system-level dependencies by typing:
 
     sudo apt-get build-dep python-imaging
-    sudo apt-get install libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev
+    sudo apt-get install libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev xvfb
+
+To install QAP you will the Python package manager, `pip`, which is included by default on many systems.  If your system does not already have this you will need to install it by following the directions [here](https://pip.pypa.io/en/stable/installing/).  On Debian-based systems in particular (such as Ubuntu), you may need to install pip with the following command:
+
+    sudo apt-get install python-pip
 
 In addtion to the visualization packges above, QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run. If you have `pip`, you may install all of these, the visualization packages, and QAP itself by typing in the command below:
 
@@ -120,28 +126,43 @@ Certain pre-processed files derived from the raw data are required to calculate 
 
 Some examples of customizable features include segmentation thresholds for anatomical preprocessing, and the option to run slice timing correction for functional preprocessing. Computer resource allocation can also be customized using the configuration files, such as dedicating multiple cores/threads to processing.
 
-Templates for these files are provided in the [`/configs` folder](https://github.com/preprocessed-connectomes-project/quality-assessment-protocol/tree/master/configs) in the QAP main repository directory. Below is a list of options which can be configured for each of the pipelines.
+Templates for these files are provided in the [`/configs` folder](https://github.com/preprocessed-connectomes-project/quality-assessment-protocol/tree/master/configs) in the QAP main repository directory. Below is a list of options which can be configured for each of the pipelines.  Note that all boolean fields that are optional will default to False if they are not defined in the file.
 
 ### General (both types)
 
-* **num_cores_per_subject**: Number of cores (on a single machine) or slots on a node (cluster/grid) per subject (or per instance of the pipeline). Slots are cores on a cluster/grid node. Dedicating multiple nodes allows each subject's processing pipeline to run certain operations in parallel to save time. 
-* **num_subjects_at_once**: Similar to *num_cores_per_subject*, except this determines how many pipelines to run at once.   
+* **pipeline_name**: A descriptive name for the pipeline run.
+* **num_processors**:  Number of cores (on a single machine) or slots on a node (cluster/grid) per subject (or per instance of the pipeline). Slots are cores on a cluster/grid node. Dedicating multiple nodes allows each subject's processing pipeline to run certain operations in parallel to save time. 
+* **num_subjects_per_bundle**: Similar to *num_processors*, except this determines how many pipelines to run at once.   
+* **num_bundles_at_once**: 
+* **memory_allocated**: The amount of memory (in GB) to allocate to the pipeline run.
+* **resource_manager**: If you are using a resource manager, you can specify which resource manager you are using here.  Potential values are 'PBS', 'SGE', and 'SLURM'.
 * **output_directory**: The directory to write output files to.
 * **working_directory**: The directory to store intermediary processing files in.
-* **write_all_outputs**: A boolean option to determine whether or not all files used in the process of calculating the QAP measures will be saved to the output directory or not.  If *True*, all outputs will be saved.  If *False*, only the csv file containing the measures will be saved.
-* **write_report**: A boolean option to determine whether or not to generate report plots and a group measure CSV ([see below](#generating-reports)).  If *True*, plots and a CSV will be produced; if *False*, QAP will not produce reports.
-* **write_graph**: A boolean option to determine whether or not to write a representation of the graph that corresponds to the workflow that will be applied to each of the subjects. If *True*, it uses the *write_graph()* function of nipype Workflows to save the corresponding graph in dot format.  Note that you will need to have grapviz/pygraphviz installed (see installation section above), otherwise you will receive an error.
+* **write_report (optional)**: A boolean option to determine whether or not to generate report plots and a group measure CSV ([see below](#generating-reports)).  If *True*, plots and a CSV will be produced; if *False*, QAP will not produce reports.
+* **write_graph (optional)**: A boolean option to determine whether or not to write a representation of the graph that corresponds to the workflow that will be applied to each of the subjects. If *True*, it uses the *write_graph()* function of nipype Workflows to save the corresponding graph in dot format.  Note that you will need to have grapviz/pygraphviz installed (see installation section above), otherwise you will receive an error.
+* **write_all_outputs (optional)**: A boolean option to determine whether or not all files used in the process of calculating the QAP measures will be saved to the output directory or not.  If *True*, all outputs will be saved.  If *False*, only the csv file containing the measures will be saved.
+
+### Cloud Settings (both types)
+
+* **upload_to_s3 (optional)**: If set to True, this will upload your output data to an Amazon Simple Storage Service bucket.  The exact location that the files will be located at in the bucket is dictated by the settings for `bucket_name` and `bucket_out_prefix`.
+* **bucket_prefix (optional)**: If you are downloading your input data from an Amazon Simple Storage Service bucket, this will specify the path within the bucket to pull the data from.
+* **bucket_out_prefix (optional)**: If you are saving the QAP pipeline outputs to an Amazon Simple Storage Service bucket, this will specify the path within the bucket to pull the data from.
+* **local_prefix (optional)**: The local path where input files are temporarily stored when pulled down from an Amazon Simple Storage Service bucket. 
+* **bucket_name (optional)**: The name of the Amazon Simple Storage Service bucket.
+* **creds_path (optional)**: The local path to the AWS credentials you will use to upload to a bucket.
 
 ### Anatomical pipelines
 
+# TODO Figure out if template_brain_for_anat is still valid or if it's been deprecated.
 * **template_brain_for_anat**: Template brain to be used during anatomical registration, as a reference.
+* **template_skull_for_anat**: Template brain to be used during anatomical registration, as a reference.
+* **exclude_zeros (optional) **: If set to True, this option will exlcude zero-valued voxels from the background of anatomical scans.  This is meant for images that have been manually altered (e.g., ears, faces removed to accommodate privacy concerns) where the empty space would skew the results of the metrics.
 
 ### Functional pipelines
 
-* **start_idx**: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the first timepoint you wish to include in the analysis. Enter *0* to include the first volume.          
-* **stop_idx**: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the last timepoint you wish to include in the analysis. Enter *End* to include the final volume. Enter *0* in start_idx and *End* in stop_idx to include the entire timeseries. 
-* **slice_timing_correction**: Whether or not to run slice timing correction - *True* or *False*. Interpolates voxel timeseries so that sampling occurs at the same time.
-* **ghost_direction**: Allows you to specify the phase encoding (*x* - RL/LR, *y* - AP/PA, *z* - SI/IS, or *all*) used to acquire the scan.  Omitting this option will default to *y*.
+* **start_idx (optional)**: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the first timepoint you wish to include in the analysis. Enter *0* to include the first volume.          
+* **stop_idx (optional)**: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the last timepoint you wish to include in the analysis. Enter *End* to include the final volume. Enter *0* in start_idx and *End* in stop_idx to include the entire timeseries. 
+* **ghost_direction (optional)**: Allows you to specify the phase encoding (*x* - RL/LR, *y* - AP/PA, *z* - SI/IS, or *all*) used to acquire the scan.  Omitting this option will default to *y*.
 
 Make sure that you multiply *num_cores_per_subject* and *num_subjects_at_once* for the maximum amount of cores that could potentially be used during an anatomical or functional pipeline run.
 
@@ -292,14 +313,6 @@ Sun Grid Engine (SGE) allows you to parallelize your cloud analyses by having ea
 Note that the *mpi_smp* environment is created by the *cpac_sge* Starcluster plug-in mentioned earlier.  The *cpac_env.sh* script is a script containing all of the environmental variables used by AFNI and FSL.  If you opt to not use the C-PAC AMI, you will need to create a comparable script and have the batch script source it.  Submit the job to the SGE scheduler by typing:
 
     qsub {path to the text file}
-
-## Merging Outputs
-
-QAP generates outputs for each subject and session separately.  To view a comprehensive summary for all the measures for all the subjects, you will need to merge these separate outputs into a single file.  You can do this by running the following command:
-
-    qap_merge_outputs.py {path to qap output directory}
-
-`qap_merge_outputs.py` will automatically determine if you have calculated anatomical spatial, functional spatial or functional temporal measures.  The merged outputs will appear in a file named `qap_anatomical_spatial_{qap output directory name}.csv` in the directory from which the command is run.
 
 ## Generating Reports
 
