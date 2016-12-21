@@ -966,6 +966,7 @@ def _run_workflow(args):
     import nipype.interfaces.utility as util
 
     import qap
+    from qap.qap_workflows_utils import read_json
 
     import glob
 
@@ -1124,8 +1125,8 @@ def _run_workflow(args):
                     if ".json" in resource:
                         # load relevant json info into resource pool
                         json_file = op.join(output_dir, resource)
-                        json_dict = read_json_file(json_file)
-                        sub_json_dict = json_dict[(sub_id, session_id, scan_id)]
+                        json_dict = read_json(json_file)
+                        sub_json_dict = json_dict["%s %s %s" % (sub_id, session_id, scan_id)]
 
                         if "anatomical_header_info" in sub_json_dict.keys():
                             resource_pool["anatomical_header_info"] = \
