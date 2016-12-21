@@ -397,11 +397,11 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
                   of the file assigned to the participant's data
     """
 
-    import nibabel
+    import nibabel as nb
     from qap.workflow_utils import raise_smart_exception
 
     try:
-        img = nibabel.load(in_file)
+        img = nb.load(in_file)
         img_header = img.header
     except:
         err = "You may not have an up-to-date installation of the Python " \

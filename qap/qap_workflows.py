@@ -296,6 +296,7 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
     from qap_workflows_utils import create_header_dict_entry, write_json
+    from workflow_utils import raise_smart_exception
 
     gather_header = pe.Node(niu.Function(
                              input_names=['in_file', 'subject', 'session', 'scan', 'type'],
@@ -315,8 +316,9 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
             gather_header.inputs.in_file = resource_pool["functional_scan"]
             gather_header.inputs.type = data_type
 
-    out_json = os.path.join(config['output_directory'], 
-                           'qap_%s.json' % data_type)
+    out_dir = op.join(config['output_directory'], config["run_name"], 
+        config["subject_id"], config["session_id"], config["scan_id"])
+    out_json = op.join(out_dir, "qap_%s.json" % data_type)
 
     header_to_json = pe.Node(niu.Function(
                                  input_names=["output_dict",
@@ -384,8 +386,6 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
       2. PlotMosaic() node (if enabled) to generate QC mosaic
       3. qap_anatomical_spatial_to_json function node to write/update numbers
          to the output JSON file
-      4. qap_anatomical_spatial_to_csv function node to populate the output
-         CSV file with data from the JSON file
     """
 
     import os
@@ -398,8 +398,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     from qap_workflows_utils import qap_anatomical_spatial, \
                                     write_json
     from qap.viz.interfaces import PlotMosaic
-    from qap_utils import json_to_csv
-    from workflow_utils import check_config_settings
+    from workflow_utils import check_config_settings, raise_smart_exception
 
     check_config_settings(config, "template_head_for_anat")
 
@@ -532,7 +531,9 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
 
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
-    out_json = op.join(config['output_directory'], 'qap_anatomical.json')
+    out_dir = op.join(config['output_directory'], config["run_name"], 
+        config["subject_id"], config["session_id"], config["scan_id"])
+    out_json = op.join(out_dir, "qap_anatomical.json")
 
     spatial_to_json = pe.Node(niu.Function(
                                   input_names=["output_dict",
@@ -543,16 +544,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     spatial_to_json.inputs.json_file = out_json
 
     workflow.connect(spatial, 'qc', spatial_to_json, 'output_dict')
-    resource_pool['qap_anatomical_spatial'] = out_json
-
-    # write/update CSV
-    json_to_csv = pe.Node(niu.Function(
-                                  input_names=["json_file"],
-                                  output_names=["csv_file"],
-                                  function=json_to_csv),
-                              name="qap_anatomical_spatial_to_csv%s" % name)
-    workflow.connect(spatial_to_json, 'json_file', json_to_csv, 'json_file')
-    resource_pool['anat_spat_csv'] = (json_to_csv, 'csv_file')
+    resource_pool['qap_anatomical_spatial'] = out_json #(spatial_to_json, 'json_file')
 
     return workflow, resource_pool
 
@@ -790,8 +782,6 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
       2. PlotMosaic() node (if enabled) to generate QC mosaic
       3. qap_functional_spatial_to_json function node to write/update numbers
          to the output JSON file
-      4. qap_functional_spatial_to_csv function node to populate the output
-         CSV file with data from the JSON file
     """
 
     import os
@@ -807,9 +797,8 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
     from qap_workflows_utils import qap_functional_spatial, \
                                     write_json
     from qap.viz.interfaces import PlotMosaic
-    from qap_utils import json_to_csv
 
-    from workflow_utils import check_input_resources
+    from workflow_utils import check_input_resources, raise_smart_exception
 
     if 'mean_functional' not in resource_pool.keys():
         from functional_preproc import mean_functional_workflow
@@ -883,8 +872,9 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
         #     plot.inputs.in_mask = resource_pool['functional_brain_mask']
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
-    out_json = op.join(
-        config['output_directory'], 'qap_functional.json')
+    out_dir = op.join(config['output_directory'], config["run_name"], 
+        config["subject_id"], config["session_id"], config["scan_id"])
+    out_json = op.join(out_dir, "qap_functional.json")
 
     spatial_epi_to_json = pe.Node(niu.Function(
                                   input_names=["output_dict",
@@ -896,17 +886,7 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
 
     workflow.connect(spatial_epi, 'qc', spatial_epi_to_json, 'output_dict')
 
-    resource_pool['qap_functional_spatial'] = (spatial_epi_to_json, 'json_file')
-
-    # write/update CSV
-    json_to_csv = pe.Node(niu.Function(
-                                  input_names=["json_file"],
-                                  output_names=["csv_file"],
-                                  function=json_to_csv),
-                              name="qap_functional_spatial_to_csv%s" % name)
-    workflow.connect(spatial_epi_to_json, 'json_file', 
-        json_to_csv, 'json_file')
-    resource_pool['func_spat_csv'] = (json_to_csv, 'csv_file')
+    resource_pool['qap_functional_spatial'] = out_json #(spatial_epi_to_json, 'json_file')
 
     return workflow, resource_pool
 
@@ -1143,8 +1123,6 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
       3. PlotMosaic() node (if enabled) to generate QC mosaic
       4. qap_functional_temporal_to_json function node to write/update numbers
          to the output JSON file
-      5. qap_functional_temporal_to_csv function node to populate the output
-         CSV file with data from the JSON file
     """
 
     import os
@@ -1159,7 +1137,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
                                     write_json
     from temporal_qc import fd_jenkinson
     from qap.viz.interfaces import PlotMosaic, PlotFD
-    from qap_utils import json_to_csv
+    from workflow_utils import raise_smart_exception
 
     def _getfirst(inlist):
         if isinstance(inlist, list):
@@ -1266,8 +1244,9 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         workflow.connect(fd, 'out_file', fdplot, 'in_file')
         resource_pool['qap_fd'] = (fdplot, 'out_file')
 
-    out_json = op.join(
-        config['output_directory'], 'qap_functional.json')
+    out_dir = op.join(config['output_directory'], config["run_name"], 
+        config["subject_id"], config["session_id"], config["scan_id"])
+    out_json = op.join(out_dir, "qap_functional.json")
 
     temporal_to_json = pe.Node(niu.Function(
                                   input_names=["output_dict",
@@ -1278,16 +1257,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     temporal_to_json.inputs.json_file = out_json
 
     workflow.connect(temporal, 'qc', temporal_to_json, 'output_dict')
-    resource_pool['qap_functional_temporal'] = (temporal_to_json, 'json_file')
-
-    # write/update CSV
-    json_to_csv = pe.Node(niu.Function(
-                                  input_names=["json_file"],
-                                  output_names=["csv_file"],
-                                  function=json_to_csv),
-                              name="qap_functional_temporal_to_csv%s" % name)
-    workflow.connect(temporal_to_json, 'json_file', json_to_csv, 'json_file')
-    resource_pool['func_temp_csv'] = (json_to_csv, 'csv_file')
+    resource_pool['qap_functional_temporal'] = out_json #(temporal_to_json, 'json_file')
 
     return workflow, resource_pool
 

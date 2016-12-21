@@ -122,8 +122,8 @@ class QAProtocolCLI:
         if args.with_reports:
             self._config['write_report'] = True
 
-        if "num_subjects_per_bundle" not in self._config.keys():
-            self._config["num_subjects_per_bundle"] = 1
+        if "num_participants_at_once" not in self._config.keys():
+            self._config["num_participants_at_once"] = 1
 
         if "num_bundles_at_once" not in self._config.keys():
             self._config["num_bundles_at_once"] = 1
@@ -419,7 +419,7 @@ class QAProtocolCLI:
         i = 0
         bundles = []
 
-        if len(flat_sub_dict_dict) < self._num_subjects_per_bundle:
+        if len(flat_sub_dict_dict) < self._num_participants_at_once:
             bundles.append(flat_sub_dict_dict)
         else:
             for sub_info_tuple in flat_sub_dict_dict.keys():
@@ -427,7 +427,7 @@ class QAProtocolCLI:
                     new_bundle = {}
                 new_bundle[sub_info_tuple] = flat_sub_dict_dict[sub_info_tuple]
                 i += 1
-                if i == self._num_subjects_per_bundle:
+                if i == self._num_participants_at_once:
                     bundles.append(new_bundle)
                     i = 0
 
@@ -499,10 +499,10 @@ class QAProtocolCLI:
                 #       subjects 9-12 from the s3_dict_yml
 
                 first_subj_idx = \
-                    (bundle_idx-1)*self._config["num_subjects_per_bundle"] + 1
+                    (bundle_idx-1)*self._config["num_participants_at_once"] + 1
 
                 last_subj_idx = \
-                    first_subj_idx + self._config["num_subjects_per_bundle"]
+                    first_subj_idx + self._config["num_participants_at_once"]
 
                 for idx in range(first_subj_idx, last_subj_idx):
                     single_sub_dict = dl_subj_from_s3(idx, self._config["pipeline_config_yaml"], \
@@ -553,10 +553,10 @@ class QAProtocolCLI:
             if bundle_idx:
 
                 first_subj_idx = \
-                    (bundle_idx-1)*self._config["num_subjects_per_bundle"] + 1
+                    (bundle_idx-1)*self._config["num_participants_at_once"] + 1
 
                 last_subj_idx = \
-                    first_subj_idx + self._config["num_subjects_per_bundle"]
+                    first_subj_idx + self._config["num_participants_at_once"]
 
                 for idx in range(first_subj_idx, last_subj_idx):
 
@@ -743,13 +743,13 @@ class QAProtocolCLI:
         # Get configurations and settings
         config = self._config
         check_config_settings(config, "num_processors")
-        check_config_settings(config, "num_subjects_per_bundle")
-        check_config_settings(config, "memory_allocated")
+        check_config_settings(config, "num_participants_at_once")
+        check_config_settings(config, "memory_allocated_per_participant")
         check_config_settings(config, "output_directory")
         check_config_settings(config, "working_directory")
 
         self._num_processors = config["num_processors"]
-        self._num_subjects_per_bundle = config.get('num_subjects_per_bundle', 1)
+        self._num_participants_at_once = config.get('num_participants_at_once', 1)
         self._num_bundles_at_once = 1
         write_report = config.get('write_report', False)
 
@@ -811,7 +811,9 @@ class QAProtocolCLI:
         # settle run arguments (plugins)
         self.runargs = {}
         self.runargs['plugin'] = 'MultiProc'
-        self.runargs['plugin_args'] = {'memory_gb': config["memory_allocated"], \
+        memory_for_entire_run = \
+            int(config["memory_allocated_per_participant"] * config["num_participants_at_once"])
+        self.runargs['plugin_args'] = {'memory_gb': memory_for_entire_run, \
                                        'status_callback': log_nodes_cb}
         n_procs = {'n_procs': self._num_processors}
         self.runargs['plugin_args'].update(n_procs)
@@ -833,7 +835,7 @@ class QAProtocolCLI:
                 import math
 
                 # get num_bundles
-                bundle_size = self._config["num_subjects_per_bundle"]
+                bundle_size = self._config["num_participants_at_once"]
 
                 with open(self._s3_dict_yml,"r") as f:
                     s3_dict = yaml.load(f)
@@ -843,7 +845,7 @@ class QAProtocolCLI:
                 num_bundles = int(math.ceil(num_bundles))
 
                 if num_bundles == 1:
-                    self._config["num_subjects_per_bundle"] = len(s3_dict)
+                    self._config["num_participants_at_once"] = len(s3_dict)
 
                 logger.info("Running locally, pulling data from S3 - %d " \
                             "bundles" % num_bundles)
@@ -856,7 +858,7 @@ class QAProtocolCLI:
             import math
 
             # get num_bundles
-            bundle_size = self._config["num_subjects_per_bundle"]
+            bundle_size = self._config["num_participants_at_once"]
 
             if self._s3_dict_yml:
 
@@ -879,9 +881,9 @@ class QAProtocolCLI:
 
             if num_bundles == 1:
                 if self._s3_dict_yml:
-                    self._config["num_subjects_per_bundle"] = len(s3_dict)
+                    self._config["num_participants_at_once"] = len(s3_dict)
                 if self._config["subject_list"]:
-                    self._config["num_subjects_per_bundle"] = \
+                    self._config["num_participants_at_once"] = \
                         len(flat_sub_dict_dict)
 
             batch_file_contents, batch_filepath, exec_cmd, \
@@ -977,7 +979,7 @@ def _run_workflow(args):
     # Read and apply general settings in config
     keep_outputs = config.get('write_all_outputs', False)
 
-    num_subjects_per_bundle = config.get('num_subjects_per_bundle',1)
+    num_participants_at_once = config.get('num_participants_at_once',1)
 
     log_dir = op.join(config["output_directory"], run_name)
 
@@ -1212,6 +1214,8 @@ def _run_workflow(args):
                 ds.inputs.base_directory = output_dir
                 node, out_file = resource_pool[output]
                 workflow.connect(node, out_file, ds, output)
+                new_outputs += 1
+            elif ".json" in resource_pool[output]:
                 new_outputs += 1
 
         rt = {'id': sub_id, 'session': session_id, 'scan': scan_id,

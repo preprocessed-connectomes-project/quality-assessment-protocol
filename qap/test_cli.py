@@ -257,7 +257,7 @@ def test_create_bundles_one_sub_per_bundle():
     from qap import cli
 
     cli_obj = init_cli_obj()
-    cli_obj._num_subjects_per_bundle = 1
+    cli_obj._num_participants_at_once = 1
 
     flat_sub_dict_dict = init_flat_sub_dict_dict()
 
@@ -268,7 +268,7 @@ def test_create_bundles_one_sub_per_bundle():
     assert len(bundles) == 4
 
     # how many sub-session-scans should be in each bundle
-    assert len(bundles[0]) == cli_obj._num_subjects_per_bundle
+    assert len(bundles[0]) == cli_obj._num_participants_at_once
 
 
 @pytest.mark.quick
@@ -277,7 +277,7 @@ def test_create_bundles_two_subs_per_bundle():
     from qap import cli
 
     cli_obj = init_cli_obj()
-    cli_obj._num_subjects_per_bundle = 2
+    cli_obj._num_participants_at_once = 2
 
     flat_sub_dict_dict = init_flat_sub_dict_dict()
 
@@ -288,7 +288,7 @@ def test_create_bundles_two_subs_per_bundle():
     assert len(bundles) == 2
 
     # how many sub-session-scans should be in each bundle
-    assert len(bundles[0]) == cli_obj._num_subjects_per_bundle
+    assert len(bundles[0]) == cli_obj._num_participants_at_once
 
 
 @pytest.mark.quick
@@ -297,7 +297,7 @@ def test_create_bundles_six_subs_per_bundle():
     from qap import cli
 
     cli_obj = init_cli_obj()
-    cli_obj._num_subjects_per_bundle = 6
+    cli_obj._num_participants_at_once = 6
 
     flat_sub_dict_dict = init_flat_sub_dict_dict()
 

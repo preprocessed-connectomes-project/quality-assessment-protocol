@@ -597,6 +597,109 @@ def create_subdict_from_s3_list(s3_list, bucket_prefix, session_list=None,
     return s3_dict
 
 
+def gather_json_info(output_dir):
+    """Extract the dictionaries from the JSON output files and merge them into
+    one dictionary.
+
+    Parameters: ::
+      output_dir : [string]
+        the path to the main output directory of the QAP run
+
+    Returns: ::
+      json_dict : [dictionary]
+        the output data of the QAP run keyed by participant-session-scan
+    """
+
+    import os
+    from qap.qap_workflows_utils import read_json
+
+    json_dict = {}
+
+    for root, dirs, files in os.walk(os.path.abspath(output_dir)):
+        for filename in files:
+            if ".json" in filename:
+                filepath = os.path.join(root,filename)
+                temp_dict = read_json(filepath)
+                json_dict.update(temp_dict)
+
+    return json_dict
+
+    
+def json_to_csv(json_dict, csv_output_dir=None):
+    """Extract the data from the JSON output file and write it to a CSV file.
+
+    Keyword arguments:
+      json_dict -- [dictionary] dictionary containing all of the JSON output
+                   information from the QAP run
+      csv_output_dir -- [string] (default: None) path to the directory to 
+                        write the CSV file into
+
+    Returns:
+      csv_file -- [string] the CSV file path
+    """
+
+    import os
+    import simplejson
+    import pandas as pd
+    from qap.workflow_utils import raise_smart_exception
+
+    qap_types = ["anatomical_spatial",
+                 "functional_spatial",
+                 "functional_temporal"]
+
+    output_dict = {}
+
+    for sub_sess_scan in json_dict.keys():
+        # flatten the JSON dict
+        sub_json_dict = json_dict[sub_sess_scan]
+        header_dict = {}
+        qap_dict = {}
+
+        try:
+            header_dict = sub_json_dict["anatomical_header_info"]
+        except KeyError:
+            pass
+
+        try:
+            header_dict = sub_json_dict["functional_header_info"]
+        except KeyError:
+            pass
+
+        for qap_type in qap_types:
+            try:
+                qap_dict = sub_json_dict[qap_type]
+            except KeyError:
+                continue
+
+            for key in sub_json_dict.keys():
+                if "anatomical" not in key and "functional" not in key:
+                    qap_dict[key] = sub_json_dict[key]
+
+            qap_dict.update(header_dict)
+
+            try:
+                output_dict[qap_type].append(qap_dict)
+            except KeyError:
+                output_dict[qap_type] = [qap_dict]
+
+    for qap_type in output_dict.keys():
+
+        json_df = pd.DataFrame(output_dict[qap_type])
+        json_df.sort_values(by=["Participant","Session","Series"],
+                            inplace=True)
+        if not csv_output_dir:
+            csv_output_dir = os.getcwd()
+        csv_file = os.path.join(csv_output_dir, "qap_%s.csv" % qap_type)
+
+        try:
+            json_df.to_csv(csv_file)
+        except:
+            err = "Could not write CSV file!\nCSV file: %s" % csv_file
+            raise_smart_exception(locals(),err)
+
+    return csv_file
+
+
 def create_CPAC_outputs_dict(cpac_outdir, qap_type, session_format):
 
     # for script 'qap_cpac_output_sublist_generator.py'
