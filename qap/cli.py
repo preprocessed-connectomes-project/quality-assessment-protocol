@@ -9,7 +9,7 @@ import time
 import argparse
 import yaml
 
-from nipype import config 
+from nipype import config
 log_dir=os.path.join("tmp","nipype","logs")
 config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
 
@@ -466,8 +466,9 @@ class QAProtocolCLI:
 
         self._sub_dict = {}
 
-        if self._bundle_idx and (not bundle_idx):
-            bundle_idx = self._bundle_idx
+        if not bundle_idx:
+            if self._bundle_idx:
+                bundle_idx = self._bundle_idx
 
         # if the user is using S3 storage, download the bundle or subject
         if self._s3_dict_yml:
@@ -509,10 +510,18 @@ class QAProtocolCLI:
                                                            self._s3_dict_yml)
                     self._sub_dict.update(single_sub_dict)
 
+                wfargs = (self._sub_dict, self._sub_dict.keys(), \
+                          self._config, run_name, self.runargs, \
+                          bundle_idx)
+
             elif self._subj_idx:
 
                 self._sub_dict = dl_subj_from_s3(self._subj_idx, \
                     self._config, self._s3_dict_yml)
+
+                wfargs = (self._sub_dict, self._sub_dict.keys(), \
+                          self._config, run_name, self.runargs, \
+                          self._subj_idx)
 
             if len(self._sub_dict) == 0:
                 err = "\n[!] Subject dictionary was not successfully " \
@@ -570,6 +579,10 @@ class QAProtocolCLI:
 
                     self._sub_dict.update(single_sub_dict)
 
+                wfargs = (self._sub_dict, self._sub_dict.keys(),
+                          self._config, run_name, self.runargs,
+                          bundle_idx)
+
             elif self._subj_idx:
 
                 # Get list of subject keys for indexing
@@ -579,10 +592,12 @@ class QAProtocolCLI:
                 # Grab subject dictionary of interest
                 subj_key = sd_keys[self._subj_idx-1]
                 self._sub_dict = flat_sub_dict_dict[subj_key]
+                wfargs = (self._sub_dict, self._sub_dict.keys(),
+                              self._config, run_name, self.runargs,
+                              self._subj_idx)
         
         # let's go!
-        rt = _run_workflow((self._sub_dict, self._sub_dict.keys(), \
-                               self._config, run_name, self.runargs))
+        rt = _run_workflow(wfargs)
     
         # make not uploading results to S3 bucket the default if not specified
         if "upload_to_s3" not in self._config.keys():
@@ -633,7 +648,7 @@ class QAProtocolCLI:
         #     one tuple for each bundle
         #     len(wfargs) = number of bundles
         wfargs = [(data_bundle, data_bundle.keys(), self._config, run_name,
-                   self.runargs) for data_bundle in bundles]
+                   self.runargs, idx) for idx, data_bundle in enumerate(bundles)]
 
         results = []
 
@@ -793,14 +808,13 @@ class QAProtocolCLI:
                 pass
 
         run_name = config['pipeline_name']
-
         results = None
 
         # set up callback logging
         import logging
         from nipype.pipeline.plugins.callback_log import log_nodes_cb
 
-        cb_log_filename = os.path.join(config["output_directory"], \
+        cb_log_filename = os.path.join(config["output_directory"],
                                        "callback.log")
         # Add handler to callback log file
         cb_logger = logging.getLogger('callback')
@@ -813,17 +827,19 @@ class QAProtocolCLI:
         self.runargs['plugin'] = 'MultiProc'
         memory_for_entire_run = \
             int(config["memory_allocated_per_participant"] * config["num_participants_at_once"])
-        self.runargs['plugin_args'] = {'memory_gb': memory_for_entire_run, \
+        self.runargs['plugin_args'] = {'memory_gb': memory_for_entire_run,
                                        'status_callback': log_nodes_cb}
         n_procs = {'n_procs': self._num_processors}
         self.runargs['plugin_args'].update(n_procs)
 
         # Start the magic
         if self._cloudify:
-
+            # self._cloudify is set to True ONLY when the CLI is run given an S3_dict_yml AND
+            # either a bundle or subject idx
             results = self._run_one_bundle_on_node(run_name)
 
         elif not self._platform:
+            # run on something that isn't a cluster
 
             if self._config["subject_list"]:
 
@@ -853,6 +869,7 @@ class QAProtocolCLI:
                 self._run_here_from_s3(run_name, num_bundles)
 
         elif self._platform:
+            # run on a cluster/grid
 
             import yaml
             import math
@@ -935,7 +952,7 @@ def starter_node_func(starter):
     return starter
 
 
-def _run_workflow(args):
+def _run_workflow(args, run=True):
     """Connect and execute the QAP Nipype workflow for one bundle of data.
 
     Keyword Arguments:
@@ -958,12 +975,10 @@ def _run_workflow(args):
 
     import os
     import os.path as op
-    import sys
 
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
-    import nipype.interfaces.utility as util
 
     import qap
     from qap.qap_workflows_utils import read_json
@@ -974,15 +989,16 @@ def _run_workflow(args):
     from time import strftime
     from nipype import config as nyconfig
 
+    os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = "/Users/steven.giavasis/abin"
+
     # unpack args
-    resource_pool_dict, sub_info_list, config, run_name, runargs = args
+    resource_pool_dict, sub_info_list, config, run_name, runargs, bundle_idx = args
 
     # Read and apply general settings in config
     keep_outputs = config.get('write_all_outputs', False)
 
-    num_participants_at_once = config.get('num_participants_at_once',1)
-
-    log_dir = op.join(config["output_directory"], run_name)
+    log_dir = op.join(config['output_directory'], '_'.join([run_name, "logs"]), \
+                      '_'.join(["bundle", str(bundle_idx)]))
 
     try:
         os.makedirs(log_dir)
@@ -1015,9 +1031,6 @@ def _run_workflow(args):
     workflow.config['execution'] = \
         {'crashdump_dir': config["output_directory"]}
 
-    # individual workflow and logger setup
-    logger.info("Contents of resource pool:\n%s" % str(resource_pool_dict))
-
     # create the one node all participants will start from
     starter_node = pe.Node(niu.Function(input_names=['starter'], 
                                         output_names=['starter'], 
@@ -1030,6 +1043,7 @@ def _run_workflow(args):
     new_outputs = 0
 
     # iterate over each subject in the bundle
+    logger.info("Starting bundle %s.." % str(bundle_idx))
     for sub_info in sub_info_list:
 
         resource_pool = resource_pool_dict[sub_info]
@@ -1085,6 +1099,8 @@ def _run_workflow(args):
             scan_id = "scan_0"
 
         name = "_".join(["", sub_id, session_id, scan_id])
+
+        logger.info("Participant info: %s" % name)
 
         # set output directory
         output_dir = op.join(config["output_directory"], run_name,
@@ -1148,6 +1164,9 @@ def _run_workflow(args):
         # the bundle together as a Nipype pipeline
         resource_pool["starter"] = (starter_node, 'starter')
 
+        # individual workflow and logger setup
+        logger.info("Contents of resource pool for this participant:\n%s" % str(resource_pool))
+
         # start connecting the pipeline
         qw = None
         for qap_type in qap_types:
@@ -1186,6 +1205,8 @@ def _run_workflow(args):
         # just the final JSON files)
         if keep_outputs:
             out_list = resource_pool.keys()
+        logger.info("Outputs we're keeping: %s" % str(out_list))
+        logger.info('Resource pool keys after workflow connection: {}'.format(str(resource_pool.keys())))
 
         # Save reports to out_dir if necessary
         if config.get('write_report', False):
@@ -1222,6 +1243,8 @@ def _run_workflow(args):
         rt = {'id': sub_id, 'session': session_id, 'scan': scan_id,
               'status': 'started'}
 
+    logger.info("New outputs: %s" % str(new_outputs))
+
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
         if config.get('write_graph', False):
@@ -1239,19 +1262,24 @@ def _run_workflow(args):
                 dotfilename=op.join(config["output_directory"], \
                                     "".join([run_name, ".dot"])),
                 simple_form=False)
-        try:
-            logger.info("Running with plugin %s" % runargs["plugin"])
-            logger.info("Using plugin args %s" % runargs["plugin_args"])
-            workflow.run(plugin=runargs["plugin"], \
-                         plugin_args=runargs["plugin_args"])
-            rt['status'] = 'finished'
-        except Exception as e:  # TODO We should be more specific here ...
-            rt.update({'status': 'failed', 'msg': e})
-            # ... however this is run inside a pool.map: do not raise Exception
+        if run:
+            try:
+                logger.info("Running with plugin %s" % runargs["plugin"])
+                logger.info("Using plugin args %s" % runargs["plugin_args"])
+                workflow.run(plugin=runargs["plugin"],
+                             plugin_args=runargs["plugin_args"])
+                rt['status'] = 'finished'
+                logger.info("Workflow run finished for bundle %s." % str(bundle_idx))
+            except Exception as e:  # TODO We should be more specific here ...
+                rt.update({'status': 'failed', 'msg': e})
+                logger.info("Workflow run failed for bundle %s." % str(bundle_idx))
+                # ... however this is run inside a pool.map: do not raise Exception
+        else:
+            return workflow
 
     else:
         rt['status'] = 'cached'
-        logger.info("\nEverything is already done for subject %s." % sub_id)
+        logger.info("\nEverything is already done for bundle %s." % str(bundle_idx))
 
     # Remove working directory when done
     if not keep_outputs:

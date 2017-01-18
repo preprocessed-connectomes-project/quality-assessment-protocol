@@ -20,6 +20,8 @@ def main():
           packages=['qap', 'qap.viz'],
           package_data={'qap': ['inpoint*.txt',
                                 'viz/html/*.html',
+                                'test_data/input_data/site_1/sub_001/session_01/anatomical_scan/anat_1/*.nii.gz',
+                                'test_data/input_data/site_1/sub_001/session_02/anatomical_scan/anat_1/*.nii.gz',
                                 'test_data/*.nii.gz',
                                 'test_data/*.dot',
                                 'test_data/*.1D',

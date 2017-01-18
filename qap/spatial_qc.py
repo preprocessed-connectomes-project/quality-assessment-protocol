@@ -330,18 +330,22 @@ def fwhm(anat_file, mask_file, out_vox=False):
           https://afni.nimh.nih.gov/pub/dist/doc/program_help/3dFWHMx.html
     """
 
-    import commands
     import nibabel as nib
     import numpy as np
     from scipy.special import cbrt
-    
-    # call AFNI command to get the FWHM in x,y,z and combined
-    cmd     = "3dFWHMx -combined -mask %s -input %s" % (mask_file, anat_file)
-    out     = commands.getoutput(cmd)
-    
+
+    import subprocess
+
+    fwhm_string_list = ["3dFWHMx", "-combined", "-mask", mask_file, "-input", anat_file]
+    try:
+        retcode = subprocess.check_output(fwhm_string_list)
+    except Exception as e:
+        err = "\n\n[!] Something went wrong with AFNI's 3dFWHMx. Error " \
+              "details: %s\n\n" % e
+        raise Exception(err)
+
     # extract output
-    line    = out.splitlines()[-1].strip()
-    vals    = np.array(line.split(), dtype=np.float)
+    vals = np.array(retcode.split(), dtype=np.float)
     
     if out_vox:
         # get pixel dimensions

@@ -192,11 +192,8 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
     """
 
     import os
-    import sys
     import copy
-    import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
-    import nipype.interfaces.utility as util
 
     from nipype.interfaces.afni import preprocess
 
@@ -265,8 +262,6 @@ def run_anatomical_skullstrip(anatomical_reorient, out_dir=None, run=True):
     """
 
     import os
-    import sys
-
     import glob
 
     import nipype.interfaces.io as nio

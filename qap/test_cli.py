@@ -11,16 +11,20 @@ def test_cli():
 
 @pytest.mark.quick
 def init_cli_obj():
+    # type: () -> object
 
     import os
     from qap import cli
 
-    out_dir = os.path.join(os.getcwd(), "unit_tests_cli")
+    out_dir = os.path.join(os.getcwd(), "unit_tests_cli", "out")
+    work_dir = os.path.join(os.getcwd(), "unit_tests_cli", "work")
 
     cli_obj = cli.QAProtocolCLI(parse_args=False)
     cli_obj._config = {}
     cli_obj._config["output_directory"] = out_dir
+    cli_obj._config["working_directory"] = work_dir
     cli_obj._config["qap_type"] = "anatomical_spatial"
+    cli_obj._config["template_head_for_anat"] = "/Library/Python/2.7/site-packages/qap-1.0.8-py2.7.egg/qap/test_data/MNI152_T1_3MM.nii.gz"
     cli_obj._num_processors = 4
 
     return cli_obj
@@ -102,8 +106,8 @@ def test_prepare_cluster_batch_file_for_SGE_with_sublist():
 
     cli_obj = init_cli_obj()
 
-    cli_obj._config["pipeline_config_yaml"] = os.path.join(out_dir, \
-    	"pipeline_config.yml")
+    cli_obj._config["pipeline_config_yaml"] = os.path.join(out_dir,
+                                                           "pipeline_config.yml")
     cli_obj._config["subject_list"] = \
         os.path.join(out_dir, "participant_list.yml")
     cli_obj._s3_dict_yml = None
@@ -311,3 +315,46 @@ def test_create_bundles_six_subs_per_bundle():
     #   number of sub-session-scans less than "num subs per bundle", so should
     #   just be the total number of sub-session-scans
     assert len(bundles[0]) == 4
+
+
+@pytest.mark.quick
+def test_run_workflow_build_only():
+
+    import os
+    from qap import cli
+    import pkg_resources as p
+
+    anat_scan_1 = p.resource_filename("qap", os.path.join("test_data", "input_data", "site_1",
+                                                        "sub_001", "session_01", "anatomical_scan",
+                                                        "anat_1", "anat.nii.gz"))
+    anat_scan_2 = p.resource_filename("qap", os.path.join("test_data", "input_data", "site_1",
+                                                        "sub_001", "session_02", "anatomical_scan",
+                                                        "anat_1", "anat.nii.gz"))
+
+    one_bundle = {('sub_001', 'session_01', 'anat_1'): {'anatomical_scan': anat_scan_1},
+                  ('sub_001', 'session_02', 'anat_1'): {'anatomical_scan': anat_scan_2}}
+
+    run_name = "test_run_workflow"
+    run_args = {'plugin': 'MultiProc'}
+    bundle_idx = 1
+
+    cli_obj = init_cli_obj()
+
+    args = (one_bundle, one_bundle.keys(), cli_obj._config, run_name, run_args, bundle_idx)
+
+    workflow = cli._run_workflow(args, False)
+
+    node_names = workflow.list_node_names()
+
+    terminal_nodes = [
+        'gather_header_info_sub_001_session_01_anat_1',
+        'gather_header_info_sub_001_session_02_anat_1',
+        'qap_anatomical_spatial_sub_001_session_01_anat_1',
+        'qap_anatomical_spatial_sub_001_session_02_anat_1',
+        'qap_anatomical_spatial_to_json_sub_001_session_01_anat_1',
+        'qap_anatomical_spatial_to_json_sub_001_session_02_anat_1',
+        'qap_header_to_json_sub_001_session_01_anat_1',
+        'qap_header_to_json_sub_001_session_02_anat_1']
+
+    for node in terminal_nodes:
+        assert node in node_names

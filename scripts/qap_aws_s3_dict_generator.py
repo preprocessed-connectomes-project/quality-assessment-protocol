@@ -16,13 +16,13 @@ def main():
                             help="the filepath prefix to the top level of " \
                                  "your raw data directory on S3 storage")
  
-    parser.add_argument("creds_path", type=str, \
-                            help="the path to the file containing your AWS " \
-                                 "credentials")
-
     parser.add_argument("outfile_path", type=str, \
                             help="the full filepath for the S3 subject " \
                                  "YAML dictionary this script will create")
+
+    parser.add_argument("--creds_path", type=str, \
+                            help="the path to the file containing your AWS " \
+                                 "credentials")
 
     parser.add_argument('--include_sites', action='store_true', \
                             help="include this flag if you wish to include " \

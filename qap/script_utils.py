@@ -382,7 +382,7 @@ def gather_custom_raw_data(filepath_list, base_folder, directory_format,
     return data_dict
 
 
-def pull_s3_sublist(bucket_name, bucket_prefix, creds_path):
+def pull_s3_sublist(bucket_name, bucket_prefix, creds_path=None):
     """Create a list of filepaths stored on the Amazon S3 bucket.
 
     Keyword Arguments:
@@ -399,7 +399,8 @@ def pull_s3_sublist(bucket_name, bucket_prefix, creds_path):
     import os
     from indi_aws import fetch_creds
 
-    creds_path = os.path.abspath(creds_path)
+    if creds_path:
+        creds_path = os.path.abspath(creds_path)
 
     s3_list = []
     bucket = fetch_creds.return_bucket(creds_path, bucket_name)
@@ -496,7 +497,7 @@ def create_subdict_from_s3_list(s3_list, bucket_prefix, session_list=None,
             if "task-" in scan_id:
                 scan_id = scan_id.replace("task-","")
             if "__" in scan_id:
-                scan_id = scan_id.replace("__","")          
+                scan_id = scan_id.replace("__","")
 
             if scan_type == "anat":
                 # this requirement is subject to change with the BIDS spec!!
