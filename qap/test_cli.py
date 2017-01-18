@@ -278,8 +278,6 @@ def test_create_bundles_one_sub_per_bundle():
 @pytest.mark.quick
 def test_create_bundles_two_subs_per_bundle():
 
-    from qap import cli
-
     cli_obj = init_cli_obj()
     cli_obj._num_participants_at_once = 2
 
@@ -298,8 +296,6 @@ def test_create_bundles_two_subs_per_bundle():
 @pytest.mark.quick
 def test_create_bundles_six_subs_per_bundle():
 
-    from qap import cli
-
     cli_obj = init_cli_obj()
     cli_obj._num_participants_at_once = 6
 
@@ -315,6 +311,23 @@ def test_create_bundles_six_subs_per_bundle():
     #   number of sub-session-scans less than "num subs per bundle", so should
     #   just be the total number of sub-session-scans
     assert len(bundles[0]) == 4
+
+
+@pytest.mark.quick
+def test_get_num_bundles():
+
+    cli_obj = init_cli_obj()
+    cli_obj._config["num_participants_at_once"] = 2
+    size_of_sublist = 5
+
+    num_bundles = cli_obj._get_num_bundles(size_of_sublist)
+    assert num_bundles == 3
+
+    cli_obj._config["num_participants_at_once"] = 7
+    size_of_sublist = 5
+
+    num_bundles = cli_obj._get_num_bundles(size_of_sublist)
+    assert num_bundles == 1
 
 
 @pytest.mark.quick

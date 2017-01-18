@@ -441,6 +441,18 @@ class QAProtocolCLI:
         return bundles
 
 
+    def _get_num_bundles(self, sub_dict_size):
+
+        import math
+
+        bundle_size = self._config["num_participants_at_once"]
+        num_bundles = float(sub_dict_size) / float(bundle_size)
+        # round up if it is a float
+        num_bundles = int(math.ceil(num_bundles))
+
+        return num_bundles
+
+
     def _run_one_bundle_on_node(self, run_name, bundle_idx=None):
         """Execute one bundle's workflow on one node/slot of a cluster/grid.
 
@@ -851,14 +863,10 @@ class QAProtocolCLI:
                 import math
 
                 # get num_bundles
-                bundle_size = self._config["num_participants_at_once"]
-
                 with open(self._s3_dict_yml,"r") as f:
                     s3_dict = yaml.load(f)
 
-                num_bundles = float(len(s3_dict)) / float(bundle_size)
-                # round up if it is a float
-                num_bundles = int(math.ceil(num_bundles))
+                num_bundles = self._get_num_bundles(len(s3_dict))
 
                 if num_bundles == 1:
                     self._config["num_participants_at_once"] = len(s3_dict)
@@ -872,17 +880,14 @@ class QAProtocolCLI:
             # run on a cluster/grid
 
             import yaml
-            import math
 
             # get num_bundles
-            bundle_size = self._config["num_participants_at_once"]
-
             if self._s3_dict_yml:
 
                 with open(self._s3_dict_yml,"r") as f:
                     s3_dict = yaml.load(f)
 
-                num_bundles = float(len(s3_dict)) / float(bundle_size)
+                num_bundles = self._get_num_bundles(len(s3_dict))
 
             elif self._config["subject_list"]:
 
@@ -890,11 +895,7 @@ class QAProtocolCLI:
                 subdict = self._load_sublist()
                 flat_sub_dict_dict = self.create_flat_sub_dict_dict(subdict)
 
-                num_bundles = \
-                    float(len(flat_sub_dict_dict)) / float(bundle_size)
-
-            # round up if it is a float
-            num_bundles = int(math.ceil(num_bundles))
+                num_bundles = self._get_num_bundles(len(flat_sub_dict_dict))
 
             if num_bundles == 1:
                 if self._s3_dict_yml:
@@ -907,7 +908,7 @@ class QAProtocolCLI:
                    confirm_str, cluster_files_dir = \
                    self._prepare_cluster_batch_file(run_name, num_bundles)
 
-            self._run_on_cluster(batch_file_contents, batch_filepath, \
+            self._run_on_cluster(batch_file_contents, batch_filepath,
                                      exec_cmd, confirm_str, cluster_files_dir)
 
         # PDF reporting
