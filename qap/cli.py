@@ -419,7 +419,7 @@ class QAProtocolCLI:
         i = 0
         bundles = []
 
-        if len(flat_sub_dict_dict) < self._num_participants_at_once:
+        if len(flat_sub_dict_dict) < self._config["num_participants_at_once"]:
             bundles.append(flat_sub_dict_dict)
         else:
             for sub_info_tuple in flat_sub_dict_dict.keys():
@@ -427,7 +427,7 @@ class QAProtocolCLI:
                     new_bundle = {}
                 new_bundle[sub_info_tuple] = flat_sub_dict_dict[sub_info_tuple]
                 i += 1
-                if i == self._num_participants_at_once:
+                if i == self._config["num_participants_at_once"]:
                     bundles.append(new_bundle)
                     i = 0
 
@@ -989,8 +989,6 @@ def _run_workflow(args, run=True):
     import time
     from time import strftime
     from nipype import config as nyconfig
-
-    os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = "/Users/steven.giavasis/abin"
 
     # unpack args
     resource_pool_dict, sub_info_list, config, run_name, runargs, bundle_idx = args
