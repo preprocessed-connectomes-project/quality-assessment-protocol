@@ -163,6 +163,36 @@ def dl_subj_from_s3(subj_idx, cfg_file, s3_dict_yaml):
     return sub_dict
 
 
+def download_single_s3_path(s3_path, cfg_dict):
+
+    import os
+    from indi_aws import fetch_creds, aws_utils
+
+    # Init variables
+    bucket_prefix = cfg_dict["bucket_prefix"]
+    local_prefix = cfg_dict["local_prefix"]
+    bucket_name = cfg_dict["bucket_name"]
+    creds_path = cfg_dict["creds_path"]
+
+    bucket = fetch_creds.return_bucket(creds_path, bucket_name)
+
+    if "s3://" in s3_path:
+        s3_prefix = s3_path.replace("s3://","")
+    if bucket_name in s3_prefix:
+        s3_prefix = s3_prefix.replace(bucket_name + "/", "")
+
+    local_dl = s3_prefix.replace(bucket_prefix, local_prefix)
+
+    if os.path.isfile(local_dl):
+        print "\nS3 bucket file already downloaded! Skipping download.\n"
+        print "S3 file: %s" % s3_path
+        print "Local file already exists: %s\n" % local_dl
+    else:
+        aws_utils.s3_download(bucket, ([s3_prefix], [local_dl]))
+
+    return local_dl
+
+
 def upl_qap_output(cfg_file):
     """Upload a pipeline output file back to the AWS S3 bucket.
 
@@ -203,5 +233,4 @@ def upl_qap_output(cfg_file):
                    for ufile in upl_files]
 
     aws_utils.s3_upload(bucket, (upl_files, s3_upl_files))
-
 

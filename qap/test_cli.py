@@ -50,9 +50,8 @@ def init_flat_sub_dict_dict():
     return ref_flat_dict
 
 
-@pytest.mark.skip()
 @pytest.mark.quick
-def test_prepare_cluster_batch_file_for_SGE_with_s3_dict():
+def test_submit_cluster_batch_file_for_SGE_s3_paths():
 
     import os
     import shutil
@@ -65,7 +64,7 @@ def test_prepare_cluster_batch_file_for_SGE_with_s3_dict():
 
     cli_obj = init_cli_obj()
 
-    cli_obj._s3_dict_yml = os.path.join(out_dir, "s3_dict_yml.yml")
+    cli_obj._config["subject_list"] = os.path.join(out_dir, "s3_sublist.yml")
     cli_obj._config["pipeline_config_yaml"] = os.path.join(out_dir, \
     	"pipeline_config.yml")
     cli_obj._platform = "SGE"
@@ -82,9 +81,9 @@ def test_prepare_cluster_batch_file_for_SGE_with_s3_dict():
     assert file_contents.split("\n")[3] == "#$ -N run_1"
     assert file_contents.split("\n")[4] == "#$ -t 1-5"
     assert file_contents.split("\n")[6] == "#$ -pe mpi_smp 4"
-    assert file_contents.split("\n")[14] == "qap_anatomical_spatial.py " \
-        "--s3_dict_yml %s --bundle_idx $SGE_TASK_ID %s" \
-        % (os.path.join(out_dir, "s3_dict_yml.yml"), \
+    assert file_contents.split("\n")[14] == "qap_measures_pipeline.py " \
+        "--bundle_idx $SGE_TASK_ID %s %s" \
+        % (os.path.join(out_dir, "s3_sublist.yml"),
            os.path.join(out_dir, "pipeline_config.yml"))
     assert exec_cmd == "qsub"
     assert confirm_str == "(?<=Your job-array )\d+"

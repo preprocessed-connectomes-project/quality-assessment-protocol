@@ -5,9 +5,7 @@
 
 import os
 import os.path as op
-import time
 import argparse
-import yaml
 
 from nipype import config
 log_dir=os.path.join("tmp","nipype","logs")
@@ -29,8 +27,6 @@ class QAProtocolCLI:
             self._parse_args()
         else:
             self._cloudify = False
-            self._s3_dict_yml = None
-            self._subj_idx = None
             self._bundle_idx = None
 
 
@@ -44,17 +40,12 @@ class QAProtocolCLI:
             "AWS Cloud Inputs (only required for AWS Cloud runs)")
         req = parser.add_argument_group("Required Inputs")
 
-        cloudgroup.add_argument('--subj_idx', type=int,
-                                help='Subject index to run')
         cloudgroup.add_argument('--bundle_idx', type=int,
                                 help='Bundle index to run')
-        cloudgroup.add_argument(
-            '--s3_dict_yml', type=str,
-            help='Path to YAML file containing S3 input filepaths dictionary')
 
         # Subject list (YAML file)
         group.add_argument(
-            "--sublist", type=str, help="filepath to subject list YAML")
+            "particlist", type=str, help="filepath to participant list YAML")
         req.add_argument(
             "config", type=str, help="filepath to pipeline configuration YAML")
 
@@ -65,59 +56,12 @@ class QAProtocolCLI:
 
         args = parser.parse_args()
 
-        # checks
-        if args.subj_idx and not args.s3_dict_yml and not args.sublist:
-            raise RuntimeError(
-                "\n[!] You provided --subj_idx, but not --s3_dict_yml. "
-                "When executing cloud-based runs, please provide both "
-                "inputs.\n")
-
-        if args.bundle_idx and not args.s3_dict_yml and not args.sublist:
-            raise RuntimeError(
-                "\n[!] You provided --bundle_idx, but not --s3_dict_yml. "
-                "When executing cloud-based runs, please provide both "
-                "inputs.\n")
-
-        elif not args.sublist and not args.subj_idx and not args.s3_dict_yml:
-            raise RuntimeError(
-                "\n[!] Either --sublist is required for regular runs, or "
-                "both --subj_idx and --s3_dict_yml for cloud-based runs.\n")
-
-        elif args.sublist and args.s3_dict_yml:
-            raise RuntimeError(
-                "\n[!] Either --sublist is required for regular runs, or "
-                "both --s3_dict_yml and either --subj_idx or --bundle_idx " \
-                "for cloud-based runs, but not all three. (I'm not sure " \
-                "which you are trying to do!)\n")
-
-        '''
-        elif args.s3_dict_yml and not args.sublist:
-            if not args.subj_idx and not args.bundle_idx:
-                raise RuntimeError(
-                    "\n[!] You provided --s3_dict_yml, but no --subj_idx or "\
-                    "--bundle_idx. When executing cloud-based runs, please " \
-                    "provide both required inputs.\n")
-            if args.subj_idx and args.bundle_idx:
-                raise RuntimeError(
-                    "\n[!] You provided both --subj_idx and --bundle_idx. " \
-                    "You only need one for the run.\n")
-        '''
-
-        '''
-        elif args.sublist and (args.subj_idx or args.bundle_idx or \
-            args.s3_dict_yml):
-            raise RuntimeError(
-                "\n[!] Either --sublist is required for regular runs, or "
-                "both --s3_dict_yml and either --subj_idx or --bundle_idx " \
-                "for cloud-based runs. (I'm not sure which you are trying " \
-                "to do!)\n")
-        '''
-
         # Load config
         from qap.script_utils import read_yml_file
         self._config = read_yml_file(args.config)
 
         self._config['pipeline_config_yaml'] = os.path.realpath(args.config)
+        self._run_name = self._config['pipeline_name']
 
         if args.with_reports:
             self._config['write_report'] = True
@@ -128,48 +72,18 @@ class QAProtocolCLI:
         if "num_bundles_at_once" not in self._config.keys():
             self._config["num_bundles_at_once"] = 1
 
-        self._cloudify = False
-
-        if args.s3_dict_yml and (args.subj_idx or args.bundle_idx):
-
-            # ---- Cloud-ify! ----
-            self._cloudify = True
-            self._s3_dict_yml = os.path.realpath(args.s3_dict_yml)
-            self._config["subject_list"] = None
-
-        elif args.s3_dict_yml:
-
-            # do this alone in case we are sending in an S3 dict YAML but no
-            # YAML entry indexes (like bundle_idx) - this happens when we
-            # first kick off a cluster run
-            self._s3_dict_yml = os.path.realpath(args.s3_dict_yml)
-            self._config["subject_list"] = None
-
-        elif args.sublist:
-
-            self._config["subject_list"] = os.path.realpath(args.sublist)
-            self._s3_dict_yml = None
-
-        else:
-            raise RuntimeError(
-                "\n[!] Arguments were parsed, but no appropriate run found")
+        self._config["subject_list"] = os.path.realpath(args.particlist)
 
         if args.bundle_idx:
-
             self._bundle_idx = args.bundle_idx
-            self._subj_idx = None
-
-        elif args.subj_idx:
-
-            self._subj_idx = args.subj_idx
+        else:
             self._bundle_idx = None
 
 
-    def _prepare_cluster_batch_file(self, run_name, num_bundles):
+    def _submit_cluster_batch_file(self, num_bundles):
         """Write the cluster batch file for the appropriate scheduler.
 
         Keyword Arguments:
-          run_name -- [string] the name of the pipeline or run being executed
           num_bundles -- [integer] the number of bundles total being run
 
         Returns:
@@ -183,7 +97,7 @@ class QAProtocolCLI:
               https://github.com/dclark87
           - This function will write the batch file appropriate for the 
             scheduler being used, and then this CLI will be run again on each
-            node/slot through the _run_one_bundle_on_node function.
+            node/slot through the _run_one_bundle function.
         """
 
         import os
@@ -199,9 +113,6 @@ class QAProtocolCLI:
         if not os.path.exists(cluster_files_dir):
             os.makedirs(cluster_files_dir)
 
-        #run_error_file = os.path.join(cluster_files_dir, "%s.err" % run_name)
-        #run_out_file = os.path.join(cluster_files_dir, "%s.out" % run_name)
-
         # Batch file variables
         timestamp = str(strftime("%Y_%m_%d_%H_%M_%S"))
         shell = commands.getoutput('echo $SHELL')
@@ -210,20 +121,13 @@ class QAProtocolCLI:
         # Set up config dictionary
         config_dict = {'timestamp' : timestamp,
                        'shell' : shell,
-                       'job_name' : run_name,
+                       'job_name' : self._run_name,
                        'num_tasks' : num_bundles,
                        'queue' : "all.q",
                        'par_env' : "mpi_smp",
                        'cores_per_task' : self._num_processors,
                        'user' : user_account,
                        'work_dir' : cluster_files_dir}
-
-        if self._s3_dict_yml:
-            subdict_arg = "--s3_dict_yml"
-            subdict = self._s3_dict_yml
-        elif self._config["subject_list"]:
-            subdict_arg = "--sublist"
-            subdict = self._config["subject_list"]
 
         # Get string template for job scheduler
         if self._platform == "PBS":
@@ -251,14 +155,13 @@ class QAProtocolCLI:
         # Populate string from config dict values
         batch_file_contents = batch_file_contents % config_dict
 
-        run_str = "qap_%s.py %s %s --bundle_idx %s %s" % \
-                      (self._config["qap_type"], \
-                       subdict_arg, subdict, env_arr_idx, \
+        run_str = "qap_measures_pipeline.py --bundle_idx %s %s %s" % \
+                      (env_arr_idx, self._config["subject_list"],
                        self._config["pipeline_config_yaml"])
 
         batch_file_contents = "\n".join([batch_file_contents, run_str])
 
-        batch_filepath = os.path.join(cluster_files_dir, 'cpac_submit_%s.%s' \
+        batch_filepath = os.path.join(cluster_files_dir, 'cpac_submit_%s.%s'
                                       % (timestamp, self._platform))
 
         with open(batch_filepath, 'w') as f:
@@ -280,7 +183,7 @@ class QAProtocolCLI:
             f.write(pid)
 
 
-    def create_flat_sub_dict_dict(self, subdict):
+    def _create_flat_sub_dict_dict(self, subdict):
         """Collapse the participant resource pools so that each participant-
         session-scan combination has its own entry.
 
@@ -400,7 +303,7 @@ class QAProtocolCLI:
         return subdict
 
 
-    def _create_bundles(self, flat_sub_dict_dict):
+    def _create_bundles(self):
         """Create a list of participant "bundles".
 
         Keyword Arguments:
@@ -419,13 +322,13 @@ class QAProtocolCLI:
         i = 0
         bundles = []
 
-        if len(flat_sub_dict_dict) < self._config["num_participants_at_once"]:
+        if len(self._sub_dict) < self._config["num_participants_at_once"]:
             bundles.append(flat_sub_dict_dict)
         else:
-            for sub_info_tuple in flat_sub_dict_dict.keys():
+            for sub_info_tuple in self._sub_dict.keys():
                 if i == 0:
                     new_bundle = {}
-                new_bundle[sub_info_tuple] = flat_sub_dict_dict[sub_info_tuple]
+                new_bundle[sub_info_tuple] = self._sub_dict[sub_info_tuple]
                 i += 1
                 if i == self._config["num_participants_at_once"]:
                     bundles.append(new_bundle)
@@ -441,305 +344,62 @@ class QAProtocolCLI:
         return bundles
 
 
-    def _get_num_bundles(self, sub_dict_size):
-
-        import math
-
-        bundle_size = self._config["num_participants_at_once"]
-        num_bundles = float(sub_dict_size) / float(bundle_size)
-        # round up if it is a float
-        num_bundles = int(math.ceil(num_bundles))
-
-        return num_bundles
-
-
-    def _run_one_bundle_on_node(self, run_name, bundle_idx=None):
+    def _run_one_bundle(self, bundle_idx):
         """Execute one bundle's workflow on one node/slot of a cluster/grid.
 
         Keyword Arguments:
-          run_name -- [string] the pipeline ID for identification
-          bundle_idx -- [integer] (default: None) the current bundle's index 
-                        in the list of bundles- only used when running this 
-                        manually
+          bundle_idx -- [integer] the bundle ID number - used to calculate
+                        which entries in the participant list to pull into
+                        the current bundle, based on the number of
+                        participants per bundle (participants at once)
 
         Returns:
-          rt -- [Python dictionary] a dictionary with information about the 
+          rt -- [Python dictionary] a dictionary with information about the
                 workflow run, its status, and results
 
         Notes:
           - Compatible with Amazon AWS cluster runs, and S3 buckets.
         """
 
-        # kick off a single-bundle run
-        #   this will be called multiple times throughout the execution of
-        #   a batch script for SGE on the cloud
+        from cloud_utils import download_single_s3_path
 
-        from cloud_utils import dl_subj_from_s3, upl_qap_output
+        bundle_dict = self._bundles_list[bundle_idx]
 
-        self._sub_dict = {}
+        # check for s3 paths
+        for sub in bundle_dict.keys():
+            for resource in bundle_dict[sub].keys():
+                value = bundle_dict[sub][resource]
+                if "s3://" in value:
+                    bundle_dict[sub][resource] = download_single_s3_path(value,
+                                                                         self._config)
 
-        if not bundle_idx:
-            if self._bundle_idx:
-                bundle_idx = self._bundle_idx
+        wfargs = (bundle_dict, bundle_dict.keys(),
+                  self._config, self._run_name, self.runargs,
+                  bundle_idx)
 
-        # if the user is using S3 storage, download the bundle or subject
-        if self._s3_dict_yml:
-
-            # s3_dict_yml is a dictionary of dictionaries, keyed with
-            # sub-session-scan tuples, and is generated by the 
-            # qap_aws_s3_dict_generator.py script, containing filepath info of
-            # data on S3 storage
-            #   format:
-            #     { (sub01,session01,scan01):
-            #           {"anatomical_scan": <S3 filepath>},
-            #       (sub02,session01,scan01):
-            #           {"anatomical_scan": <S3 filepath>}, ..}
-
-            # bundle_idx is an integer (minimum of 1) which will be used to
-            # calculate where in the s3_dict_yml to begin downloading subjects
-            # for that bundle, based on the number of subjects per bundle
-            # (specified by the user)
-
-            # subj_idx is an integer (minimum of 1) which will select the
-            # entry from s3_dict_yml to retrieve using the dl_subj_from_s3
-            # function
-
-            if bundle_idx:
-
-                # download data from S3 by the bundle
-                #   ex. if we are doing 4 subjects per bundle and we are on
-                #       our 3rd bundle (bundle_idx = 3), then this should be
-                #       subjects 9-12 from the s3_dict_yml
-
-                first_subj_idx = \
-                    (bundle_idx-1)*self._config["num_participants_at_once"] + 1
-
-                last_subj_idx = \
-                    first_subj_idx + self._config["num_participants_at_once"]
-
-                for idx in range(first_subj_idx, last_subj_idx):
-                    single_sub_dict = dl_subj_from_s3(idx, self._config["pipeline_config_yaml"], \
-                                                           self._s3_dict_yml)
-                    self._sub_dict.update(single_sub_dict)
-
-                wfargs = (self._sub_dict, self._sub_dict.keys(), \
-                          self._config, run_name, self.runargs, \
-                          bundle_idx)
-
-            elif self._subj_idx:
-
-                self._sub_dict = dl_subj_from_s3(self._subj_idx, \
-                    self._config, self._s3_dict_yml)
-
-                wfargs = (self._sub_dict, self._sub_dict.keys(), \
-                          self._config, run_name, self.runargs, \
-                          self._subj_idx)
-
-            if len(self._sub_dict) == 0:
-                err = "\n[!] Subject dictionary was not successfully " \
-                      "downloaded from the S3 bucket!\n"
-                raise RuntimeError(err)
-
-            try:
-                # integrate site information into the subject list
-                #   it was separate in the first place to circumvent the fact
-                #   that even though site_name doesn't get keyed with scan
-                #   names, that doesn't necessarily mean scan names haven't
-                #   been specified for that participant
-
-                for sub in self._sub_dict.keys():
-                    sub = str(sub)
-                    for resource_path in self._sub_dict[sub].values():
-                        if ".nii" in resource_path:
-                            filepath = resource_path
-                            break
-
-                    site_name = filepath.split("/")[-5]
-                    self._sub_dict[sub]["site_name"] = site_name
-
-            except:
-                pass
-
-        elif self._config["subject_list"]:
-
-            # run on a cluster without pulling data from S3
-
-            # get flat sublist
-            # flat_sub_dict_dict is a dictionary of dictionaries. format:
-            #   { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
-            #                                "anatomical_brain": <filepath>} }
-            subdict = self._load_sublist()
-            flat_sub_dict_dict = self.create_flat_sub_dict_dict(subdict)
-
-            if bundle_idx:
-
-                first_subj_idx = \
-                    (bundle_idx-1)*self._config["num_participants_at_once"] + 1
-
-                last_subj_idx = \
-                    first_subj_idx + self._config["num_participants_at_once"]
-
-                for idx in range(first_subj_idx, last_subj_idx):
-
-                    # Get list of subject keys for indexing
-                    sd_keys = flat_sub_dict_dict.keys()
-                    sd_keys.sort()
-
-                    # Grab subject dictionary of interest
-                    subj_key = sd_keys[idx-1]
-                    single_sub_dict = flat_sub_dict_dict[subj_key]
-
-                    self._sub_dict.update(single_sub_dict)
-
-                wfargs = (self._sub_dict, self._sub_dict.keys(),
-                          self._config, run_name, self.runargs,
-                          bundle_idx)
-
-            elif self._subj_idx:
-
-                # Get list of subject keys for indexing
-                sd_keys = flat_sub_dict_dict.keys()
-                sd_keys.sort()
-
-                # Grab subject dictionary of interest
-                subj_key = sd_keys[self._subj_idx-1]
-                self._sub_dict = flat_sub_dict_dict[subj_key]
-                wfargs = (self._sub_dict, self._sub_dict.keys(),
-                              self._config, run_name, self.runargs,
-                              self._subj_idx)
-        
         # let's go!
         rt = _run_workflow(wfargs)
-    
+
         # make not uploading results to S3 bucket the default if not specified
         if "upload_to_s3" not in self._config.keys():
             self._config["upload_to_s3"] = False
 
         # upload results
         if self._config["upload_to_s3"]:
+            from cloud_utils import upl_qap_output
             upl_qap_output(self._config)
 
         return rt
 
-
-    def _run_here(self, run_name):
-        """Run the workflow on the local machine with locally stored data (via
-        a participant list).
-
-        Keyword Arguments:
-          run_name -- [string] the pipeline ID name
-
-        Returns:
-          results -- [Python list] a list of "rt" dictionaries, each 
-                     dictionary containing information about the workflow run,
-                     its status, and results
-
-        Notes:
-          - This runs if a sublist is provided (instead of an s3 dict yml).
-          - Creates a list of bundles of participants from the input files in
-            the participant list.
-        """
-
-        # get flattened sublist
-        # flat_sub_dict_dict is a dictionary of dictionaries. format:
-        #   { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
-        #                                "anatomical_brain": <filepath>} }
-        subdict = self._load_sublist()
-        flat_sub_dict_dict = self.create_flat_sub_dict_dict(subdict)
-
-        logger.info('There are %d subjects in the pool' %
-                    len(flat_sub_dict_dict.keys()))
-
-        # Create bundles
-        # bundles is a list of "bundles" - each bundle being a dictionary that
-        # is a starting resource pool for N sub-session-scan combos with N
-        # being the number of subjects per bundle (set by the user)
-        bundles = self._create_bundles(flat_sub_dict_dict)
-
-        # Stack workflow args, make a list of tuples containing run args
-        #     one tuple for each bundle
-        #     len(wfargs) = number of bundles
-        wfargs = [(data_bundle, data_bundle.keys(), self._config, run_name,
-                   self.runargs, idx) for idx, data_bundle in enumerate(bundles)]
-
-        results = []
-
-        # skip parallel machinery if we are running only one bundle at once
-        # NOTE: this will almost always be the case! multiple bundles at once
-        #       are only for the sake of testing/experimentation
-        if self._num_bundles_at_once == 1:
-            for a in wfargs:
-                results.append(_run_workflow(a))
-        # or use Pool if running multiple bundles simultaneously
-        else:
-            from multiprocessing import Pool
-            try:
-                pool = Pool(processes=self._num_bundles_at_once, \
-                            masktasksperchild=50)
-            except TypeError:  # Make python <2.7 compatible
-                pool = Pool(processes=self._num_bundles_at_once)
-
-            results = pool.map(_run_workflow, wfargs)
-            pool.close()
-            pool.terminate()
-
-        return results
-
-
-    def _run_here_from_s3(self, run_name, num_bundles):
-        """Run the workflow on the local machine with data stored on the
-        Amazon S3 cloud.
-
-        Keyword Arguments:
-          run_name -- [string] the pipeline ID name
-          num_bundles -- [integer] the number of bundles of data (based on the
-                         number of participants and the bundle size denoted by
-                         the user)
-
-        Returns:
-          results -- [Python list] a list of "rt" dictionaries, each 
-                     dictionary containing information about the workflow run,
-                     its status, and results
-
-        Notes:
-          - Creates a list of bundles of participants from the input files in
-            the participant list.  
-        """
-
-        results = []
-
-        self._bundle_idx = None
-        self._subj_idx = None
-
-        # skip parallel machinery if we are running only one bundle at once
-        if self._num_bundles_at_once == 1:
-            for idx in range(1,num_bundles+1):
-                results.append(self._run_one_bundle_on_node(run_name, bundle_idx=idx))
-        # or use Pool if running multiple bundles simultaneously
-        else:
-            from multiprocessing import Pool
-
-            try:
-                pool = Pool(processes=self._num_bundles_at_once, \
-                            masktasksperchild=50)
-            except TypeError:  # Make python <2.7 compatible
-                pool = Pool(processes=self._num_bundles_at_once)
-
-            results = pool.map(self._run_one_bundle_on_node,run_name,range(1,num_bundles+1))
-            pool.close()
-            pool.terminate()
-
-        return results
-        
 
     def run(self, config_file=None, partic_list=None):
         """Establish where and how we're running the pipeline and set up the
         run. (Entry point)
 
         Keyword Arguments:
-          config_file -- [string] filepath to the pipeline configuration file 
+          config_file -- [string] filepath to the pipeline configuration file
                          in YAML format
-          partic_list -- [string] filepath to the participant list file in 
+          partic_list -- [string] filepath to the participant list file in
                          YAML format
 
         Returns:
@@ -819,8 +479,7 @@ class QAProtocolCLI:
             else:
                 pass
 
-        run_name = config['pipeline_name']
-        results = None
+        results = []
 
         # set up callback logging
         import logging
@@ -844,72 +503,67 @@ class QAProtocolCLI:
         n_procs = {'n_procs': self._num_processors}
         self.runargs['plugin_args'].update(n_procs)
 
+        # load the participant list file into dictionary
+        subdict = self._load_sublist()
+
+        try:
+            # integrate site information into the subject list
+            #   it was separate in the first place to circumvent the fact
+            #   that even though site_name doesn't get keyed with scan
+            #   names, that doesn't necessarily mean scan names haven't
+            #   been specified for that participant
+
+            for sub in subdict.keys():
+                sub = str(sub)
+                for resource_path in subdict[sub].values():
+                    if ".nii" in resource_path:
+                        filepath = resource_path
+                        break
+
+                site_name = filepath.split("/")[-5]
+                sub_dict[sub]["site_name"] = site_name
+
+        except:
+            pass
+
+        # flatten the participant dictionary
+        self._sub_dict = self._create_flat_sub_dict_dict(subdict)
+
+        # create the list of bundles
+        self._bundles_list = self._create_bundles()
+        num_bundles = len(self._bundles_list)
+
+        if num_bundles == 1:
+            self._config["num_participants_at_once"] = len(self._bundles_list[0])
+
         # Start the magic
-        if self._cloudify:
-            # self._cloudify is set to True ONLY when the CLI is run given an S3_dict_yml AND
-            # either a bundle or subject idx
-            results = self._run_one_bundle_on_node(run_name)
+        if not self._bundle_idx:
+            # not a cluster/grid run
 
-        elif not self._platform:
-            # run on something that isn't a cluster
+            if self._num_bundles_at_once == 1:
+                # this is always the case
+                for idx in range(0, num_bundles):
+                    results.append(self._run_one_bundle(idx))
 
-            if self._config["subject_list"]:
+            else:
+                # or use Pool if running multiple bundles simultaneously
+                # for testing/experimentation only!!!
+                from multiprocessing import Pool
+                try:
+                    pool = Pool(processes=self._num_bundles_at_once,
+                                masktasksperchild=50)
+                except TypeError:  # Make python <2.7 compatible
+                    pool = Pool(processes=self._num_bundles_at_once)
 
-                results = self._run_here(run_name)
+                results = pool.map(self._run_one_bundle, range(0, num_bundles))
+                pool.close()
+                pool.terminate()
+            return results
 
-            elif self._s3_dict_yml:
-
-                import yaml
-                import math
-
-                # get num_bundles
-                with open(self._s3_dict_yml,"r") as f:
-                    s3_dict = yaml.load(f)
-
-                num_bundles = self._get_num_bundles(len(s3_dict))
-
-                if num_bundles == 1:
-                    self._config["num_participants_at_once"] = len(s3_dict)
-
-                logger.info("Running locally, pulling data from S3 - %d " \
-                            "bundles" % num_bundles)
-
-                self._run_here_from_s3(run_name, num_bundles)
-
-        elif self._platform:
-            # run on a cluster/grid
-
-            import yaml
-
-            # get num_bundles
-            if self._s3_dict_yml:
-
-                with open(self._s3_dict_yml,"r") as f:
-                    s3_dict = yaml.load(f)
-
-                num_bundles = self._get_num_bundles(len(s3_dict))
-
-            elif self._config["subject_list"]:
-
-                # get flattened sublist
-                subdict = self._load_sublist()
-                flat_sub_dict_dict = self.create_flat_sub_dict_dict(subdict)
-
-                num_bundles = self._get_num_bundles(len(flat_sub_dict_dict))
-
-            if num_bundles == 1:
-                if self._s3_dict_yml:
-                    self._config["num_participants_at_once"] = len(s3_dict)
-                if self._config["subject_list"]:
-                    self._config["num_participants_at_once"] = \
-                        len(flat_sub_dict_dict)
-
-            batch_file_contents, batch_filepath, exec_cmd, \
-                   confirm_str, cluster_files_dir = \
-                   self._prepare_cluster_batch_file(run_name, num_bundles)
-
-            self._run_on_cluster(batch_file_contents, batch_filepath,
-                                     exec_cmd, confirm_str, cluster_files_dir)
+        elif self._bundle_idx:
+            # there is a self._bundle_idx only if the pipeline runner is run with bundle_idx
+            # as a parameter - only happening either manually, or when running on a cluster
+            self._submit_cluster_batch_file(num_bundles)
 
         # PDF reporting
         if write_report:
@@ -923,7 +577,7 @@ class QAProtocolCLI:
                 in_csv = op.join(config['output_directory'], 
                     '%s.csv' % qap_type)
 
-                reports = workflow_report(in_csv, qap_type, run_name, results,
+                reports = workflow_report(in_csv, qap_type, self._run_name, results,
                                           out_dir=config['output_directory'])
   
                 for k, v in reports.iteritems():
@@ -1052,8 +706,7 @@ def _run_workflow(args, run=True):
 
         for resource in resource_pool.keys():
             try:
-                if not op.isfile(resource_pool[resource]) and \
-                    resource != "site_name":
+                if not op.isfile(resource_pool[resource]) and resource != "site_name":
                     invalid_paths.append((resource, resource_pool[resource]))
             except:
                 err = "\n\n[!]"

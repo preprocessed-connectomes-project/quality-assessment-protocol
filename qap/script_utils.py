@@ -83,7 +83,7 @@ def csv_to_pandas_df(csv_file):
 
 
 def parse_raw_data_list(filepath_list, site_folder, include_sites=False, 
-    subject_inclusion=None):
+    subject_inclusion=None, s3_bucket=False):
     """Parse a list of NIFTI filepaths into a participant data dictionary for
     the 'qap_raw_data_sublist_generator.py' script.
 
@@ -113,7 +113,8 @@ def parse_raw_data_list(filepath_list, site_folder, include_sites=False,
     sub_dict = {}
     inclusion_list = []
 
-    site_folder = os.path.abspath(site_folder)
+    if not s3_bucket:
+        site_folder = os.path.abspath(site_folder)
     
     # create subject inclusion list
     if subject_inclusion:
@@ -407,7 +408,7 @@ def pull_s3_sublist(bucket_name, bucket_prefix, creds_path=None):
 
     # Build S3-subjects to download
     for bk in bucket.objects.filter(Prefix=bucket_prefix):
-        s3_list.append(str(bk.key))
+        s3_list.append("/".join(["s3:/", bucket_name, str(bk.key)]))
 
     return s3_list
 
