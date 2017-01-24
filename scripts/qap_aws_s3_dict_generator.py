@@ -4,9 +4,10 @@ def main():
 
     import argparse
     from qap.script_utils import pull_s3_sublist, \
-                                 create_subdict_from_s3_list, \
+                                 read_txt_file, \
                                  parse_raw_data_list, \
                                  write_inputs_dict_to_yaml_file
+    from qap.bids_utils import extract_bids_data
 
     parser = argparse.ArgumentParser()
  
@@ -25,21 +26,10 @@ def main():
                             help="the path to the file containing your AWS " \
                                  "credentials")
 
-    parser.add_argument('--include_sites', action='store_true', \
-                            help="include this flag if you wish to include " \
-                                 "site information in your subject list - " \
-                                 "data must be organized as /site_name/" \
-                                 "subject_id/session_id/scan_id/..")
-
-    parser.add_argument("--session_list", type=str, \
+    parser.add_argument("--participant_list", type=str, \
                             help="filepath to a text file containing the " \
-                                 "names of sessions you want included, one " \
-                                 "on each line")
-
-    parser.add_argument("--series_list", type=str, \
-                            help="filepath to a text file containing the " \
-                                 "names of series you want included, one " \
-                                 "on each line")
+                                 "names of participants you want included, " \
+                                 "one on each line")
 
     parser.add_argument("--BIDS", action="store_true", \
                             help="if the dataset is in BIDS format")
@@ -47,19 +37,24 @@ def main():
     args = parser.parse_args()
 
     # run it!
-    s3_list = pull_s3_sublist(args.bucket_name, args.bucket_prefix, \
-        args.creds_path)
+    s3_list = pull_s3_sublist(args.bucket_name, args.bucket_prefix,
+                              args.creds_path)
 
-    #s3_dict = create_subdict_from_s3_list(s3_list, args.bucket_prefix, \
-    #    args.session_list, args.series_list, args.BIDS)
-    s3_dict = parse_raw_data_list(s3_list, args.bucket_prefix,
-                                  include_sites=args.include_sites,
-                                  s3_bucket=True)
+    # create subject inclusion list
+    if args.participant_list:
+        inclusion_list = read_txt_file(args.participant_list)
+    else:
+        inclusion_list = None
+
+    if not args.BIDS:
+        s3_dict = parse_raw_data_list(s3_list, args.bucket_prefix,
+                                      inclusion_list=inclusion_list,
+                                      s3_bucket=True)
+    else:
+        s3_dict = extract_bids_data(s3_list, inclusion_list)
 
     write_inputs_dict_to_yaml_file(s3_dict, args.outfile_path)
 
 
 if __name__ == "__main__":
     main()
-    
-    

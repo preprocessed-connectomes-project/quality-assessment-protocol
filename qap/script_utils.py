@@ -65,7 +65,7 @@ def csv_to_pandas_df(csv_file):
       csv_file -- [string] the filepath to the CSV file to be loaded
 
     Returns:
-      data -- [Pandas DataFrame] a dataFrame object with the data from the CSV 
+      data -- [Pandas DataFrame] a dataFrame object with the data from the CSV
               file
     """
 
@@ -82,21 +82,17 @@ def csv_to_pandas_df(csv_file):
     return data
 
 
-def parse_raw_data_list(filepath_list, site_folder, include_sites=False, 
-    subject_inclusion=None, s3_bucket=False):
+def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None,
+                        s3_bucket=False):
     """Parse a list of NIFTI filepaths into a participant data dictionary for
     the 'qap_raw_data_sublist_generator.py' script.
 
     Keyword Arguments:
       filepath_list -- [string] a list of input file NIFTI filepaths
-      site_folder -- [string] the root directory containing the NIFTI 
+      site_folder -- [string] the root directory containing the NIFTI
                      filepaths in the list
-      include_sites -- [boolean] (default: False) whether or not to include 
-                       the site ID of each participant in the dictionary 
-                       entries
-      subject_inclusion -- [string] (default: None) a filepath to a text file 
-                           describing which participants to include in the
-                           dictionary (each line should have a participant ID)
+      subject_inclusion -- [list] (default: None) a list of participant
+                           IDs to include in the sublist dictionary
 
     Returns:
       subdict -- [Python dictionary] a dictionary containing the NIFTI files 
@@ -111,19 +107,23 @@ def parse_raw_data_list(filepath_list, site_folder, include_sites=False,
     import os
 
     sub_dict = {}
-    inclusion_list = []
+    if not inclusion_list:
+        inclusion_list = []
+        inclusion = False
 
     if not s3_bucket:
         site_folder = os.path.abspath(site_folder)
     
-    # create subject inclusion list
-    if subject_inclusion:
-        inclusion_list = read_txt_file(subject_inclusion)
-    
     for fullpath in filepath_list:
             
         # /path_to_site_folder/subject_id/session_id/scan_id/..
-        second_half = fullpath.split(site_folder)[1]
+        try:
+            second_half = fullpath.split(site_folder)[1]
+        except:
+            err = "[!] Something went wrong with the filepath " \
+                  "parsing.\n\nFilepath: %s\nSite folder: %s\n" \
+                  % (fullpath, site_folder)
+            raise Exception(err)
         second_half_list = second_half.split("/")
         filename = second_half_list[-1]
 
@@ -132,49 +132,25 @@ def parse_raw_data_list(filepath_list, site_folder, include_sites=False,
         except:
             pass
 
-        if include_sites:
-            try:
-                site_id = second_half_list[-5]
-                subject_id = second_half_list[-4]
-                session_id = second_half_list[-3]
-                scan_id = second_half_list[-2]
-            except:
-                err = "\n\n[!] Could not parse the data directory " \
-                      "structure for this file - is it in the " \
-                      "correct format?\nFile path:\n%s\n\nIt should "\
-                      "be something like this:\n/site_folder/subject"\
-                      "_id/session_id/scan_id/file.nii.gz\n\n" \
-                      % second_half
-                print err
-        else:
-            try:
-                subject_id = second_half_list[-4]
-                session_id = second_half_list[-3]
-                scan_id = second_half_list[-2]
-            except:                    
-                err = "\n\n[!] Could not parse the data directory " \
-                      "structure for this file - is it in the " \
-                      "correct format?\nFile path:\n%s\n\nIt should "\
-                      "be something like this:\n/data_folder/subject"\
-                      "_id/session_id/scan_id/file.nii.gz\n\n" \
-                      % second_half
-                print err
-            if subject_id not in second_half_list[0]:
-                err = "\n\n[!] You are creating a participant list without " \
-                      "site information included, but the site folder you " \
-                      "provided is not the directory level containing the " \
-                      "participants' folders - if there are multiple site " \
-                      "or data folders in the site_folder directory, you " \
-                      "might end up accidentally gathering data from other " \
-                      "sites or collections.\n\nPlease either provide a " \
-                      "different site folder input, or include sites by " \
-                      "passing the --sites flag.\n\n"
-                raise Exception(err)
+        try:
+            site_id = second_half_list[-5]
+            subject_id = second_half_list[-4]
+            session_id = second_half_list[-3]
+            scan_id = second_half_list[-2]
+        except:
+            err = "\n\n[!] Could not parse the data directory " \
+                  "structure for this file - is it in the " \
+                  "correct format?\nFile path:\n%s\n\nIt should "\
+                  "be something like this:\n/site_folder/subject"\
+                  "_id/session_id/scan_id/file.nii.gz\n\n" \
+                  % second_half
+            print err
 
-        if subject_inclusion == None:
+        if not inclusion:
             inclusion_list.append(subject_id)
-                       
-        #sub_info = (subject_id, session_id, scan_id)
+
+        resource = None
+
         if ("anat" in scan_id) or ("anat" in filename) or \
             ("mprage" in filename):
             resource = "anatomical_scan"
@@ -194,10 +170,7 @@ def parse_raw_data_list(filepath_list, site_folder, include_sites=False,
             
             if resource not in sub_dict[subject_id][session_id].keys():
                 sub_dict[subject_id][session_id][resource] = {}
-
-                if include_sites:
-                    sub_dict[subject_id][session_id]["site_name"] = \
-                        site_id
+                sub_dict[subject_id][session_id]["site_name"] = site_id
                                                
             if scan_id not in sub_dict[subject_id][session_id][resource].keys():
                 sub_dict[subject_id][session_id][resource][scan_id] = fullpath
@@ -213,14 +186,16 @@ def parse_raw_data_list(filepath_list, site_folder, include_sites=False,
             
             if resource not in sub_dict[subject_id][session_id].keys():
                 sub_dict[subject_id][session_id][resource] = {}
-                
-                if include_sites:
-                    sub_dict[subject_id][session_id]["site_name"] = \
-                        site_id
+                sub_dict[subject_id][session_id]["site_name"] = site_id
                             
             if scan_id not in sub_dict[subject_id][session_id][resource].keys():
                 sub_dict[subject_id][session_id][resource][scan_id] = fullpath
- 
+
+    if len(sub_dict) == 0:
+        err = "\nThe participant list came out empty! Double-check your " \
+              "settings.\n"
+        raise Exception(err)
+
     return sub_dict
 
 
@@ -406,197 +381,17 @@ def pull_s3_sublist(bucket_name, bucket_prefix, creds_path=None):
     s3_list = []
     bucket = fetch_creds.return_bucket(creds_path, bucket_name)
 
+    # ensure slash at end of bucket_prefix, so that if the final
+    # directory name is a substring in other directory names, these
+    # other directories will not be pulled into the file list
+    if "/" not in bucket_prefix[-1]:
+        bucket_prefix += "/"
+
     # Build S3-subjects to download
     for bk in bucket.objects.filter(Prefix=bucket_prefix):
         s3_list.append("/".join(["s3:/", bucket_name, str(bk.key)]))
 
     return s3_list
-
-
-def create_subdict_from_s3_list(s3_list, bucket_prefix, session_list=None,
-    series_list=None, BIDS=False):
-    """Populate a participant data dictionary parsed from the NIFTI filepaths
-    extracted from an Amazon S3 bucket, for the 'qap_aws_s3_dict_generator.py'
-    script.
-
-    Keyword Arguments:
-      s3_list -- [Python list] a list of Amazon S3 filepaths from an Amazon
-                 S3 bucket
-      bucket_prefix -- [string] the directory path of the root directory of
-                       your data on the S3 bucket
-      session_list -- [string] (default: None) the filepath of a text file 
-                      listing the session IDs of sessions you want to include 
-                      in the dictionary
-      series_list -- [string] (default: None) the filepath of a text file 
-                     listing the series/scan IDs of series/scans you want to  
-                     include in the dictionary
-      BIDS -- [boolean] (default: False) whether or not the S3 filepaths are
-              organized in the BIDS standard data format
-
-    Returns:
-      s3_dict -- [Python dictionary] the participant data dictionary keyed by
-                 the participant information
-
-    Notes:
-      - This is for the 'qap_aws_s3_dict_generator.py' script.
-      - This can support either BIDS or conventional data formats.
-      - The s3_list can be generated using the 'pull_s3_sublist' function.
-    """
-
-    s3_dict = {}
-
-    # Read in series_list, if it is provided
-    if session_list:
-        try:
-            session_list = os.path.abspath(session_list)
-            sessions = read_txt_file(session_list)
-        except:
-            err = "\n\nCould not successfully read the session list.\n%s" \
-                  % session_list
-            raise Exception(err)
-
-    # Read in series_list, if it is provided
-    if series_list:
-        try:
-            series_list = os.path.abspath(series_list)
-            series = read_txt_file(series_list)
-        except:
-            err = "\n\nCould not successfully read the series list.\n%s" \
-                  % series_list
-            raise Exception(err)
-
-    # Build dictionary of filepaths
-    for sfile in s3_list:
-
-        include = False
-
-        if BIDS:
-            ssplit = sfile.split("/")
-            folder = ssplit[-5]
-            sub_id = ssplit[-4]
-            session_id = ssplit[-3]
-            scan_type = ssplit[-2]
-            filename = ssplit[-1]
-
-            if ".nii" not in filename:
-                continue
-
-            scan_id = None
-
-            if sub_id not in filename:
-                err = "\n\n[!] The dataset provided is not in BIDS format!" \
-                      "\n\n"
-                raise Exception(err)
-            elif sub_id in filename:
-                scan_id = filename.replace(sub_id,"")
-            if session_id in scan_id:
-                scan_id = scan_id.replace(session_id,"")
-            if ".nii" in scan_id:
-                scan_id = scan_id.replace(".nii","")
-            if ".gz" in scan_id:
-                scan_id = scan_id.replace(".gz","")
-            if "task-" in scan_id:
-                scan_id = scan_id.replace("task-","")
-            if "__" in scan_id:
-                scan_id = scan_id.replace("__","")
-
-            if scan_type == "anat":
-                # this requirement is subject to change with the BIDS spec!!
-                if "T1w.nii" in filename:
-                    include = True
-            if scan_type == "func":
-                include = True
-
-            if ("sub-" not in sub_id) or (scan_id == None):
-                err = "\n\n[!] This is not a BIDS-formatted dataset!\n\n"
-                raise Exception(err)
-
-            # this is to get the folder containing the sub-ID folders so that
-            # we can avoid sub-folders within the directory
-            bucket_prefix_split = bucket_prefix.split("/")
-            if bucket_prefix_split[-1] != "":
-                containing_folder = bucket_prefix_split[-1]
-            else:
-                containing_folder = bucket_prefix_split[-2]
-
-            if containing_folder != folder:
-                include = False
-
-            if session_list:
-                if session_id not in sessions:
-                    include = False
-
-            if series_list:
-                for series_id in series:
-                    if series_id in scan_id:
-                        break
-                else:
-                    include = False 
-
-        else:
-            ssplit = sfile.split('/')
-            sub_id = ssplit[-4]
-            session_id = ssplit[-3]
-            scan_id = ssplit[-2]
-            filename = ssplit[-1]
-
-            if ("sub-" in filename) and ("_ses-" in filename):
-                err = "\n\n[!] You selected to create a data list from a " \
-                      "a data directory that isn't in BIDS format, but the " \
-                      "data is in BIDS format!\n\nPlease use the --BIDS " \
-                      "flag for BIDS datasets.\n\n"
-                raise Exception(err)
-
-            if ("anat" in scan_id) or ("anat" in filename) or \
-                ("mprage" in filename):
-                scan_type = "anat"
-                include = True
-            if ("func" in scan_id) or ("rest" in scan_id) or \
-                ("func" in filename) or ("rest" in filename):
-                scan_type = "func"
-                include = True
-
-            if session_list:
-                if session_id not in sessions:
-                    include = False
-
-            if series_list:
-                if scan_id not in series:
-                    include = False
-
-        if (include == True) and ("nii" in filename):
-        
-            if scan_type == "anat":
-                subkey_type = "anatomical_scan"
-            elif scan_type == "func":
-                subkey_type = "functional_scan"
-
-            resource_dict = {}
-            resource_dict[subkey_type] = sfile
-
-            # this ONLY handles raw data inputs, not CPAC-generated outputs!
-            if not s3_dict.has_key((sub_id, session_id, scan_id)):
-
-                s3_dict[(sub_id, session_id, scan_id)] = {}
-                s3_dict[(sub_id, session_id, scan_id)].update(resource_dict)
-
-            else:
-
-                s3_dict[(sub_id, session_id, scan_id)].update(resource_dict)    
-
-        else:
-
-            continue
-    
-    if len(s3_dict) == 0:
-        err = "\n[!] Filepaths have not been successfully gathered from " \
-              "the S3 bucket!\n"
-        raise Exception(err)
-
-    dict_len = len(s3_dict)
-    print "Total number of subject-session-scans: %d\n" % dict_len
-
-    return s3_dict
 
 
 def gather_json_info(output_dir):

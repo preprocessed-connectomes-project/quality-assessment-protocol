@@ -144,4 +144,11 @@ def extract_bids_data( file_path_list, inclusion_list=None ):
             # insert the full path to the scan into dictionary
             sub_dict[f_dict["sub"]][f_dict["ses"]][scan_type][f_key] = file_path
 
+    if len(sub_dict) == 0:
+        err = "\nThe participant list came out empty! Double-check your " \
+              "settings.\n"
+        raise Exception(err)
+
+    return sub_dict
+
     return(sub_dict)

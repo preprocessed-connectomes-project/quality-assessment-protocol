@@ -234,23 +234,18 @@ def calculate_plane_coords(coords_list, infile_dims):
 
     # get the vectors connecting the points
     u = []
-
     for a_pt, c_pt in zip(coords_list[0], coords_list[2]):
         u.append(int(a_pt - c_pt))
 
     v = []
-
     for b_pt, c_pt in zip(coords_list[1], coords_list[2]):
         v.append(int(b_pt - c_pt))
-
-    u_vector = np.asarray(u)
-    v_vector = np.asarray(v)
 
     # vector cross product
     n = np.cross(u, v)
 
     # normalize the vector
-    n = n / np.linalg.norm(n, 2)
+    n /= np.linalg.norm(n, 2)
     constant = np.dot(n, np.asarray(coords_list[0]))
 
     # now determine the z-coordinate for each pair of x,y
