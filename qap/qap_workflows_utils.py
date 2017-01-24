@@ -245,7 +245,7 @@ def calculate_plane_coords(coords_list, infile_dims):
     n = np.cross(u, v)
 
     # normalize the vector
-    n /= np.linalg.norm(n, 2)
+    n = n / np.linalg.norm(n, 2)
     constant = np.dot(n, np.asarray(coords_list[0]))
 
     # now determine the z-coordinate for each pair of x,y
@@ -392,8 +392,13 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
                   of the file assigned to the participant's data
     """
 
+    import os
     import nibabel as nb
     from qap.workflow_utils import raise_smart_exception
+
+    if not os.path.isfile(in_file):
+        err = "Filepath doesn't exist!\nFilepath: %s" % in_file
+        raise_smart_exception(locals(),err)
 
     try:
         img = nb.load(in_file)

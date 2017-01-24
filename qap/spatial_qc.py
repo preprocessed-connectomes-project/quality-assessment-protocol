@@ -336,7 +336,8 @@ def fwhm(anat_file, mask_file, out_vox=False):
 
     import subprocess
 
-    fwhm_string_list = ["3dFWHMx", "-combined", "-mask", mask_file, "-input", anat_file]
+    fwhm_string_list = ["3dFWHMx", "-combined", "-mask", mask_file,
+                        "-input", anat_file]
     try:
         retcode = subprocess.check_output(fwhm_string_list)
     except Exception as e:

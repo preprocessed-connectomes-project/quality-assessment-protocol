@@ -97,7 +97,7 @@ class QAProtocolCLI:
               https://github.com/dclark87
           - This function will write the batch file appropriate for the 
             scheduler being used, and then this CLI will be run again on each
-            node/slot through the _run_one_bundle function.
+            node/slot through the run_one_bundle function.
         """
 
         import os
@@ -303,20 +303,18 @@ class QAProtocolCLI:
         return subdict
 
 
-    def _create_bundles(self):
+    def create_bundles(self):
         """Create a list of participant "bundles".
 
-        Keyword Arguments:
-          flat_sub_dict_dict -- [Python dictionary] a dictionary of 
-                                dictionaries where each participant-session-
-                                scan combination has its own entry, and input 
-                                file filepaths are defined
-
-        Returns:
-          bundles -- [Python list] a list of bundles - each bundle being a 
-                     dictionary that is a starting resource pool for N 
-                     sub-session-scan combos with N being the number of 
-                     participants per bundle (set by the user)
+        :type flat_sub_dict_dict: dictionary
+        :param flat_sub_dict_dict: A dictionary of dictionaries where each
+                                   participant-session-scan combination has
+                                   its own entry, and input file filepaths
+                                   are defined.
+        :rtype: list
+        :return: A list of bundles - each bundle being a dictionary that is a
+                 starting resource pool for N sub-session-scan combos with N
+                 being the number of participants per bundle (set by the user)
         """
 
         i = 0
@@ -344,21 +342,19 @@ class QAProtocolCLI:
         return bundles
 
 
-    def _run_one_bundle(self, bundle_idx):
+    def run_one_bundle(self, bundle_idx):
         """Execute one bundle's workflow on one node/slot of a cluster/grid.
 
-        Keyword Arguments:
-          bundle_idx -- [integer] the bundle ID number - used to calculate
-                        which entries in the participant list to pull into
-                        the current bundle, based on the number of
-                        participants per bundle (participants at once)
+        - Compatible with Amazon AWS cluster runs, and S3 buckets.
 
-        Returns:
-          rt -- [Python dictionary] a dictionary with information about the
-                workflow run, its status, and results
-
-        Notes:
-          - Compatible with Amazon AWS cluster runs, and S3 buckets.
+        :type bundle_idx: int
+        :param bundle_idx: The bundle ID number - used to calculate which
+                           entries in the participant list to pull into the
+                           current bundle, based on the number of participants
+                           per bundle (participants at once).
+        :rtype: dictionary
+        :return: A dictionary with information about the workflow run, its
+                  status, and results.
         """
 
         from cloud_utils import download_single_s3_path
@@ -396,19 +392,16 @@ class QAProtocolCLI:
         """Establish where and how we're running the pipeline and set up the
         run. (Entry point)
 
-        Keyword Arguments:
-          config_file -- [string] filepath to the pipeline configuration file
-                         in YAML format
-          partic_list -- [string] filepath to the participant list file in
-                         YAML format
+        - This is the entry point for pipeline building and connecting.
+          Depending on the inputs, the appropriate workflow runner will
+          be selected and executed.
 
-        Returns:
-          N/A
-
-        Notes:
-          - This is the entry point for pipeline building and connecting.
-            Depending on the inputs, the appropriate workflow runner will
-            be selected and executed.
+        :type config_file: str
+        :param config_file: Filepath to the pipeline configuration file in
+                            YAML format.
+        :type partic_list: str
+        :param partic_list: Filepath to the participant list file in YAML
+                            format.
         """
 
         from qap.workflow_utils import raise_smart_exception, \
@@ -530,7 +523,7 @@ class QAProtocolCLI:
         self._sub_dict = self._create_flat_sub_dict_dict(subdict)
 
         # create the list of bundles
-        self._bundles_list = self._create_bundles()
+        self._bundles_list = self.create_bundles()
         num_bundles = len(self._bundles_list)
 
         if num_bundles == 1:
@@ -543,7 +536,7 @@ class QAProtocolCLI:
             if self._num_bundles_at_once == 1:
                 # this is always the case
                 for idx in range(0, num_bundles):
-                    results.append(self._run_one_bundle(idx))
+                    results.append(self.run_one_bundle(idx))
 
             else:
                 # or use Pool if running multiple bundles simultaneously
@@ -555,7 +548,7 @@ class QAProtocolCLI:
                 except TypeError:  # Make python <2.7 compatible
                     pool = Pool(processes=self._num_bundles_at_once)
 
-                results = pool.map(self._run_one_bundle, range(0, num_bundles))
+                results = pool.map(self.run_one_bundle, range(0, num_bundles))
                 pool.close()
                 pool.terminate()
             return results

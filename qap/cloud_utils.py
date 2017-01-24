@@ -97,18 +97,18 @@ def pull_S3_sublist(yaml_outpath, img_type, cfg_file):
 def dl_subj_from_s3(subj_idx, cfg_file, s3_dict_yaml):
     """Download a single participant's data from the Amazon S3 bucket.
 
-    Keyword Arguments:
-      subj_idx -- [integer] the participant's index within the list of S3 
-                  bucket filepaths
-      cfg_file -- [string] filepath to the pipeline configuration file 
-                  containing S3 bucket and AWS credentials information
-      s3_dict_yaml -- [string] filepath to the YAML file containing the AWS S3 
-                      filepaths
-
-    Returns:
-      sub_dict -- [Python dictionary] a dictionary with one entry mapping the 
-                  participant's ID info to local filepath of the newly-
-                  downloaded data file
+    :type subj_idx: int
+    :param subj_idx: The participant's index within the list of S3 bucket
+                     filepaths.
+    :type cfg_file: str
+    :param cfg_file: Filepath to the pipeline configuration file containing
+                     S3 bucket and AWS credentials information.
+    :type s3_dict_yaml: str
+    :param s3_dict_yaml: Filepath to the YAML file containing the AWS S3
+                         filepaths.
+    :rtype: dict
+    :return: A dictionary with one entry mapping the participant's ID info
+             to local filepath of the newly-downloaded data file.
     """
 
     # Import packages
@@ -164,9 +164,21 @@ def dl_subj_from_s3(subj_idx, cfg_file, s3_dict_yaml):
 
 
 def download_single_s3_path(s3_path, cfg_dict):
+    """Download a single file from an AWS s3 bucket.
+
+    :type s3_path: string
+    :param s3_path: An "s3://" pre-pended path to a file stored on an
+                    Amazon AWS s3 bucket.
+    :type cfg_dict: dictionary
+    :param cfg_dict: A dictionary containing the pipeline setup
+                     parameters.
+    :rtype: string
+    :return: The local filepath of the downloaded s3 file.
+    """
 
     import os
     from indi_aws import fetch_creds, aws_utils
+    from workflow_utils import raise_smart_exception
 
     # Init variables
     bucket_prefix = cfg_dict["bucket_prefix"]
@@ -181,10 +193,16 @@ def download_single_s3_path(s3_path, cfg_dict):
     if bucket_name in s3_prefix:
         s3_prefix = s3_prefix.replace(bucket_name + "/", "")
 
-    local_dl = s3_prefix.replace(bucket_prefix, local_prefix)
+    if bucket_prefix in s3_prefix:
+        local_dl = s3_prefix.replace(bucket_prefix, local_prefix)
+    else:
+        err = "The bucket prefix provided in the pipeline configuration " \
+              "file does not match the S3 bucket filepath(s).\nBucket "\
+              "prefix: %s\nS3 path: %s" % (bucket_prefix, s3_prefix)
+        raise_smart_exception(locals(),err)
 
     if os.path.isfile(local_dl):
-        print "\nS3 bucket file already downloaded! Skipping download.\n"
+        print "\nS3 bucket file already downloaded! Skipping download."
         print "S3 file: %s" % s3_path
         print "Local file already exists: %s\n" % local_dl
     else:
