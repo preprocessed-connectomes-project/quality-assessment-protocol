@@ -6,6 +6,7 @@ dependencies:
   override:
     - pip install --upgrade pip
     - pip install numpy
+    - pip install lockfile
     - pip install -e .
     - if [[ ! -d ~/fsl ]]; then wget "http://fsl.fmrib.ox.ac.uk/fsldownloads/fsl-5.0.9-centos6_64.tar.gz"; tar zxvf fsl-5.0.9-centos6_64.tar.gz; mv fsl ~/fsl; fi
     - if [[ ! -d ~/afni ]]; then wget "http://afni.nimh.nih.gov/pub/dist/tgz/linux_openmp_64.tgz"; tar zxvf linux_openmp_64.tgz; mv linux_openmp_64 ~/afni; fi
