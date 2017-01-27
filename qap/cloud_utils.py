@@ -6,18 +6,18 @@ def pull_S3_sublist(yaml_outpath, img_type, cfg_file):
     """Return a YAML file describing S3 filepaths of files stored on an Amazon
     S3 bucket.
 
-    Keyword Arguments:
-      yaml_outpath -- [string] the output file path for the YAML file of 
-                      filepaths that will be written
-      img_type -- [string] specify whether you are looking for anatomical or 
-                  functional scans ("anat" or "rest")
-      cfg_file -- [string] filepath of the pipeline configuration file (in 
-                  this case, containing S3 bucket and AWS credentials 
-                  information)
-
-    Returns:
-      yaml_outpath -- [string] the output file path for the YAML file once it 
-                      has been written
+    :type yaml_outpath: str
+    :param yaml_outpath: The output file path for the YAML file of filepaths
+                         that will be written.
+    :type img_type: str
+    :param img_type: Specify whether you are looking for anatomical or
+                     functional scans ("anat" or "rest").
+    :type cfg_file: str
+    :param cfg_file: Filepath of the pipeline configuration file (in this
+                     case, containing S3 bucket and AWS credentials
+                     information).
+    :rtype: str
+    :return: The output file path for the YAML file once it has been written.
     """
 
     import os
@@ -166,13 +166,13 @@ def dl_subj_from_s3(subj_idx, cfg_file, s3_dict_yaml):
 def download_single_s3_path(s3_path, cfg_dict):
     """Download a single file from an AWS s3 bucket.
 
-    :type s3_path: string
+    :type s3_path: str
     :param s3_path: An "s3://" pre-pended path to a file stored on an
                     Amazon AWS s3 bucket.
     :type cfg_dict: dictionary
     :param cfg_dict: A dictionary containing the pipeline setup
                      parameters.
-    :rtype: string
+    :rtype: str
     :return: The local filepath of the downloaded s3 file.
     """
 
@@ -212,14 +212,11 @@ def download_single_s3_path(s3_path, cfg_dict):
 
 
 def upl_qap_output(cfg_file):
-    """Upload a pipeline output file back to the AWS S3 bucket.
+    """Upload a pipeline output file to an AWS S3 bucket.
 
-    Keyword Arguments:
-      cfg_file -- [string] filepath to the pipeline configuration file 
-                  containing S3 bucket and AWS credentials information
-
-    Returns:
-      N/A
+    :type cfg_file: str
+    :param cfg_file: Filepath to the pipeline configuration file containing
+                     S3 bucket and AWS credentials information.
     """
 
     # Import packages

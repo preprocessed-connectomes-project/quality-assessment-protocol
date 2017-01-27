@@ -14,10 +14,10 @@ config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}
 from nipype import logging
 logger = logging.getLogger('workflow')
 
-class QAProtocolCLI:
 
+class QAProtocolCLI:
     """
-    This class and the associated _run_workflow function implement what
+    This class and the associated run_workflow function implement what
     the former scripts (qap_anatomical_spatial.py, etc.) contained
     """
 
@@ -28,7 +28,6 @@ class QAProtocolCLI:
         else:
             self._cloudify = False
             self._bundle_idx = None
-
 
     def _parse_args(self):
 
@@ -59,6 +58,7 @@ class QAProtocolCLI:
         # Load config
         from qap.script_utils import read_yml_file
         self._config = read_yml_file(args.config)
+        self.validate_config_dict()
 
         self._config['pipeline_config_yaml'] = os.path.realpath(args.config)
         self._run_name = self._config['pipeline_name']
@@ -79,25 +79,19 @@ class QAProtocolCLI:
         else:
             self._bundle_idx = None
 
-
-    def _submit_cluster_batch_file(self, num_bundles):
+    def submit_cluster_batch_file(self, num_bundles):
         """Write the cluster batch file for the appropriate scheduler.
 
-        Keyword Arguments:
-          num_bundles -- [integer] the number of bundles total being run
+        - Batch file setup code borrowed from dclark87's CPAC cluster setup
+          code:
+              - https://github.com/FCP-INDI/C-PAC/blob/0.4.0_development/CPAC/pipeline/cpac_runner.py
+              - https://github.com/dclark87
+        - This function will write the batch file appropriate for the
+          scheduler being used, and then this CLI will be run again on each
+          node/slot through the run_one_bundle function.
 
-        Returns:
-          N/A
-
-        Notes:
-          - Batch file setup code borrowed from dclark87's CPAC cluster setup
-            code:
-              https://github.com/FCP-INDI/C-PAC/blob/0.4.0_development/CPAC/..
-                  ..pipeline/cpac_runner.py
-              https://github.com/dclark87
-          - This function will write the batch file appropriate for the 
-            scheduler being used, and then this CLI will be run again on each
-            node/slot through the run_one_bundle function.
+        :type num_bundles: int
+        :param num_bundles: The number of bundles total being run.
         """
 
         import os
@@ -182,33 +176,63 @@ class QAProtocolCLI:
         with open(pid_file, 'w') as f:
             f.write(pid)
 
+    def validate_config_dict(self):
+        """Validate the pipeline configuration dictionary to ensure the
+        parameters are properly set.
+        """
+        config_options = ["pipeline_name",
+                          "num_processors",
+                          "num_participants_at_once",
+                          "memory_allocated_per_participant",
+                          "resource_manager",
+                          "output_directory",
+                          "working_directory",
+                          "template_head_for_anat",
+                          "exclude_zeros",
+                          "start_idx",
+                          "stop_idx",
+                          "write_report",
+                          "write_graph",
+                          "write_all_outputs",
+                          "upload_to_s3",
+                          "bucket_prefix",
+                          "bucket_out_prefix",
+                          "local_prefix",
+                          "bucket_name",
+                          "creds_path"]
+        invalid = []
+        for param in self._config.keys():
+            if param not in config_options:
+                invalid.append(param)
+        if len(invalid) > 0:
+            err = "\n[!] The following parameters in your configuration " \
+                  "file are not recognized. Double-check the pipeline " \
+                  "configuration template.\n"
+            err += "\n".join([x for x in invalid])
+            raise Exception(err)
 
-    def _create_flat_sub_dict_dict(self, subdict):
+    def create_flat_sub_dict_dict(self, subdict):
         """Collapse the participant resource pools so that each participant-
         session-scan combination has its own entry.
 
-        Keyword Arguments:
-          subdict -- [Python dictionary] a dictionary containing the filepaths
-                     of input files for each participant, sorted by session 
-                     and scan
-
-        Returns:
-          flat_sub_dict_dict -- [Python dictionary] a dictionary of 
-                                dictionaries where each participant-session-
-                                scan combination has its own entry, and input 
-                                file filepaths are defined
-
-        Notes:
-          - input subdict format:
-              {'sub_01': {'session_01': 
+        - input subdict format:
+              {'sub_01': {'session_01':
                              {'anatomical_scan': {'scan_01': <filepath>,
                                                   'scan_02': <filepath>},
                               'site_name': 'Site_1'} },
                'sub_02': {..} }
 
-          - output dict format:
+        - output dict format:
               { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
                                            "anatomical_brain": <filepath>} }
+
+        :type subdict: dictionary
+        :param subdict: A dictionary containing the filepaths of input files
+                        for each participant, sorted by session and scan.
+        :rtype: dictionary
+        :return: A dictionary of dictionaries where each participant-session-
+                 scan combination has its own entry, and input file filepaths
+                 are defined.
         """
 
         flat_sub_dict_dict = {}
@@ -270,20 +294,18 @@ class QAProtocolCLI:
 
         return flat_sub_dict_dict
 
-
-    def _load_sublist(self):
+    def load_sublist(self):
         """Load the participant list YAML file into a dictionary and check.
 
-        Returns:
-          subdict -- [Python dictionary] the participant list in a dictionary
-
-        Notes:
-          - subdict format:
-              {'sub_01': {'session_01': 
+        - subdict format:
+              {'sub_01': {'session_01':
                             {'anatomical_scan': {'scan_01': <filepath>,
                                                  'scan_02': <filepath>},
                              'site_name': 'Site_1'} },
               'sub_02': {..} }
+
+        :rtype: dictionary
+        :return: The participant list in a dictionary.
         """
 
         import yaml
@@ -301,7 +323,6 @@ class QAProtocolCLI:
             raise_smart_exception(locals(),msg)
 
         return subdict
-
 
     def create_bundles(self):
         """Create a list of participant "bundles".
@@ -341,7 +362,6 @@ class QAProtocolCLI:
 
         return bundles
 
-
     def run_one_bundle(self, bundle_idx):
         """Execute one bundle's workflow on one node/slot of a cluster/grid.
 
@@ -360,6 +380,7 @@ class QAProtocolCLI:
         from cloud_utils import download_single_s3_path
 
         bundle_dict = self._bundles_list[bundle_idx]
+        num_bundles = len(self._bundles_list)
 
         # check for s3 paths
         for sub in bundle_dict.keys():
@@ -371,10 +392,10 @@ class QAProtocolCLI:
 
         wfargs = (bundle_dict, bundle_dict.keys(),
                   self._config, self._run_name, self.runargs,
-                  bundle_idx)
+                  bundle_idx, num_bundles)
 
         # let's go!
-        rt = _run_workflow(wfargs)
+        rt = run_workflow(wfargs)
 
         # make not uploading results to S3 bucket the default if not specified
         if "upload_to_s3" not in self._config.keys():
@@ -386,7 +407,6 @@ class QAProtocolCLI:
             upl_qap_output(self._config)
 
         return rt
-
 
     def run(self, config_file=None, partic_list=None):
         """Establish where and how we're running the pipeline and set up the
@@ -411,9 +431,9 @@ class QAProtocolCLI:
         if config_file:
             from qap.script_utils import read_yml_file
             self._config = read_yml_file(config_file)
+            self.validate_config_dict()
             self._config["pipeline_config_yaml"] = config_file
       
-        # make sure that we were configured by at least one of the two mechanism
         if not self._config:
              raise Exception("config not found!")
 
@@ -497,7 +517,7 @@ class QAProtocolCLI:
         self.runargs['plugin_args'].update(n_procs)
 
         # load the participant list file into dictionary
-        subdict = self._load_sublist()
+        subdict = self.load_sublist()
 
         try:
             # integrate site information into the subject list
@@ -520,7 +540,7 @@ class QAProtocolCLI:
             pass
 
         # flatten the participant dictionary
-        self._sub_dict = self._create_flat_sub_dict_dict(subdict)
+        self._sub_dict = self.create_flat_sub_dict_dict(subdict)
 
         # create the list of bundles
         self._bundles_list = self.create_bundles()
@@ -554,9 +574,10 @@ class QAProtocolCLI:
             return results
 
         elif self._bundle_idx:
-            # there is a self._bundle_idx only if the pipeline runner is run with bundle_idx
-            # as a parameter - only happening either manually, or when running on a cluster
-            self._submit_cluster_batch_file(num_bundles)
+            # there is a self._bundle_idx only if the pipeline runner is run
+            # with bundle_idx as a parameter - only happening either manually,
+            # or when running on a cluster
+            self.submit_cluster_batch_file(num_bundles)
 
         # PDF reporting
         if write_report:
@@ -582,43 +603,37 @@ def starter_node_func(starter):
     """Pass a dummy string through to provide a basic function for the first
     Nipype workflow node.
 
-    Keyword Arguments:
-      starter -- [string] a dummy string
+    - This is used for a Nipype utility function node to serve as a starting
+      node to connect to multiple unrelated Nipype workflows. Each of these
+      workflows runs QAP for one participant in the current bundle being run.
+    - Connecting the multiple non-interdependent participant workflows as
+      one workflow allows the Nipype resource scheduler to maximize
+      performance.
 
-    Returns:
-      starter -- [string] the same string
-
-    Notes:
-      - This is used for a Nipype utility function node to serve as a starting
-        node to connect to multiple unrelated Nipype workflows. Each of these
-        workflows runs QAP for one participant in the current bundle being 
-        run.
-      - Connecting the multiple non-interdependent participant workflows as
-        one workflow allows the Nipype resource scheduler to maximize 
-        performance.
+    :type starter: str
+    :param starter: A dummy string.
+    :rtype: str
+    :return: The same string.
     """
     return starter
 
 
-def _run_workflow(args, run=True):
+def run_workflow(args, run=True):
     """Connect and execute the QAP Nipype workflow for one bundle of data.
 
-    Keyword Arguments:
-      args -- [Python tuple] a 5-element tuple of information comprising of 
-              the bundle's resource pool, a list of participant info, the 
-              configuration options, the pipeline ID run name and 
-              miscellaneous run args
+    - This function will update the resource pool with what is found in the
+      output directory (if it already exists). If the final expected output
+      of the pipeline is already found, the pipeline will not run and it
+      will move onto the next bundle. If the final expected output is not
+      present, the pipeline begins to build itself backwards.
 
-    Returns:
-      rt - [Python dictionary] a dictionary with information about the 
-           workflow run, its status, and results
-
-    Notes:
-      - This function will update the resource pool with what is found in the
-        output directory (if it already exists). If the final expected output
-        of the pipeline is already found, the pipeline will not run and it
-        will move onto the next bundle. If the final expected output is not
-        present, the pipeline begins to build itself backwards.
+    :type args: tuple
+    :param args: A 7-element tuple of information comprising of the bundle's
+                 resource pool, a list of participant info, the configuration
+                 options, the pipeline ID run name and miscellaneous run args.
+    :rtype: dictionary
+    :return: A dictionary with information about the workflow run, its status,
+             and results.
     """
 
     import os
@@ -638,12 +653,19 @@ def _run_workflow(args, run=True):
     from nipype import config as nyconfig
 
     # unpack args
-    resource_pool_dict, sub_info_list, config, run_name, runargs, bundle_idx = args
+    resource_pool_dict, sub_info_list, config, run_name, runargs, bundle_idx, num_bundles = args
 
     # Read and apply general settings in config
     keep_outputs = config.get('write_all_outputs', False)
 
-    log_dir = op.join(config['output_directory'], '_'.join([run_name, "logs"]), \
+    # take date+time stamp for run identification purposes
+    unique_pipeline_id = strftime("%Y%m%d_%H_%M_%S")
+    pipeline_start_stamp = strftime("%Y-%m-%d_%H:%M:%S")
+    pipeline_start_time = time.time()
+
+    log_dir = op.join(config['output_directory'],
+                      '_'.join([run_name, "logs"]),
+                      '_'.join([unique_pipeline_id, "%dbundles" % num_bundles]),
                       '_'.join(["bundle", str(bundle_idx)]))
 
     try:
@@ -660,12 +682,6 @@ def _run_workflow(args, run=True):
     nyconfig.update_config(
         {'logging': {'log_directory': log_dir, 'log_to_file': True}})
     logging.update_logging(nyconfig)
-
-    # take date+time stamp for run identification purposes
-    unique_pipeline_id = strftime("%Y%m%d%H%M%S")
-    pipeline_start_stamp = strftime("%Y-%m-%d_%H:%M:%S")
-
-    pipeline_start_time = time.time()
 
     logger.info("QAP version %s" % qap.__version__)
     logger.info("Pipeline start time: %s" % pipeline_start_stamp)
@@ -689,7 +705,7 @@ def _run_workflow(args, run=True):
     new_outputs = 0
 
     # iterate over each subject in the bundle
-    logger.info("Starting bundle %s.." % str(bundle_idx))
+    logger.info("Starting bundle %s out of %s.." % (str(bundle_idx), str(num_bundles)))
     for sub_info in sub_info_list:
 
         resource_pool = resource_pool_dict[sub_info]

@@ -2,17 +2,15 @@
 def load_image(image_file):
     """Load a raw scan image from a NIFTI file and check it.
 
-    Keyword arguments:
-      image_file -- [string] path to the image, usually a structural or 
-                    functional scan
-
-    Returns:
-      dat -- [Nibabel data] image data in Nibabel format
+    :type image_file: str
+    :param image_file: Path to the image, usually a structural or functional
+                       scan.
+    :rtype: Nibabel data
+    :return: Image data in Nibabel format.
     """
 
     import nibabel as nib
     import numpy as np
-
     from workflow_utils import raise_smart_exception
 
     try:
@@ -47,12 +45,12 @@ def load_image(image_file):
 def load_mask(mask_file, ref_file):
     """Load a mask from a NIFTI file and check the shape and dimensions.
 
-    Keyword arguments:
-      mask_file -- [string] filepath to binarized mask file
-      ref_file -- [string] filepath to anatomical file the mask is meant for
-
-    Returns:
-      mask_dat -- [Nibabel data] the mask data in Nibabel format
+    :type mask_file: str
+    :param mask_file: Filepath to the binarized mask file.
+    :type ref_file: str
+    :param ref_file: Filepath to the anatomical file the mask is meant for.
+    :rtype: Nibabel data
+    :return: The mask data in Nibabel format.
     """
 
     import nibabel as nib
@@ -69,7 +67,7 @@ def load_mask(mask_file, ref_file):
     ref_img = nib.load(ref_file)
 
     # Check that the specified mask is binary.
-    mask_vals   = np.unique(mask_dat)
+    mask_vals = np.unique(mask_dat)
     if (mask_vals.size != 2) or not (mask_vals == [0, 1]).all():
         err = "Error: Mask is not binary, has %i unique val(s) of %s " \
               "(see file %s)" % (mask_vals.size, mask_vals, mask_file)
@@ -82,7 +80,7 @@ def load_mask(mask_file, ref_file):
         raise_smart_exception(locals(),err)
 
     # Verify that the mask and anatomical images are in the same space
-    # (have the samme affine matrix)
+    # (have the same affine matrix)
     if (mask_img.get_affine() == ref_img.get_affine()).all == False:
         err = "Error: Mask and anatomical image are not in the same space " \
               "for %s vs %s" % (mask_file, ref_file)
@@ -96,17 +94,17 @@ def create_anatomical_background_mask(anatomical_data, fg_mask_data,
     """Create a mask of the area outside the head in an anatomical scan by
     inverting a provided foreground mask.
 
-    Keyword arguments:
-      anatomical_data -- [Numpy array] an array of the raw anatomical data
-      fg_mask_data -- [Numpy array] an array of binary foreground mask data
-      exclude_zeroes -- [boolean] (default: False) flag to exclude pure zero 
-                        values when creating the background mask
-
-    Returns:
-      bg_mask_data -- [Nibabel data] background mask data in Nibabel format
+    :type anatomical_data: NumPy array
+    :param anatomical_data: An array of the raw anatomical data.
+    :type fg_mask_data: NumPy array
+    :param fg_mask_data: An array of binary foreground mask data.
+    :type exclude_zeroes: bool
+    :param exclude_zeroes: (default: False) Flag to exclude pure zero values
+                           when creating the background mask.
+    :rtype: Nibabel data
+    :return bg_mask_data: Background mask data in Nibabel format.
     """
 
-    import numpy as np
     from workflow_utils import raise_smart_exception
 
     # invert the foreground mask

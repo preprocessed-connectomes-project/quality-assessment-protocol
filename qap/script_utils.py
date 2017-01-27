@@ -2,11 +2,11 @@
 def read_txt_file(txt_file):
     """Read in a text file into a list of strings.
 
-    Keyword Arguments:
-      txt_file -- [string] filepath to the text file
+    :type txt_file: str
+    :param txt_file: Filepath to the text file.
+    :rtype: list
+    :return: A list of strings, the lines in the text file.
 
-    Returns:
-      strings -- [Python list] a list of strings, the lines in the text file
     """
 
     with open(txt_file,"r") as f:
@@ -17,12 +17,10 @@ def read_txt_file(txt_file):
 def read_yml_file(yml_file):
     """Read in a YAML file into a dictionary.
 
-    Keyword Arguments:
-      yml_file -- [string] filepath to the YAML file
-
-    Returns:
-      config -- [Python dictionary] dictionary of the data stored in the YAML 
-                file
+    :type yml_file: str
+    :param yml_file: Filepath to the YAML file.
+    :rtype: dict
+    :return: Dictionary of the data stored in the YAML
     """
 
     import os
@@ -35,13 +33,12 @@ def read_yml_file(yml_file):
 def gather_filepath_list(site_folder):
     """Gather all of the NIFTI files under a provided directory.
 
-    Keyword Arguments:
-      site_folder -- [string] path to the base directory containing all of the 
-                     NIFTI files you wish to gather
-
-    Returns:
-      filepath_list -- [Python list] a list of filepaths to the NIFTI files 
-                       found within and under the provided site folder
+    :type site_folder: str
+    :param site_folder: Path to the base directory containing all of the
+                        NIFTI files you wish to gather.
+    :rtype: list
+    :return: A list of filepaths to the NIFTI files found within and under
+             the provided site folder.
     """
 
     import os
@@ -61,12 +58,10 @@ def gather_filepath_list(site_folder):
 def csv_to_pandas_df(csv_file):
     """Convert the data in a CSV file into a Pandas DataFrame.
 
-    Keyword Arguments:
-      csv_file -- [string] the filepath to the CSV file to be loaded
-
-    Returns:
-      data -- [Pandas DataFrame] a dataFrame object with the data from the CSV
-              file
+    :type csv_file: str
+    :param csv_file: The filepath to the CSV file to be loaded.
+    :rtype: Pandas DataFrame
+    :return: A DataFrame object with the data from the CSV file.
     """
 
     import pandas as pd
@@ -87,21 +82,24 @@ def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None,
     """Parse a list of NIFTI filepaths into a participant data dictionary for
     the 'qap_raw_data_sublist_generator.py' script.
 
-    Keyword Arguments:
-      filepath_list -- [string] a list of input file NIFTI filepaths
-      site_folder -- [string] the root directory containing the NIFTI
-                     filepaths in the list
-      subject_inclusion -- [list] (default: None) a list of participant
-                           IDs to include in the sublist dictionary
+    - This is for the 'qap_sublist_generator.py' script.
+    - This is designed for data directories formatted as such:
+        /site_folder/participant_ID/session_ID/scan_ID/filename.nii.gz
 
-    Returns:
-      subdict -- [Python dictionary] a dictionary containing the NIFTI files 
-                 indexed by participant information
-
-    Notes:
-      - This is for the 'qap_raw_data_sublist_generator.py' script.
-      - This is designed for data directories formatted as such:
-          /site_folder/participant_ID/session_ID/scan_ID/filename.nii.gz 
+    :type filepath_list: str
+    :param filepath_list: A list of input file NIFTI filepaths.
+    :type site_folder: str
+    :param site_folder: The root directory containing the NIFTI filepaths in
+                        the list.
+    :type inclusion_list: list
+    :param inclusion_list: (default: None) A list of participant IDs to
+                           include in the sublist dictionary.
+    :type s3_bucket: bool
+    :param s3_bucket: A flag denoting whether the list contains AWS S3 bucket
+                      filepaths instead of local disk filepaths.
+    :rtype: dict
+    :return: A dictionary containing the NIFTI files indexed by participant
+             information.
     """
 
     import os

@@ -3,13 +3,13 @@ def gather_nifti_file_paths(dataset_folder, creds_path=None):
     """Gather the NIFTI filepaths present on either an Amazon S3 bucket, or
     on the local filesystem.
 
-    Keyword Arguments:
-      dataset_folder -- [string] the path to the directory containing the data
-      creds_path -- [string] (default: None) the path to the file containing 
-                    your AWS credentials
-
-    Returns:
-      file_path_list -- [Python list] a list of the gathered filepaths
+    :type dataset_folder: str
+    :param dataset_folder: The path to the directory containing the data.
+    :type creds_path: str
+    :param creds_path: (default: None) The path to the file containing your
+                       AWS credentials.
+    :rtype: list
+    :return: A list of the gathered filepaths.
     """
 
     import os
@@ -18,7 +18,8 @@ def gather_nifti_file_paths(dataset_folder, creds_path=None):
 
     file_path_list=[]
 
-    # paths that include s3:// are assumed to live in AWS Simple Storage Service
+    # paths that include s3:// are assumed to live in AWS Simple Storage
+    # Service
     if "s3://" in dataset_folder:
         try:
             from indi_aws import fetch_creds
@@ -61,32 +62,31 @@ def extract_bids_data( file_path_list, inclusion_list=None ):
     """Parse the BIDS-formatted data from a list of filepaths and create a
     dictionary mapping the data to participant, session, series, etc.
 
-    Keyword Arguments:
-      file_path_list -- [Python list] a list of existing NIFTI filepaths
-      inclusion_list -- [Python list] (default: None) a list of participant 
-                        IDs, to prune down the dictionary to only include 
-                        these participants
+    - For more information on the BIDS data structure format, visit:
+        http://bids.neuroimaging.io/
 
-    Returns:
-      sub_dict -- [Python dictionary] a dictionary containing the NIFTI 
-                  filepaths mapped to their participant information and type 
-                  of scan
-
-    Notes:
-      - For more information on the BIDS data structure format, visit:
-          http://bids.neuroimaging.io/
+    :type file_path_list: list
+    :param file_path_list: A list of existing NIFTI filepaths.
+    :type inclusion_list: list
+    :param inclusion_list: (default: None) A list of participant IDs, to prune
+                            down the dictionary to only include these
+                           participants.
+    :rtype: dict
+    :return: A dictionary containing the NIFTI filepaths mapped to their
+             participant information and type of scan.
     """
 
     import os
 
-    # iterate through the files and put them into a dictionary, all of the information that we need to do this
-    # is in the filename
+    # iterate through the files and put them into a dictionary, all of the
+    # information that we need to do this is in the filename
     sub_dict = {}
 
     for file_path in file_path_list:
         filename=os.path.basename(file_path)
         try:
-            # discard the file extension and split filename into key-value chunks, the last chunk being the series type
+            # discard the file extension and split filename into key-value
+            # chunks, the last chunk being the series type
             f_chunks = (filename.split(".")[0]).split("_")
             # make a dictionary from the key-value chunks
             f_dict = {chunk.split("-")[0]:"-".join(chunk.split("-")[1:]) for chunk in f_chunks[:-1]}
@@ -109,8 +109,8 @@ def extract_bids_data( file_path_list, inclusion_list=None ):
         # add ses- onto the front of session name to preserve bids-ness
         f_dict["ses"] = "-".join(["ses",f_dict["ses"]])
 
-        # determine whether the scan is anatomical or functional, we don't know how to handle anything but T1w
-        # and BOLD for now
+        # determine whether the scan is anatomical or functional, we don't
+        # know how to handle anything but T1w and BOLD for now
         if "t1w" in f_dict["series"].lower():
             scan_type = "anatomical_scan"
         elif "bold" in f_dict["series"].lower():
@@ -148,7 +148,5 @@ def extract_bids_data( file_path_list, inclusion_list=None ):
         err = "\nThe participant list came out empty! Double-check your " \
               "settings.\n"
         raise Exception(err)
-
-    return sub_dict
 
     return(sub_dict)

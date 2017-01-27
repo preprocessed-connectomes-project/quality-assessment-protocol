@@ -6,13 +6,12 @@ from qap.script_utils import write_inputs_dict_to_yaml_file
 def main():
 
     import argparse
-    import yaml
 
     parser = argparse.ArgumentParser()
 
     parser.add_argument("dataset_folder", type=str, \
-                        help="full path to the directory holding the " \
-                             "raw data, organized according to the BIDS specification" \
+                        help="full path to the directory holding the raw " \
+                             "data, organized according to the BIDS specification" \
                              "http://bids.neuroimaging.io")
 
     parser.add_argument("outfile_path", type=str, \

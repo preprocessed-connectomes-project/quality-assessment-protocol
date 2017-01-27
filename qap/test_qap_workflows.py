@@ -9,8 +9,6 @@ def test_run_everything_qap_anatomical_spatial_workflow_graph():
     # own unit tests)
 
     import os
-    import numpy as np
-    import nibabel as nb
     import shutil
 
     import pkg_resources as p
@@ -62,8 +60,6 @@ def test_run_everything_qap_functional_spatial_workflow_graph():
     # own unit tests)
 
     import os
-    import numpy as np
-    import nibabel as nb
     import shutil
 
     import pkg_resources as p

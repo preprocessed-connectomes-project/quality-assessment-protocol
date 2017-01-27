@@ -3,20 +3,20 @@
 def get_idx(in_files, stop_idx=None, start_idx=None):
     """Validate and return the first and the last volume of the functional 
     timeseries (if selected).
-    
-    Keyword Arguments:
-      in_files -- [string] the filepath to the NIFTI image of the functional 
-                  timeseries        
-      stop_idx -- [integer] (default: None) last volume to be considered, 
-                  specified by user in the configuration file     
-      start_idx -- [integer] (default: None) first volume to be considered, 
-                   specified by user in the configuration file 
-    
-    Returns:
-      stopidx -- [integer] value of last volume to consider for the functional 
-                 run 
-      startidx -- [integer] value of first volume to consider for the 
-                  functional run
+
+    :type in_files: str
+    :param in_files: The filepath to the NIFTI image of the functional
+                     timeseries.
+    :type start_idx: int
+    :param start_idx: (default: None) First volume to be considered, specified
+                       by user in the configuration file.
+    :type stop_idx: int
+    :param stop_idx: (default: None) Last volume to be considered, specified
+                     by user in the configuration file.
+    :rtype: int
+    :return: Value of first volume to consider for the functional run.
+    :rtype: int
+    :return: Value of last volume to consider for the functional run.
     """
 
     from nibabel import load
@@ -40,68 +40,58 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to deoblique and reorient a functional
     scan from a NIFTI file.
 
-    Keyword arguments:
-      workflow -- [Nipype workflow] a Nipype workflow object which can already
-                  contain other connected nodes; this function will insert the
-                  following workflow into this one provided
-      resource_pool -- [Python dictionary] a dictionary defining input files 
-                       and pointers to Nipype node outputs / workflow 
-                       connections; the keys are the resource names
-      config -- [Python dictionary] a dictionary defining the configuration 
-                settings for the workflow, such as directory paths or toggled 
-                options
-      name -- [string] (default: "_") a string to append to the end of each 
-              node name
+    - This is a seminal workflow that can only take an input directly from
+      disk (i.e. no Nipype workflow connections/pointers, and this is where
+      the pipeline will actually begin). For the sake of building the
+      pipeine in reverse, if this workflow is called when there is no input
+      file available, this function will return the unmodified workflow and
+      resource pool directly back.
+    - In conjunction with the other workflow-building functions, if this
+      function returns the workflow and resource pool unmodified, each
+      function up will do the same until it reaches the top level, allowing
+      the pipeline builder to continue "searching" for a base-level input
+      without crashing at this one.
 
-    Returns:
-      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
-                  but with the following sub-workflow connected into it
-      resource_pool -- [Python dictionary] the resource pool originally 
-                       provided, but updated (if applicable) with the newest 
-                       outputs and connections
+    Expected Resources in Resource Pool
+      - functional_scan: The raw functional 4D timeseries in a NIFTI file.
 
-    Notes:
-      - This is a seminal workflow that can only take an input directly from
-        disk (i.e. no Nipype workflow connections/pointers, and this is where
-        the pipeline will actually begin). For the sake of building the  
-        pipeine in reverse, if this workflow is called when there is no input 
-        file available, this function will return the unmodified workflow and 
-        resource pool directly back.
-      - In conjunction with the other workflow-building functions, if this
-        function returns the workflow and resource pool unmodified, each
-        function up will do the same until it reaches the top level, allowing
-        the pipeline builder to continue "searching" for a base-level input
-        without crashing at this one.
+    New Resources Added to Resource Pool
+      - func_reorient: The deobliqued, reoriented functional timeseries.
 
-    Expected Resources in Resource Pool:
-      functional_scan -- the raw functional 4D timeseries in a NIFTI file
-
-    New Resources Added to Resource Pool:
-      func_reorient -- the deobliqued, reoriented functional timeseries
-
-    Workflow Steps:
+    Workflow Steps
       1. get_idx function node (if a start_idx and/or stop_idx is set in the
          configuration) to generate the volume range to keep in the timeseries
       2. AFNI 3dcalc to drop volumes not included in the range (if a start_idx
          and/or stop_idx has been set in the configuration only)
       3. AFNI 3drefit to deoblique the file
       4. AFNI 3dresample to reorient the file to RPI
+
+    :type workflow: Nipype workflow object
+    :param workflow: A Nipype workflow object which can already contain other
+                     connected nodes; this function will insert the following
+                     workflow into this one provided.
+    :type resource_pool: dict
+    :param resource_pool: A dictionary defining input files and pointers to
+                          Nipype node outputs / workflow connections; the keys
+                          are the resource names.
+    :type config: dict
+    :param config: A dictionary defining the configuration settings for the
+                   workflow, such as directory paths or toggled options.
+    :type name: str
+    :param name: (default: "_") A string to append to the end of each node
+                 name.
+    :rtype: Nipype workflow object
+    :return: The Nipype workflow originally provided, but with this function's
+              sub-workflow connected into it.
+    :rtype: dict
+    :return: The resource pool originally provided, but updated (if
+             applicable) with the newest outputs and connections.
     """
 
-    import os
-    import sys
-
-    import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
-
     import nipype.interfaces.utility as util
-
     from nipype.interfaces.afni import preprocess
 
-    from workflow_utils import check_input_resources, \
-                               check_config_settings
-
-    #check_input_resources(resource_pool, "functional_scan")
     if "functional_scan" not in resource_pool.keys():
         return workflow, resource_pool
 
@@ -170,34 +160,37 @@ def run_func_preproc(functional_scan, start_idx=None, stop_idx=None, \
     """Run the 'func_preproc_workflow' function to execute the modular
     workflow with the provided inputs.
 
-    Keyword Arguments:
-      functional_scan -- [string] filepath to the raw functional timeseries 
-                         image in a NIFTI file
-      start_idx -- [integer] (default: None) the timeseries timepoint/volume 
-                   to start with - i.e. will only include this timepoint and 
-                   the ones after it - setting this to None will include all 
-                   timepoints from the beginning
-      stop_idx -- [integer] (default: None) the timeseries timepoint/volume to
-                  end with - i.e. will only include this timepoint and the 
-                  ones before it - setting this to None will include all 
-                  timepoints up until the end of the timeseries
-      out_dir -- [string] (default: None) the output directory to write the 
-                 results to; if left as None, will write to the current 
-                 directory
-      run -- [boolean] (default: True) will run the workflow; if set to False,
-             will connect the Nipype workflow and return the workflow object 
-             instead
-
-    Returns:
-      outpath -- [string] (if run=True) the filepath of the generated 
-                 func_reorient file
-      workflow -- [Nipype workflow] (if run=False) the Nipype workflow object
-      workflow.base_dir -- [string] (if run=False) the base directory of the 
-                           workflow if it were to be run
+    :type functional_scan: str
+    :param functional_scan: Filepath to the raw functional timeseries image in
+                             a NIFTI file.
+    :type start_idx: int
+    :param start_idx: (default: None) The timeseries timepoint/volume to start
+                       with - i.e. will only include this timepoint and the
+                      ones after it - setting this to None will include all
+                      timepoints from the beginning.
+    :type stop_idx: int
+    :param stop_idx: (default: None) The timeseries timepoint/volume to end
+                     with - i.e. will only include this timepoint and the
+                     ones before it - setting this to None will include all
+                     timepoints up until the end of the timeseries.
+    :type out_dir: str
+    :param out_dir: (default: None) The output directory to write the results
+                    to; if left as None, will write to the current directory.
+    :type run: bool
+    :param run: (default: True) Will run the workflow; if set to False, will
+                connect the Nipype workflow and return the workflow object
+                instead.
+    :rtype: str
+    :return: (if run=True) The filepath of the generated anatomical_reorient
+             file.
+    :rtype: Nipype workflow object
+    :return: (if run=False) The connected Nipype workflow object.
+    :rtype: str
+    :return: (if run=False) The base directory of the workflow if it were to
+             be run.
     """
 
     import os
-    import sys
     import glob
 
     import nipype.interfaces.io as nio
@@ -234,7 +227,7 @@ def run_func_preproc(functional_scan, start_idx=None, stop_idx=None, \
 
     workflow.connect(node, out_file, ds, 'func_reorient')
 
-    if run == True:
+    if run:
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
         outpath = glob.glob(os.path.join(workflow_dir, "func_reorient",\
@@ -249,58 +242,49 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to calculate the motion correction
     parameters of a functional timeseries using AFNI's 3dvolreg.
 
-    Keyword arguments:
-      workflow -- [Nipype workflow] a Nipype workflow object which can already
-                  contain other connected nodes; this function will insert the
-                  following workflow into this one provided
-      resource_pool -- [Python dictionary] a dictionary defining input files 
-                       and pointers to Nipype node outputs / workflow 
-                       connections; the keys are the resource names
-      config -- [Python dictionary] a dictionary defining the configuration 
-                settings for the workflow, such as directory paths or toggled 
-                options
-      name -- [string] (default: "_") a string to append to the end of each 
-              node name
+    - If any resources/outputs required by this workflow are not in the
+      resource pool, this workflow will call pre-requisite workflow builder
+      functions to further populate the pipeline with workflows which will
+      calculate/generate these necessary pre-requisites.
 
-    Returns:
-      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
-                  but with the following sub-workflow connected into it
-      resource_pool -- [Python dictionary] the resource pool originally 
-                       provided, but updated (if applicable) with the newest 
-                       outputs and connections
-
-    Notes:
-      - If any resources/outputs required by this workflow are not in the
-        resource pool, this workflow will call pre-requisite workflow builder
-        functions to further populate the pipeline with workflows which will
-        calculate/generate these necessary pre-requisites.
-
-    Expected Resources in Resource Pool:
-      func_reorient - the deobliqued, reoriented functional timeseries
+    Expected Resources in Resource Pool
+      - func_reorient: The deobliqued, reoriented functional timeseries.
 
     New Resources Added to Resource Pool:
-      func_motion_correct -- the motion-corrected functional timeseries
-      coordinate_transformation -- the matrix transformation from AFNI's
-                                   3dvolreg (--1Dmatrix_save option)
+      - func_motion_correct: The motion-corrected functional timeseries.
+      - coordinate_transformation: The matrix transformation from AFNI's
+                                   3dvolreg (--1Dmatrix_save option).
 
-    Workflow Steps:
+    Workflow Steps
       1. AFNI 3dcalc to extract the first volume of the functional timeseries
-         for the basefile for 3dvolreg
-      2. AFNI 3dvolreg to calculate the motion correction parameters
+         for the basefile for 3dvolreg.
+      2. AFNI 3dvolreg to calculate the motion correction parameters.
+
+    :type workflow: Nipype workflow object
+    :param workflow: A Nipype workflow object which can already contain other
+                     connected nodes; this function will insert the following
+                     workflow into this one provided.
+    :type resource_pool: dict
+    :param resource_pool: A dictionary defining input files and pointers to
+                          Nipype node outputs / workflow connections; the keys
+                          are the resource names.
+    :type config: dict
+    :param config: A dictionary defining the configuration settings for the
+                   workflow, such as directory paths or toggled options.
+    :type name: str
+    :param name: (default: "_") A string to append to the end of each node
+                 name.
+    :rtype: Nipype workflow object
+    :return: The Nipype workflow originally provided, but with this function's
+              sub-workflow connected into it.
+    :rtype: dict
+    :return: The resource pool originally provided, but updated (if
+             applicable) with the newest outputs and connections.
     """
 
-    import os
-    import sys
     import copy
-    import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
-
-    import nipype.interfaces.utility as util
-
     from nipype.interfaces.afni import preprocess
-
-    from workflow_utils import check_input_resources, \
-                               check_config_settings
 
     if "func_reorient" not in resource_pool.keys():
         from functional_preproc import func_preproc_workflow
@@ -310,19 +294,6 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
         if resource_pool == old_rp:
             return workflow, resource_pool
     
-    '''
-    func_get_mean_RPI = pe.Node(interface=preprocess.TStat(),
-                            name='func_get_mean_RPI%s' % name)
-    func_get_mean_RPI.inputs.options = '-mean'
-    func_get_mean_RPI.inputs.outputtype = 'NIFTI_GZ'
-    
-    if len(resource_pool["func_reorient"]) == 2:
-        node, out_file = resource_pool["func_reorient"]
-        workflow.connect(node, out_file, func_get_mean_RPI, 'in_file')
-    else:
-        func_get_mean_RPI.inputs.in_file = resource_pool["func_reorient"]
-    '''
-
     # get the first volume of the time series
     get_func_volume = pe.Node(interface=preprocess.Calc(),
                               name='get_func_volume%s' % name)
@@ -365,26 +336,27 @@ def run_func_motion_correct(func_reorient, out_dir=None, run=True):
     """Run the 'func_motion_correct_workflow' function to execute the modular
     workflow with the provided inputs.
 
-    Keyword Arguments:
-      func_reorient -- [string] filepath to the deobliqued, reoriented 
-                       functional timeseries
-      out_dir -- [string] (default: None) the output directory to write the 
-                 results to; if left as None, will write to the current 
-                 directory
-      run -- [boolean] (default: True) will run the workflow; if set to False,
-             will connect the Nipype workflow and return the workflow object 
-             instead
-
-    Returns:
-      outpath -- [string] (if run=True) the filepath of the generated 
-                 func_motion_correct file
-      workflow -- [Nipype workflow] (if run=False) the Nipype workflow object
-      workflow.base_dir -- [string] (if run=False) the base directory of the 
-                           workflow if it were to be run
+    :type func_reorient: str
+    :param func_reorient: Filepath to the deobliqued, reoriented functional
+                          timeseries.
+    :type out_dir: str
+    :param out_dir: (default: None) The output directory to write the results
+                    to; if left as None, will write to the current directory.
+    :type run: bool
+    :param run: (default: True) Will run the workflow; if set to False, will
+                connect the Nipype workflow and return the workflow object
+                instead.
+    :rtype: str
+    :return: (if run=True) The filepath of the generated anatomical_reorient
+             file.
+    :rtype: Nipype workflow object
+    :return: (if run=False) The connected Nipype workflow object.
+    :rtype: str
+    :return: (if run=False) The base directory of the workflow if it were to
+             be run.
     """
 
     import os
-    import sys
     import glob
 
     import nipype.interfaces.io as nio
@@ -426,7 +398,7 @@ def run_func_motion_correct(func_reorient, out_dir=None, run=True):
 
     workflow.connect(node, out_file, ds, 'coordinate_transformation')
 
-    if run == True:
+    if run:
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
         outpath = glob.glob(os.path.join(workflow_dir, "func_motion_correct",\
@@ -440,49 +412,45 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to generate a functional brain mask
     using AFNI's 3dAutomask.
 
-    Keyword arguments:
-      workflow -- [Nipype workflow] a Nipype workflow object which can already
-                  contain other connected nodes; this function will insert the
-                  following workflow into this one provided
-      resource_pool -- [Python dictionary] a dictionary defining input files 
-                       and pointers to Nipype node outputs / workflow 
-                       connections; the keys are the resource names
-      config -- [Python dictionary] a dictionary defining the configuration 
-                settings for the workflow, such as directory paths or toggled 
-                options
-      name -- [string] (default: "_") a string to append to the end of each 
-              node name
+    - If any resources/outputs required by this workflow are not in the
+      resource pool, this workflow will call pre-requisite workflow builder
+      functions to further populate the pipeline with workflows which will
+      calculate/generate these necessary pre-requisites.
 
-    Returns:
-      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
-                  but with the following sub-workflow connected into it
-      resource_pool -- [Python dictionary] the resource pool originally 
-                       provided, but updated (if applicable) with the newest 
-                       outputs and connections
+    Expected Resources in Resource Pool
+      - func_reorient: The deobliqued, reoriented functional timeseries.
 
-    Notes:
-      - If any resources/outputs required by this workflow are not in the
-        resource pool, this workflow will call pre-requisite workflow builder
-        functions to further populate the pipeline with workflows which will
-        calculate/generate these necessary pre-requisites.
+    New Resources Added to Resource Pool
+      - functional_brain_mask: The binary brain mask of the functional time
+                               series.
 
-    Expected Resources in Resource Pool:
-      func_reorient -- the deobliqued, reoriented functional timeseries
+    Workflow Steps
+      1. AFNI's 3dAutomask to generate the mask.
 
-    New Resources Added to Resource Pool:
-      functional_brain_mask -- the binary brain mask of the functional time
-                               series
-
-    Workflow Steps:
-      1. AFNI's 3dAutomask to generate the mask
+    :type workflow: Nipype workflow object
+    :param workflow: A Nipype workflow object which can already contain other
+                     connected nodes; this function will insert the following
+                     workflow into this one provided.
+    :type resource_pool: dict
+    :param resource_pool: A dictionary defining input files and pointers to
+                          Nipype node outputs / workflow connections; the keys
+                          are the resource names.
+    :type config: dict
+    :param config: A dictionary defining the configuration settings for the
+                   workflow, such as directory paths or toggled options.
+    :type name: str
+    :param name: (default: "_") A string to append to the end of each node
+                 name.
+    :rtype: Nipype workflow object
+    :return: The Nipype workflow originally provided, but with this function's
+              sub-workflow connected into it.
+    :rtype: dict
+    :return: The resource pool originally provided, but updated (if
+             applicable) with the newest outputs and connections.
     """
 
-    import os
-    import sys
     import copy
-    import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
-    import nipype.interfaces.utility as util   
     from nipype.interfaces.afni import preprocess
 
     if "func_reorient" not in resource_pool.keys():
@@ -514,26 +482,27 @@ def run_functional_brain_mask(func_reorient, out_dir=None, run=True):
     """Run the 'functional_brain_mask_workflow' function to execute the 
     modular workflow with the provided inputs.
 
-    Keyword Arguments:
-      func_reorient - [string] filepath to the deobliqued, reoriented 
-                      functional timeseries
-      out_dir -- [string] (default: None) the output directory to write the 
-                 results to; if left as None, will write to the current 
-                 directory
-      run -- [boolean] (default: True) will run the workflow; if set to False,
-             will connect the Nipype workflow and return the workflow object 
-             instead
-
-    Returns:
-      outpath -- [string] (if run=True) the filepath of the generated 
-                 functional_brain_mask file
-      workflow -- [Nipype workflow] (if run=False) the Nipype workflow object
-      workflow.base_dir -- [string] (if run=False) the base directory of the 
-                           workflow if it were to be run
+    :type func_reorient: str
+    :param func_reorient: Filepath to the deobliqued, reoriented functional
+                          timeseries.
+    :type out_dir: str
+    :param out_dir: (default: None) The output directory to write the results
+                    to; if left as None, will write to the current directory.
+    :type run: bool
+    :param run: (default: True) Will run the workflow; if set to False, will
+                connect the Nipype workflow and return the workflow object
+                instead.
+    :rtype: str
+    :return: (if run=True) The filepath of the generated anatomical_reorient
+             file.
+    :rtype: Nipype workflow object
+    :return: (if run=False) The connected Nipype workflow object.
+    :rtype: str
+    :return: (if run=False) The base directory of the workflow if it were to
+             be run.
     """
 
     import os
-    import sys
     import glob
 
     import nipype.interfaces.io as nio
@@ -566,7 +535,7 @@ def run_functional_brain_mask(func_reorient, out_dir=None, run=True):
 
     workflow.connect(node, out_file, ds, output)
 
-    if run == True:
+    if run:
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
         outpath = glob.glob(os.path.join(workflow_dir, "functional_brain" \
@@ -582,52 +551,48 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
     functional scan (the inversion of the functional brain mask) using AFNI's
     3dCalc.
 
-    Keyword arguments:
-      workflow -- [Nipype workflow] a Nipype workflow object which can already
-                  contain other connected nodes; this function will insert the
-                  following workflow into this one provided
-      resource_pool -- [Python dictionary] a dictionary defining input files 
-                       and pointers to Nipype node outputs / workflow 
-                       connections; the keys are the resource names
-      config -- [Python dictionary] a dictionary defining the configuration 
-                settings for the workflow, such as directory paths or toggled 
-                options
-      name -- [string] (default: "_") a string to append to the end of each 
-              node name
+    - If any resources/outputs required by this workflow are not in the
+      resource pool, this workflow will call pre-requisite workflow builder
+      functions to further populate the pipeline with workflows which will
+      calculate/generate these necessary pre-requisites.
 
-    Returns:
-      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
-                  but with the following sub-workflow connected into it
-      resource_pool -- [Python dictionary] the resource pool originally 
-                       provided, but updated (if applicable) with the newest 
-                       outputs and connections
+    Expected Resources in Resource Pool
+      - functional_brain_mask: The binary brain mask of the functional time
+                               series.
 
-    Notes:
-      - If any resources/outputs required by this workflow are not in the
-        resource pool, this workflow will call pre-requisite workflow builder
-        functions to further populate the pipeline with workflows which will
-        calculate/generate these necessary pre-requisites.
-
-    Expected Resources in Resource Pool:
-      functional_brain_mask -- the binary brain mask of the functional time
-                               series
-
-    New Resources Added to Resource Pool:
-      inverted_functional_brain_mask -- the inversion of the functional brain
+    New Resources Added to Resource Pool
+      - inverted_functional_brain_mask: The inversion of the functional brain
                                         mask, a binary brain mask of the
                                         background of the functional time
-                                        series
+                                        series.
 
     Workflow Steps:
       1. AFNI's 3dcalc to invert the functional brain mask
+
+    :type workflow: Nipype workflow object
+    :param workflow: A Nipype workflow object which can already contain other
+                     connected nodes; this function will insert the following
+                     workflow into this one provided.
+    :type resource_pool: dict
+    :param resource_pool: A dictionary defining input files and pointers to
+                          Nipype node outputs / workflow connections; the keys
+                          are the resource names.
+    :type config: dict
+    :param config: A dictionary defining the configuration settings for the
+                   workflow, such as directory paths or toggled options.
+    :type name: str
+    :param name: (default: "_") A string to append to the end of each node
+                 name.
+    :rtype: Nipype workflow object
+    :return: The Nipype workflow originally provided, but with this function's
+              sub-workflow connected into it.
+    :rtype: dict
+    :return: The resource pool originally provided, but updated (if
+             applicable) with the newest outputs and connections.
     """
 
-    import os
-    import sys
     import copy
-    import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
-    import nipype.interfaces.utility as util   
     from nipype.interfaces.afni import preprocess
 
     if "functional_brain_mask" not in resource_pool.keys():
@@ -663,26 +628,27 @@ def run_invert_functional_brain_mask(functional_brain_mask, out_dir=None,
     """Run the 'invert_functional_brain_mask_workflow' function to execute the
     modular workflow with the provided inputs.
 
-    Keyword Arguments:
-      functional_brain_mask -- [string] filepath to the binary functional 
-                               brain mask
-      out_dir -- [string] (default: None) the output directory to write the 
-                 results to; if left as None, will write to the current 
-                 directory
-      run -- [boolean] (default: True) will run the workflow; if set to False,
-             will connect the Nipype workflow and return the workflow object 
-             instead
-
-    Returns:
-      outpath -- [string] (if run=True) the filepath of the generated 
-                 inverted_functional_brain_mask file
-      workflow -- [Nipype workflow] (if run=False) the Nipype workflow object
-      workflow.base_dir -- [string] (if run=False) the base directory of the 
-                           workflow if it were to be run
+    :type functional_brain_mask: str
+    :param functional_brain_mask: Filepath to the binary functional brain
+                                  mask.
+    :type out_dir: str
+    :param out_dir: (default: None) The output directory to write the results
+                    to; if left as None, will write to the current directory.
+    :type run: bool
+    :param run: (default: True) Will run the workflow; if set to False, will
+                connect the Nipype workflow and return the workflow object
+                instead.
+    :rtype: str
+    :return: (if run=True) The filepath of the generated anatomical_reorient
+             file.
+    :rtype: Nipype workflow object
+    :return: (if run=False) The connected Nipype workflow object.
+    :rtype: str
+    :return: (if run=False) The base directory of the workflow if it were to
+             be run.
     """
 
     import os
-    import sys
     import glob
 
     import nipype.interfaces.io as nio
@@ -696,9 +662,7 @@ def run_invert_functional_brain_mask(functional_brain_mask, out_dir=None,
         out_dir = os.getcwd()
 
     workflow_dir = os.path.join(out_dir, "workflow_output", output)
-
     workflow.base_dir = workflow_dir
-
 
     resource_pool = {}
     config = {}
@@ -709,7 +673,6 @@ def run_invert_functional_brain_mask(functional_brain_mask, out_dir=None,
     workflow, resource_pool = \
             invert_functional_brain_mask_workflow(workflow, resource_pool, config)
 
-
     ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
     ds.inputs.base_directory = workflow_dir
     
@@ -717,7 +680,7 @@ def run_invert_functional_brain_mask(functional_brain_mask, out_dir=None,
 
     workflow.connect(node, out_file, ds, output)
 
-    if run == True:
+    if run:
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
         outpath = glob.glob(os.path.join(workflow_dir, "inverted_functional_"\
@@ -732,53 +695,47 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
     functional timeseries comprising of the mean of its timepoint values,
     using AFNI's 3dTstat.
 
-    Keyword arguments:
-      workflow -- [Nipype workflow] a Nipype workflow object which can already
-                  contain other connected nodes; this function will insert the
-                  following workflow into this one provided
-      resource_pool -- [Python dictionary] a dictionary defining input files 
-                       and pointers to Nipype node outputs / workflow 
-                       connections; the keys are the resource names
-      config -- [Python dictionary] a dictionary defining the configuration 
-                settings for the workflow, such as directory paths or toggled 
-                options
-      name -- [string] (default: "_") a string to append to the end of each 
-              node name
+    - If any resources/outputs required by this workflow are not in the
+      resource pool, this workflow will call pre-requisite workflow builder
+      functions to further populate the pipeline with workflows which will
+      calculate/generate these necessary pre-requisites.
+    - For QAP: This workflow will NOT remove background noise from the
+      image, to maintain as accurate of a quality metric as possible.
 
-    Returns:
-      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
-                  but with the following sub-workflow connected into it
-      resource_pool -- [Python dictionary] the resource pool originally 
-                       provided, but updated (if applicable) with the newest 
-                       outputs and connections
+    Expected Resources in Resource Pool
+      - func_reorient: The deobliqued, reoriented functional timeseries.
 
-    Notes:
-      - If any resources/outputs required by this workflow are not in the
-        resource pool, this workflow will call pre-requisite workflow builder
-        functions to further populate the pipeline with workflows which will
-        calculate/generate these necessary pre-requisites.
-      - For QAP: This workflow will NOT remove background noise from the
-        image, to maintain as accurate of a quality metric as possible.
-
-    Expected Resources in Resource Pool:
-      func_reorient -- the deobliqued, reoriented functional timeseries
-
-    New Resources Added to Resource Pool:
-      mean_functional -- the one-volume image of the averaged timeseries
+    New Resources Added to Resource Pool
+      - mean_functional: The one-volume image of the averaged timeseries.
 
     Workflow Steps:
-      1. AFNI 3dTstat to calculate the mean of the functional timeseries
+      1. AFNI 3dTstat to calculate the mean of the functional timeseries.
+
+    :type workflow: Nipype workflow object
+    :param workflow: A Nipype workflow object which can already contain other
+                     connected nodes; this function will insert the following
+                     workflow into this one provided.
+    :type resource_pool: dict
+    :param resource_pool: A dictionary defining input files and pointers to
+                          Nipype node outputs / workflow connections; the keys
+                          are the resource names.
+    :type config: dict
+    :param config: A dictionary defining the configuration settings for the
+                   workflow, such as directory paths or toggled options.
+    :type name: str
+    :param name: (default: "_") A string to append to the end of each node
+                 name.
+    :rtype: Nipype workflow object
+    :return: The Nipype workflow originally provided, but with this function's
+              sub-workflow connected into it.
+    :rtype: dict
+    :return: The resource pool originally provided, but updated (if
+             applicable) with the newest outputs and connections.
     """
 
-    import os
-    import sys
     import copy
-    import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
-    import nipype.interfaces.utility as util 
     from nipype.interfaces.afni import preprocess
-
-    from workflow_utils import check_input_resources
 
     if "func_reorient" not in resource_pool.keys():
 
@@ -811,36 +768,35 @@ def run_mean_functional(func_reorient, out_dir=None, run=True):
     """Run the 'mean_functional_workflow' function to execute the modular
     workflow with the provided inputs.
 
-    Keyword Arguments:
-      func_reorient -- [string] filepath to the deobliqued, reoriented 
-                       functional timeseries
-      out_dir -- [string] (default: None) the output directory to write the 
-                 results to; if left as None, will write to the current 
-                 directory
-      run -- [boolean] (default: True) will run the workflow; if set to False,
-             will connect the Nipype workflow and return the workflow object 
-             instead
+    - This workflow will NOT remove background noise.
 
-    Returns:
-      outpath -- [string] (if run=True) the filepath of the generated 
-                 mean_functional file
-      workflow -- [Nipype workflow] (if run=False) the Nipype workflow object
-      workflow.base_dir -- [string] (if run=False) the base directory of the 
-                           workflow if it were to be run
-
-    Notes:
-      - This workflow will NOT remove background noise.
+    :type func_reorient: str
+    :param func_reorient: Filepath to the deobliqued, reoriented functional
+                          timeseries.
+    :type out_dir: str
+    :param out_dir: (default: None) The output directory to write the results
+                    to; if left as None, will write to the current directory.
+    :type run: bool
+    :param run: (default: True) Will run the workflow; if set to False, will
+                connect the Nipype workflow and return the workflow object
+                instead.
+    :rtype: str
+    :return: (if run=True) The filepath of the generated anatomical_reorient
+             file.
+    :rtype: Nipype workflow object
+    :return: (if run=False) The connected Nipype workflow object.
+    :rtype: str
+    :return: (if run=False) The base directory of the workflow if it were to
+             be run.
     """
 
     import os
-    import sys
     import glob
 
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
 
     output = "mean_functional"
-
     workflow = pe.Workflow(name='%s_workflow' % output)
 
     if not out_dir:
@@ -849,17 +805,14 @@ def run_mean_functional(func_reorient, out_dir=None, run=True):
     workflow_dir = os.path.join(out_dir, "workflow_output", output)
     workflow.base_dir = workflow_dir
 
-
     resource_pool = {}
     config = {}
     num_cores_per_subject = 1
 
     resource_pool["func_reorient"] = func_reorient
 
-    
     workflow, resource_pool = \
-            mean_functional_workflow(workflow, resource_pool, config)
-
+        mean_functional_workflow(workflow, resource_pool, config)
 
     ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
     ds.inputs.base_directory = workflow_dir
@@ -868,12 +821,11 @@ def run_mean_functional(func_reorient, out_dir=None, run=True):
 
     workflow.connect(node, out_file, ds, output)
 
-    if run == True:
+    if run:
         workflow.run(plugin='MultiProc', plugin_args= \
                          {'n_procs': num_cores_per_subject})
-        outpath = glob.glob(os.path.join(workflow_dir, "mean_functional", \
+        outpath = glob.glob(os.path.join(workflow_dir, "mean_functional",
                                          "*"))[0] 
         return outpath
     else:
         return workflow, workflow.base_dir
-        
