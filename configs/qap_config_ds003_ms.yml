@@ -21,7 +21,7 @@ working_directory: /tmp/workdir_ms
 
 # path to whole head template
 # only required if you have anatomical scans
-template_head_for_anat: /path/to/head/template
+template_head_for_anat: /home/ubuntu/fsl/data/standard/MNI152_T1_2mm.nii.gz
 
 # exclude zero-value voxels from the background of the anatomical scan
 # this is meant for images that have been manually altered (ex. ears removed

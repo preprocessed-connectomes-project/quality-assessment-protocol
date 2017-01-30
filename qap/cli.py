@@ -550,7 +550,7 @@ class QAProtocolCLI:
             self._config["num_participants_at_once"] = len(self._bundles_list[0])
 
         # Start the magic
-        if not self._bundle_idx:
+        if not self._platform:
             # not a cluster/grid run
 
             if self._num_bundles_at_once == 1:
@@ -573,11 +573,15 @@ class QAProtocolCLI:
                 pool.terminate()
             return results
 
-        elif self._bundle_idx:
+        elif not self._bundle_idx:
             # there is a self._bundle_idx only if the pipeline runner is run
             # with bundle_idx as a parameter - only happening either manually,
             # or when running on a cluster
             self.submit_cluster_batch_file(num_bundles)
+
+        else:
+            # if there is a bundle_idx supplied to the runner
+            self.run_one_bundle(self._bundle_idx)
 
         # PDF reporting
         if write_report:

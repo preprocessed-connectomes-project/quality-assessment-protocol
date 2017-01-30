@@ -1,17 +1,13 @@
 
-import os
-import sys
-import numpy as np
-import nibabel as nb
-import pandas as pd
-import scipy.ndimage as nd
 import scipy.stats as stats
-from tempfile import mkdtemp
-import shutil
+
 
 def pass_floats(output_string):
     """Parse AFNI command STDOUT output strings and return the output values 
     as a list of floats.
+
+    :type output_string: str
+    :param output_string: An AFNI command standard output.
 
     Keyword Arguments:
       output_string -- [string] an AFNI command standard output
@@ -49,7 +45,6 @@ def calculate_percent_outliers(values_list):
     from workflow_utils import raise_smart_exception
 
     try:
-
         # calculate the IQR
         sorted_values = sorted(values_list)
 
@@ -191,8 +186,6 @@ def outlier_timepoints(func_file, mask_file=None, out_fraction=True):
     """
 
     import commands
-    import re
-    import numpy as np
     from workflow_utils import raise_smart_exception
 
     opts = []

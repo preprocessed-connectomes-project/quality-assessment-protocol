@@ -202,24 +202,28 @@ def populate_custom_data_dict(data_dict, filepath, part_id, session_id, series_i
     """Update a participant data dictionary with a NIFTI filepath keyed to
     a participant's information, for the 'gather_custom_raw_data.py' script.
 
-    Keyword Arguments:
-      data_dict -- [Python dictionary] the participant data dictionary
-      filepath -- [string] the new NIFTI filepath to add to the dictionary
-      part_id -- [string] the participant ID
-      session_id -- [string] the session ID
-      series_id -- [string] the series/scan ID
-      site_id -- [string] the site name/ID
-      resource -- [string] the name of the type of data/file the NIFTI file is
-      default_series_label -- [string] (default: None) a default to use for 
-                              series/scan names/IDs
+    - This is for the 'gather_custom_raw_data.py' script, but is called in
+      the 'gather_custom_raw_data' function, one NIFTI file at a time.
 
-    Returns:
-      data_dict -- [Python dictionary] the updated version of the data_dict 
-                   provided in the inputs
-
-    Notes:
-      - This is for the 'gather_custom_raw_data.py' script, but is called in
-        the 'gather_custom_raw_data' function, one NIFTI file at a time.
+    :type data_dict: dict
+    :param data_dict: The participant data dictionary.
+    :type filepath: str
+    :param filepath: The new NIFTI filepath to add to the dictionary.
+    :type part_id: str
+    :param part_id: The participant ID.
+    :type session_id: str
+    :param session_id: The session ID.
+    :type series_id: str
+    :param series_id: The series/scan ID.
+    :type site_id: str
+    :param site_id: The site name/ID.
+    :type resource: str
+    :param resource: The name of the type of data/file the NIFTI file is.
+    :type default_series_label: str
+    :param default_series_label: (default: None) A default to use for series/
+                                 scan names/IDs.
+    :rtype: dict
+    :return: The updated version of the data_dict provided in the inputs.
     """
 
     new_dict = data_dict
@@ -254,31 +258,30 @@ def gather_custom_raw_data(filepath_list, base_folder, directory_format,
     when the NIFTI filepaths are based on a custom data directory format, for
     the 'qap_flexible_sublist_generator.py' script.
 
-    Keyword Arguments:
-      filepath_list -- [Python list] a list of NIFTI filepaths
-      base_folder -- [string] the root directory containing all of the NIFTI 
-                     filepaths in the list
-      directory_format -- [string] a string describing the data directory 
-                          layout in the format '/{site}/{participant}/..'
-                          '..{session}/..' etc. where the order of the {} 
-                          items can vary
-      anatomical_keywords -- [string] (default: None) a string of space- 
-                             delimited keywords that may be in the NIFTI 
-                             filepath or filename that denotes the file is 
-                             anatomical
-      functional_keywords -- [string] (default: None) a string of space-
-                             delimited keywords that may be in the NIFTI 
-                             filepath or filename that denotes the file is 
-                             functional
+    - This is for the 'qap_flexible_sublist_generator.py' script.
+    - This is to facilitate participant dictionary generation for data
+      directory formats that are neither BIDS-format nor conventional
+      (/site/participant/session/scan/file).
 
-    Returns:
-      data_dict -- [Python dictionary] the participant data dictionary
-
-    Notes:
-      - This is for the 'qap_flexible_sublist_generator.py' script.
-      - This is to facilitate participant dictionary generation for data 
-        directory formats that are neither BIDS-format nor conventional 
-        (/site/participant/session/scan/file).
+    :type filepath_list: list
+    :param filepath_list: A list of NIFTI filepaths.
+    :type base_folder: str
+    :param base_folder: The root directory containing all of the NIFTI
+                        filepaths in the list.
+    :type directory_format: str
+    :param directory_format: A string describing the data directory layout in
+                             the format '/{site}/{participant}/{session}/..'
+                             etc. wehre the order of the {} items can vary.
+    :type anatomical_keywords: str
+    :param anatomical_keywords: (default: None) A string of space-delimited
+                                keywords that may be in the NIFTI filepath or
+                                filename that denotes the file is anatomical.
+    :type functional_keywords: str
+    :param functional_keywords: (default: None) A string of space-delimited
+                                keywords that may be in the NIFTI filepath or
+                                filename that denotes the file is functional.
+    :rtype: dict
+    :return: The participant data dictionary.
     """
 
     import os
@@ -359,15 +362,16 @@ def gather_custom_raw_data(filepath_list, base_folder, directory_format,
 def pull_s3_sublist(bucket_name, bucket_prefix, creds_path=None):
     """Create a list of filepaths stored on the Amazon S3 bucket.
 
-    Keyword Arguments:
-      bucket_name -- [string] the name of the Amazon S3 bucket
-      bucket_prefix -- [string] the directory path of the root directory of
-                       your data on the S3 bucket
-      creds_path -- [string] the filepath to your Amazon AWS keys
-
-    Returns:
-      s3_list -- [Python list] a list of Amazon S3 filepaths from the bucket
-                 and bucket directory you provided
+    :type bucket_name: str
+    :param bucket_name: The name of the Amazon S3 bucket.
+    :type bucket_prefix: str
+    :param bucket_prefix: The directory path of the root directory of your
+                          data on the S3 bucket.
+    :type creds_path: str
+    :param creds_path: The filepath to your Amazon AWS keys.
+    :rtype: list
+    :return: A list of Amazon S3 filepaths from the bucket and bucket
+             directory you provided.
     """
 
     import os
@@ -396,13 +400,10 @@ def gather_json_info(output_dir):
     """Extract the dictionaries from the JSON output files and merge them into
     one dictionary.
 
-    Parameters: ::
-      output_dir : [string]
-        the path to the main output directory of the QAP run
-
-    Returns: ::
-      json_dict : [dictionary]
-        the output data of the QAP run keyed by participant-session-scan
+    :type output_dir: str
+    :param output_dir: The path to the main output directory of the QAP run.
+    :rtype: dict
+    :return: The output data of the QAP run keyed by participant-session-scan.
     """
 
     import os
@@ -423,18 +424,17 @@ def gather_json_info(output_dir):
 def json_to_csv(json_dict, csv_output_dir=None):
     """Extract the data from the JSON output file and write it to a CSV file.
 
-    Keyword arguments:
-      json_dict -- [dictionary] dictionary containing all of the JSON output
-                   information from the QAP run
-      csv_output_dir -- [string] (default: None) path to the directory to 
-                        write the CSV file into
-
-    Returns:
-      csv_file -- [string] the CSV file path
+    :type json_dict: dict
+    :param json_dict: Dictionary containing all of the JSON output
+                      information from the QAP run.
+    :type csv_output_dir: str
+    :param csv_output_dir: (default: None) Path to the directory to write the
+                           CSV file into.
+    :rtype: str
+    :return: The CSV file path.
     """
 
     import os
-    import simplejson
     import pandas as pd
     from qap.workflow_utils import raise_smart_exception
 
@@ -680,28 +680,26 @@ def qap_csv_correlations(data_old, data_new, replacements=None):
     each QAP measure for the purpose of regression testing, for the 
     'qap_test_correlations.py' script.
 
-    Keyword Arguments:
-      data_old -- [Pandas DataFrame] a dataframe of QAP output measures from
-                  the older-version run
-      data_new -- [Pandas DataFrame] a dataframe of QAP output measures from
-                  the newer-version run
-      replacements -- [Python list] a list of strings describing column name
-                      replacements, in case column names have changed; these
-                      strings are in the format "old_name,new_name"
+    - This is for the 'qap_test_correlations.py' script.
+    - This is intended for regression testing between versions of the QAP
+      software.
+    - The 'metric_list' below must be kept current with changes to metrics
+      and their titles.
 
-    Returns:
-      correlations_dict -- [Python dictionary] a dictionary of correlations 
-                           values keyed by each QAP metric
-
-    Notes:
-      - This is for the 'qap_test_correlations.py' script.
-      - This is intended for regression testing between versions of the QAP
-        software.
-      - The 'metric_list' below must be kept current with changes to metrics
-        and their titles.
+    :type data_old: Pandas DataFrame
+    :param data_old: A DataFrame of QAP output measures from the older-
+                     version run.
+    :type data_new: Pandas DataFrame
+    :param data_new: A DataFrame of QAP output measures from the newer-
+                     version run.
+    :type replacements: list
+    :param replacements: A list of strings describing column name
+                         replacements, in case column names have changed;
+                         these strings are in the format "old_name,new_name".
+    :rtype: dict
+    :return: A dictionary of correlations values keyed by each QAP metric.
     """
 
-    import numpy as np
     import pandas as pd
     import scipy.stats
 
@@ -755,8 +753,8 @@ def qap_csv_correlations(data_old, data_new, replacements=None):
         metric_old = "_".join([metric, "OLD"])
         metric_new = "_".join([metric, "NEW"])
         if (metric_old in data_merged) and (metric_new in data_merged):
-            metric_old_val = data_merged[metric_old]#.flatten()
-            metric_new_val = data_merged[metric_new]#.flatten()
+            metric_old_val = data_merged[metric_old]
+            metric_new_val = data_merged[metric_new]
             correlations_dict[metric] = scipy.stats.pearsonr(metric_old_val, metric_new_val)
 
     return correlations_dict
@@ -765,17 +763,14 @@ def qap_csv_correlations(data_old, data_new, replacements=None):
 def write_inputs_dict_to_yaml_file(input_dict, yaml_outpath):
     """Write a participant data dictionary to a YAML file.
 
-    Keyword Arguments:
-      input_dict -- [Python dictionary] a participant data dictionary keyed by
-                    participant information
-      yaml_outpath -- [string] the filepath where to write the YAML file to
+    - This is used across the participant list generator scripts.
+    - yaml_outpath should also include the YAML filename.
 
-    Returns:
-      N/A
-
-    Notes:
-      - This is used across the participant list generator scripts.
-      - yaml_outpath should also include the YAML filename.
+    :type input_dict: dict
+    :param input_dict: A participant data dictionary keyed by participant
+                       information.
+    :type yaml_outpath: str
+    :param yaml_outpath: The filepath wehre to write the YAML file to.
     """
 
     import os
