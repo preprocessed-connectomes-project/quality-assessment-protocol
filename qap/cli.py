@@ -101,6 +101,8 @@ class QAProtocolCLI:
         from time import strftime
         from indi_schedulers import cluster_templates
 
+        print "Submitting cluster job to %s.." % self._platform
+
         # Create cluster log dir
         cluster_files_dir = \
             os.path.join(self._config["output_directory"], "cluster_files")
@@ -161,6 +163,8 @@ class QAProtocolCLI:
         with open(batch_filepath, 'w') as f:
             f.write(batch_file_contents)
 
+        print "Batch file written to %s.." % batch_filepath
+
         # Get output response from job submission
         out = commands.getoutput('%s %s' % (exec_cmd, batch_filepath))
 
@@ -169,6 +173,8 @@ class QAProtocolCLI:
             err_msg = 'Error submitting QAP pipeline run to %s queue' \
                       % self._platform
             raise Exception(err_msg)
+
+        print "Batch job submitted to %s queue." % self._platform
 
         # Get pid and send to pid file
         pid = re.search(confirm_str, out).group(0)
@@ -571,7 +577,6 @@ class QAProtocolCLI:
                 results = pool.map(self.run_one_bundle, range(0, num_bundles))
                 pool.close()
                 pool.terminate()
-            return results
 
         elif not self._bundle_idx:
             # there is a self._bundle_idx only if the pipeline runner is run
@@ -581,8 +586,11 @@ class QAProtocolCLI:
 
         else:
             # if there is a bundle_idx supplied to the runner
-            self.run_one_bundle(self._bundle_idx)
+            results = self.run_one_bundle(self._bundle_idx)
 
+        """
+        # this is going to have to be worked into the post JSON-to-CSV
+        # conversion!!!!
         # PDF reporting
         if write_report:
             from qap.viz.reports import workflow_report
@@ -601,6 +609,7 @@ class QAProtocolCLI:
                 for k, v in reports.iteritems():
                     if v['success']:
                         logger.info('Written report (%s) in %s' % (k, v['path']))
+        """
 
 
 def starter_node_func(starter):

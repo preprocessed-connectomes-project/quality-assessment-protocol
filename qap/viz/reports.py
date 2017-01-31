@@ -23,6 +23,21 @@ from .plotting import (plot_measures, plot_mosaic, plot_all,
 # matplotlib.rc('figure', figsize=(11.69, 8.27))  # for DINA4 size
 def workflow_report(in_csv, qap_type, run_name, res_dict,
                     out_dir=None, out_file=None):
+    """
+
+    :type in_csv: str
+    :param in_csv: The filepath of the QAP output CSV file to create a report
+                   for.
+    :type qap_type: str
+    :param qap_type: The type of QAP set of measures ("anatomical spatial",
+                     etc.).
+    :param run_name:
+    :param res_dict:
+    :param out_dir:
+    :param out_file:
+    :return:
+    """
+
     import datetime
 
     if out_dir is None:
@@ -296,8 +311,6 @@ def all_anatomical(df, sc_split=False, condensed=True,
 
 def all_func_temporal(df, sc_split=False, condensed=True,
                       out_file='func_temporal.pdf'):
-    #groups = [['dvars'], ['gcor'], ['m_tsnr'], ['mean_fd'],
-    #          ['num_fd'], ['outlier'], ['perc_fd'], ['quality']]
     groups = [['Fraction of Outliers (Mean)', 'Fraction of Outliers (Median)',
                'Fraction of Outliers (Std Dev)', 'Fraction of Outliers IQR'],
               ['GCOR'],

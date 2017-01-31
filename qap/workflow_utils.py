@@ -4,13 +4,11 @@ def raise_smart_exception(local_vars, msg=None):
     """Raise an exception with more information about the traceback, and 
     enforce inclusion of the locals().
 
-    Keyword Arguments:
-      local_vars -- [Python dictionary] input for locals()
-      msg -- [string] (default: None) the custom error message for the 
-             exception in question
-
-    Returns:
-      N/A
+    :type local_vars: dict
+    :param local_vars: Input for locals().
+    :type msg: str
+    :param msg: (default: None) The custom error message for the exception in
+                question.
     """
 
     import traceback
@@ -25,15 +23,13 @@ def check_input_resources(resource_pool, resource_name):
     """Check to make sure a specific resource/file is present in the 
     resource pool.
 
-    Keyword Arguments:
-      resource_pool -- [Python dictionary] the resource pool of resources 
-                       (which includes output files of sub-workflows, and 
-                       connection pointers for Nipype nodes/workflows)
-      resource_name -- [string] the name of the output/intermediary file to 
-                       check for within the resource pool
-
-    Returns:
-      N/A
+    :type resource_pool: dict
+    :param resource_pool: The resource pool of resources (which includes
+                          output files of sub-workflows, and connection
+                          pointers for Nipype nodes/workflows).
+    :type resource_name: str
+    :param resource_name: The name of the output/intermediary file to check
+                          for within the resource pool.
     """
 
     import os
@@ -60,14 +56,11 @@ def check_config_settings(config, parameter):
     """Check to make sure a configuration setting/parameter is present in the 
     pipeline configuration dictionary.
 
-    Keyword Arguments:
-      config -- [Python dictionary] a dictionary keying configuration options 
-                to their chosen selections
-      parameter -- [string] the key of the configuration parameter to be 
-                   checked
-
-    Returns:
-      N/A
+    :type config: dict
+    :param config: A dictionary keying configuration options to their chosen
+                   selections.
+    :type parameter: str
+    :param parameter: The key of the configuration parameter to be checked.
     """
 
     if parameter not in config.keys():
@@ -81,13 +74,11 @@ def generate_nipype_workflow_graphs(workflow, out_dir=None):
     """Generate the Nipype workflow dependency graphs given the workflow 
     object.
 
-    Keyword Arguments:
-      workflow -- [Nipype workflow] the connected workflow object
-      out_dir -- [string] (default: None) the directory where to write the 
-                 dependency graph .dot and .png files to
-
-    Returns:
-      N/A
+    :type workflow: Nipype workflow object
+    :param workflow: The connected workflow object.
+    :type out_dir: str
+    :param out_dir: (default: None) The directory where to write the
+                    dependency graph .dot and .png files to.
     """
 
     if not out_dir:

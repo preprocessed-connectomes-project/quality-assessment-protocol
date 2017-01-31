@@ -10,53 +10,52 @@ easily run/test the workflow function and build unit tests for it.
 Each workflow function has one associated runner function.
 """
 
+
 def template_workflow(workflow, resource_pool, config, name="_"):
     """Build a Nipype workflow to...
 
-    Keyword arguments:
-      workflow -- [Nipype workflow] a Nipype workflow object which can already
-                  contain other connected nodes; this function will insert the
-                  following workflow into this one provided
-      resource_pool -- [Python dictionary] a dictionary defining input files 
-                       and pointers to Nipype node outputs / workflow 
-                       connections; the keys are the resource names
-      config -- [Python dictionary] a dictionary defining the configuration 
-                settings for the workflow, such as directory paths or toggled 
-                options
-      name -- [string] (default: "_") a string to append to the end of each 
-              node name
+    - If any resources/outputs required by this workflow are not in the
+      resource pool, this workflow will call pre-requisite workflow builder
+      functions to further populate the pipeline with workflows which will
+      calculate/generate these necessary pre-requisites.
 
-    Returns:
-      workflow -- [Nipype workflow] the Nipype workflow originally provided, 
-                  but with the following sub-workflow connected into it
-      resource_pool -- [Python dictionary] the resource pool originally 
-                       provided, but updated (if applicable) with the newest 
-                       outputs and connections
+    Expected Resources in Resource Pool
+      - {resource name}: {resource description}
+      - {resource name}: {resource description}
+      - ..
 
-    Notes:
-      - If any resources/outputs required by this workflow are not in the
-        resource pool, this workflow will call pre-requisite workflow builder
-        functions to further populate the pipeline with workflows which will
-        calculate/generate these necessary pre-requisites.
+    New Resources Added to Resource Pool
+      - {resource name}: {resource description}
+      - {resource name}: {resource description}
+      - ..
 
-    Expected Resources in Resource Pool:
-      {resource name} -- {resource description}
-      {resource name} -- {resource description}
-      ..
-
-    New Resources Added to Resource Pool:
-      {resource name} -- {resource description}
-      {resource name} -- {resource description}
-      ..
-
-    Workflow Steps:
+    Workflow Steps
       1. {node 1..}
       2. {node 2..}
       3. ..
+
+    :type workflow: Nipype workflow object
+    :param workflow: A Nipype workflow object which can already contain other
+                     connected nodes; this function will insert the following
+                     workflow into this one provided.
+    :type resource_pool: dict
+    :param resource_pool: A dictionary defining input files and pointers to
+                          Nipype node outputs / workflow connections; the keys
+                          are the resource names.
+    :type config: dict
+    :param config: A dictionary defining the configuration settings for the
+                   workflow, such as directory paths or toggled options.
+    :type name: str
+    :param name: (default: "_") A string to append to the end of each node
+                 name.
+    :rtype: Nipype workflow object
+    :return: The Nipype workflow originally provided, but with this function's
+              sub-workflow connected into it.
+    :rtype: dict
+    :return: The resource pool originally provided, but updated (if
+             applicable) with the newest outputs and connections.\
     """
 
-    import os
-    import sys
     import copy
     import nipype.interfaces.io as nio
     import nipype.pipeline.engine as pe
@@ -103,26 +102,27 @@ def run_template_workflow(input_resource, out_dir=None, run=True):
     """Run the 'template_workflow' function to execute the modular workflow
     with the provided inputs.
 
-    Keyword Arguments:
-      input_resource -- [string] the filepath of the { input resource }
-      out_dir -- [string] (default: None) the output directory to write the 
-                 results to; if left as None, will write to the current 
-                 directory
-      run -- [boolean] (default: True) will run the workflow; if set to False,
-             will connect the Nipype workflow and return the workflow object 
-             instead
-
-    Returns:
-      outpath -- [string] (if run=True) the filepath of the generated output
-                 file
-      workflow -- [Nipype workflow] (if run=False) the Nipype workflow object
-      workflow.base_dir -- [string] (if run=False) the base directory of the 
-                           workflow if it were to be run
+    :type input_resource: str
+    :param input_resource: The filepath of the { input resource }. Can have
+                           multiple.
+    :type out_dir: str
+    :param out_dir: (default: None) The output directory to write the results
+                    to; if left as None, will write to the current directory.
+    :type run: bool
+    :param run: (default: True) Will run the workflow; if set to False, will
+                connect the Nipype workflow and return the workflow object
+                instead.
+    :rtype: str
+    :return: (if run=True) The filepath of the generated anatomical_reorient
+             file.
+    :rtype: Nipype workflow object
+    :return: (if run=False) The connected Nipype workflow object.
+    :rtype: str
+    :return: (if run=False) The base directory of the workflow if it were to
+             be run.
     """
 
     import os
-    import sys
-
     import glob
 
     import nipype.interfaces.io as nio
