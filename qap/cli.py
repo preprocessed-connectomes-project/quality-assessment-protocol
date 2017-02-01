@@ -41,6 +41,8 @@ class QAProtocolCLI:
 
         cloudgroup.add_argument('--bundle_idx', type=int,
                                 help='Bundle index to run')
+        cloudgroup.add_argument('--log_dir', type=str,
+                                help='Directory for workflow logging')
 
         # Subject list (YAML file)
         group.add_argument(
@@ -78,6 +80,11 @@ class QAProtocolCLI:
             self._bundle_idx = args.bundle_idx
         else:
             self._bundle_idx = None
+
+        if args.log_dir:
+            self._run_log_dir = args.log_dir
+        else:
+            self._run_log_dir = None
 
     def submit_cluster_batch_file(self, num_bundles):
         """Write the cluster batch file for the appropriate scheduler.
@@ -151,9 +158,10 @@ class QAProtocolCLI:
         # Populate string from config dict values
         batch_file_contents = batch_file_contents % config_dict
 
-        run_str = "qap_measures_pipeline.py --bundle_idx %s %s %s" % \
-                      (env_arr_idx, self._config["subject_list"],
-                       self._config["pipeline_config_yaml"])
+        run_str = "qap_measures_pipeline.py --bundle_idx %s --log_dir %s %s "\
+                  "%s" % (env_arr_idx, self._run_log_dir,
+                          self._config["subject_list"],
+                          self._config["pipeline_config_yaml"])
 
         batch_file_contents = "\n".join([batch_file_contents, run_str])
 
@@ -385,6 +393,8 @@ class QAProtocolCLI:
 
         from cloud_utils import download_single_s3_path
 
+        self._config["workflow_log_dir"] = self._run_log_dir
+
         bundle_dict = self._bundles_list[bundle_idx]
         num_bundles = len(self._bundles_list)
 
@@ -554,14 +564,35 @@ class QAProtocolCLI:
         self._bundles_list = self.create_bundles()
         num_bundles = len(self._bundles_list)
 
+        if not self._bundle_idx:
+            # want to initialize the run-level log directory (not the bundle-
+            # level) only the first time we run the script, due to the
+            # timestamp. if sub-nodes are being kicked off by a batch file on
+            # a cluster, we don't want a new timestamp for every new node run
+            self._run_log_dir = op.join(config['output_directory'],
+                                        '_'.join([self._run_name, "logs"]),
+                                        '_'.join([strftime("%Y%m%d_%H_%M_%S"),
+                                                 "%dbundles" % num_bundles]),
+                                        '_'.join(["bundle", str(bundle_idx)]))
+
+        if self._run_log_dir:
+            if not os.path.isdir(self._run_log_dir):
+                try:
+                    os.makedirs(self._run_log_dir)
+                except:
+                    if not op.isdir(self._run_log_dir):
+                        err = "[!] Log directory unable to be created.\n" \
+                              "Path: %s\n\n" % self._run_log_dir
+                        raise Exception(err)
+                    else:
+                        pass
+
         if num_bundles == 1:
             self._config["num_participants_at_once"] = len(self._bundles_list[0])
 
         # Start the magic
         if not self._platform:
             # not a cluster/grid run
-
-            self._config["workflow_start_time"] = strftime("%Y%m%d_%H_%M_%S")
 
             if self._num_bundles_at_once == 1:
                 # this is always the case
@@ -586,7 +617,7 @@ class QAProtocolCLI:
             # there is a self._bundle_idx only if the pipeline runner is run
             # with bundle_idx as a parameter - only happening either manually,
             # or when running on a cluster
-            self._config["workflow_start_time"] = strftime("%Y%m%d_%H_%M_%S")
+            """ MAKE SURE TO ADD THE RUN_LOG_DIR TO THE BATCH FILE!!! """
             self.submit_cluster_batch_file(num_bundles)
 
         else:
@@ -594,7 +625,8 @@ class QAProtocolCLI:
             results = self.run_one_bundle(self._bundle_idx)
 
         # write bundle results to JSON file
-        write_json(results, os.path.join(results["log_dir"],"workflow_results.json"))
+        write_json(results, os.path.join(results["bundle_log_dir"],
+                                         "workflow_results.json"))
 
         """
         # this is going to have to be worked into the post JSON-to-CSV
@@ -680,28 +712,25 @@ def run_workflow(args, run=True):
     keep_outputs = config.get('write_all_outputs', False)
 
     # take date+time stamp for run identification purposes
-    unique_pipeline_id = config["workflow_start_time"]
     pipeline_start_stamp = strftime("%Y-%m-%d_%H:%M:%S")
     pipeline_start_time = time.time()
 
-    log_dir = op.join(config['output_directory'],
-                      '_'.join([run_name, "logs"]),
-                      '_'.join([unique_pipeline_id, "%dbundles" % num_bundles]),
-                      '_'.join(["bundle", str(bundle_idx)]))
+    bundle_log_dir = op.join(config["workflow_log_dir"],
+                             '_'.join(["bundle", str(bundle_idx)]))
 
     try:
-        os.makedirs(log_dir)
+        os.makedirs(bundle_log_dir)
     except:
         if not op.isdir(log_dir):
-            err = "[!] Output directory unable to be created.\n" \
-                    "Path: %s\n\n" % log_dir
+            err = "[!] Bundle log directory unable to be created.\n" \
+                    "Path: %s\n\n" % bundle_log_dir
             raise Exception(err)
         else:
             pass
 
     # set up logging
     nyconfig.update_config(
-        {'logging': {'log_directory': log_dir, 'log_to_file': True}})
+        {'logging': {'log_directory': bundle_log_dir, 'log_to_file': True}})
     logging.update_logging(nyconfig)
 
     logger.info("QAP version %s" % qap.__version__)
@@ -923,7 +952,7 @@ def run_workflow(args, run=True):
                 new_outputs += 1
 
         rt = {'id': sub_id, 'session': session_id, 'scan': scan_id,
-              'status': 'started', 'log_dir': log_dir}
+              'status': 'started', 'bundle_log_dir': bundle_log_dir}
 
     logger.info("New outputs: %s" % str(new_outputs))
 
