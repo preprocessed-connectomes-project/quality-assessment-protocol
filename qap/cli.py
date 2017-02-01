@@ -577,8 +577,7 @@ class QAProtocolCLI:
             self._run_log_dir = op.join(config['output_directory'],
                                         '_'.join([self._run_name, "logs"]),
                                         '_'.join([strftime("%Y%m%d_%H_%M_%S"),
-                                                 "%dbundles" % num_bundles]),
-                                        '_'.join(["bundle", str(bundle_idx)]))
+                                                 "%dbundles" % num_bundles]))
 
         if self._run_log_dir:
             if not os.path.isdir(self._run_log_dir):
