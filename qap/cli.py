@@ -391,6 +391,8 @@ class QAProtocolCLI:
                   status, and results.
         """
 
+        import os
+        from qap.qap_workflows_utils import write_json
         from cloud_utils import download_single_s3_path
 
         self._config["workflow_log_dir"] = self._run_log_dir
@@ -412,6 +414,10 @@ class QAProtocolCLI:
 
         # let's go!
         rt = run_workflow(wfargs)
+
+        # write bundle results to JSON file
+        write_json(rt, os.path.join(rt["bundle_log_dir"],
+                                    "workflow_results.json"))
 
         # make not uploading results to S3 bucket the default if not specified
         if "upload_to_s3" not in self._config.keys():
@@ -441,7 +447,6 @@ class QAProtocolCLI:
         """
 
         from time import strftime
-        from qap.qap_workflows_utils import write_json
         from qap.workflow_utils import raise_smart_exception, \
                                        check_config_settings
 
@@ -623,10 +628,6 @@ class QAProtocolCLI:
         else:
             # if there is a bundle_idx supplied to the runner
             results = self.run_one_bundle(self._bundle_idx)
-
-        # write bundle results to JSON file
-        write_json(results, os.path.join(results["bundle_log_dir"],
-                                         "workflow_results.json"))
 
         """
         # this is going to have to be worked into the post JSON-to-CSV
