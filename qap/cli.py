@@ -115,15 +115,15 @@ class QAProtocolCLI:
         user_account = getpass.getuser()
 
         # Set up config dictionary
-        config_dict = {'timestamp' : timestamp,
-                       'shell' : shell,
-                       'job_name' : self._run_name,
-                       'num_tasks' : num_bundles,
-                       'queue' : "all.q",
-                       'par_env' : "mpi_smp",
-                       'cores_per_task' : self._num_processors,
-                       'user' : user_account,
-                       'work_dir' : cluster_files_dir}
+        config_dict = {'timestamp': timestamp,
+                       'shell': shell,
+                       'job_name': self._run_name,
+                       'num_tasks': num_bundles,
+                       'queue': "all.q",
+                       'par_env': "mpi_smp",
+                       'cores_per_task': self._num_processors,
+                       'user': user_account,
+                       'work_dir': cluster_files_dir}
 
         # Get string template for job scheduler
         if self._platform == "PBS":
@@ -430,6 +430,8 @@ class QAProtocolCLI:
                             format.
         """
 
+        from time import strftime
+        from qap.qap_workflows_utils import write_json
         from qap.workflow_utils import raise_smart_exception, \
                                        check_config_settings
 
@@ -459,7 +461,7 @@ class QAProtocolCLI:
         self._num_bundles_at_once = 1
         write_report = config.get('write_report', False)
 
-        if "resource_manager" in config.keys():
+        if "resource_manager" in config.keys() and not self._bundle_idx:
             res_mngr = config["resource_manager"]
             if (res_mngr == None) or ("None" in res_mngr) or \
                 ("none" in res_mngr):
@@ -559,6 +561,8 @@ class QAProtocolCLI:
         if not self._platform:
             # not a cluster/grid run
 
+            self._config["workflow_start_time"] = strftime("%Y%m%d_%H_%M_%S")
+
             if self._num_bundles_at_once == 1:
                 # this is always the case
                 for idx in range(0, num_bundles):
@@ -582,11 +586,15 @@ class QAProtocolCLI:
             # there is a self._bundle_idx only if the pipeline runner is run
             # with bundle_idx as a parameter - only happening either manually,
             # or when running on a cluster
+            self._config["workflow_start_time"] = strftime("%Y%m%d_%H_%M_%S")
             self.submit_cluster_batch_file(num_bundles)
 
         else:
             # if there is a bundle_idx supplied to the runner
             results = self.run_one_bundle(self._bundle_idx)
+
+        # write bundle results to JSON file
+        write_json(results, os.path.join(results["log_dir"],"workflow_results.json"))
 
         """
         # this is going to have to be worked into the post JSON-to-CSV
@@ -672,7 +680,7 @@ def run_workflow(args, run=True):
     keep_outputs = config.get('write_all_outputs', False)
 
     # take date+time stamp for run identification purposes
-    unique_pipeline_id = strftime("%Y%m%d_%H_%M_%S")
+    unique_pipeline_id = config["workflow_start_time"]
     pipeline_start_stamp = strftime("%Y-%m-%d_%H:%M:%S")
     pipeline_start_time = time.time()
 
@@ -915,7 +923,7 @@ def run_workflow(args, run=True):
                 new_outputs += 1
 
         rt = {'id': sub_id, 'session': session_id, 'scan': scan_id,
-              'status': 'started'}
+              'status': 'started', 'log_dir': log_dir}
 
     logger.info("New outputs: %s" % str(new_outputs))
 
