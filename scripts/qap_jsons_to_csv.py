@@ -3,12 +3,15 @@
 
 def main():
 
+    import os
     import argparse
     from qap.script_utils import gather_json_info, json_to_csv
+    from qap.workflow_utils import raise_smart_exception
 
     parser = argparse.ArgumentParser()
     parser.add_argument("output_dir", type=str,
-                        help="the main output directory of the QAP run")
+                        help="the main output directory of the QAP run "
+                        "which contains the participant directories")
     parser.add_argument("--with_reports", action='store_true',
                         default=False, help="Write a summary report in PDF "
                         "format.")
@@ -22,17 +25,20 @@ def main():
         from qap.viz.reports import workflow_report
         # TODO: read in combined results dictionary from log JSONs
         #logs_dict = gather_json_info("_".join([args.output_dir, "logs"]))
-        # TODO: get a handle for the three CSVs, do checks
 
         qap_types = ["anatomical_spatial",
                      "functional_spatial",
                      "functional_temporal"]
         for qap_type in qap_types:
             qap_type = "_".join(["qap", qap_type])
-            in_csv = op.join(config['output_directory'],
-                             '%s.csv' % qap_type)
-            reports = workflow_report(in_csv, qap_type, self._run_name,
-                                      out_dir=config['output_directory'])
+            run_name = args.output_dir.split("/")[-1]
+            in_csv = op.join(os.getcwd(), '%s.csv' % qap_type)
+            if os.path.isfile(in_csv):
+                err = "[!] The %s CSV file was not successfully created." \
+                      % qap_type
+                raise_smart_exception(locals(), err)
+            reports = workflow_report(in_csv, qap_type, run_name,
+                                      out_dir=args.output_dir)
 
 
 if __name__ == "__main__":
