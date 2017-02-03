@@ -4,8 +4,6 @@
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 # @Author: oesteban
 # @Date:   2015-11-13 07:54:38
-# @Last Modified by:   oesteban
-# @Last Modified time: 2015-11-13 07:55:14
 
 import sys
 import os
@@ -20,10 +18,9 @@ from matplotlib.backends.backend_pdf import PdfPages
 from .plotting import (plot_measures, plot_mosaic, plot_all,
                        plot_fd, plot_dist)
 
-# matplotlib.rc('figure', figsize=(11.69, 8.27))  # for DINA4 size
-def workflow_report(in_csv, qap_type, run_name, res_dict,
-                    out_dir=None, out_file=None):
-    """
+
+def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None):
+    """Generate a PDF report of a QAP run.
 
     :type in_csv: str
     :param in_csv: The filepath of the QAP output CSV file to create a report
@@ -31,11 +28,15 @@ def workflow_report(in_csv, qap_type, run_name, res_dict,
     :type qap_type: str
     :param qap_type: The type of QAP set of measures ("anatomical spatial",
                      etc.).
-    :param run_name:
+    :type run_name: str
+    :param run_name: The name of the pipeline run.
     :param res_dict:
-    :param out_dir:
-    :param out_file:
-    :return:
+    :type out_dir: str
+    :param out_dir: The output directory for the reports.
+    :type out_file: str
+    :param out_file: The filename of the PDF report.
+    :rtype: dict
+    :return: A dictionary with information about the report generation.
     """
 
     import datetime
@@ -67,23 +68,23 @@ def workflow_report(in_csv, qap_type, run_name, res_dict,
     func = getattr(sys.modules[__name__], qap_type)
 
     # Identify failed subjects
-    failed = ['%s (%s_%s)' % (s['id'], s['session'], s['scan'])
-              for s in res_dict if 'failed' in s['status']]
+    #failed = ['%s (%s_%s)' % (s['id'], s['session'], s['scan'])
+    #          for s in res_dict if 'failed' in s['status']]
 
     pdf_group = []
 
     # Generate summary page
-    out_sum = op.join(out_dir, run_name, 'summary_group.pdf')
-    summary_cover(
-        (qap_type,
-         datetime.datetime.now().strftime("%Y-%m-%d, %H:%M"),
-         ", ".join(failed) if len(failed) > 0 else "none"),
-        is_group=True, out_file=out_sum)
-    pdf_group.append(out_sum)
+    #out_sum = op.join(out_dir, run_name, 'summary_group.pdf')
+    #summary_cover(
+    #    (qap_type,
+    #     datetime.datetime.now().strftime("%Y-%m-%d, %H:%M"),
+    #     ", ".join(failed) if len(failed) > 0 else "none"),
+    #    is_group=True, out_file=out_sum)
+    #pdf_group.append(out_sum)
 
     # Generate group report
     qc_group = op.join(out_dir, run_name, 'qc_measures_group.pdf')
-    # Generate violinplots. If successfull, add documentation.
+    # Generate violinplots. If successful, add documentation.
     func(df, out_file=qc_group)
     pdf_group.append(qc_group)
 
@@ -128,19 +129,19 @@ def workflow_report(in_csv, qap_type, run_name, res_dict,
 
             sess_scans.append('%s (%s)' % (sesid, ', '.join(scans)))
 
-        failed = ['%s (%s)' % (s['Session'], s['Series'])
-                  for s in res_dict if 'failed' in s['status'] and
-                  subid in s['id']]
+        #failed = ['%s (%s)' % (s['Session'], s['Series'])
+        #          for s in res_dict if 'failed' in s['status'] and
+        #          subid in s['id']]
 
         # Summary cover
-        out_sum = op.join(out_dir, run_name, 'summary_%s.pdf' % subid)
-        summary_cover(
-            (subid, subid, qap_type,
-             datetime.datetime.now().strftime("%Y-%m-%d, %H:%M"),
-             ", ".join(sess_scans),
-             ",".join(failed) if len(failed) > 0 else "none"),
-            out_file=out_sum)
-        plots.insert(0, out_sum)
+        #out_sum = op.join(out_dir, run_name, 'summary_%s.pdf' % subid)
+        #summary_cover(
+        #    (subid, subid, qap_type,
+        #     datetime.datetime.now().strftime("%Y-%m-%d, %H:%M"),
+        #     ", ".join(sess_scans),
+        #     ",".join(failed) if len(failed) > 0 else "none"),
+        #    out_file=out_sum)
+        #plots.insert(0, out_sum)
 
         # Summary (violinplots) of QC measures
         qc_ms = op.join(out_dir, run_name, subid, 
@@ -162,7 +163,6 @@ def workflow_report(in_csv, qap_type, run_name, res_dict,
 
 def get_documentation(doc_type, out_file):
     import codecs
-    import StringIO
     from xhtml2pdf import pisa
     # open output file for writing (truncated binary)
     result = open(out_file, "w+b")
@@ -183,8 +183,8 @@ def get_documentation(doc_type, out_file):
 
 def summary_cover(data, is_group=False, out_file=None):
     import codecs
-    import StringIO
     from xhtml2pdf import pisa
+
     # open output file for writing (truncated binary)
     result = open(out_file, "w+b")
 

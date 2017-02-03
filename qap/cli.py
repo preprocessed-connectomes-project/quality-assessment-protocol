@@ -46,9 +46,11 @@ class QAProtocolCLI:
 
         # Subject list (YAML file)
         group.add_argument(
-            "particlist", type=str, help="filepath to participant list YAML")
+            "data_config_file", type=str,
+            help="filepath to participant list YAML")
         req.add_argument(
-            "config", type=str, help="filepath to pipeline configuration YAML")
+            "pipeline_config_file", type=str,
+            help="filepath to pipeline configuration YAML")
 
         # Write PDF reports
         group.add_argument(
@@ -59,10 +61,10 @@ class QAProtocolCLI:
 
         # Load config
         from qap.script_utils import read_yml_file
-        self._config = read_yml_file(args.config)
+        self._config = read_yml_file(args.pipeline_config_file)
         self.validate_config_dict()
 
-        self._config['pipeline_config_yaml'] = os.path.realpath(args.config)
+        self._config['pipeline_config_yaml'] = os.path.realpath(args.pipeline_config_file)
         self._run_name = self._config['pipeline_name']
 
         if args.with_reports:
@@ -74,7 +76,7 @@ class QAProtocolCLI:
         if "num_bundles_at_once" not in self._config.keys():
             self._config["num_bundles_at_once"] = 1
 
-        self._config["subject_list"] = os.path.realpath(args.particlist)
+        self._config["subject_list"] = os.path.realpath(args.data_config_file)
 
         if args.bundle_idx:
             self._bundle_idx = args.bundle_idx
@@ -621,35 +623,11 @@ class QAProtocolCLI:
             # there is a self._bundle_idx only if the pipeline runner is run
             # with bundle_idx as a parameter - only happening either manually,
             # or when running on a cluster
-            """ MAKE SURE TO ADD THE RUN_LOG_DIR TO THE BATCH FILE!!! """
             self.submit_cluster_batch_file(num_bundles)
 
         else:
             # if there is a bundle_idx supplied to the runner
             results = self.run_one_bundle(self._bundle_idx)
-
-        """
-        # this is going to have to be worked into the post JSON-to-CSV
-        # conversion!!!!
-        # PDF reporting
-        if write_report:
-            from qap.viz.reports import workflow_report
-            logger.info('Writing PDF reports')
-            qap_types = ["anatomical_spatial", 
-                         "functional_spatial", 
-                         "functional_temporal"]
-            for qap_type in qap_types:
-                qap_type = "_".join(["qap", qap_type])
-                in_csv = op.join(config['output_directory'], 
-                    '%s.csv' % qap_type)
-
-                reports = workflow_report(in_csv, qap_type, self._run_name, results,
-                                          out_dir=config['output_directory'])
-  
-                for k, v in reports.iteritems():
-                    if v['success']:
-                        logger.info('Written report (%s) in %s' % (k, v['path']))
-        """
 
 
 def starter_node_func(starter):
@@ -756,6 +734,9 @@ def run_workflow(args, run=True):
 
     # iterate over each subject in the bundle
     logger.info("Starting bundle %s out of %s.." % (str(bundle_idx), str(num_bundles)))
+    # results dict
+    rt = {'status': 'Started', 'bundle_log_dir': bundle_log_dir}
+
     for sub_info in sub_info_list:
 
         resource_pool = resource_pool_dict[sub_info]
@@ -810,6 +791,9 @@ def run_workflow(args, run=True):
             scan_id = "scan_0"
 
         name = "_".join(["", sub_id, session_id, scan_id])
+
+        rt[name] = {'id': sub_id, 'session': session_id, 'scan': scan_id,
+                    'resource_pool': str(resource_pool)}
 
         logger.info("Participant info: %s" % name)
 
@@ -950,9 +934,6 @@ def run_workflow(args, run=True):
                 new_outputs += 1
             elif ".json" in resource_pool[output]:
                 new_outputs += 1
-
-        rt = {'id': sub_id, 'session': session_id, 'scan': scan_id,
-              'status': 'started', 'bundle_log_dir': bundle_log_dir}
 
     logger.info("New outputs: %s" % str(new_outputs))
 

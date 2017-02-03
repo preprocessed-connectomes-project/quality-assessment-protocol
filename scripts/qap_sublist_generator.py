@@ -19,11 +19,11 @@ def main():
                                  "format")
 
     parser.add_argument("outfile_path", type=str,
-                            help="full path for the generated subject list")
+                            help="filename for the generated subject list")
 
     parser.add_argument("--include", type=str,
-                            help="text file containing participant IDs of the " \
-                                 "subjects you want to include - leave " \
+                            help="text file containing participant IDs of " \
+                                 "the subjects you want to include - leave " \
                                  "this out if you want to run all of them")
 
     parser.add_argument("--BIDS", action="store_true",
