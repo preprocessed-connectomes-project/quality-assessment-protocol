@@ -32,11 +32,9 @@ def main():
         for qap_type in qap_types:
             qap_type = "_".join(["qap", qap_type])
             run_name = args.output_dir.split("/")[-1]
-            in_csv = op.join(os.getcwd(), '%s.csv' % qap_type)
-            if os.path.isfile(in_csv):
-                err = "[!] The %s CSV file was not successfully created." \
-                      % qap_type
-                raise_smart_exception(locals(), err)
+            in_csv = os.path.join(os.getcwd(), '%s.csv' % qap_type)
+            if not os.path.isfile(in_csv):
+                continue
             reports = workflow_report(in_csv, qap_type, run_name,
                                       out_dir=args.output_dir)
 
