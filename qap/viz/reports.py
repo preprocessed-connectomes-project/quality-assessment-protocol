@@ -39,8 +39,6 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None):
     :return: A dictionary with information about the report generation.
     """
 
-    import datetime
-
     if out_dir is None:
         out_dir = os.getcwd()
 
@@ -56,8 +54,8 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None):
         df.drop_duplicates(['Participant', 'Session', 'Series'], keep='last',
                            inplace=True)
     except TypeError:
-        df.drop_duplicates(['Participant', 'Session', 'Series'], take_last=True,
-                           inplace=True)
+        df.drop_duplicates(['Participant', 'Session', 'Series'],
+                           take_last=True, inplace=True)
 
     df["Participant"] = df["Participant"].astype(str)
     df["Session"] = df["Session"].astype(str)
@@ -83,13 +81,13 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None):
     #pdf_group.append(out_sum)
 
     # Generate group report
-    qc_group = op.join(out_dir, run_name, 'qc_measures_group.pdf')
+    qc_group = op.join(os.getcwd(), 'qc_measures_group.pdf')
     # Generate violinplots. If successful, add documentation.
     func(df, out_file=qc_group)
     pdf_group.append(qc_group)
 
     # Generate documentation page
-    doc = op.join(out_dir, run_name, 'documentation.pdf')
+    doc = op.join(os.getcwd(), 'documentation.pdf')
 
     # Let documentation page fail
     get_documentation(qap_type, doc)
@@ -97,7 +95,7 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None):
         pdf_group.append(doc)
 
     if len(pdf_group) > 0:
-        out_group_file = op.join(out_dir, '%s_group.pdf' % qap_type)
+        out_group_file = op.join(os.getcwd(), '%s_group.pdf' % qap_type)
         # Generate final report with collected pdfs in plots
         concat_pdf(pdf_group, out_group_file)
         result['group'] = {'success': True, 'path': out_group_file}
@@ -144,8 +142,7 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None):
         #plots.insert(0, out_sum)
 
         # Summary (violinplots) of QC measures
-        qc_ms = op.join(out_dir, run_name, subid, 
-            '%s_measures.pdf' % qap_type)
+        qc_ms = op.join(os.getcwd(), '%s_measures.pdf' % qap_type)
 
         func(df, subject=subid, out_file=qc_ms)
         plots.append(qc_ms)
