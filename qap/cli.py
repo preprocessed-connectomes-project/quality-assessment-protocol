@@ -227,6 +227,8 @@ class QAProtocolCLI:
                   "configuration template.\n"
             err += "\n".join([x for x in invalid])
             raise Exception(err)
+        else:
+            return 0
 
     def create_flat_sub_dict_dict(self, subdict):
         """Collapse the participant resource pools so that each participant-
@@ -395,7 +397,7 @@ class QAProtocolCLI:
         """
 
         import os
-        from qap.qap_workflows_utils import write_json
+        from qap_utils import write_json
         from cloud_utils import download_single_s3_path
 
         self._config["workflow_log_dir"] = self._run_log_dir
@@ -676,7 +678,7 @@ def run_workflow(args, run=True):
     import nipype.interfaces.utility as niu
 
     import qap
-    from qap.qap_workflows_utils import read_json
+    from qap_utils import read_json
 
     import glob
 

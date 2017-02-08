@@ -359,19 +359,20 @@ def gather_custom_raw_data(filepath_list, base_folder, directory_format,
     return data_dict
 
 
-def pull_s3_sublist(bucket_name, bucket_prefix, creds_path=None):
+def pull_s3_sublist(data_folder, creds_path=None):
     """Create a list of filepaths stored on the Amazon S3 bucket.
 
-    :type bucket_name: str
-    :param bucket_name: The name of the Amazon S3 bucket.
-    :type bucket_prefix: str
-    :param bucket_prefix: The directory path of the root directory of your
-                          data on the S3 bucket.
+    :type data_folder: str
+    :param data_folder: The full S3 (s3://) path to the directory holding the
+                        data.
     :type creds_path: str
     :param creds_path: The filepath to your Amazon AWS keys.
     :rtype: list
     :return: A list of Amazon S3 filepaths from the bucket and bucket
              directory you provided.
+    :rtype: str
+    :return: The data folder path with the s3:// prefix and bucket name
+             removed.
     """
 
     import os
@@ -379,6 +380,10 @@ def pull_s3_sublist(bucket_name, bucket_prefix, creds_path=None):
 
     if creds_path:
         creds_path = os.path.abspath(creds_path)
+
+    s3_path = data_folder.split("s3://")[1]
+    bucket_name = s3_path.split("/")[0]
+    bucket_prefix = s3_path.split(bucket_name + "/")[1]
 
     s3_list = []
     bucket = fetch_creds.return_bucket(creds_path, bucket_name)
@@ -393,7 +398,7 @@ def pull_s3_sublist(bucket_name, bucket_prefix, creds_path=None):
     for bk in bucket.objects.filter(Prefix=bucket_prefix):
         s3_list.append("/".join(["s3:/", bucket_name, str(bk.key)]))
 
-    return s3_list
+    return s3_list, bucket_prefix
 
 
 def gather_json_info(output_dir):

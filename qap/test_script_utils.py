@@ -1,5 +1,54 @@
 
 import pytest
+import unittest
+
+
+class TestPullS3Sublist(unittest.TestCase):
+
+    # will fail if no internet connection
+    # use this test fixture periodically
+
+    def setUp(self):
+        from qap.script_utils import pull_s3_sublist
+        self.pull_s3_sublist = pull_s3_sublist
+        self.bids_path = "s3://fcp-indi/data/Projects/CORR/RawDataBIDS"
+        self.custom_path = "s3://fcp-indi/data/Projects/CORR/RawData"
+        self.invalid_bucket_path = "s3://fcp--indi/data/Projects/CORR/RawDataBIDS"
+        self.invalid_dir_path = "s3://fcp-indi/data/Projects/corr/RawDataBIDS"
+        self.bids_s3_list = [
+            's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/T1w.json',
+            's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003001/ses-1/anat/sub-0003001_ses-1_run-1_T1w.nii.gz',
+            's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003001/ses-1/func/sub-0003001_ses-1_task-rest_run-1_bold.nii.gz',
+            's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003001/ses-1/func/sub-0003001_ses-1_task-rest_run-2_bold.nii.gz',
+            's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003001/sub-0003001_sessions.tsv']
+        self.custom_s3_list = [
+            's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003001/session_1/anat_1/anat.nii.gz',
+            's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003001/session_1/rest_1/rest.nii.gz',
+            's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003001/session_1/rest_2/rest.nii.gz',
+            's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003002/session_1/anat_1/anat.nii.gz',
+            's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003002/session_1/rest_1/rest.nii.gz']
+
+    def test_BIDS(self):
+        test_bids_s3_list = self.pull_s3_sublist(self.bids_path)
+        self.assertListEqual(self.bids_s3_list, test_bids_s3_list[0][0:5])
+
+    def test_custom(self):
+        test_custom_s3_list = self.pull_s3_sublist(self.custom_path)
+        self.assertListEqual(self.custom_s3_list, test_custom_s3_list[0][0:5])
+
+    def test_invalid_bucket_name(self):
+        with self.assertRaises(Exception):
+            self.pull_s3_sublist(self.invalid_bucket_path)
+
+    def test_wrong_dirpath(self):
+        test_wrong_list = self.pull_s3_sublist(self.invalid_dir_path)
+        self.assertEquals(0, len(test_wrong_list[0]))
+
+    def test_invalid_creds_path(self):
+        with self.assertRaises(Exception):
+            self.pull_s3_sublist(self.bids_path, "/path/to/nothing.csv")
+
+
 
 # site_1
 # 0026005 - 3 sessions, 1 anat and 2 func each

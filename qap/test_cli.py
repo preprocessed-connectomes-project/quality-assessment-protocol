@@ -1,5 +1,45 @@
 
 import pytest
+import unittest
+
+
+class TestValidateConfigDict(unittest.TestCase):
+
+    def setUp(self):
+        from qap.cli import validate_config_dict
+        self.validate_config_dict = validate_config_dict
+        self.good_config_dict = {"num_processors": 4,
+                                 "output_directory": "/path/to/output"}
+        self.bad_config_dict = {"num_processors": 4,
+                                "output_directory": "/path/to/output",
+                                "num_bundles_at_once": 2}
+
+    def test_no_obsolete_keys(self):
+        ret = self.validate_config_dict(self.good_config_dict)
+        self.assertEquals(0, ret)
+
+    def test_obsolete_keys(self):
+        with self.assertRaises(Exception):
+            self.validate_config_dict(self.bad_config_dict)
+
+
+class TestCreateFlatSubDictDict(unittest.Testcase):
+
+    def setUp(self):
+        from qap.cli import create_flat_sub_dict_dict
+        self.create_flat_sub_dict_dict = create_flat_sub_dict_dict
+        self.ref_flat_subdict = {
+            ("sub_001", "session_01", "anat_1"): {
+                "anatomical_scan": "/file/path/sub_001/session_01/anatomical_scan/anat_1/file.nii.gz"
+            },
+            ("sub_002", "session_01", "anat_1"): {
+                "anatomical_scan": "/file/path/sub_002/session_01/anatomical_scan/anat_1/file.nii.gz"
+            }
+        }
+
+    def test_twosubs(self):
+        pass
+
 
 @pytest.mark.skip()
 @pytest.mark.quick

@@ -40,11 +40,8 @@ def main():
     # run it!
     if "s3://" in args.data_folder:
         s3 = True
-        s3_path = args.data_folder.split("s3://")[1]
-        bucket_name = s3_path.split("/")[0]
-        data_dir = s3_path.split(bucket_name + "/")[1]
-        filepath_list = pull_s3_sublist(bucket_name, data_dir,
-                                        args.creds_path)
+        filepath_list, data_dir = \
+            pull_s3_sublist(args.data_folder, args.creds_path)
     else:
         data_dir = args.data_folder
         filepath_list = gather_filepath_list(args.data_folder)
