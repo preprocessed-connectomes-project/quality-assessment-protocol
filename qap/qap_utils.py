@@ -1,4 +1,128 @@
 
+def create_expr_string(clip_level_value):
+    """Create the expression arg string to run AFNI 3dcalc via Nipype.
+
+    :type clip_level_value: int
+    :param clip_level_value: The integer of the clipping threshold.
+    :rtype: str
+    :return The string intended for the Nipype AFNI 3dcalc "expr" arg inputs.
+    """
+
+    expr_string = "step(a-%s)" % clip_level_value
+
+    return expr_string
+
+
+def read_nifti_image(nifti_infile):
+    """Read a NIFTI file into Nibabel-format image data.
+
+    :type nifti_infile: str
+    :param nifti_infile: The filepath of the NIFTI image to read in.
+    :rtype: Nibabel image
+    :return: Image data in Nibabel format.
+    """
+
+    import nibabel as nb
+    from qap_utils import raise_smart_exception
+
+    try:
+        nifti_img = nb.load(nifti_infile)
+    except:
+        err = "\n\n[!] Could not load the NIFTI image using Nibabel:\n" \
+              "%s\n\n" % nifti_infile
+        raise_smart_exception(locals(), err)
+
+    return nifti_img
+
+
+def write_nifti_image(nifti_img, file_path):
+    """Write image data in Nibabel format into a NIFTI file.
+
+    :type nifti_img: Nibabel image
+    :param nifti_img: The image data Nibabel object to write out.
+    :type file_path: str
+    :param file_path: The filepath of the NIFTI image to create.
+    """
+
+    import nibabel as nb
+    from qap_utils import raise_smart_exception
+
+    try:
+        nb.save(nifti_img, file_path)
+    except:
+        err = "\n\n[!] Could not save the NIFTI image using Nibabel:\n" \
+              "%s\n\n" % file_path
+        raise_smart_exception(locals(), err)
+
+
+def read_json(json_filename):
+    """Read the contents of a JSON file.
+
+    :type json_filename: str
+    :param json_filename: The path to the JSON file.
+    :rtype: dict
+    :return: Dictionary containing the info from the JSON file.
+    """
+
+    import os
+    import json
+    from qap_utils import raise_smart_exception
+
+    if not os.path.exists(json_filename):
+        err = "\n\n[!] The JSON file provided does not exist.\nFilepath: " \
+              "%s\n\n" % json_filename
+        raise_smart_exception(locals(),err)
+
+    with open(json_filename, "r") as f:
+        json_dict = json.load(f)
+
+    return json_dict
+
+
+def write_json(output_dict, json_file):
+    """Either update or write a dictionary to a JSON file.
+
+    :type output_dict: dict
+    :param output_dict: The dictionary to write or append to the JSON file.
+    :type json_file: str
+    :param json_file: The filepath of the JSON file to write to or update.
+    :rtype: str
+    :return: Filepath of the JSON file written to.
+    """
+
+    import os
+    import json
+    from lockfile import FileLock
+
+    from qap.qap_workflows_utils import read_json
+
+    write = True
+
+    if os.path.exists(json_file):
+        current_dict = read_json(json_file)
+        if current_dict == output_dict:
+            # nothing to update
+            write = False
+        else:
+            for key in output_dict.keys():
+                try:
+                    current_dict[key].update(output_dict[key])
+                except KeyError:
+                    current_dict[key] = output_dict[key]
+    else:
+        current_dict = output_dict
+
+    if write:
+        lock = FileLock(json_file)
+        lock.acquire()
+        with open(json_file, "wt") as f:
+            json.dump(current_dict, f, indent=2, sort_keys=True)
+        lock.release()
+
+    if os.path.exists(json_file):
+        return json_file
+
+
 def load_image(image_file):
     """Load a raw scan image from a NIFTI file and check it.
 
@@ -11,7 +135,7 @@ def load_image(image_file):
 
     import nibabel as nib
     import numpy as np
-    from workflow_utils import raise_smart_exception
+    from qap_utils import raise_smart_exception
 
     try:
         img = nib.load(image_file)
@@ -56,7 +180,7 @@ def load_mask(mask_file, ref_file):
     import nibabel as nib
     import numpy as np
 
-    from workflow_utils import raise_smart_exception
+    from qap_utils import raise_smart_exception
 
     try:
         mask_img = nib.load(mask_file)
@@ -105,7 +229,7 @@ def create_anatomical_background_mask(anatomical_data, fg_mask_data,
     :return bg_mask_data: Background mask data in Nibabel format.
     """
 
-    from workflow_utils import raise_smart_exception
+    from qap_utils import raise_smart_exception
 
     # invert the foreground mask
     try:
@@ -123,3 +247,105 @@ def create_anatomical_background_mask(anatomical_data, fg_mask_data,
         bg_mask_data = bg_mask_data * bool_anat_data
 
     return bg_mask_data
+
+
+def raise_smart_exception(local_vars, msg=None):
+    """Raise an exception with more information about the traceback, and
+    enforce inclusion of the locals().
+
+    :type local_vars: dict
+    :param local_vars: Input for locals().
+    :type msg: str
+    :param msg: (default: None) The custom error message for the exception in
+                question.
+    """
+
+    import traceback
+    e = "\n\nLocal variables:\n%s\n\n%s\n\n" \
+        % (str(local_vars), str(traceback.format_exc()))
+    if msg:
+        e = "%s\n\n%s\n\n" % (e, str(msg))
+    raise Exception(e)
+
+
+def check_input_resources(resource_pool, resource_name):
+    """Check to make sure a specific resource/file is present in the
+    resource pool.
+
+    :type resource_pool: dict
+    :param resource_pool: The resource pool of resources (which includes
+                          output files of sub-workflows, and connection
+                          pointers for Nipype nodes/workflows).
+    :type resource_name: str
+    :param resource_name: The name of the output/intermediary file to check
+                          for within the resource pool.
+    """
+
+    import os
+
+    if resource_name not in resource_pool.keys():
+        err = "Resource pool: %s\n\n[!] The resource '%s' is missing " \
+              "from the resource pool, and it is needed in one of the steps " \
+              "of the pipeline. Please make sure it is specified " \
+              "properly." % (resource_pool, resource_name)
+
+        raise_smart_exception(locals(), err)
+
+    else:
+        if len(resource_pool[resource_name]) > 2:
+            if not os.path.isfile(resource_pool[resource_name]):
+                err = "[!] The path provided for the resource '%s' " \
+                      "does not exist!\nPath provided: %s" % \
+                      (resource_name, resource_pool[resource_name])
+
+                raise_smart_exception(locals(), err)
+
+
+def check_config_settings(config, parameter):
+    """Check to make sure a configuration setting/parameter is present in the
+    pipeline configuration dictionary.
+
+    :type config: dict
+    :param config: A dictionary keying configuration options to their chosen
+                   selections.
+    :type parameter: str
+    :param parameter: The key of the configuration parameter to be checked.
+    """
+
+    if parameter not in config.keys():
+        err = "[!] The parameter '%s' is missing from your pipeline " \
+              "configuration .YML file. Please make sure this is specified " \
+              "properly." % parameter
+        raise_smart_exception(locals(), err)
+
+
+def generate_nipype_workflow_graphs(workflow, out_dir=None):
+    """Generate the Nipype workflow dependency graphs given the workflow
+    object.
+
+    :type workflow: Nipype workflow object
+    :param workflow: The connected workflow object.
+    :type out_dir: str
+    :param out_dir: (default: None) The directory where to write the
+                    dependency graph .dot and .png files to.
+    """
+
+    if not out_dir:
+        pass
+
+    """
+    workflow.write_graph(
+        dotfilename=op.join(config["output_directory"], \
+                            "".join([run_name, ".dot"])),
+        simple_form=False)
+    workflow.write_graph(
+        graph2use="orig",
+        dotfilename=op.join(config["output_directory"], \
+                            "".join([run_name, ".dot"])),
+        simple_form=False)
+    workflow.write_graph(
+        graph2use="hierarchical",
+        dotfilename=op.join(config["output_directory"], \
+                            "".join([run_name, ".dot"])),
+        simple_form=False)
+    """

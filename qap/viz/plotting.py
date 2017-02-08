@@ -83,6 +83,8 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
         except ValueError:
             pass
 
+    df["Participant"] = df["Participant"].astype(str)
+
     axes = []
     for i, snames in enumerate(groups):
         axes.append(plt.subplot(gs[i]))

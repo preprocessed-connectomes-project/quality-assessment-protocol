@@ -391,7 +391,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     from qap_workflows_utils import qap_anatomical_spatial, \
                                     write_json
     from qap.viz.interfaces import PlotMosaic
-    from workflow_utils import check_config_settings
+    from qap_utils import check_config_settings
 
     check_config_settings(config, "template_head_for_anat")
 
@@ -1190,7 +1190,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         node, out_file = resource_pool['func_reorient']
         workflow.connect(node, out_file, temporal, 'func_timeseries')
     else:
-        from workflow_utils import check_input_resources
+        from qap_utils import check_input_resources
         check_input_resources(resource_pool, 'func_reorient')
         input_file = resource_pool['func_reorient']
         temporal.inputs.func_timeseries = input_file

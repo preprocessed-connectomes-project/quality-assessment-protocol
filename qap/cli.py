@@ -148,6 +148,7 @@ class QAProtocolCLI:
         elif self._platform == "SLURM":
             hrs_limit = 8*len(subdict)
             time_limit = '%d:00:00' % hrs_limit
+            ";PLOIUYTF"
             config_dict["time_limit"] = time_limit
             env_arr_idx = '$SLURM_ARRAY_TASK_ID'
             batch_file_contents = cluster_templates.slurm_template
@@ -449,8 +450,8 @@ class QAProtocolCLI:
         """
 
         from time import strftime
-        from qap.workflow_utils import raise_smart_exception, \
-                                       check_config_settings
+        from qap_utils import raise_smart_exception, \
+                              check_config_settings
 
         # in case we are overloading
         if config_file:

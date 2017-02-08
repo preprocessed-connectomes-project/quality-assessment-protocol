@@ -43,7 +43,7 @@ def load(func_file, mask_file, check4d=True):
     """
 
     import nibabel as nib
-    from workflow_utils import raise_smart_exception
+    from qap_utils import raise_smart_exception
 
     try:
         func_img = nib.load(func_file)
@@ -144,7 +144,7 @@ def calc_dvars(func_file, mask_file, output_all=False):
     :return: The output DVARS values vector.
     """
 
-    from workflow_utils import raise_smart_exception
+    from qap_utils import raise_smart_exception
 
     # load data
     func = load(func_file, mask_file)

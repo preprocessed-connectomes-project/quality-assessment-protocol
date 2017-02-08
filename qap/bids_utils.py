@@ -83,7 +83,7 @@ def extract_bids_data( file_path_list, inclusion_list=None ):
     sub_dict = {}
 
     for file_path in file_path_list:
-        filename=os.path.basename(file_path)
+        filename = os.path.basename(file_path)
         try:
             # discard the file extension and split filename into key-value
             # chunks, the last chunk being the series type
@@ -130,7 +130,7 @@ def extract_bids_data( file_path_list, inclusion_list=None ):
                 sub_dict[f_dict["sub"]][f_dict["ses"]][scan_type]={}
 
             # calculate a key for the scan file
-            f_key=f_dict["series"]
+            f_key = f_dict["series"]
             if "functional_scan" in scan_type:
                 if not "task" in f_dict:
                     print "Error (missing 'task-' key), Functional scan {0:s}".format(filename) + \

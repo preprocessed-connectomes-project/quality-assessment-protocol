@@ -86,7 +86,7 @@ def download_single_s3_path(s3_path, cfg_dict):
 
     import os
     from indi_aws import fetch_creds, aws_utils
-    from workflow_utils import raise_smart_exception
+    from qap_utils import raise_smart_exception
 
     # Init variables
     working_dir = cfg_dict["working_directory"]
