@@ -23,22 +23,51 @@ class TestValidateConfigDict(unittest.TestCase):
             self.validate_config_dict(self.bad_config_dict)
 
 
-class TestCreateFlatSubDictDict(unittest.Testcase):
+class TestCreateFlatSubDictDict(unittest.TestCase):
 
     def setUp(self):
         from qap.cli import create_flat_sub_dict_dict
         self.create_flat_sub_dict_dict = create_flat_sub_dict_dict
+        self.ref_flat_subdict_nosite = {
+            ("sub_001", "session_01", "anat_1"): {
+                "anatomical_scan": "/file/path/sub_001/session_01/anatomical_scan/anat_1/file.nii.gz"},
+            ("sub_002", "session_01", "anat_1"): {
+                "anatomical_scan": "/file/path/sub_002/session_01/anatomical_scan/anat_1/file.nii.gz"}}
+        self.input_subdict_nosite = {
+            'sub_001': {
+                'session_01': {
+                    'anatomical_scan': {
+                        'anat_1': '/file/path/sub_001/session_01/anatomical_scan/anat_1/file.nii.gz'}}},
+            'sub_002': {
+                'session_01': {
+                    'anatomical_scan': {
+                        'anat_1': '/file/path/sub_002/session_01/anatomical_scan/anat_1/file.nii.gz'}}}}
         self.ref_flat_subdict = {
             ("sub_001", "session_01", "anat_1"): {
-                "anatomical_scan": "/file/path/sub_001/session_01/anatomical_scan/anat_1/file.nii.gz"
-            },
+                "anatomical_scan": "/file/site_01/sub_001/session_01/anatomical_scan/anat_1/file.nii.gz",
+                "site_name": "site_01"},
             ("sub_002", "session_01", "anat_1"): {
-                "anatomical_scan": "/file/path/sub_002/session_01/anatomical_scan/anat_1/file.nii.gz"
-            }
-        }
+                "anatomical_scan": "/file/site_01/sub_002/session_01/anatomical_scan/anat_1/file.nii.gz",
+                "site_name": "site_01"}}
+        self.input_subdict = {
+            'sub_001': {
+                'session_01': {
+                    'anatomical_scan': {
+                        'anat_1': '/file/site_01/sub_001/session_01/anatomical_scan/anat_1/file.nii.gz'},
+                    'site_name': 'site_01'}},
+            'sub_002': {
+                'session_01': {
+                    'anatomical_scan': {
+                        'anat_1': '/file/site_01/sub_002/session_01/anatomical_scan/anat_1/file.nii.gz'},
+                    'site_name': 'site_01'}}}
 
-    def test_twosubs(self):
-        pass
+    def test_twosubs_nosite(self):
+        test_flat = self.create_flat_sub_dict_dict(self.input_subdict_nosite)
+        self.assertDictEqual(self.ref_flat_subdict_nosite, test_flat)
+
+    def test_twosubs_withsite(self):
+        test_flat = self.create_flat_sub_dict_dict(self.input_subdict)
+        self.assertDictEqual(self.ref_flat_subdict, test_flat)
 
 
 @pytest.mark.skip()

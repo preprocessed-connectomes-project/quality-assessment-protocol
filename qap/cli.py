@@ -15,6 +15,91 @@ from nipype import logging
 logger = logging.getLogger('workflow')
 
 
+def create_flat_sub_dict_dict(subdict):
+    """Collapse the participant resource pools so that each participant-
+    session-scan combination has its own entry.
+
+    - input subdict format:
+          {'sub_01': {'session_01':
+                         {'anatomical_scan': {'scan_01': <filepath>,
+                                              'scan_02': <filepath>},
+                          'site_name': 'Site_1'} },
+           'sub_02': {..} }
+
+    - output dict format:
+          { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
+                                       "anatomical_brain": <filepath>} }
+
+    :type subdict: dictionary
+    :param subdict: A dictionary containing the filepaths of input files
+                    for each participant, sorted by session and scan.
+    :rtype: dictionary
+    :return: A dictionary of dictionaries where each participant-session-
+             scan combination has its own entry, and input file filepaths
+             are defined.
+    """
+
+    flat_sub_dict_dict = {}
+    sites_dict = {}
+
+    for subid in subdict.keys():
+        subid = str(subid)
+        # sessions
+        for session in subdict[subid].keys():
+            # resource files
+            for resource in subdict[subid][session].keys():
+                if type(subdict[subid][session][resource]) is dict:
+                    # then this has sub-scans defined
+                    for scan in subdict[subid][session][resource].keys():
+                        filepath = subdict[subid][session][resource][scan]
+                        resource_dict = {}
+                        resource_dict[resource] = filepath
+                        sub_info_tuple = (subid, session, scan)
+                        if sub_info_tuple not in flat_sub_dict_dict.keys():
+                            flat_sub_dict_dict[sub_info_tuple] = {}
+
+                        flat_sub_dict_dict[sub_info_tuple].update(
+                            resource_dict)
+
+                elif resource == "site_name":
+                    sites_dict[subid] = subdict[subid][session][resource]
+
+                else:
+                    filepath = subdict[subid][session][resource]
+                    resource_dict = {}
+                    resource_dict[resource] = filepath
+                    sub_info_tuple = (subid, session, None)
+
+                    if sub_info_tuple not in flat_sub_dict_dict.keys():
+                        flat_sub_dict_dict[sub_info_tuple] = {}
+
+                    flat_sub_dict_dict[sub_info_tuple].update(resource_dict)
+
+    if len(flat_sub_dict_dict) == 0:
+        # this error message meant more for devs than user
+        msg = "The participant dictionary is empty."
+        raise_smart_exception(locals(), msg)
+
+    # in case some subjects have site names and others don't
+    if len(sites_dict.keys()) > 0:
+        for subid in subdict.keys():
+            subid = str(subid)
+            if subid not in sites_dict.keys():
+                sites_dict[subid] = None
+
+        # integrate site information into flat_sub_dict_dict
+        #     it was separate in the first place to circumvent the fact
+        #     that even though site_name doesn't get keyed with scan names
+        #     names, that doesn't necessarily mean scan names haven't been
+        #     specified for that participant
+        for sub_info_tuple in flat_sub_dict_dict.keys():
+            site_info = {}
+            site_info["site_name"] = sites_dict[sub_info_tuple[0]]
+            flat_sub_dict_dict[sub_info_tuple].update(site_info)
+
+    return flat_sub_dict_dict
+
+
 class QAProtocolCLI:
     """
     This class and the associated run_workflow function implement what

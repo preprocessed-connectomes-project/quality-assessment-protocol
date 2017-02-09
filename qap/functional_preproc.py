@@ -744,7 +744,7 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
         workflow, resource_pool = \
             func_preproc_workflow(workflow, resource_pool, config, name)
         if resource_pool == old_rp:
-            return workflow, resource_pool        
+            return workflow, resource_pool
    
     func_mean_tstat = pe.Node(interface=preprocess.TStat(),
                            name='func_mean_tstat%s' % name)

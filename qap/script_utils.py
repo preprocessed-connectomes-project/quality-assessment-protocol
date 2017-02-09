@@ -37,20 +37,18 @@ def gather_filepath_list(site_folder):
     :param site_folder: Path to the base directory containing all of the
                         NIFTI files you wish to gather.
     :rtype: list
-    :return: A list of filepaths to the NIFTI files found within and under
-             the provided site folder.
+    :return: A list of relative filepaths to the NIFTI files found within and
+             under the provided site folder.
     """
 
     import os
-
-    site_folder = os.path.abspath(site_folder)
 
     filepath_list = []
     for root, folders, files in os.walk(site_folder):
         for filename in files:
             fullpath = os.path.join(root, filename)
             if ".nii" in fullpath:
-                filepath_list.append(fullpath)
+                filepath_list.append(fullpath.replace(site_folder + "/", ""))
 
     return filepath_list
 
@@ -77,14 +75,14 @@ def csv_to_pandas_df(csv_file):
     return data
 
 
-def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None,
-                        s3_bucket=False):
+def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None):
     """Parse a list of NIFTI filepaths into a participant data dictionary for
     the 'qap_raw_data_sublist_generator.py' script.
 
     - This is for the 'qap_sublist_generator.py' script.
     - This is designed for data directories formatted as such:
         /site_folder/participant_ID/session_ID/scan_ID/filename.nii.gz
+    - Not for BIDS datasets.
 
     :type filepath_list: str
     :param filepath_list: A list of input file NIFTI filepaths.
@@ -94,9 +92,6 @@ def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None,
     :type inclusion_list: list
     :param inclusion_list: (default: None) A list of participant IDs to
                            include in the sublist dictionary.
-    :type s3_bucket: bool
-    :param s3_bucket: A flag denoting whether the list contains AWS S3 bucket
-                      filepaths instead of local disk filepaths.
     :rtype: dict
     :return: A dictionary containing the NIFTI files indexed by participant
              information.
@@ -108,21 +103,12 @@ def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None,
     if not inclusion_list:
         inclusion_list = []
         inclusion = False
-
-    if not s3_bucket:
-        site_folder = os.path.abspath(site_folder)
     
-    for fullpath in filepath_list:
+    for rel_path in filepath_list:
             
         # /path_to_site_folder/subject_id/session_id/scan_id/..
-        try:
-            second_half = fullpath.split(site_folder)[1]
-        except:
-            err = "[!] Something went wrong with the filepath " \
-                  "parsing.\n\nFilepath: %s\nSite folder: %s\n" \
-                  % (fullpath, site_folder)
-            raise Exception(err)
-        second_half_list = second_half.split("/")
+        fullpath = os.path.join(site_folder, rel_path)
+        second_half_list = rel_path.split("/")
         filename = second_half_list[-1]
 
         try:
@@ -396,7 +382,7 @@ def pull_s3_sublist(data_folder, creds_path=None):
 
     # Build S3-subjects to download
     for bk in bucket.objects.filter(Prefix=bucket_prefix):
-        s3_list.append("/".join(["s3:/", bucket_name, str(bk.key)]))
+        s3_list.append(str(bk.key).replace(bucket_prefix,""))
 
     return s3_list, bucket_prefix
 

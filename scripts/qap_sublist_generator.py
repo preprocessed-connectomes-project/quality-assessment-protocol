@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
+
 def main():
 
+    import os
     import argparse
-
     from qap.script_utils import gather_filepath_list, \
                                  read_txt_file, \
                                  pull_s3_sublist, \
@@ -35,16 +36,13 @@ def main():
 
     args = parser.parse_args()
 
-    s3 = False
-
     # run it!
     if "s3://" in args.data_folder:
-        s3 = True
-        filepath_list, data_dir = \
-            pull_s3_sublist(args.data_folder, args.creds_path)
-    else:
         data_dir = args.data_folder
-        filepath_list = gather_filepath_list(args.data_folder)
+        filepath_list = pull_s3_sublist(data_dir, args.creds_path)
+    else:
+        data_dir = os.path.abspath(args.data_folder)
+        filepath_list = gather_filepath_list(data_dir)
 
     if args.include:
         inclusion_list = read_txt_file(args.include)
@@ -53,11 +51,10 @@ def main():
 
     if not args.BIDS:
         sub_dict = parse_raw_data_list(filepath_list, data_dir,
-                                       inclusion_list=inclusion_list,
-                                       s3_bucket=s3)
+                                       inclusion_list=inclusion_list)
     else:
-        from qap.bids_utils import extract_bids_data
-        sub_dict = extract_bids_data(filepath_list, inclusion_list)
+        from qap.bids_utils import bids_gen_qap_sublist
+        sub_dict = bids_gen_qap_sublist(data_dir, filepath_list)
 
     write_inputs_dict_to_yaml_file(sub_dict, args.outfile_path)
 
