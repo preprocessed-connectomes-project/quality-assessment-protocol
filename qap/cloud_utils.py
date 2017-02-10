@@ -22,7 +22,10 @@ def download_single_s3_path(s3_path, cfg_dict):
 
     # Init variables
     working_dir = cfg_dict["working_directory"]
-    creds_path = cfg_dict["creds_path"]
+    try:
+        creds_path = cfg_dict["creds_path"]
+    except KeyError:
+        creds_path = None
 
     if "s3://" in s3_path:
         s3_prefix = s3_path.replace("s3://","")

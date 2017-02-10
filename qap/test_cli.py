@@ -3,6 +3,8 @@ import pytest
 import unittest
 
 
+# un-skip this once the CLI is un-classed
+@pytest.mark.skip()
 class TestValidateConfigDict(unittest.TestCase):
 
     def setUp(self):
@@ -23,61 +25,155 @@ class TestValidateConfigDict(unittest.TestCase):
             self.validate_config_dict(self.bad_config_dict)
 
 
-class TestCreateFlatSubDictDict(unittest.TestCase):
+# un-skip this once the CLI is un-classed
+@pytest.mark.skip()
+class TestCreateSessionDict(unittest.TestCase):
 
     def setUp(self):
-        from qap.cli import create_flat_sub_dict_dict
-        self.create_flat_sub_dict_dict = create_flat_sub_dict_dict
-        self.ref_flat_subdict_nosite = {
-            ("sub_001", "session_01", "anat_1"): {
-                "anatomical_scan": "/file/path/sub_001/session_01/anatomical_scan/anat_1/file.nii.gz"},
-            ("sub_002", "session_01", "anat_1"): {
-                "anatomical_scan": "/file/path/sub_002/session_01/anatomical_scan/anat_1/file.nii.gz"}}
-        self.input_subdict_nosite = {
-            'sub_001': {
-                'session_01': {
-                    'anatomical_scan': {
-                        'anat_1': '/file/path/sub_001/session_01/anatomical_scan/anat_1/file.nii.gz'}}},
-            'sub_002': {
-                'session_01': {
-                    'anatomical_scan': {
-                        'anat_1': '/file/path/sub_002/session_01/anatomical_scan/anat_1/file.nii.gz'}}}}
-        self.ref_flat_subdict = {
-            ("sub_001", "session_01", "anat_1"): {
-                "anatomical_scan": "/file/site_01/sub_001/session_01/anatomical_scan/anat_1/file.nii.gz",
-                "site_name": "site_01"},
-            ("sub_002", "session_01", "anat_1"): {
-                "anatomical_scan": "/file/site_01/sub_002/session_01/anatomical_scan/anat_1/file.nii.gz",
-                "site_name": "site_01"}}
+        # setup
+        from qap.cli import create_session_dict
+        self.create_session_dict = create_session_dict
+        self.maxDiff = None
+
+        # inputs
         self.input_subdict = {
             'sub_001': {
                 'session_01': {
                     'anatomical_scan': {
-                        'anat_1': '/file/site_01/sub_001/session_01/anatomical_scan/anat_1/file.nii.gz'},
+                        'anat_1': '/file/site_01/sub_001/session_01/anat_1/mprage.nii.gz'},
+                    'functional_scan': {
+                        'rest_1': '/file/site_01/sub_001/session_01/rest_1/rest.nii.gz',
+                        'rest_2': '/file/site_01/sub_001/session_01/rest_2/rest.nii.gz'},
                     'site_name': 'site_01'}},
             'sub_002': {
                 'session_01': {
                     'anatomical_scan': {
-                        'anat_1': '/file/site_01/sub_002/session_01/anatomical_scan/anat_1/file.nii.gz'},
+                        'anat_1': '/file/site_01/sub_002/session_01/anat_1/mprage.nii.gz'},
+                    'functional_scan': {
+                        'rest_1': '/file/site_01/sub_002/session_01/rest_1/rest.nii.gz',
+                        'rest_2': '/file/site_01/sub_002/session_01/rest_2/rest.nii.gz'},
                     'site_name': 'site_01'}}}
 
-    def test_twosubs_nosite(self):
-        test_flat = self.create_flat_sub_dict_dict(self.input_subdict_nosite)
-        self.assertDictEqual(self.ref_flat_subdict_nosite, test_flat)
+        # outputs
+        self.ref_subdict = {
+            ("sub_001", "session_01"): {
+                "anat_1": {
+                    "anatomical_scan": "/file/site_01/sub_001/session_01/anat_1/mprage.nii.gz"},
+                "rest_1": {
+                    "functional_scan": "/file/site_01/sub_001/session_01/rest_1/rest.nii.gz"},
+                "rest_2": {
+                    "functional_scan": "/file/site_01/sub_001/session_01/rest_2/rest.nii.gz"},
+                "site_name": "site_01"},
+            ("sub_002", "session_01"): {
+                "anat_1": {
+                    "anatomical_scan": "/file/site_01/sub_002/session_01/anat_1/mprage.nii.gz"},
+                "rest_1": {
+                    "functional_scan": "/file/site_01/sub_002/session_01/rest_1/rest.nii.gz"},
+                "rest_2": {
+                    "functional_scan": "/file/site_01/sub_002/session_01/rest_2/rest.nii.gz"},
+                "site_name": "site_01"}}
 
-    def test_twosubs_withsite(self):
-        test_flat = self.create_flat_sub_dict_dict(self.input_subdict)
-        self.assertDictEqual(self.ref_flat_subdict, test_flat)
+    def test_two_subs(self):
+        test_subdict = self.create_session_dict(self.input_subdict)
+        self.assertDictEqual(self.ref_subdict, test_subdict)
+
+
+@pytest.mark.quick
+class TestCLI(unittest.TestCase):
+
+    def setUp(self):
+        import os
+        from qap import cli
+
+        out_dir = os.path.join(os.getcwd(), "unit_tests_cli", "out")
+        work_dir = os.path.join(os.getcwd(), "unit_tests_cli", "work")
+
+        self.cli = cli.QAProtocolCLI(parse_args=False)
+        self.cli._config = {}
+        self.cli._config["output_directory"] = out_dir
+        self.cli._config["working_directory"] = work_dir
+        self.cli._config["qap_type"] = "anatomical_spatial"
+        self.cli._config["template_head_for_anat"] = "/Library/Python/2.7/site-packages/qap-1.0.8-py2.7.egg/qap/test_data/MNI152_T1_3MM.nii.gz"
+        self.cli._num_processors = 1
+        self.cli._run_log_dir = "/custom/log/dir"
+        self.cli.runargs = {'plugin': 'MultiProc'}
+        self.cli._run_name = "qap_unit_test"
+
+        self.ref_flat_dict = {
+            ("sub_001", "session_01"): {
+                "anat_1": {
+                    "anatomical_scan": "/file/path/sub_001/session_01/anatomical_scan/anat_1/file.nii.gz"},
+                "site_name": "site_1"},
+            ("sub_001", "session_02"): {
+                "anat_1": {
+                    "anatomical_scan": "/file/path/sub_001/session_02/anatomical_scan/anat_1/file.nii.gz"},
+                "site_name": "site_1"},
+            ("sub_002", "session_01"): {
+                "anat_1": {
+                    "anatomical_scan": "/file/path/sub_002/session_01/anatomical_scan/anat_1/file.nii.gz"},
+                "anat_2": {
+                    "anatomical_scan": "/file/path/sub_002/session_01/anatomical_scan/anat_2/file.nii.gz"},
+                "site_name": "site_1"}}
+
+        self.cli._bundles_list = [
+            {
+                ('sub_001', 'session_01', 'anat_1'): {
+                    'anatomical_scan': '/file/path/sub_001/session_01/anatomical_scan/anat_1/file.nii.gz'},
+                ('sub_002', 'session_01', 'anat_1'): {
+                    'anatomical_scan': '/file/path/sub_002/session_01/anatomical_scan/anat_1/file.nii.gz'},
+                ('sub_002', 'session_01', 'anat_2'): {
+                    'anatomical_scan': '/file/path/sub_002/session_01/anatomical_scan/anat_2/file.nii.gz'}},
+            {
+                ('sub_001', 'session_02', 'anat_1'): {
+                    'anatomical_scan': '/file/path/sub_001/session_02/anatomical_scan/anat_1/file.nii.gz'}}]
+
+    def tearDown(self):
+        import shutil
+        try:
+            shutil.rmtree(self.cli._config["output_directory"])
+        except OSError:
+            pass
+        try:
+            shutil.rmtree(self.cli._config["working_directory"])
+        except OSError:
+            pass
+
+    def test_create_bundles_one_ses_each(self):
+        self.cli._config["num_sessions_at_once"] = 1
+        self.cli._sub_dict = self.ref_flat_dict
+        bundles = self.cli.create_bundles()
+
+        # how many bundles there should be
+        #   3 sub-sessions, 1 per bundle = 3 bundles
+        self.assertEqual(len(bundles), 3)
+
+    def test_create_bundles_two_ses_each(self):
+        self.cli._config["num_sessions_at_once"] = 2
+        self.cli._sub_dict = self.ref_flat_dict
+        bundles = self.cli.create_bundles()
+
+        # how many bundles there should be
+        #   3 sub-sessions, 2 per bundle = 2 bundles
+        self.assertEqual(len(bundles), 2)
+
+    def test_create_bundles_five_ses_each(self):
+        self.cli._config["num_sessions_at_once"] = 5
+        self.cli._sub_dict = self.ref_flat_dict
+        bundles = self.cli.create_bundles()
+        print bundles
+        # how many bundles there should be
+        #   3 sub-sessions, 5 per bundle = 1 bundles
+        self.assertEqual(len(bundles), 1)
+
+        # should only have 4 filepaths
+        self.assertEqual(len(bundles[0]), 4)
+
+    def test_run_one_bundle(self):
+        wfargs = self.cli.run_one_bundle(0, run=False)
+        self.assertEqual(len(wfargs[1]), 3)
 
 
 @pytest.mark.skip()
-@pytest.mark.quick
-def test_cli():
-
-    err = "some minor refactoring needed! no proper error message when you send in an S3 list as a subject list. flatten sublist, run_here, etc. seems convoluted"
-    pass
-
-
 @pytest.mark.quick
 def init_cli_obj():
     # type: () -> object
@@ -99,6 +195,7 @@ def init_cli_obj():
     return cli_obj
 
 
+@pytest.mark.skip()
 @pytest.mark.quick
 def init_flat_sub_dict_dict():
 
@@ -119,6 +216,7 @@ def init_flat_sub_dict_dict():
     return ref_flat_dict
 
 
+@pytest.mark.skip()
 @pytest.mark.quick
 def test_submit_cluster_batch_file_for_SGE_s3_paths():
 
@@ -288,41 +386,7 @@ def test_prepare_cluster_batch_file_for_SLURM_with_sublist():
     assert cluster_files_dir == os.path.join(out_dir, "cluster_files")
 
 
-@pytest.mark.quick
-def test_create_flat_sub_dict_dict():
-
-    from qap import cli
-
-    cli_obj = init_cli_obj()
-
-    subdict = {}
-    subdict["sub_001"] = {}
-    subdict["sub_001"]["session_01"] = {}
-    subdict["sub_001"]["session_01"]["anatomical_scan"] = {}
-    subdict["sub_001"]["session_01"]["anatomical_scan"]["anat_1"] = \
-	    "/file/path/sub_001/session_01/anatomical_scan/anat_1/file.nii.gz"
-
-    subdict["sub_001"]["session_02"] = {}
-    subdict["sub_001"]["session_02"]["anatomical_scan"] = {}
-    subdict["sub_001"]["session_02"]["anatomical_scan"]["anat_1"] = \
-	    "/file/path/sub_001/session_02/anatomical_scan/anat_1/file.nii.gz"
-
-    subdict["sub_002"] = {}
-    subdict["sub_002"]["session_01"] = {}
-    subdict["sub_002"]["session_01"]["anatomical_scan"] = {}
-    subdict["sub_002"]["session_01"]["anatomical_scan"]["anat_1"] = \
-	    "/file/path/sub_002/session_01/anatomical_scan/anat_1/file.nii.gz"
-
-    subdict["sub_002"]["session_01"]["anatomical_scan"]["anat_2"] = \
-	    "/file/path/sub_002/session_01/anatomical_scan/anat_2/file.nii.gz"
-
-    flat_sub_dict_dict = cli_obj.create_flat_sub_dict_dict(subdict)
-
-    ref_flat_dict = init_flat_sub_dict_dict()
-
-    assert flat_sub_dict_dict == ref_flat_dict
-
-
+@pytest.mark.skip()
 @pytest.mark.quick
 def test_create_bundles_one_sub_per_bundle():
 
@@ -343,6 +407,7 @@ def test_create_bundles_one_sub_per_bundle():
     assert len(bundles[0]) == cli_obj._num_participants_at_once
 
 
+@pytest.mark.skip()
 @pytest.mark.quick
 def test_create_bundles_two_subs_per_bundle():
 
@@ -361,6 +426,7 @@ def test_create_bundles_two_subs_per_bundle():
     assert len(bundles[0]) == cli_obj._num_participants_at_once
 
 
+@pytest.mark.skip()
 @pytest.mark.quick
 def test_create_bundles_six_subs_per_bundle():
 
@@ -381,6 +447,7 @@ def test_create_bundles_six_subs_per_bundle():
     assert len(bundles[0]) == 4
 
 
+@pytest.mark.skip()
 @pytest.mark.quick
 def test_get_num_bundles():
 
@@ -398,6 +465,7 @@ def test_get_num_bundles():
     assert num_bundles == 1
 
 
+@pytest.mark.skip()
 @pytest.mark.quick
 def test_run_workflow_build_only():
 

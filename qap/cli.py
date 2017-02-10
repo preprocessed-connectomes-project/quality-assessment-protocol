@@ -15,91 +15,6 @@ from nipype import logging
 logger = logging.getLogger('workflow')
 
 
-def create_flat_sub_dict_dict(subdict):
-    """Collapse the participant resource pools so that each participant-
-    session-scan combination has its own entry.
-
-    - input subdict format:
-          {'sub_01': {'session_01':
-                         {'anatomical_scan': {'scan_01': <filepath>,
-                                              'scan_02': <filepath>},
-                          'site_name': 'Site_1'} },
-           'sub_02': {..} }
-
-    - output dict format:
-          { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
-                                       "anatomical_brain": <filepath>} }
-
-    :type subdict: dictionary
-    :param subdict: A dictionary containing the filepaths of input files
-                    for each participant, sorted by session and scan.
-    :rtype: dictionary
-    :return: A dictionary of dictionaries where each participant-session-
-             scan combination has its own entry, and input file filepaths
-             are defined.
-    """
-
-    flat_sub_dict_dict = {}
-    sites_dict = {}
-
-    for subid in subdict.keys():
-        subid = str(subid)
-        # sessions
-        for session in subdict[subid].keys():
-            # resource files
-            for resource in subdict[subid][session].keys():
-                if type(subdict[subid][session][resource]) is dict:
-                    # then this has sub-scans defined
-                    for scan in subdict[subid][session][resource].keys():
-                        filepath = subdict[subid][session][resource][scan]
-                        resource_dict = {}
-                        resource_dict[resource] = filepath
-                        sub_info_tuple = (subid, session, scan)
-                        if sub_info_tuple not in flat_sub_dict_dict.keys():
-                            flat_sub_dict_dict[sub_info_tuple] = {}
-
-                        flat_sub_dict_dict[sub_info_tuple].update(
-                            resource_dict)
-
-                elif resource == "site_name":
-                    sites_dict[subid] = subdict[subid][session][resource]
-
-                else:
-                    filepath = subdict[subid][session][resource]
-                    resource_dict = {}
-                    resource_dict[resource] = filepath
-                    sub_info_tuple = (subid, session, None)
-
-                    if sub_info_tuple not in flat_sub_dict_dict.keys():
-                        flat_sub_dict_dict[sub_info_tuple] = {}
-
-                    flat_sub_dict_dict[sub_info_tuple].update(resource_dict)
-
-    if len(flat_sub_dict_dict) == 0:
-        # this error message meant more for devs than user
-        msg = "The participant dictionary is empty."
-        raise_smart_exception(locals(), msg)
-
-    # in case some subjects have site names and others don't
-    if len(sites_dict.keys()) > 0:
-        for subid in subdict.keys():
-            subid = str(subid)
-            if subid not in sites_dict.keys():
-                sites_dict[subid] = None
-
-        # integrate site information into flat_sub_dict_dict
-        #     it was separate in the first place to circumvent the fact
-        #     that even though site_name doesn't get keyed with scan names
-        #     names, that doesn't necessarily mean scan names haven't been
-        #     specified for that participant
-        for sub_info_tuple in flat_sub_dict_dict.keys():
-            site_info = {}
-            site_info["site_name"] = sites_dict[sub_info_tuple[0]]
-            flat_sub_dict_dict[sub_info_tuple].update(site_info)
-
-    return flat_sub_dict_dict
-
-
 class QAProtocolCLI:
     """
     This class and the associated run_workflow function implement what
@@ -155,8 +70,8 @@ class QAProtocolCLI:
         if args.with_reports:
             self._config['write_report'] = True
 
-        if "num_participants_at_once" not in self._config.keys():
-            self._config["num_participants_at_once"] = 1
+        if "num_sessions_at_once" not in self._config.keys():
+            self._config["num_sessions_at_once"] = 1
 
         if "num_bundles_at_once" not in self._config.keys():
             self._config["num_bundles_at_once"] = 1
@@ -215,7 +130,7 @@ class QAProtocolCLI:
                        'num_tasks': num_bundles,
                        'queue': "all.q",
                        'par_env': "mpi_smp",
-                       'cores_per_task': self._num_processors,
+                       'cores_per_task': self._config["num_processors"],
                        'user': user_account,
                        'work_dir': cluster_files_dir}
 
@@ -284,7 +199,7 @@ class QAProtocolCLI:
         """
         config_options = ["pipeline_name",
                           "num_processors",
-                          "num_participants_at_once",
+                          "num_sessions_at_once",
                           "memory_allocated_per_participant",
                           "resource_manager",
                           "output_directory",
@@ -315,9 +230,9 @@ class QAProtocolCLI:
         else:
             return 0
 
-    def create_flat_sub_dict_dict(self, subdict):
+    def create_session_dict(self, subdict):
         """Collapse the participant resource pools so that each participant-
-        session-scan combination has its own entry.
+        session combination has its own entry.
 
         - input subdict format:
               {'sub_01': {'session_01':
@@ -327,16 +242,18 @@ class QAProtocolCLI:
                'sub_02': {..} }
 
         - output dict format:
-              { (sub01,session01,scan01): {"anatomical_scan": <filepath>,
-                                           "anatomical_brain": <filepath>} }
+              { (sub01,session01): {"scan_01": {
+                                            "anatomical_scan": <filepath>},
+                                   {"scan_02": {
+                                            "anatomical_scan": <filepath>} } }
 
-        :type subdict: dictionary
+        :type subdict: dict
         :param subdict: A dictionary containing the filepaths of input files
                         for each participant, sorted by session and scan.
-        :rtype: dictionary
-        :return: A dictionary of dictionaries where each participant-session-
-                 scan combination has its own entry, and input file filepaths
-                 are defined.
+        :rtype: dict
+        :return: A dictionary of dictionaries where each participant-session
+                 combination has its own entry, and input file filepaths are
+                 defined.
         """
 
         flat_sub_dict_dict = {}
@@ -354,11 +271,14 @@ class QAProtocolCLI:
                             filepath = subdict[subid][session][resource][scan]
                             resource_dict = {}
                             resource_dict[resource] = filepath
-                            sub_info_tuple = (subid, session, scan)
+                            sub_info_tuple = (subid, session)
                             if sub_info_tuple not in flat_sub_dict_dict.keys():
                                 flat_sub_dict_dict[sub_info_tuple] = {}
+                            if scan not in flat_sub_dict_dict[sub_info_tuple].keys():
+                                flat_sub_dict_dict[sub_info_tuple][scan] = {}
 
-                            flat_sub_dict_dict[sub_info_tuple].update(resource_dict)
+                            flat_sub_dict_dict[sub_info_tuple][scan].update(
+                                resource_dict)
 
                     elif resource == "site_name":
                         sites_dict[subid] = subdict[subid][session][resource]
@@ -367,17 +287,18 @@ class QAProtocolCLI:
                         filepath = subdict[subid][session][resource]
                         resource_dict = {}
                         resource_dict[resource] = filepath
-                        sub_info_tuple = (subid, session, None)
+                        sub_info_tuple = (subid, session)
 
                         if sub_info_tuple not in flat_sub_dict_dict.keys():
                             flat_sub_dict_dict[sub_info_tuple] = {}
 
-                        flat_sub_dict_dict[sub_info_tuple].update(resource_dict)
+                        flat_sub_dict_dict[sub_info_tuple].update(
+                            resource_dict)
 
         if len(flat_sub_dict_dict) == 0:
             # this error message meant more for devs than user
             msg = "The participant dictionary is empty."
-            raise_smart_exception(locals(),msg)
+            raise_smart_exception(locals(), msg)
 
         # in case some subjects have site names and others don't
         if len(sites_dict.keys()) > 0:
@@ -431,11 +352,6 @@ class QAProtocolCLI:
     def create_bundles(self):
         """Create a list of participant "bundles".
 
-        :type flat_sub_dict_dict: dictionary
-        :param flat_sub_dict_dict: A dictionary of dictionaries where each
-                                   participant-session-scan combination has
-                                   its own entry, and input file filepaths
-                                   are defined.
         :rtype: list
         :return: A list of bundles - each bundle being a dictionary that is a
                  starting resource pool for N sub-session-scan combos with N
@@ -445,20 +361,28 @@ class QAProtocolCLI:
         i = 0
         bundles = []
 
-        if len(self._sub_dict) < self._config["num_participants_at_once"]:
-            bundles.append(flat_sub_dict_dict)
-        else:
-            for sub_info_tuple in self._sub_dict.keys():
-                if i == 0:
-                    new_bundle = {}
-                new_bundle[sub_info_tuple] = self._sub_dict[sub_info_tuple]
-                i += 1
-                if i == self._config["num_participants_at_once"]:
-                    bundles.append(new_bundle)
-                    i = 0
-
-            if i > 0:
+        for session_tuple in self._sub_dict.keys():
+            if i == 0:
+                new_bundle = {}
+            sub = session_tuple[0]
+            ses = session_tuple[1]
+            site_name = None
+            if "site_name" in self._sub_dict[session_tuple].keys():
+                site_name = self._sub_dict[session_tuple]["site_name"]
+            for scan in self._sub_dict[session_tuple].keys():
+                if scan != "site_name":
+                    sub_info_tuple = (sub, ses, scan)
+                    new_bundle[sub_info_tuple] = \
+                        self._sub_dict[session_tuple][scan]
+                    if site_name:
+                        new_bundle[sub_info_tuple].update({"site_name": site_name})
+            i += 1
+            if i == self._config["num_sessions_at_once"]:
                 bundles.append(new_bundle)
+                i = 0
+
+        if i > 0:
+            bundles.append(new_bundle)
 
         if len(bundles) == 0:
             msg = "No bundles created."
@@ -466,7 +390,7 @@ class QAProtocolCLI:
 
         return bundles
 
-    def run_one_bundle(self, bundle_idx):
+    def run_one_bundle(self, bundle_idx, run=True):
         """Execute one bundle's workflow on one node/slot of a cluster/grid.
 
         - Compatible with Amazon AWS cluster runs, and S3 buckets.
@@ -476,6 +400,8 @@ class QAProtocolCLI:
                            entries in the participant list to pull into the
                            current bundle, based on the number of participants
                            per bundle (participants at once).
+        :type run: bool
+        :param run: Run flag, set to False for testing.
         :rtype: dictionary
         :return: A dictionary with information about the workflow run, its
                   status, and results.
@@ -495,30 +421,34 @@ class QAProtocolCLI:
             for resource in bundle_dict[sub].keys():
                 value = bundle_dict[sub][resource]
                 if "s3://" in value:
-                    bundle_dict[sub][resource] = download_single_s3_path(value,
-                                                                         self._config)
+                    bundle_dict[sub][resource] = \
+                        download_single_s3_path(value, self._config)
 
         wfargs = (bundle_dict, bundle_dict.keys(),
                   self._config, self._run_name, self.runargs,
                   bundle_idx, num_bundles)
 
-        # let's go!
-        rt = run_workflow(wfargs)
+        if run:
+            # let's go!
+            rt = run_workflow(wfargs)
 
-        # write bundle results to JSON file
-        write_json(rt, os.path.join(rt["bundle_log_dir"],
-                                    "workflow_results.json"))
+            # write bundle results to JSON file
+            write_json(rt, os.path.join(rt["bundle_log_dir"],
+                                        "workflow_results.json"))
 
-        # make not uploading results to S3 bucket the default if not specified
-        if "upload_to_s3" not in self._config.keys():
-            self._config["upload_to_s3"] = False
+            # make not uploading results to S3 bucket the default if not
+            # specified
+            if "upload_to_s3" not in self._config.keys():
+                self._config["upload_to_s3"] = False
 
-        # upload results
-        if self._config["upload_to_s3"]:
-            from cloud_utils import upl_qap_output
-            upl_qap_output(self._config)
+            # upload results
+            if self._config["upload_to_s3"]:
+                from cloud_utils import upl_qap_output
+                upl_qap_output(self._config)
 
-        return rt
+            return rt
+        else:
+            return wfargs
 
     def run(self, config_file=None, partic_list=None):
         """Establish where and how we're running the pipeline and set up the
@@ -556,13 +486,11 @@ class QAProtocolCLI:
         # Get configurations and settings
         config = self._config
         check_config_settings(config, "num_processors")
-        check_config_settings(config, "num_participants_at_once")
+        check_config_settings(config, "num_sessions_at_once")
         check_config_settings(config, "memory_allocated_per_participant")
         check_config_settings(config, "output_directory")
         check_config_settings(config, "working_directory")
 
-        self._num_processors = config["num_processors"]
-        self._num_participants_at_once = config.get('num_participants_at_once', 1)
         self._num_bundles_at_once = 1
         write_report = config.get('write_report', False)
 
@@ -623,37 +551,18 @@ class QAProtocolCLI:
         self.runargs = {}
         self.runargs['plugin'] = 'MultiProc'
         memory_for_entire_run = \
-            int(config["memory_allocated_per_participant"] * config["num_participants_at_once"])
+            int(config["memory_allocated_per_participant"] * config["num_sessions_at_once"])
         self.runargs['plugin_args'] = {'memory_gb': memory_for_entire_run,
                                        'status_callback': log_nodes_cb}
-        n_procs = {'n_procs': self._num_processors}
+        n_procs = {'n_procs': self._config["num_processors"]}
         self.runargs['plugin_args'].update(n_procs)
 
         # load the participant list file into dictionary
         subdict = self.load_sublist()
 
-        try:
-            # integrate site information into the subject list
-            #   it was separate in the first place to circumvent the fact
-            #   that even though site_name doesn't get keyed with scan
-            #   names, that doesn't necessarily mean scan names haven't
-            #   been specified for that participant
-
-            for sub in subdict.keys():
-                sub = str(sub)
-                for resource_path in subdict[sub].values():
-                    if ".nii" in resource_path:
-                        filepath = resource_path
-                        break
-
-                site_name = filepath.split("/")[-5]
-                sub_dict[sub]["site_name"] = site_name
-
-        except:
-            pass
-
         # flatten the participant dictionary
-        self._sub_dict = self.create_flat_sub_dict_dict(subdict)
+        #self._sub_dict = self.create_flat_sub_dict_dict(subdict)
+        self._sub_dict = self.create_session_dict(subdict)
 
         # create the list of bundles
         self._bundles_list = self.create_bundles()
@@ -682,7 +591,8 @@ class QAProtocolCLI:
                         pass
 
         if num_bundles == 1:
-            self._config["num_participants_at_once"] = len(self._bundles_list[0])
+            self._config["num_sessions_at_once"] = \
+                len(self._bundles_list[0])
 
         # Start the magic
         if not self._platform:

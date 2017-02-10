@@ -4,8 +4,8 @@ pipeline_name: qap_run
 # how many processors you wish to use in the run
 num_processors: 1
 
-# how many participants to run per workflow
-num_participants_at_once: 1
+# how many sessions to run per workflow
+num_sessions_at_once: 1
 
 # the amount of memory (in GB) to allocate to each participant
 memory_allocated_per_participant: 2
@@ -51,25 +51,10 @@ write_graph: False
 # (optional) will default to False if not included in this config file
 write_all_outputs: False
 
-# AWS Cloud Settings
-####################
-
-# all optional
-
 # whether or not to upload output files to S3 bucket
 upload_to_s3: False
-
-# bucket prefix (where to pull data from in S3, if applicable)
-bucket_prefix: bucket/prefix/path
 
 # bucket output prefix (where to push output files to S3, if applicable)
 bucket_out_prefix: bucket/prefix/output/destination
 
-# where to download input files to, locally, from S3
-local_prefix: /path/to/local/dir
 
-# name of your S3 bucket
-bucket_name: bucket_name
-
-# local path to your AWS credentials
-creds_path: /path/to/AWS/creds.csv

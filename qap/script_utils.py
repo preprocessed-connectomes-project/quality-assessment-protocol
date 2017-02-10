@@ -121,14 +121,14 @@ def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None):
             subject_id = second_half_list[-4]
             session_id = second_half_list[-3]
             scan_id = second_half_list[-2]
-        except:
+        except IndexError:
             err = "\n\n[!] Could not parse the data directory " \
                   "structure for this file - is it in the " \
                   "correct format?\nFile path:\n%s\n\nIt should "\
                   "be something like this:\n/site_folder/subject"\
                   "_id/session_id/scan_id/file.nii.gz\n\n" \
-                  % second_half
-            print err
+                  % rel_path
+            raise IndexError(err)
 
         if not inclusion:
             inclusion_list.append(subject_id)

@@ -93,6 +93,7 @@ class TestParseRawDataList(unittest.TestCase):
         self.local_data_folder = "/data/dir"
         self.local_file_list = ["site_1/sub_01/ses_01/anat_1/mprage.nii.gz",
                                 "site_1/sub_02/ses_01/func_1/rest.nii.gz"]
+        self.wrong_file_list = ["site_1/sub_01/anat_1/mprage.nii.gz"]
         self.s3_data_folder = "s3://data/Projects/RawData"
         self.s3_file_list = ["site_1/sub_01/ses_01/anat_1/mprage.nii.gz",
                              "site_1/sub_02/ses_01/func_1/rest.nii.gz"]
@@ -122,6 +123,11 @@ class TestParseRawDataList(unittest.TestCase):
     def test_inclusion(self):
         # TODO
         pass
+
+    def test_wrong_dir_format(self):
+        with self.assertRaises(IndexError):
+            self.parse_raw_data_list(self.wrong_file_list,
+                                     self.local_data_folder)
 
 
 @pytest.mark.quick

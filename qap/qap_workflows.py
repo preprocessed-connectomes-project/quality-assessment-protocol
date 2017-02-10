@@ -62,7 +62,8 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     import nipype.interfaces.utility as niu
     from nipype.interfaces.afni import preprocess
 
-    from qap_workflows_utils import create_expr_string, slice_head_mask
+    from qap_workflows_utils import slice_head_mask
+    from qap_utils import create_expr_string
 
     if 'allineate_linear_xfm' not in resource_pool.keys():
 
@@ -291,7 +292,8 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
 
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
-    from qap_workflows_utils import create_header_dict_entry, write_json
+    from qap_workflows_utils import create_header_dict_entry
+    from qap_utils import write_json
 
     gather_header = pe.Node(niu.Function(
                              input_names=['in_file', 'subject', 'session',
@@ -388,10 +390,9 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     import copy
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
-    from qap_workflows_utils import qap_anatomical_spatial, \
-                                    write_json
+    from qap_workflows_utils import qap_anatomical_spatial
     from qap.viz.interfaces import PlotMosaic
-    from qap_utils import check_config_settings
+    from qap_utils import check_config_settings, write_json
 
     check_config_settings(config, "template_head_for_anat")
 
@@ -790,8 +791,8 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
     import copy
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
-    from qap_workflows_utils import qap_functional_spatial, \
-                                    write_json
+    from qap_workflows_utils import qap_functional_spatial
+    from qap_utils import write_json
     from qap.viz.interfaces import PlotMosaic
 
     if 'mean_functional' not in resource_pool.keys():
@@ -1128,8 +1129,8 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
 
-    from qap_workflows_utils import qap_functional_temporal, \
-                                    write_json
+    from qap_workflows_utils import qap_functional_temporal
+    from qap_utils import write_json
     from temporal_qc import fd_jenkinson
     from qap.viz.interfaces import PlotMosaic, PlotFD
 
