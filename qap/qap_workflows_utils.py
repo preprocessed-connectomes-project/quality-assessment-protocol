@@ -255,7 +255,7 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
 
     import os
     import nibabel as nb
-    from qap_utils import raise_smart_exception
+    from qap.qap_utils import raise_smart_exception
 
     if not os.path.isfile(in_file):
         err = "Filepath doesn't exist!\nFilepath: %s" % in_file

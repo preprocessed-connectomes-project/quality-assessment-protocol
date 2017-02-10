@@ -418,6 +418,8 @@ class QAProtocolCLI:
 
         # check for s3 paths
         for sub in bundle_dict.keys():
+            if type(bundle_dict[sub]) is not dict:
+                continue
             for resource in bundle_dict[sub].keys():
                 value = bundle_dict[sub][resource]
                 if "s3://" in value:

@@ -111,6 +111,9 @@ def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None):
         second_half_list = rel_path.split("/")
         filename = second_half_list[-1]
 
+        if ".nii" not in filename:
+            continue
+
         try:
             second_half_list.remove("")
         except:
