@@ -14,24 +14,23 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("data_folder", type=str,
-                            help="full path to the directory holding the " \
-                                 "raw data, organized by /site/subject/" \
-                                 "session/scan/file.nii.gz or in BIDS " \
-                                 "format")
+                            help="full path to the directory holding the "
+                                 "raw data, organized by /site/subject/"
+                                 "session/scan/file.nii.gz or in BIDS format")
 
     parser.add_argument("outfile_path", type=str,
                             help="filename for the generated subject list")
 
     parser.add_argument("--include", type=str,
-                            help="text file containing participant IDs of " \
-                                 "the subjects you want to include - leave " \
+                            help="text file containing participant IDs of "
+                                 "the subjects you want to include - leave "
                                  "this out if you want to run all of them")
 
     parser.add_argument("--BIDS", action="store_true",
                             help="if the dataset is in BIDS format")
 
     parser.add_argument("--creds_path", type=str,
-                            help="the path to the file containing your AWS " \
+                            help="the path to the file containing your AWS "
                                  "credentials")
 
     args = parser.parse_args()

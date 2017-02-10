@@ -84,7 +84,7 @@ def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None):
         /site_folder/participant_ID/session_ID/scan_ID/filename.nii.gz
     - Not for BIDS datasets.
 
-    :type filepath_list: str
+    :type filepath_list: list
     :param filepath_list: A list of input file NIFTI filepaths.
     :type site_folder: str
     :param site_folder: The root directory containing the NIFTI filepaths in
@@ -128,7 +128,8 @@ def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None):
                   "be something like this:\n/site_folder/subject"\
                   "_id/session_id/scan_id/file.nii.gz\n\n" \
                   % rel_path
-            raise IndexError(err)
+            # do not raise an exception, just want to warn the user
+            print err
 
         if not inclusion:
             inclusion_list.append(subject_id)
@@ -356,9 +357,6 @@ def pull_s3_sublist(data_folder, creds_path=None):
     :rtype: list
     :return: A list of Amazon S3 filepaths from the bucket and bucket
              directory you provided.
-    :rtype: str
-    :return: The data folder path with the s3:// prefix and bucket name
-             removed.
     """
 
     import os
@@ -384,7 +382,7 @@ def pull_s3_sublist(data_folder, creds_path=None):
     for bk in bucket.objects.filter(Prefix=bucket_prefix):
         s3_list.append(str(bk.key).replace(bucket_prefix,""))
 
-    return s3_list, bucket_prefix
+    return s3_list
 
 
 def gather_json_info(output_dir):

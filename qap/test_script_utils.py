@@ -16,7 +16,6 @@ class TestGatherFilepathList(unittest.TestCase):
         self.data_folder = \
             p.resource_filename("qap", os.path.join("test_data",
                                                     "data_folder"))
-        self.data_folder_bids = None
 
         # outputs
         self.ref_path_list = [
