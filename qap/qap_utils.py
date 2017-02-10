@@ -94,7 +94,7 @@ def write_json(output_dict, json_file):
     import json
     from lockfile import FileLock
 
-    from qap.qap_workflows_utils import read_json
+    from qap.qap_utils import read_json
 
     write = True
 

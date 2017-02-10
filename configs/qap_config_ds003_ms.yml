@@ -5,7 +5,7 @@ pipeline_name: qap_circleci_ms
 num_processors: 2
 
 # how many participants to run per workflow
-num_participants_at_once: 2
+num_sessions_at_once: 2
 
 # the amount of memory (in GB) to allocate to each participant
 memory_allocated_per_participant: 2

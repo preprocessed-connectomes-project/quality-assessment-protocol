@@ -182,12 +182,11 @@ def slice_head_mask(infile, transform):
     import nibabel as nb
 
     from qap.script_utils import read_txt_file
-    from qap.qap_workflows_utils import read_nifti_image, \
-                                        convert_allineate_xfm, \
+    from qap.qap_workflows_utils import convert_allineate_xfm, \
                                         warp_coordinates, \
                                         calculate_plane_coords, \
-                                        create_slice_mask, \
-                                        write_nifti_image
+                                        create_slice_mask
+    from qap.qap_utils import read_nifti_image, write_nifti_image
 
     # get file info
     infile_img = read_nifti_image(infile)
