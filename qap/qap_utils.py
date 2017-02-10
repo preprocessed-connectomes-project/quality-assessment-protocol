@@ -123,3 +123,4 @@ def create_anatomical_background_mask(anatomical_data, fg_mask_data,
         bg_mask_data = bg_mask_data * bool_anat_data
 
     return bg_mask_data
+
