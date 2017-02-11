@@ -418,7 +418,10 @@ class QAProtocolCLI:
 
         # check for s3 paths
         for sub in bundle_dict.keys():
-            if type(bundle_dict[sub]) is not dict:
+            # in case we're dealing with string entries in the data dict
+            try:
+                bundle_dict[sub].keys()
+            except AttributeError:
                 continue
             for resource in bundle_dict[sub].keys():
                 value = bundle_dict[sub][resource]
@@ -740,6 +743,12 @@ def run_workflow(args, run=True):
     for sub_info in sub_info_list:
 
         resource_pool = resource_pool_dict[sub_info]
+
+        # in case we're dealing with string entries in the data dict
+        try:
+            resource_pool.keys()
+        except AttributeError:
+            continue
 
         # resource pool check
         invalid_paths = []

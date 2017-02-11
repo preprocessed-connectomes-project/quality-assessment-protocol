@@ -14,7 +14,7 @@ memory_allocated_per_participant: 2
 resource_manager: None
 
 # where to place output files
-output_directory: /tmp/output_ms
+output_directory: /
 
 # where to place Nipype workflow working files
 working_directory: /tmp/workdir_ms
