@@ -699,7 +699,7 @@ def run_workflow(args, run=True):
     try:
         os.makedirs(bundle_log_dir)
     except:
-        if not op.isdir(log_dir):
+        if not op.isdir(bundle_log_dir):
             err = "[!] Bundle log directory unable to be created.\n" \
                     "Path: %s\n\n" % bundle_log_dir
             raise Exception(err)
