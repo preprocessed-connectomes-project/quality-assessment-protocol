@@ -18,15 +18,15 @@ def convert_allineate_xfm(mat_list):
     # put together the 4x4 matrix
     #   (encode the offset as the fourth row and include the 0,0,0,1
     #    dummy row, so that this will only require one matrix multiplication)
-    row1 = [float(mat_list[0]), float(mat_list[1]), float(mat_list[2]), \
+    row1 = [float(mat_list[0]), float(mat_list[1]), float(mat_list[2]),
                 float(mat_list[3])]
-    row2 = [float(mat_list[4]), float(mat_list[5]), float(mat_list[6]), \
+    row2 = [float(mat_list[4]), float(mat_list[5]), float(mat_list[6]),
                 float(mat_list[7])]
-    row3 = [float(mat_list[8]), float(mat_list[9]), float(mat_list[10]), \
+    row3 = [float(mat_list[8]), float(mat_list[9]), float(mat_list[10]),
                 float(mat_list[11])]
-    row4 = [0,0,0,1]
+    row4 = [0, 0, 0, 1]
 
-    allineate_mat = np.asarray([row1,row2,row3,row4])
+    allineate_mat = np.asarray([row1, row2, row3, row4])
 
     return allineate_mat
 
@@ -283,7 +283,8 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
 
     for info_label in info_labels:
         try:
-            qap_dict[id_string][subkey][info_label] = str(img_header[info_label])
+            qap_dict[id_string][subkey][info_label] = \
+                str(img_header[info_label])
         except:
             print "\n\n%s field not in NIFTI header of %s\n\n" % \
                   (info_label, in_file)

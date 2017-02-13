@@ -187,8 +187,9 @@ def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None):
     return sub_dict
 
 
-def populate_custom_data_dict(data_dict, filepath, part_id, session_id, series_id,
-    site_id, resource, default_series_label=None):
+def populate_custom_data_dict(data_dict, filepath, part_id, session_id,
+                              series_id, site_id, resource,
+                              default_series_label=None):
     """Update a participant data dictionary with a NIFTI filepath keyed to
     a participant's information, for the 'gather_custom_raw_data.py' script.
 
@@ -500,13 +501,13 @@ def create_CPAC_outputs_dict(cpac_outdir, qap_type, session_format):
 
     if qap_type == "anat":
 
-        outputs = ["anatomical_reorient", "anatomical_csf_mask", \
-                   "anatomical_gm_mask", "anatomical_wm_mask", \
+        outputs = ["anatomical_reorient", "anatomical_csf_mask",
+                   "anatomical_gm_mask", "anatomical_wm_mask",
                    "anatomical_to_mni_linear_xfm"]
 
     elif qap_type == "func":
 
-        outputs = ["mean_functional", "functional_brain_mask", \
+        outputs = ["mean_functional", "functional_brain_mask",
                    "raw_functional", "coordinate_transformation"]
 
     outputs_dict = {}

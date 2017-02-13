@@ -9,7 +9,8 @@ import argparse
 
 from nipype import config
 log_dir=os.path.join("tmp","nipype","logs")
-config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
+config.update_config({'logging': {'log_directory': log_dir,
+                                  'log_to_file': True}})
 
 from nipype import logging
 logger = logging.getLogger('workflow')
@@ -64,7 +65,8 @@ class QAProtocolCLI:
         self._config = read_yml_file(args.pipeline_config_file)
         self.validate_config_dict()
 
-        self._config['pipeline_config_yaml'] = os.path.realpath(args.pipeline_config_file)
+        self._config['pipeline_config_yaml'] = \
+            os.path.realpath(args.pipeline_config_file)
         self._run_name = self._config['pipeline_name']
 
         if args.with_reports:
@@ -86,7 +88,7 @@ class QAProtocolCLI:
         if args.log_dir:
             self._run_log_dir = args.log_dir
         else:
-            self._run_log_dir = None
+            self._run_log_dir = self._config["output_directory"]
 
     def submit_cluster_batch_file(self, num_bundles):
         """Write the cluster batch file for the appropriate scheduler.
@@ -600,9 +602,12 @@ class QAProtocolCLI:
                 len(self._bundles_list[0])
 
         # Start the magic
-        if not self._platform:
+        if not self._platform and not self._bundle_idx:
             # not a cluster/grid run
+            for idx in range(0, num_bundles):
+                results.append(self.run_one_bundle(idx))
 
+            """
             if self._num_bundles_at_once == 1:
                 # this is always the case
                 for idx in range(0, num_bundles):
@@ -621,6 +626,7 @@ class QAProtocolCLI:
                 results = pool.map(self.run_one_bundle, range(0, num_bundles))
                 pool.close()
                 pool.terminate()
+            """
 
         elif not self._bundle_idx:
             # there is a self._bundle_idx only if the pipeline runner is run
@@ -687,7 +693,8 @@ def run_workflow(args, run=True):
     from nipype import config as nyconfig
 
     # unpack args
-    resource_pool_dict, sub_info_list, config, run_name, runargs, bundle_idx, num_bundles = args
+    resource_pool_dict, sub_info_list, config, run_name, runargs, \
+        bundle_idx, num_bundles = args
 
     # Read and apply general settings in config
     keep_outputs = config.get('write_all_outputs', False)
@@ -695,6 +702,9 @@ def run_workflow(args, run=True):
     # take date+time stamp for run identification purposes
     pipeline_start_stamp = strftime("%Y-%m-%d_%H:%M:%S")
     pipeline_start_time = time.time()
+
+    if "workflow_log_dir" not in config.keys():
+        config["workflow_log_dir"] = config["output_directory"]
 
     bundle_log_dir = op.join(config["workflow_log_dir"],
                              '_'.join(["bundle", str(bundle_idx)]))
@@ -736,7 +746,8 @@ def run_workflow(args, run=True):
     new_outputs = 0
 
     # iterate over each subject in the bundle
-    logger.info("Starting bundle %s out of %s.." % (str(bundle_idx), str(num_bundles)))
+    logger.info("Starting bundle %s out of %s.." % (str(bundle_idx),
+                                                    str(num_bundles)))
     # results dict
     rt = {'status': 'Started', 'bundle_log_dir': bundle_log_dir}
 
@@ -846,7 +857,9 @@ def run_workflow(args, run=True):
                         # load relevant json info into resource pool
                         json_file = op.join(output_dir, resource)
                         json_dict = read_json(json_file)
-                        sub_json_dict = json_dict["%s %s %s" % (sub_id, session_id, scan_id)]
+                        sub_json_dict = json_dict["%s %s %s" % (sub_id,
+                                                                session_id,
+                                                                scan_id)]
 
                         if "anatomical_header_info" in sub_json_dict.keys():
                             resource_pool["anatomical_header_info"] = \
@@ -869,7 +882,8 @@ def run_workflow(args, run=True):
         resource_pool["starter"] = (starter_node, 'starter')
 
         # individual workflow and logger setup
-        logger.info("Contents of resource pool for this participant:\n%s" % str(resource_pool))
+        logger.info("Contents of resource pool for this participant:\n%s"
+                    % str(resource_pool))
 
         # start connecting the pipeline
         qw = None
@@ -879,7 +893,7 @@ def run_workflow(args, run=True):
                     from qap import qap_workflows as qw
                 wf_builder = \
                     getattr(qw, "_".join(["qap", qap_type, "workflow"]))
-                workflow, resource_pool = wf_builder(workflow, resource_pool,\
+                workflow, resource_pool = wf_builder(workflow, resource_pool,
                                                      config, name)
 
         if ("anatomical_scan" in resource_pool.keys()) and \
@@ -950,17 +964,17 @@ def run_workflow(args, run=True):
     if new_outputs > 0:
         if config.get('write_graph', False):
             workflow.write_graph(
-                dotfilename=op.join(config["output_directory"], \
+                dotfilename=op.join(config["output_directory"],
                                     "".join([run_name, ".dot"])),
                 simple_form=False)
             workflow.write_graph(
                 graph2use="orig",
-                dotfilename=op.join(config["output_directory"], \
+                dotfilename=op.join(config["output_directory"],
                                     "".join([run_name, ".dot"])),
                 simple_form=False)
             workflow.write_graph(
                 graph2use="hierarchical",
-                dotfilename=op.join(config["output_directory"], \
+                dotfilename=op.join(config["output_directory"],
                                     "".join([run_name, ".dot"])),
                 simple_form=False)
         if run:
@@ -970,17 +984,20 @@ def run_workflow(args, run=True):
                 workflow.run(plugin=runargs["plugin"],
                              plugin_args=runargs["plugin_args"])
                 rt['status'] = 'finished'
-                logger.info("Workflow run finished for bundle %s." % str(bundle_idx))
+                logger.info("Workflow run finished for bundle %s."
+                            % str(bundle_idx))
             except Exception as e:  # TODO We should be more specific here ...
                 rt.update({'status': 'failed', 'msg': e})
-                logger.info("Workflow run failed for bundle %s." % str(bundle_idx))
+                logger.info("Workflow run failed for bundle %s."
+                            % str(bundle_idx))
                 # ... however this is run inside a pool.map: do not raise Exception
         else:
             return workflow
 
     else:
         rt['status'] = 'cached'
-        logger.info("\nEverything is already done for bundle %s." % str(bundle_idx))
+        logger.info("\nEverything is already done for bundle %s."
+                    % str(bundle_idx))
 
     # Remove working directory when done
     if not keep_outputs:
