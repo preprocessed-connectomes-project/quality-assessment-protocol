@@ -4,14 +4,14 @@ pipeline_name: qap_circleci
 # how many processors you wish to use in the run
 num_processors: 1
 
-# how many participants to run per workflow
+# how many sessions to run per workflow
 num_sessions_at_once: 1
 
-# the amount of memory (in GB) to allocate to each participant
-memory_allocated_per_participant: 2
+# the amount of memory (in GB) to allocate to the entire run
+available_memory: 2
 
-# which resource manager being used, if any
-resource_manager: None
+# which cluster system being used, if any
+cluster_system: None
 
 # where to place output files
 output_directory: /tmp/output

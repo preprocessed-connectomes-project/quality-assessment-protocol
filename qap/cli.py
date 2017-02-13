@@ -202,8 +202,8 @@ class QAProtocolCLI:
         config_options = ["pipeline_name",
                           "num_processors",
                           "num_sessions_at_once",
-                          "memory_allocated_per_participant",
-                          "resource_manager",
+                          "available_memory",
+                          "cluster_system",
                           "output_directory",
                           "working_directory",
                           "template_head_for_anat",
@@ -491,23 +491,22 @@ class QAProtocolCLI:
             self._config["subject_list"] = partic_list
 
         # Get configurations and settings
-        config = self._config
-        check_config_settings(config, "num_processors")
-        check_config_settings(config, "num_sessions_at_once")
-        check_config_settings(config, "memory_allocated_per_participant")
-        check_config_settings(config, "output_directory")
-        check_config_settings(config, "working_directory")
+        check_config_settings(self._config, "num_processors")
+        check_config_settings(self._config, "num_sessions_at_once")
+        check_config_settings(self._config, "available_memory")
+        check_config_settings(self._config, "output_directory")
+        check_config_settings(self._config, "working_directory")
 
         self._num_bundles_at_once = 1
-        write_report = config.get('write_report', False)
+        write_report = self._config.get('write_report', False)
 
-        if "resource_manager" in config.keys() and not self._bundle_idx:
-            res_mngr = config["resource_manager"]
+        if "cluster_system" in self._config.keys() and not self._bundle_idx:
+            res_mngr = self._config["cluster_system"]
             if (res_mngr == None) or ("None" in res_mngr) or \
                 ("none" in res_mngr):
                 self._platform = None
             else:
-                platforms = ["SGE","PBS","SLURM"]
+                platforms = ["SGE", "PBS", "SLURM"]
                 self._platform = str(res_mngr).upper()
                 if self._platform not in platforms:
                     msg = "The resource manager %s provided in the pipeline "\
@@ -520,22 +519,22 @@ class QAProtocolCLI:
 
         # Create output directory
         try:
-            os.makedirs(config["output_directory"])
+            os.makedirs(self._config["output_directory"])
         except:
-            if not op.isdir(config["output_directory"]):
+            if not op.isdir(self._config["output_directory"]):
                 err = "[!] Output directory unable to be created.\n" \
-                      "Path: %s\n\n" % config["output_directory"]
+                      "Path: %s\n\n" % self._config["output_directory"]
                 raise Exception(err)
             else:
                 pass
 
         # Create working directory
         try:
-            os.makedirs(config["working_directory"])
+            os.makedirs(self._config["working_directory"])
         except:
-            if not op.isdir(config["working_directory"]):
+            if not op.isdir(self._config["working_directory"]):
                 err = "[!] Output directory unable to be created.\n" \
-                      "Path: %s\n\n" % config["working_directory"]
+                      "Path: %s\n\n" % self._config["working_directory"]
                 raise Exception(err)
             else:
                 pass
@@ -546,7 +545,7 @@ class QAProtocolCLI:
         import logging
         from nipype.pipeline.plugins.callback_log import log_nodes_cb
 
-        cb_log_filename = os.path.join(config["output_directory"],
+        cb_log_filename = os.path.join(self._config["output_directory"],
                                        "callback.log")
         # Add handler to callback log file
         cb_logger = logging.getLogger('callback')
@@ -557,9 +556,7 @@ class QAProtocolCLI:
         # settle run arguments (plugins)
         self.runargs = {}
         self.runargs['plugin'] = 'MultiProc'
-        memory_for_entire_run = \
-            int(config["memory_allocated_per_participant"] * config["num_sessions_at_once"])
-        self.runargs['plugin_args'] = {'memory_gb': memory_for_entire_run,
+        self.runargs['plugin_args'] = {'memory_gb': int(self._config["available_memory"]),
                                        'status_callback': log_nodes_cb}
         n_procs = {'n_procs': self._config["num_processors"]}
         self.runargs['plugin_args'].update(n_procs)
@@ -580,7 +577,7 @@ class QAProtocolCLI:
             # level) only the first time we run the script, due to the
             # timestamp. if sub-nodes are being kicked off by a batch file on
             # a cluster, we don't want a new timestamp for every new node run
-            self._run_log_dir = op.join(config['output_directory'],
+            self._run_log_dir = op.join(self._config['output_directory'],
                                         '_'.join([self._run_name, "logs"]),
                                         '_'.join([strftime("%Y%m%d_%H_%M_%S"),
                                                  "%dbundles" % num_bundles]))
