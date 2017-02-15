@@ -60,11 +60,11 @@ class TestPullS3Sublist(unittest.TestCase):
 
     def test_BIDS(self):
         test_bids_s3_list = self.pull_s3_sublist(self.bids_path)
-        self.assertListEqual(self.bids_s3_list, test_bids_s3_list[0][0:5])
+        self.assertListEqual(self.bids_s3_list, test_bids_s3_list[0:5])
 
     def test_custom(self):
         test_custom_s3_list = self.pull_s3_sublist(self.custom_path)
-        self.assertListEqual(self.custom_s3_list, test_custom_s3_list[0][0:5])
+        self.assertListEqual(self.custom_s3_list, test_custom_s3_list[0:5])
 
     def test_invalid_bucket_name(self):
         with self.assertRaises(Exception):
@@ -72,7 +72,7 @@ class TestPullS3Sublist(unittest.TestCase):
 
     def test_wrong_dirpath(self):
         test_wrong_list = self.pull_s3_sublist(self.invalid_dir_path)
-        self.assertEquals(0, len(test_wrong_list[0]))
+        self.assertEquals(0, len(test_wrong_list))
 
     def test_invalid_creds_path(self):
         with self.assertRaises(Exception):
@@ -120,11 +120,17 @@ class TestParseRawDataList(unittest.TestCase):
         pass
 
     def test_inclusion(self):
-        # TODO
-        pass
+        ref_subdict = self.ref_local_subdict
+        del ref_subdict["sub_02"]
+        test_inc = self.parse_raw_data_list(self.local_file_list,
+                                            self.local_data_folder,
+                                            inclusion_list=["sub_01"])
+        self.assertDictEqual(ref_subdict, test_inc)
 
     def test_wrong_dir_format(self):
-        with self.assertRaises(IndexError):
+        # only comes out empty because there's only one entry in the input
+        # list
+        with self.assertRaisesRegexp(Exception, "came out empty"):
             self.parse_raw_data_list(self.wrong_file_list,
                                      self.local_data_folder)
 

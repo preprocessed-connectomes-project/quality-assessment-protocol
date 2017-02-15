@@ -372,7 +372,9 @@ class QAProtocolCLI:
             if "site_name" in self._sub_dict[session_tuple].keys():
                 site_name = self._sub_dict[session_tuple]["site_name"]
             for scan in self._sub_dict[session_tuple].keys():
-                if scan != "site_name":
+                if type(self._sub_dict[session_tuple][scan]) is dict:
+                    # to avoid fields in sub_dict[session_tuple] that are
+                    # strings (such as site_name or creds_path)
                     sub_info_tuple = (sub, ses, scan)
                     new_bundle[sub_info_tuple] = \
                         self._sub_dict[session_tuple][scan]
@@ -565,7 +567,6 @@ class QAProtocolCLI:
         subdict = self.load_sublist()
 
         # flatten the participant dictionary
-        #self._sub_dict = self.create_flat_sub_dict_dict(subdict)
         self._sub_dict = self.create_session_dict(subdict)
 
         # create the list of bundles
@@ -603,27 +604,6 @@ class QAProtocolCLI:
             # not a cluster/grid run
             for idx in range(0, num_bundles):
                 results.append(self.run_one_bundle(idx))
-
-            """
-            if self._num_bundles_at_once == 1:
-                # this is always the case
-                for idx in range(0, num_bundles):
-                    results.append(self.run_one_bundle(idx))
-
-            else:
-                # or use Pool if running multiple bundles simultaneously
-                # for testing/experimentation only!!!
-                from multiprocessing import Pool
-                try:
-                    pool = Pool(processes=self._num_bundles_at_once,
-                                masktasksperchild=50)
-                except TypeError:  # Make python <2.7 compatible
-                    pool = Pool(processes=self._num_bundles_at_once)
-
-                results = pool.map(self.run_one_bundle, range(0, num_bundles))
-                pool.close()
-                pool.terminate()
-            """
 
         elif not self._bundle_idx:
             # there is a self._bundle_idx only if the pipeline runner is run

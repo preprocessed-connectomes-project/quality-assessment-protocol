@@ -82,6 +82,7 @@ class TestCreateSessionDict(unittest.TestCase):
 class TestCLI(unittest.TestCase):
 
     def setUp(self):
+        # setup
         import os
         from qap import cli
 
@@ -99,21 +100,82 @@ class TestCLI(unittest.TestCase):
         self.cli.runargs = {'plugin': 'MultiProc'}
         self.cli._run_name = "qap_unit_test"
 
-        self.ref_flat_dict = {
+        # inputs/outputs
+        self.input_subdict = {
+            'sub_001': {
+                'session_01': {
+                    'anatomical_scan': {
+                        'anat_1': '/file/site_01/sub_001/session_01/anat_1/mprage.nii.gz'},
+                    'functional_scan': {
+                        'rest_1': '/file/site_01/sub_001/session_01/rest_1/rest.nii.gz',
+                        'rest_2': '/file/site_01/sub_001/session_01/rest_2/rest.nii.gz'},
+                    'site_name': 'site_01'}},
+            'sub_002': {
+                'session_01': {
+                    'anatomical_scan': {
+                        'anat_1': '/file/site_01/sub_002/session_01/anat_1/mprage.nii.gz'},
+                    'functional_scan': {
+                        'rest_1': '/file/site_01/sub_002/session_01/rest_1/rest.nii.gz',
+                        'rest_2': '/file/site_01/sub_002/session_01/rest_2/rest.nii.gz'},
+                    'site_name': 'site_01'}}}
+
+        self.BIDS_input_subdict = {
+            "sub-0003001": {
+                "ses-1": {
+                    "anatomical_scan": {
+                        "run-1_T1w": 's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003001/ses-1/anat/sub-0003001_ses-1_run-1_T1w.nii.gz'},
+                    "creds_path": '',
+                    "functional_scan": {
+                        "task-rest_run-1": 's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003001/ses-1/func/sub-0003001_ses-1_task-rest_run-1_bold.nii.gz',
+                        "task-rest_run-2": 's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003001/ses-1/func/sub-0003001_ses-1_task-rest_run-2_bold.nii.gz'},
+                    "site_name": "site-BMB1"}},
+            "sub-0003002": {
+                "ses-1": {
+                    "anatomical_scan": {
+                        "run-1_T1w": 's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003002/ses-1/anat/sub-0003002_ses-1_run-1_T1w.nii.gz'},
+                    "creds_path": '',
+                    "functional_scan": {
+                        "task-rest_run-1": 's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003002/ses-1/func/sub-0003002_ses-1_task-rest_run-1_bold.nii.gz',
+                        "task-rest_run-2": 's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003002/ses-1/func/sub-0003002_ses-1_task-rest_run-2_bold.nii.gz'},
+                    "site_name": "site-BMB1"}}}
+
+        self.session_dict = {
             ("sub_001", "session_01"): {
                 "anat_1": {
-                    "anatomical_scan": "/file/path/sub_001/session_01/anatomical_scan/anat_1/file.nii.gz"},
-                "site_name": "site_1"},
-            ("sub_001", "session_02"): {
-                "anat_1": {
-                    "anatomical_scan": "/file/path/sub_001/session_02/anatomical_scan/anat_1/file.nii.gz"},
-                "site_name": "site_1"},
+                    "anatomical_scan": "/file/site_01/sub_001/session_01/anat_1/mprage.nii.gz"},
+                "rest_1": {
+                    "functional_scan": "/file/site_01/sub_001/session_01/rest_1/rest.nii.gz"},
+                "rest_2": {
+                    "functional_scan": "/file/site_01/sub_001/session_01/rest_2/rest.nii.gz"},
+                "site_name": "site_01"},
             ("sub_002", "session_01"): {
                 "anat_1": {
-                    "anatomical_scan": "/file/path/sub_002/session_01/anatomical_scan/anat_1/file.nii.gz"},
-                "anat_2": {
-                    "anatomical_scan": "/file/path/sub_002/session_01/anatomical_scan/anat_2/file.nii.gz"},
-                "site_name": "site_1"}}
+                    "anatomical_scan": "/file/site_01/sub_002/session_01/anat_1/mprage.nii.gz"},
+                "rest_1": {
+                    "functional_scan": "/file/site_01/sub_002/session_01/rest_1/rest.nii.gz"},
+                "rest_2": {
+                    "functional_scan": "/file/site_01/sub_002/session_01/rest_2/rest.nii.gz"},
+                "site_name": "site_01"}}
+
+        self.BIDS_session_dict = {
+            ("sub-0003001", "ses-1"): {
+                "run-1_T1w": {
+                    "anatomical_scan": 's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003001/ses-1/anat/sub-0003001_ses-1_run-1_T1w.nii.gz'},
+                "creds_path": '',
+                "task-rest_run-1": {
+                    "functional_scan": 's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003001/ses-1/func/sub-0003001_ses-1_task-rest_run-1_bold.nii.gz'},
+                "task-rest_run-2": {
+                    "functional_scan": 's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003001/ses-1/func/sub-0003001_ses-1_task-rest_run-2_bold.nii.gz'},
+                "site_name": "site-BMB1"},
+            ("sub-0003002", "ses-1"): {
+                "run-1_T1w": {
+                    "anatomical_scan": 's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003002/ses-1/anat/sub-0003002_ses-1_run-1_T1w.nii.gz'},
+                "creds_path": '',
+                "task-rest_run-1": {
+                    "functional_scan": 's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003002/ses-1/func/sub-0003002_ses-1_task-rest_run-1_bold.nii.gz'},
+                "task-rest_run-2": {
+                    "functional_scan": 's3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1/sub-0003002/ses-1/func/sub-0003002_ses-1_task-rest_run-2_bold.nii.gz'},
+                "site_name": "site-BMB1"}}
 
         self.cli._bundles_list = [
             {
@@ -140,33 +202,45 @@ class TestCLI(unittest.TestCase):
 
     def test_create_bundles_one_ses_each(self):
         self.cli._config["num_sessions_at_once"] = 1
-        self.cli._sub_dict = self.ref_flat_dict
+        self.cli._sub_dict = self.session_dict
         bundles = self.cli.create_bundles()
-
         # how many bundles there should be
-        #   3 sub-sessions, 1 per bundle = 3 bundles
-        self.assertEqual(len(bundles), 3)
+        #   2 sub-sessions, 1 per bundle = 2 bundles
+        self.assertEqual(len(bundles), 2)
 
     def test_create_bundles_two_ses_each(self):
         self.cli._config["num_sessions_at_once"] = 2
-        self.cli._sub_dict = self.ref_flat_dict
+        self.cli._sub_dict = self.session_dict
         bundles = self.cli.create_bundles()
-
         # how many bundles there should be
-        #   3 sub-sessions, 2 per bundle = 2 bundles
-        self.assertEqual(len(bundles), 2)
+        #   2 sub-sessions, 2 per bundle = 1 bundles
+        self.assertEqual(len(bundles), 1)
 
     def test_create_bundles_five_ses_each(self):
         self.cli._config["num_sessions_at_once"] = 5
-        self.cli._sub_dict = self.ref_flat_dict
+        self.cli._sub_dict = self.session_dict
         bundles = self.cli.create_bundles()
-        print bundles
         # how many bundles there should be
-        #   3 sub-sessions, 5 per bundle = 1 bundles
+        #   2 sub-sessions, 5 per bundle = 1 bundles
         self.assertEqual(len(bundles), 1)
+        # should only have 6 filepaths
+        self.assertEqual(len(bundles[0]), 6)
 
-        # should only have 4 filepaths
-        self.assertEqual(len(bundles[0]), 4)
+    def test_create_session_dict_nonBIDS(self):
+        test_ses_dict = self.cli.create_session_dict(self.input_subdict)
+        self.assertDictEqual(self.session_dict, test_ses_dict)
+
+    def test_create_session_dict_BIDS(self):
+        test_ses_dict = self.cli.create_session_dict(self.BIDS_input_subdict)
+        self.assertDictEqual(self.BIDS_session_dict, test_ses_dict)
+
+    def test_create_bundles_BIDS_session_dict(self):
+        self.cli._config["num_sessions_at_once"] = 1
+        self.cli._sub_dict = self.BIDS_session_dict
+        bundles = self.cli.create_bundles()
+        # how many bundles there should be
+        #   2 sub-sessions, 1 per bundle = 2 bundles
+        self.assertEqual(len(bundles), 2)
 
     def test_run_one_bundle(self):
         wfargs = self.cli.run_one_bundle(0, run=False)
@@ -232,8 +306,8 @@ def test_submit_cluster_batch_file_for_SGE_s3_paths():
     cli_obj = init_cli_obj()
 
     cli_obj._config["subject_list"] = os.path.join(out_dir, "s3_sublist.yml")
-    cli_obj._config["pipeline_config_yaml"] = os.path.join(out_dir, \
-    	"pipeline_config.yml")
+    cli_obj._config["pipeline_config_yaml"] = os.path.join(out_dir,
+                                                           "pipeline_config.yml")
     cli_obj._platform = "SGE"
 
     file_contents, file_path, exec_cmd, confirm_str, cluster_files_dir = \

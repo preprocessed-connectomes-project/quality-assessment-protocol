@@ -41,11 +41,6 @@ def plot_measures(df, measures, ncols=4, title='Group level report',
 
         if subject is not None:
             subid = subject
-            try:
-                subid = int(subid)
-            except ValueError:
-                pass
-
             subdf = df.loc[df['Participant'] == subid]
             sessions = np.atleast_1d(subdf[['Session']]).reshape(-1).tolist()
 
@@ -76,12 +71,12 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
 
     subjects = sorted(pd.unique(df.Participant.ravel()))
     nsubj = len(subjects)
+
+    if subject:
+        if subject not in subjects:
+            return None
+
     subid = subject
-    if subid is not None:
-        try:
-            subid = int(subid)
-        except ValueError:
-            pass
 
     df["Participant"] = df["Participant"].astype(str)
 
@@ -95,7 +90,18 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
             stdf = df.copy()
             if subid is not None:
                 stdf = stdf.loc[stdf['Participant'] != subid]
-            sns.stripplot(data=stdf[snames], ax=axes[-1], jitter=0.25)
+            try:
+                sns.stripplot(data=stdf[snames], ax=axes[-1], jitter=0.25)
+            except KeyError:
+                # handle the possibility of one or multiple phase-encoding
+                # directions for GSR measure
+                if "Ghost_" in snames[0]:
+                    for sname in snames:
+                        try:
+                            sns.stripplot(data=stdf[[sname]], ax=axes[-1],
+                                          jitter=0.25)
+                        except KeyError:
+                            pass
 
         axes[-1].set_xticklabels(
             [el.get_text() for el in axes[-1].get_xticklabels()],
@@ -119,7 +125,6 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
                 pos = [j]
                 if nstars > 1:
                     pos = np.linspace(j-0.3, j+0.3, num=nstars)
-                    
                 axes[-1].plot(
                     pos, vals, ms=9, mew=.8, linestyle='None',
                     color='w', marker='*', markeredgecolor='k',
@@ -287,6 +292,14 @@ def _calc_rows_columns(ratio, n_images):
 
 
 def _calc_fd(fd_file):
+    """Calculate the frame-wise displacement (FD) given the FD vector.
+
+    :type fd_file: str
+    :param fd_file: The filepath to the frame-wise displacement 1D vector
+    file.
+    :rtype: NumPy array
+    :return: The frame-wise displacement (FD) array.
+    """
     lines = open(fd_file, 'r').readlines()
     rows = [[float(x) for x in line.split()] for line in lines]
     cols = np.array([list(col) for col in zip(*rows)])

@@ -103,6 +103,8 @@ def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None):
     if not inclusion_list:
         inclusion_list = []
         inclusion = False
+    else:
+        inclusion = True
     
     for rel_path in filepath_list:
             
@@ -133,6 +135,7 @@ def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None):
                   % rel_path
             # do not raise an exception, just want to warn the user
             print err
+            continue
 
         if not inclusion:
             inclusion_list.append(subject_id)
@@ -400,7 +403,7 @@ def gather_json_info(output_dir):
     """
 
     import os
-    from qap.qap_workflows_utils import read_json
+    from qap.qap_utils import read_json
 
     json_dict = {}
 

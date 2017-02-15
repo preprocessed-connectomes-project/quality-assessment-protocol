@@ -251,6 +251,10 @@ def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
                         fig = plot_measures(
                             sesdf, headers, subject=sub_id,
                             title='QC measures ' + subtitle)
+                    if not fig:
+                        # this happens if there is a sub_id, but the sub_id
+                        # does not have one of the sessions in "sessions"
+                        continue
                     report.savefig(fig, dpi=300)
                     fig.clf()
         else:
@@ -266,6 +270,10 @@ def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
                     fig = plot_measures(
                         sesdf, headers, subject=sub_id,
                         title='QC measures ' + subtitle)
+                if not fig:
+                    # this happens if there is a sub_id, but the sub_id does
+                    # not have one of the sessions in "sessions"
+                    continue
                 report.savefig(fig, dpi=300)
                 fig.clf()
 
