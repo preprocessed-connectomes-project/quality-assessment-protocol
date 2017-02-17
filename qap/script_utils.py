@@ -66,7 +66,7 @@ def csv_to_pandas_df(csv_file):
     from qap_utils import raise_smart_exception
 
     try:
-        data = pd.read_csv(csv_file)
+        data = pd.read_csv(csv_file, dtype={"Participant": str})
     except Exception as e:
         err = "Could not load the CSV file into a DataFrame using Pandas." \
               "\n\nCSV file: %s\n\nError details: %s\n\n" % (csv_file, e)
@@ -560,15 +560,15 @@ def create_CPAC_outputs_dict(cpac_outdir, qap_type, session_format):
                 resource_path = ""
 
                 if session_format == 1:
-                    resource_folder = os.path.join(cpac_outdir, sub_dir, \
+                    resource_folder = os.path.join(cpac_outdir, sub_dir,
                                                        session, resource)
                 elif session_format == 2:
-                    resource_folder = os.path.join(cpac_outdir, sub_dir, \
+                    resource_folder = os.path.join(cpac_outdir, sub_dir,
                                                        resource)
 
                 elif session_format == 3:
-                    resource_folder = os.path.join(cpac_outdir, \
-                                                       subject_session, \
+                    resource_folder = os.path.join(cpac_outdir,
+                                                       subject_session,
                                                        resource)
 
                 # if this current resource/output does not exist for this
@@ -597,9 +597,12 @@ def create_CPAC_outputs_dict(cpac_outdir, qap_type, session_format):
                     if qap_type == "anat":
 
                         if "mask" in resource:
-                            resource_paths = glob.glob(os.path.join(resource_folder, "*", "*"))
+                            resource_paths = \
+                                glob.glob(os.path.join(resource_folder, "*",
+                                                       "*"))
                         else:
-                            resource_paths = glob.glob(os.path.join(resource_folder, "*"))
+                            resource_paths = \
+                                glob.glob(os.path.join(resource_folder, "*"))
 
                         if len(resource_paths) == 1:
                             resource_path = resource_paths[0]
@@ -616,7 +619,9 @@ def create_CPAC_outputs_dict(cpac_outdir, qap_type, session_format):
 
                         fullscan = "_".join(["_scan", scan, "rest"])
 
-                        resource_paths = glob.glob(os.path.join(resource_folder, fullscan, "*"))
+                        resource_paths = \
+                            glob.glob(os.path.join(resource_folder, fullscan,
+                                                   "*"))
 
                         if len(resource_paths) == 1:
                             resource_path = resource_paths[0]
@@ -641,7 +646,8 @@ def create_CPAC_outputs_dict(cpac_outdir, qap_type, session_format):
                         outputs_dict[sub_dir][session][resource] = {}
 
                     if scan not in outputs_dict[sub_dir][session][resource].keys():
-                        outputs_dict[sub_dir][session][resource][scan] = resource_path
+                        outputs_dict[sub_dir][session][resource][scan] = \
+                            resource_path
 
     # make up for QAP - CPAC resource naming discrepancy
     for subid in outputs_dict.keys():
@@ -751,7 +757,8 @@ def qap_csv_correlations(data_old, data_new, replacements=None):
         if (metric_old in data_merged) and (metric_new in data_merged):
             metric_old_val = data_merged[metric_old]
             metric_new_val = data_merged[metric_new]
-            correlations_dict[metric] = scipy.stats.pearsonr(metric_old_val, metric_new_val)
+            correlations_dict[metric] = scipy.stats.pearsonr(metric_old_val,
+                                                             metric_new_val)
 
     return correlations_dict
 
@@ -795,3 +802,63 @@ def write_inputs_dict_to_yaml_file(input_dict, yaml_outpath):
               "saved to the YAML file!\nOutput filepath: %s\n" \
               % yaml_outpath
         raise Exception(err)
+
+
+def check_csv_missing_subs(csv_df, data_dict, data_type):
+    """Check which participant-sessions in the data configuration file didn't
+    make it to the output CSV.
+    """
+
+    if data_type != "anat" and data_type != "func":
+        err = "\n[!] data_type parameter must be either 'anat' or 'func'\n"
+        raise Exception(err)
+
+    if data_type == "anat":
+        type = "anatomical_scan"
+    elif data_type == "func":
+        type = "functional_scan"
+
+    uniques = []
+    for sub in data_dict.keys():
+        for ses in data_dict[sub].keys():
+            if type not in data_dict[sub][ses].keys():
+                continue
+            for scan in data_dict[sub][ses][type].keys():
+                uniques.append((sub, ses, scan))
+
+    df_ids = csv_df[["Participant", "Session", "Series"]]
+    df_uniques = [tuple(x) for x in df_ids.values]
+
+    missing = list(set(uniques) - set(df_uniques))
+
+    if len(missing) > 0:
+        print "\n%d scans missing in the output CSV compared to the input " \
+              "data config file." % len(missing)
+        # create subset of missing subs from input data config
+        new_data = {}
+        for id in missing:
+            sub = id[0]
+            ses = id[1]
+            scan = id[2]
+            if sub not in new_data.keys():
+                new_data[sub] = {}
+            if ses not in new_data[sub].keys():
+                new_data[sub][ses] = {}
+            if type not in new_data[sub][ses].keys():
+                new_data[sub][ses][type] = {}
+            if scan not in new_data[sub][ses][type].keys():
+                new_data[sub][ses][type][scan] = \
+                    data_dict[sub][ses][type][scan]
+        return new_data
+
+    else:
+        print "\nThe output CSV and input data config file match."
+        return None
+
+
+
+
+
+
+
+

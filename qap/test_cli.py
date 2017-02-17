@@ -243,7 +243,11 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(len(bundles), 2)
 
     def test_run_one_bundle(self):
-        wfargs = self.cli.run_one_bundle(0, run=False)
+        # make sure the number of sessions in the bundle being run matches
+        # runs it off self.cli._bundles_list created in setUp
+        # inputs 1 for bundle_idx parameter, first bundle in bundles_list, has
+        # 3 sessions in it
+        wfargs = self.cli.run_one_bundle(1, run=False)
         self.assertEqual(len(wfargs[1]), 3)
 
 

@@ -135,6 +135,85 @@ class TestParseRawDataList(unittest.TestCase):
                                      self.local_data_folder)
 
 
+class TestCheckCSVMissingSubs(unittest.TestCase):
+
+    def setUp(self):
+        # setup
+        import os
+        import pandas as pd
+        import pkg_resources as p
+        self.maxDiff = None
+        from qap.script_utils import check_csv_missing_subs
+        self.check_csv = check_csv_missing_subs
+
+        # inputs
+        anat_csv = \
+            p.resource_filename("qap", os.path.join("test_data",
+                                "qap_anatomical_spatial_5rows.csv"))
+        func_csv = \
+            p.resource_filename("qap", os.path.join("test_data",
+                                "qap_functional_spatial_5subs.csv"))
+        short_anat_csv = \
+            p.resource_filename("qap", os.path.join("test_data",
+                                "qap_anatomical_spatial_3rows.csv"))
+        short_func_csv = \
+            p.resource_filename("qap", os.path.join("test_data",
+                                "qap_functional_spatial_3subs.csv"))
+        self.anat_df = pd.read_csv(anat_csv, dtype={"Participant": str})
+        self.func_df = pd.read_csv(func_csv, dtype={"Participant": str})
+        self.short_anat_df = pd.read_csv(short_anat_csv,
+                                         dtype={"Participant": str})
+        self.short_func_df = pd.read_csv(short_func_csv,
+                                         dtype={"Participant": str})
+        self.data_dict = {
+            '0003001': {"session_1": {"anatomical_scan": {"anat_1": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003001/session_1/anat_1/anat.nii.gz'},
+                                      "functional_scan": {"rest_1": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003001/session_1/rest_1/rest.nii.gz',
+                                                          "rest_2": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003001/session_1/rest_2/rest.nii.gz'},
+                                      "site_name": "BMB_1"}},
+            '0003002': {"session_1": {"anatomical_scan": {"anat_1": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003002/session_1/anat_1/anat.nii.gz'},
+                                      "functional_scan": {"rest_1": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003002/session_1/rest_1/rest.nii.gz',
+                                                          "rest_2": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003002/session_1/rest_2/rest.nii.gz'},
+                                      "site_name": "BMB_1"}},
+            '0003004': {"session_1": {"anatomical_scan": {"anat_1": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003004/session_1/anat_1/anat.nii.gz'},
+                                      "functional_scan": {"rest_1": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003004/session_1/rest_1/rest.nii.gz',
+                                                          "rest_2": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003004/session_1/rest_2/rest.nii.gz'},
+                                      "site_name": "BMB_1"}},
+            '0003006': {"session_1": {"anatomical_scan": {"anat_1": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003006/session_1/anat_1/anat.nii.gz'},
+                                      "functional_scan": {"rest_1": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003006/session_1/rest_1/rest.nii.gz',
+                                                          "rest_2": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003006/session_1/rest_2/rest.nii.gz'},
+                                      "site_name": "BMB_1"}},
+            '0003007': {"session_1": {"anatomical_scan": {"anat_1": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003007/session_1/anat_1/anat.nii.gz'},
+                                      "functional_scan": {"rest_1": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003007/session_1/rest_1/rest.nii.gz',
+                                                          "rest_2": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003007/session_1/rest_2/rest.nii.gz'},
+                                      "site_name": "BMB_1"}}}
+
+        # outputs
+        self.anat_missing_dict = {
+            '0003006': {"session_1": {"anatomical_scan": {"anat_1": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003006/session_1/anat_1/anat.nii.gz'}}},
+            '0003007': {"session_1": {"anatomical_scan": {"anat_1": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003007/session_1/anat_1/anat.nii.gz'}}}}
+        self.func_missing_dict = {
+            '0003006': {"session_1": {"functional_scan": {"rest_1": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003006/session_1/rest_1/rest.nii.gz',
+                                                          "rest_2": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003006/session_1/rest_2/rest.nii.gz'}}},
+            '0003007': {"session_1": {"functional_scan": {"rest_1": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003007/session_1/rest_1/rest.nii.gz',
+                                                          "rest_2": 's3://fcp-indi/data/Projects/CORR/RawData/BMB_1/0003007/session_1/rest_2/rest.nii.gz'}}}}
+
+    def test_anat_no_missing(self):
+        ret = self.check_csv(self.anat_df, self.data_dict, "anat")
+        self.assertEquals(ret, None)
+
+    def test_anat_missing(self):
+        ret = self.check_csv(self.short_anat_df, self.data_dict, "anat")
+        self.assertDictEqual(ret, self.anat_missing_dict)
+
+    def test_func_no_missing(self):
+        ret = self.check_csv(self.func_df, self.data_dict, "func")
+        self.assertEquals(ret, None)
+
+    def test_func_missing(self):
+        ret = self.check_csv(self.short_func_df, self.data_dict, "func")
+        self.assertDictEqual(ret, self.func_missing_dict)
+
+
 @pytest.mark.quick
 def test_gather_custom_raw_data():
 

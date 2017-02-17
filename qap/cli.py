@@ -148,9 +148,8 @@ class QAProtocolCLI:
             confirm_str = '(?<=Your job-array )\d+'
             exec_cmd = 'qsub'
         elif self._platform == "SLURM":
-            hrs_limit = 8*len(subdict)
+            hrs_limit = 8 * num_bundles
             time_limit = '%d:00:00' % hrs_limit
-            ";PLOIUYTF"
             config_dict["time_limit"] = time_limit
             env_arr_idx = '$SLURM_ARRAY_TASK_ID'
             batch_file_contents = cluster_templates.slurm_template
@@ -258,6 +257,8 @@ class QAProtocolCLI:
                  defined.
         """
 
+        from qap.qap_utils import raise_smart_exception
+
         flat_sub_dict_dict = {}
         sites_dict = {}
 
@@ -336,6 +337,7 @@ class QAProtocolCLI:
         """
 
         import yaml
+        from qap.qap_utils import raise_smart_exception
 
         if "subject_list" in self._config.keys():
             with open(self._config["subject_list"], "r") as f:
@@ -359,6 +361,8 @@ class QAProtocolCLI:
                  starting resource pool for N sub-session-scan combos with N
                  being the number of participants per bundle (set by the user)
         """
+
+        from qap.qap_utils import raise_smart_exception
 
         i = 0
         bundles = []
@@ -417,7 +421,7 @@ class QAProtocolCLI:
 
         self._config["workflow_log_dir"] = self._run_log_dir
 
-        bundle_dict = self._bundles_list[bundle_idx]
+        bundle_dict = self._bundles_list[bundle_idx-1]
         num_bundles = len(self._bundles_list)
 
         # check for s3 paths
@@ -514,8 +518,8 @@ class QAProtocolCLI:
                     msg = "The resource manager %s provided in the pipeline "\
                           "configuration file is not one of the valid " \
                           "choices. It must be one of the following:\n%s" \
-                          % (self._platform,str(platforms))
-                    raise_smart_exception(locals(),msg)
+                          % (self._platform, str(platforms))
+                    raise_smart_exception(locals(), msg)
         else:
             self._platform = None
 
@@ -558,8 +562,9 @@ class QAProtocolCLI:
         # settle run arguments (plugins)
         self.runargs = {}
         self.runargs['plugin'] = 'MultiProc'
-        self.runargs['plugin_args'] = {'memory_gb': int(self._config["available_memory"]),
-                                       'status_callback': log_nodes_cb}
+        self.runargs['plugin_args'] = \
+            {'memory_gb': int(self._config["available_memory"]),
+             'status_callback': log_nodes_cb}
         n_procs = {'n_procs': self._config["num_processors"]}
         self.runargs['plugin_args'].update(n_procs)
 
@@ -602,7 +607,7 @@ class QAProtocolCLI:
         # Start the magic
         if not self._platform and not self._bundle_idx:
             # not a cluster/grid run
-            for idx in range(0, num_bundles):
+            for idx in range(1, num_bundles+1):
                 results.append(self.run_one_bundle(idx))
 
         elif not self._bundle_idx:
@@ -906,14 +911,14 @@ def run_workflow(args, run=True):
         # Save reports to out_dir if necessary
         if config.get('write_report', False):
 
-            if ("qap_mosaic" in resource_pool.keys()) and \
-                ("qap_mosaic" not in out_list):
+            if ("qap_mosaic" in resource_pool.keys()) and  \
+                    ("qap_mosaic" not in out_list):
                 out_list += ['qap_mosaic']
 
             # The functional temporal also has an FD plot
             if 'qap_functional_temporal' in resource_pool.keys():
                 if ("qap_fd" in resource_pool.keys()) and \
-                    ("qap_fd" not in out_list):
+                        ("qap_fd" not in out_list):
                     out_list += ['qap_fd']
 
         for output in out_list:
@@ -926,8 +931,8 @@ def run_workflow(args, run=True):
             # were not present in the subject list YML (the starting resource
             # pool) and had to be generated
             if (len(resource_pool[output]) == 2) and (output != "starter"):
-                ds = pe.Node(nio.DataSink(), name='datasink_%s%s' \
-                    % (output,name))
+                ds = pe.Node(nio.DataSink(), name='datasink_%s%s'
+                                                  % (output,name))
                 ds.inputs.base_directory = output_dir
                 node, out_file = resource_pool[output]
                 workflow.connect(node, out_file, ds, output)
