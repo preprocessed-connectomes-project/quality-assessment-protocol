@@ -906,7 +906,8 @@ def run_workflow(args, run=True):
         if keep_outputs:
             out_list = resource_pool.keys()
         logger.info("Outputs we're keeping: %s" % str(out_list))
-        logger.info('Resource pool keys after workflow connection: {}'.format(str(resource_pool.keys())))
+        logger.info('Resource pool keys after workflow connection: '
+                    '{}'.format(str(resource_pool.keys())))
 
         # Save reports to out_dir if necessary
         if config.get('write_report', False):
@@ -969,10 +970,12 @@ def run_workflow(args, run=True):
                 logger.info("Workflow run finished for bundle %s."
                             % str(bundle_idx))
             except Exception as e:  # TODO We should be more specific here ...
-                rt.update({'status': 'failed', 'msg': e})
+                errmsg = e
+                rt.update({'status': 'failed'})
                 logger.info("Workflow run failed for bundle %s."
                             % str(bundle_idx))
-                # ... however this is run inside a pool.map: do not raise Exception
+                # ... however this is run inside a pool.map: do not raise
+                # Exception
         else:
             return workflow
 
@@ -994,7 +997,7 @@ def run_workflow(args, run=True):
             pass
 
     if rt["status"] == "failed":
-        logger.error(rt["msg"])
+        logger.error(errmsg)
     else:
         pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
         pipeline_end_time = time.time()

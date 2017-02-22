@@ -807,6 +807,20 @@ def write_inputs_dict_to_yaml_file(input_dict, yaml_outpath):
 def check_csv_missing_subs(csv_df, data_dict, data_type):
     """Check which participant-sessions in the data configuration file didn't
     make it to the output CSV.
+
+    - This is used in the qap_check_output_csv.py script.
+
+    :type csv_df: Pandas DataFrame
+    :param csv_df: A Pandas DataFrame object containing the information from
+                   a QAP output CSV file.
+    :type data_dict: dict
+    :param data_dict: A QAP data configuration/resource pool dictionary.
+    :type data_type: str
+    :param data_type: The type of data- either 'anat' or 'func'.
+    :rtype: dict
+    :returns: A new data configuration dictionary containing the raw data
+              filepaths of the participant data that didn't make it into the
+              output CSV.
     """
 
     if data_type != "anat" and data_type != "func":
