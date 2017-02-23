@@ -19,7 +19,8 @@ from .plotting import (plot_measures, plot_mosaic, plot_all,
                        plot_fd, plot_dist)
 
 
-def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None):
+def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
+                    full_reports=False):
     """Generate a PDF report of a QAP run.
 
     :type in_csv: str
@@ -35,6 +36,9 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None):
     :param out_dir: The output directory for the reports.
     :type out_file: str
     :param out_file: The filename of the PDF report.
+    :type full_reports: bool
+    :param full_reports: Whether or not to produce the individual-level
+                         reports as well.
     :rtype: dict
     :return: A dictionary with information about the report generation.
     """
@@ -100,61 +104,63 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None):
         concat_pdf(pdf_group, out_group_file)
         result['group'] = {'success': True, 'path': out_group_file}
 
-    # Generate individual reports for subjects
-    for subid in [str(sub) for sub in subject_list]:
-        # Get subject-specific info
-        subdf = df.loc[df['Participant'] == subid]
-        sessions = sorted(pd.unique(subdf.Session.ravel()))
-        plots = []
-        sess_scans = []
-        # Re-build mosaic location
-        for sesid in [str(sess) for sess in sessions]:
-            sesdf = subdf.loc[subdf['Session'] == sesid]
-            scans = sorted(pd.unique(sesdf.Series.ravel()))
+    if full_reports:
+        # Generate individual reports for subjects
+        for subid in [str(sub) for sub in subject_list]:
+            # Get subject-specific info
+            subdf = df.loc[df['Participant'] == subid]
+            sessions = sorted(pd.unique(subdf.Session.ravel()))
+            plots = []
+            sess_scans = []
+            # Re-build mosaic location
+            for sesid in [str(sess) for sess in sessions]:
+                sesdf = subdf.loc[subdf['Session'] == sesid]
+                scans = sorted(pd.unique(sesdf.Series.ravel()))
 
-            # Each scan has a volume and (optional) fd plot
-            for scanid in [str(scan) for scan in scans]:
-                sub_info = [subid, sesid, scanid]
-                sub_path = op.join(out_dir, run_name, '/'.join(sub_info))
-                m = op.join(sub_path, 'qap_mosaic', 'mosaic.pdf')
+                # Each scan has a volume and (optional) fd plot
+                for scanid in [str(scan) for scan in scans]:
+                    sub_info = [subid, sesid, scanid]
+                    sub_path = op.join(out_dir, run_name, '/'.join(sub_info))
+                    m = op.join(sub_path, 'qap_mosaic', 'mosaic.pdf')
 
-                if op.isfile(m):
-                    plots.append(m)
+                    if op.isfile(m):
+                        plots.append(m)
 
-                fd = op.join(sub_path, 'qap_fd', 'fd.pdf')
-                if 'functional_temporal' in qap_type and op.isfile(fd):
-                    plots.append(fd)
+                    fd = op.join(sub_path, 'qap_fd', 'fd.pdf')
+                    if 'functional_temporal' in qap_type and op.isfile(fd):
+                        plots.append(fd)
 
-            sess_scans.append('%s (%s)' % (sesid, ', '.join(scans)))
+                sess_scans.append('%s (%s)' % (sesid, ', '.join(scans)))
 
-        #failed = ['%s (%s)' % (s['Session'], s['Series'])
-        #          for s in res_dict if 'failed' in s['status'] and
-        #          subid in s['id']]
+            #failed = ['%s (%s)' % (s['Session'], s['Series'])
+            #          for s in res_dict if 'failed' in s['status'] and
+            #          subid in s['id']]
 
-        # Summary cover
-        #out_sum = op.join(out_dir, run_name, 'summary_%s.pdf' % subid)
-        #summary_cover(
-        #    (subid, subid, qap_type,
-        #     datetime.datetime.now().strftime("%Y-%m-%d, %H:%M"),
-        #     ", ".join(sess_scans),
-        #     ",".join(failed) if len(failed) > 0 else "none"),
-        #    out_file=out_sum)
-        #plots.insert(0, out_sum)
+            # Summary cover
+            #out_sum = op.join(out_dir, run_name, 'summary_%s.pdf' % subid)
+            #summary_cover(
+            #    (subid, subid, qap_type,
+            #     datetime.datetime.now().strftime("%Y-%m-%d, %H:%M"),
+            #     ", ".join(sess_scans),
+            #     ",".join(failed) if len(failed) > 0 else "none"),
+            #    out_file=out_sum)
+            #plots.insert(0, out_sum)
 
-        # Summary (violinplots) of QC measures
-        qc_ms = op.join(os.getcwd(), '%s_measures.pdf' % qap_type)
+            # Summary (violinplots) of QC measures
+            qc_ms = op.join(os.getcwd(), '%s_measures.pdf' % qap_type)
 
-        func(df, subject=subid, out_file=qc_ms)
-        plots.append(qc_ms)
+            func(df, subject=subid, out_file=qc_ms)
+            plots.append(qc_ms)
 
-        if len(plots) > 0:
-            if doc is not None:
-                plots.append(doc)
+            if len(plots) > 0:
+                if doc is not None:
+                    plots.append(doc)
 
-            # Generate final report with collected pdfs in plots
-            sub_path = out_file % subid
-            concat_pdf(plots, sub_path)
-            result[subid] = {'success': True, 'path': sub_path}
+                # Generate final report with collected pdfs in plots
+                sub_path = out_file % subid
+                concat_pdf(plots, sub_path)
+                result[subid] = {'success': True, 'path': sub_path}
+
     return result
 
 
