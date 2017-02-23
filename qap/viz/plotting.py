@@ -56,6 +56,7 @@ def plot_measures(df, measures, ncols=4, title='Group level report',
     fig.suptitle(title)
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
     plt.subplots_adjust(top=0.85)
+    plt.close()
     return fig
 
 
@@ -133,6 +134,7 @@ def plot_all(df, groups, subject=None, figsize=(11.69, 5),
     fig.suptitle(title)
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
     plt.subplots_adjust(top=0.85)
+    plt.close()
     return fig
 
 

@@ -151,7 +151,6 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
 
             # Summary (violinplots) of QC measures
             qc_ms = op.join(os.getcwd(), '%s_measures.pdf' % qap_type)
-
             func(df, subject=subid, out_file=qc_ms)
             plots.append(qc_ms)
 
@@ -290,7 +289,7 @@ def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
 
     report.close()
     plt.close()
-    # print 'Written report file %s' % out_file
+
     return out_file
 
 
