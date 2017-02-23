@@ -704,6 +704,7 @@ def qap_csv_correlations(data_old, data_new, replacements=None):
 
     import pandas as pd
     import scipy.stats
+    from qap.qap_utils import raise_smart_exception
 
     metric_list = ["EFC","SNR","FBER","CNR","FWHM","Qi1","Cortical Contrast",
         "Ghost_x", "Ghost_y", "Ghost_z", "GCOR", "RMSD (Mean)", 
@@ -739,15 +740,40 @@ def qap_csv_correlations(data_old, data_new, replacements=None):
     # make sure participant IDs are strings (if they are all digits, can be
     # mistakenly read in as ints or floats)
     if data_old["Participant"].dtype != str:
-        data_old["Participant"] = data_old["Participant"].astype(int).astype(str)
+        try:
+            data_old["Participant"] = data_old["Participant"].astype(
+                int).astype(str)
+        except ValueError:
+            data_old["Participant"] = data_old["Participant"].astype(str)
 
     if data_new["Participant"].dtype != str:
-        data_new["Participant"] = data_new["Participant"].astype(int).astype(str)
+        try:
+            data_new["Participant"] = data_new["Participant"].astype(
+                int).astype(str)
+        except ValueError:
+            data_new["Participant"] = data_new["Participant"].astype(str)
 
     # make sure both DFs match
-    data_merged = pd.merge(data_old, data_new, 
-        on=["Participant","Session","Series"], how="inner", 
-        suffixes=("_OLD","_NEW"))
+    data_merged = pd.merge(data_old, data_new,
+                           on=["Participant", "Session", "Series"],
+                           how="inner",
+                           suffixes=("_OLD", "_NEW"))
+
+    if len(data_merged) == 0:
+        # try a last-ditch approach
+        try:
+            data_old["Participant"] = data_old["Participant"].astype(int)
+            data_new["Participant"] = data_new["Participant"].astype(int)
+            data_merged = pd.merge(data_old, data_new,
+                                   on=["Participant", "Session", "Series"],
+                                   how="inner",
+                                   suffixes=("_OLD", "_NEW"))
+        except:
+            pass
+        if len(data_merged) == 0:
+            err = "[!] There were no participant matches between the two " \
+                  "CSVs."
+            raise_smart_exception(locals(), err)
 
     # correlate the numbers!
     correlations_dict = {}
