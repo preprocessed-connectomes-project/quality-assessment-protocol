@@ -105,8 +105,11 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
         result['group'] = {'success': True, 'path': out_group_file}
 
     if full_reports:
+        idx = 1
         # Generate individual reports for subjects
         for subid in [str(sub) for sub in subject_list]:
+            print "Generating report for %s.. (%d/%d)" \
+                  % (subid, idx, len(subject_list))
             # Get subject-specific info
             subdf = df.loc[df['Participant'] == subid]
             sessions = sorted(pd.unique(subdf.Session.ravel()))
@@ -160,6 +163,8 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
                 sub_path = out_file % subid
                 concat_pdf(plots, sub_path)
                 result[subid] = {'success': True, 'path': sub_path}
+
+            idx += 1
 
     return result
 
