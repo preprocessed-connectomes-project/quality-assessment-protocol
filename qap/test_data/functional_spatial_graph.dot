@@ -1,0 +1,17 @@
+digraph qap_functional_spatial_workflow{
+  label="qap_functional_spatial_workflow";
+  qap_functional_spatial_workflow_func_deoblique_[label="func_deoblique_.Refit.afni"];
+  qap_functional_spatial_workflow_func_reorient_[label="func_reorient_.Resample.afni"];
+  qap_functional_spatial_workflow_func_mean_tstat_[label="func_mean_tstat_.TStat.afni"];
+  qap_functional_spatial_workflow_func_get_brain_mask_[label="func_get_brain_mask_.Automask.afni"];
+  qap_functional_spatial_workflow_qap_functional_spatial_[label="qap_functional_spatial_.Function.utility"];
+  qap_functional_spatial_workflow_qap_functional_spatial_to_json_[label="qap_functional_spatial_to_json_.Function.utility"];
+  qap_functional_spatial_workflow_qap_functional_spatial_to_csv_[label="qap_functional_spatial_to_csv_.Function.utility"];
+  qap_functional_spatial_workflow_func_deoblique_ -> qap_functional_spatial_workflow_func_reorient_;
+  qap_functional_spatial_workflow_func_reorient_ -> qap_functional_spatial_workflow_func_mean_tstat_;
+  qap_functional_spatial_workflow_func_reorient_ -> qap_functional_spatial_workflow_func_get_brain_mask_;
+  qap_functional_spatial_workflow_func_mean_tstat_ -> qap_functional_spatial_workflow_qap_functional_spatial_;
+  qap_functional_spatial_workflow_func_get_brain_mask_ -> qap_functional_spatial_workflow_qap_functional_spatial_;
+  qap_functional_spatial_workflow_qap_functional_spatial_ -> qap_functional_spatial_workflow_qap_functional_spatial_to_json_;
+  qap_functional_spatial_workflow_qap_functional_spatial_to_json_ -> qap_functional_spatial_workflow_qap_functional_spatial_to_csv_;
+}

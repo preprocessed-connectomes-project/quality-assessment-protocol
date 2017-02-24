@@ -1,0 +1,6 @@
+digraph functional_brain_mask_workflow{
+  label="functional_brain_mask_workflow";
+  functional_brain_mask_workflow_func_get_brain_mask_[label="func_get_brain_mask_.Automask.afni"];
+  functional_brain_mask_workflow_datasink_functional_brain_mask[label="datasink_functional_brain_mask.DataSink.io"];
+  functional_brain_mask_workflow_func_get_brain_mask_ -> functional_brain_mask_workflow_datasink_functional_brain_mask;
+}

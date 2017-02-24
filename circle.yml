@@ -6,32 +6,24 @@ dependencies:
   override:
     - pip install --upgrade pip
     - pip install numpy
+    - pip install lockfile
     - pip install -e .
     - if [[ ! -d ~/fsl ]]; then wget "http://fsl.fmrib.ox.ac.uk/fsldownloads/fsl-5.0.9-centos6_64.tar.gz"; tar zxvf fsl-5.0.9-centos6_64.tar.gz; mv fsl ~/fsl; fi
     - if [[ ! -d ~/afni ]]; then wget "http://afni.nimh.nih.gov/pub/dist/tgz/linux_openmp_64.tgz"; tar zxvf linux_openmp_64.tgz; mv linux_openmp_64 ~/afni; fi
-    - if [[ ! -d ~/examples/ds003_downsampled ]]; then wget "https://googledrive.com/host/0B2JWN60ZLkgkMEw4bW5VUUpSdFU/ds003_downsampled.tar"; mkdir -p ~/examples; tar xvf ds003_downsampled.tar -C ~/examples; fi
+    - if [[ ! -d ~/examples/ds003_downsampled ]]; then wget -O ds003_downsampled.tar "https://osf.io/7zb25/?action=download"; mkdir -p ~/examples; tar xvf ds003_downsampled.tar -C ~/examples; fi
 test:
   override:
-    # First three tests only on one subject
-    - echo "sub-01" > inclusion_file && python scripts/qap_bids_data_sublist_generator.py -t functional --include inclusion_file ~/examples/ds003_downsampled/ ~/bids_func_sub-01.yml
-    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_functional_spatial.py --sublist ~/bids_func_sub-01.yml configs/qap_config_ds003.yml
-    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_functional_temporal.py --sublist ~/bids_func_sub-01.yml configs/qap_config_ds003.yml
-    - echo "sub-01" > inclusion_file && python scripts/qap_bids_data_sublist_generator.py -t anatomical --include inclusion_file ~/examples/ds003_downsampled/ ~/bids_anat_sub-01.yml
-    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_anatomical_spatial.py --sublist ~/bids_anat_sub-01.yml configs/qap_config_ds003.yml
-    # Second three tests on multiple subjects, two subjects at once (qap_config_ds003_ms.yml)
-    # Anatomical spatial set to last, since it takes longer
-    - python scripts/qap_bids_data_sublist_generator.py -t functional ~/examples/ds003_downsampled/ ~/bids_func_list.yml
-    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_functional_spatial.py --sublist ~/bids_func_list.yml configs/qap_config_ds003_ms.yml
-    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_functional_temporal.py --sublist ~/bids_func_list.yml configs/qap_config_ds003_ms.yml
-    - python scripts/qap_bids_data_sublist_generator.py -t anatomical ~/examples/ds003_downsampled/ ~/bids_anat_list.yml
-    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_anatomical_spatial.py --sublist ~/bids_anat_list.yml configs/qap_config_ds003_ms.yml
+    # First test only on one subject
+    - echo "sub-01" > inclusion_file && python scripts/qap_sublist_generator.py --include inclusion_file --BIDS ~/examples/ds003_downsampled/ ~/bids_sub-01.yml
+    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_measures_pipeline.py ~/bids_sub-01.yml configs/qap_config_ds003.yml
+    # Second test on multiple subjects, two subjects at once (qap_config_ds003_ms.yml)
+    - python scripts/qap_sublist_generator.py --BIDS ~/examples/ds003_downsampled/ ~/bids_list.yml
+    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_measures_pipeline.py ~/bids_list.yml configs/qap_config_ds003_ms.yml
 general:
   artifacts:
     - "/tmp/output"
     - "/tmp/workdir"
     - "/tmp/output_ms"
     - "/tmp/workdir_ms"
-    - "~/bids_anat_sub-01.yml"
-    - "~/bids_func_sub-01.yml"
-    - "~/bids_anat_list.yml"
-    - "~/bids_func_list.yml"
+    - "~/bids_sub-01.yml"
+    - "~/bids_list.yml"

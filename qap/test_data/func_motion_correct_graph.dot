@@ -1,0 +1,10 @@
+digraph func_motion_correct_workflow{
+  label="func_motion_correct_workflow";
+  func_motion_correct_workflow_get_func_volume_[label="get_func_volume_.Calc.afni"];
+  func_motion_correct_workflow_func_motion_correct_[label="func_motion_correct_.Volreg.afni"];
+  func_motion_correct_workflow_datasink_func_motion_correct[label="datasink_func_motion_correct.DataSink.io"];
+  func_motion_correct_workflow_datasink_coordinate_transformation[label="datasink_coordinate_transformation.DataSink.io"];
+  func_motion_correct_workflow_get_func_volume_ -> func_motion_correct_workflow_func_motion_correct_;
+  func_motion_correct_workflow_func_motion_correct_ -> func_motion_correct_workflow_datasink_func_motion_correct;
+  func_motion_correct_workflow_func_motion_correct_ -> func_motion_correct_workflow_datasink_coordinate_transformation;
+}
