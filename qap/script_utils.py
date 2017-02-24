@@ -486,7 +486,9 @@ def json_to_csv(json_dict, csv_output_dir=None):
             json_df.to_csv(csv_file)
         except:
             err = "Could not write CSV file!\nCSV file: %s" % csv_file
-            raise_smart_exception(locals(),err)
+            raise_smart_exception(locals(), err)
+
+        print "CSV file created successfully: %s" % csv_file
 
     return csv_file
 
@@ -895,6 +897,59 @@ def check_csv_missing_subs(csv_df, data_dict, data_type):
         print "\nThe output CSV and input data config file match."
         return None
 
+
+def parse_logs(bundle_log_dir):
+    """Parse the pypeline.log files and workflow_results.json files for each
+    bundle and compute run-time statistics.
+
+    :type bundle_log_dir: str
+    :param bundle_log_dir: The path to the directory containing the bundle log
+                           directories.
+    """
+
+    import os
+    import json
+
+    timing = {}
+    bundle_info = {}
+
+    for root, dirs, files in os.walk(bundle_log_dir):
+        for filename in files:
+            filepath = os.path.join(root, filename)
+            bundle_name = filepath.split("/")[-2]
+
+            # if Nipype workflow log file
+            if filename == "pypeline.log":
+                with open(filepath, "r") as f:
+                    loglines = f.readlines()
+                    for line in reversed(loglines):
+                        if "Elapsed time (minutes)" in line:
+                            minutes = line.split(": ")[1]
+                            timing[bundle_name] = minutes
+                            break
+
+            if filename == "workflow_results.json":
+                try:
+                    with open(filepath, "r") as f:
+                        wf_dict = json.load(f)
+                except ValueError:
+                    print "Could not load %s" % filepath
+                    continue
+                num_scans = len(wf_dict) - 2
+                bundle_info[bundle_name] = num_scans
+
+    total_mins = 0.0
+    for mins in timing.values():
+        total_mins += float(mins)
+    avg_mins = total_mins/float(len(timing.values()))
+
+    total_scans = 0
+    for scans in bundle_info.values():
+        total_scans += scans
+    avg_scans = total_scans/len(bundle_info.values())
+
+    print avg_scans
+    print avg_mins
 
 
 
