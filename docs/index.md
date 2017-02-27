@@ -45,7 +45,13 @@ If you are using a Debian-based Linux distribution, you can use `apt-get` by fir
 
 ### Python Dependencies and QAP
 
-QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run.  If you have `pip`, you may install all of these and QAP itself by typing in the command below:
+QAP requires the following version of Nipype, available here:
+
+* [Nipype zip](https://github.com/ccraddock/nipype/archive/master.zip)
+
+To install the package, unzip the archive and run `python setup.py install` from within the extracted directory.
+
+QAP also requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and Pandas to run.  If you have `pip`, you may install all of these and QAP itself by typing in the command below:
 
     pip install qap
 
@@ -135,7 +141,7 @@ The QAP pipelines take in subject list YAML (.yml) files as an input. The filepa
 
 Where `participant_id` is replaced with a participant ID code, `session_id` is replaced with a folder of the form `session_<number>`, and `scan_id` is replaced with `anat_<number>`, `func_<number>` or `rest_<number>` depending on the scan type. To make the script parse the above directory structure and generate the subject list YAML file, invoke the following command:
 
-    qap_sublist_generator.py {absolute path to site_name directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'}
+    qap_sublist_generator.py {absolute path to site_name directory} {path to where the output YAML file should be stored}
 
 These subject lists can also be created or edited by hand if you wish, though this can be cumbersome for larger data sets. For reference, an example of the subject list format follows:
 
@@ -214,7 +220,7 @@ Below is an example of the slice mosaic that is provided as a part of the anatom
 
 ### Downloading Data from Your S3 Bucket
 
-If you ran QAP in the cloud, you will need to download the outputs from S3 before you can merge them.  To do this, run the following command:
+If you ran QAP to push the output JSON files to S3 storage on the cloud, you will need to download the outputs from S3 before you can merge them.  To do this, run the following command:
 
     qap_download_output_from_S3.py {path to the S3 directory containing subject outputs} {path to AWS key file} {s3 bucket name} {type of measure to download} {directory to download to}
 
