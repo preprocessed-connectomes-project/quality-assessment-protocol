@@ -87,7 +87,15 @@ apt-get install -y afni
 
 <h3 id="python-dependencies-and-qap">Python Dependencies and QAP</h3>
 
-<p>QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run.  If you have <code>pip</code>, you may install all of these and QAP itself by typing in the command below:</p>
+<p>QAP requires the following version of Nipype, available here:</p>
+
+<ul>
+  <li><a href="https://github.com/ccraddock/nipype/archive/master.zip">Nipype zip</a></li>
+</ul>
+
+<p>To install the package, unzip the archive and run <code>python setup.py install</code> from within the extracted directory.</p>
+
+<p>QAP also requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and Pandas to run.  If you have <code>pip</code>, you may install all of these and QAP itself by typing in the command below:</p>
 
 <pre><code>pip install qap
 </code></pre>
@@ -192,7 +200,7 @@ apt-get install -y afni
 
 <p>Where <code>participant_id</code> is replaced with a participant ID code, <code>session_id</code> is replaced with a folder of the form <code>session_&lt;number&gt;</code>, and <code>scan_id</code> is replaced with <code>anat_&lt;number&gt;</code>, <code>func_&lt;number&gt;</code> or <code>rest_&lt;number&gt;</code> depending on the scan type. To make the script parse the above directory structure and generate the subject list YAML file, invoke the following command:</p>
 
-<pre><code>qap_sublist_generator.py {absolute path to site_name directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'}
+<pre><code>qap_sublist_generator.py {absolute path to site_name directory} {path to where the output YAML file should be stored}
 </code></pre>
 
 <p>These subject lists can also be created or edited by hand if you wish, though this can be cumbersome for larger data sets. For reference, an example of the subject list format follows:</p>
@@ -277,7 +285,7 @@ apt-get install -y afni
 
 <h3 id="downloading-data-from-your-s3-bucket">Downloading Data from Your S3 Bucket</h3>
 
-<p>If you ran QAP in the cloud, you will need to download the outputs from S3 before you can merge them.  To do this, run the following command:</p>
+<p>If you ran QAP to push the output JSON files to S3 storage on the cloud, you will need to download the outputs from S3 before you can merge them.  To do this, run the following command:</p>
 
 <pre><code>qap_download_output_from_S3.py {path to the S3 directory containing subject outputs} {path to AWS key file} {s3 bucket name} {type of measure to download} {directory to download to}
 </code></pre>
