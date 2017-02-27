@@ -7,15 +7,15 @@ def main():
     exec(open('qap/version.py').read())
     setup(name='qap',
           version=__version__,
-          description='A collection of three quality assessment pipelines ' \
+          description='A collection of three quality assessment pipelines '
                       'for anatomical MRI and functional MRI scans.',
-          author='Cameron Craddock, Zarrar Shehzad, Steven Giavasis,' \
+          author='Cameron Craddock, Zarrar Shehzad, Steven Giavasis,'
                  'Daniel Clark',
           author_email='cameron.craddock@childmind.org',
-          url='https://github.com/preprocessed-connectomes-project/' \
+          url='https://github.com/preprocessed-connectomes-project/'
               'quality-assessment-protocol',
-          download_url='https://github.com/preprocessed-connectomes-project/'\
-                       'quality-assessment-protocol/tarball/1.0.2',
+          download_url='https://github.com/preprocessed-connectomes-project/'
+                       'quality-assessment-protocol/archive/v1.0.8.zip',
           license='',
           packages=['qap', 'qap.viz'],
           package_data={'qap': ['inpoint*.txt',
