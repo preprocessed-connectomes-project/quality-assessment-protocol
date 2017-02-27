@@ -1,0 +1,6 @@
+digraph inverted_functional_brain_mask_workflow{
+  label="inverted_functional_brain_mask_workflow";
+  inverted_functional_brain_mask_workflow_invert_mask_[label="invert_mask_.Calc.afni"];
+  inverted_functional_brain_mask_workflow_datasink_inverted_functional_brain_mask[label="datasink_inverted_functional_brain_mask.DataSink.io"];
+  inverted_functional_brain_mask_workflow_invert_mask_ -> inverted_functional_brain_mask_workflow_datasink_inverted_functional_brain_mask;
+}

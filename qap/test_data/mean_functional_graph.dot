@@ -1,0 +1,6 @@
+digraph mean_functional_workflow{
+  label="mean_functional_workflow";
+  mean_functional_workflow_func_mean_skullstrip_[label="func_mean_skullstrip_.TStat.afni"];
+  mean_functional_workflow_datasink_mean_functional[label="datasink_mean_functional.DataSink.io"];
+  mean_functional_workflow_func_mean_skullstrip_ -> mean_functional_workflow_datasink_mean_functional;
+}

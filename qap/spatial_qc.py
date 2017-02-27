@@ -1,62 +1,36 @@
 
-import os
-import sys
-import numpy as np
-import nibabel as nb
-import pandas as pd
-import scipy.ndimage as nd
-import scipy.stats as stats
-
-
-
 def summary_mask(anat_data, mask_data):
+    """Will calculate the three values (mean, stdev, and size) and return them
+    as a tuple.
 
-    """
-    Will calculate the three values (mean, stdev, and size).
-    Output as a tuple.
-    
-    Paramaters
-    ----------
-    anat_data: np.array
-    mask_data: np.array
-    
-    Returns (tuple)
-    -------
-    mean: float
-        mean of anatomical data in the mask
-    std: float
-        standard deviation of anatomical data in the mask
-    size: int
-        size of the mask (i.e., number of non-zero voxels)
+    :type anat_data: NumPy array
+    :param anat_data: The anatomical scan data.
+    :type mask_data: NumPy array
+    :param mask_data: The binary mask to mask the anatomical data with.
+    :rtype: tuple
+    :return: The summary values (mean, standard deviation, size) of the scan.
     """
     
     import numpy as np
     
     anat_masked = anat_data[mask_data == 1].astype(np.float)
-    mean        = anat_masked.mean()
-    std         = anat_masked.std(ddof=1)
-    size        = len(anat_masked)
+    mean = anat_masked.mean()
+    std = anat_masked.std(ddof=1)
+    size = len(anat_masked)
     
     return (mean, std, size)
 
 
-
-def get_background(anat_data, fg_mask_data):
-
-    # Define the image background by taking the inverse of the
-    # foreground mask.
-    bg_mask = (fg_mask_data == 0) * 1
-
-    # Create an image containing only background voxels (everything 
-    # outside bg_mask set to 0)
-    background = anat_data.copy()
-    background[bg_mask != 1] = 0
-
-    return background, bg_mask
-
-
-
 def check_datatype(background):
+    """Process the image data to only include non-negative integer values.
+
+    :type background: NumPy array
+    :param background: The voxel values of teh background (outside of the head
+                       ) of the anatomical image.
+    :rtype: NumPy array
+    :return: The input array with floats converted to integers and
+             negative values set to zero.
+    """
 
     import numpy as np
 
@@ -87,10 +61,15 @@ def check_datatype(background):
     return background
 
 
-
 def convert_negatives(img_data):
+    """Convert any negative voxel values to zero and provide a warning.
 
-    # convert any negative voxel values to zero, provide warning
+    :type img_data: NumPy array
+    :param img_data: The anatomical image's voxel values.
+    :rtype: NumPy array
+    :return: The input array with negative values set to zero.
+    """
+
     for vox in img_data.flatten():
         if vox < 0:
             print "\nWARNING: Negative voxel values in anatomical scan " \
@@ -101,67 +80,108 @@ def convert_negatives(img_data):
     return img_data
 
 
-
 def snr(mean_fg, std_bg):
+    """Calculate the Signal-to-Noise Ratio (SNR) of an image.
 
-    """
-    Calculate Signal-to-Noise Ratio (SNR)
-    
-    _For anatomical images:_ 
+    - For anatomical images:
         SNR = (mean GM intensity) / (std of background intensities)
-    
-    _For functional images:_
-        SNR = (mean brain intensity) / (std of background intensities)    
+    - For functional images:
+        SNR = (mean brain intensity) / (std of background intensities)
+
+    :type mean_fg: float
+    :param mean_fg: The mean value of voxel intensities in the foreground
+                    (either within the head or a particular tissue) of the
+                    image.
+    :type std_bg: float
+    :param std_bg: The standard deviation of the voxel intensities of the
+                   background (outside of the head) voxels.
+    :rtype: float
+    :return: The signal-to-noise ratio (SNR).
     """
 
-    snr     = mean_fg / std_bg
+    snr_val = mean_fg / std_bg
 
-    return snr
-
+    return snr_val
 
 
 def cnr(mean_gm, mean_wm, std_bg):
+    """Calculate Contrast-to-Noise Ratio (CNR) of an image.
 
+    - CNR = |(mean GM intensity) - (mean WM intensity)| /
+                                          (std of background intensities)
+
+    :type mean_gm: float
+    :param mean_gm: The mean value of the gray matter voxels.
+    :type mean_wm: float
+    :param mean_wm: The mean value of the whiet matter voxels.
+    :type std_bg: float
+    :param std_bg: The standard deviation of the voxel intensities of the
+                   background (outside the head) voxels.
+    :rtype: float
+    :return: The contrast-to-noise (CNR) ratio.
     """
-    Calculate Contrast-to-Noise Ratio (CNR)
+
+    import numpy as np
+    cnr_val = np.abs(mean_gm - mean_wm)/std_bg
+
+    return cnr_val
+
+
+def cortical_contrast(mean_gm, mean_wm):
+    """Calculate the vertex-wise cortical contrast.
+
+    - cortical contrast = (mean WM intensity) - (mean GM intensity) /
+                            ( (mean WM intensity + mean GM intensity) / 2 )
+
+    :type mean_gm: float
+    :param mean_gm: The mean value of the gray matter voxels.
+    :type mean_wm: float
+    :param mean_wm: The mean value of the white matter voxels.
+    :rtype: float
+    :return: The cortical contrast value.
+    """
+
+    cort_con = (mean_wm - mean_gm) / ((mean_wm + mean_gm) / 2)
+
+    return cort_con
+
     
-    CNR = |(mean GM intensity) - (mean WM intensity)| / (std of 
-                                                       background intensities)    
+def fber(anat_data, skull_mask_data, bg_mask_data):
+    """Calculate the Foreground-to-Background Energy Ratio (FBER) of an image.
+
+    - FBER = (mean foreground energy) / (mean background energy)
+
+    :type anat_data: NumPy array
+    :param anat_data: The anatomical/spatial data of the image.
+    :type skull_mask_data: NumPy array
+    :param skull_mask_data: The binary mask defining the head.
+    :type bg_mask_data: NumPy array
+    :param bg_mask_data: The binary mask defining the background (outside of
+                         the head).
+    :rtype: float
+    :return: The foreground-to-background energy ratio (FBER).
     """
 
     import numpy as np
 
-    cnr     = np.abs(mean_gm - mean_wm)/std_bg
-
-    return cnr
-
-    
-    
-def fber(anat_data, mask_data):
-
-    """
-    Calculate Foreground:Background Energy Ratio
-    
-    FBER = (mean foreground energy) / (mean background energy)
-    """
-
-    import numpy as np
-
-    mean_fg = (np.abs(anat_data[mask_data == 1]) ** 2).sum() / (mask_data.sum())
-    mean_bg = (np.abs(anat_data[mask_data == 0]) ** 2).sum() / (mask_data.size - mask_data.sum())
-    fber    = mean_fg / mean_bg
+    mean_fg = (np.abs(anat_data[skull_mask_data == 1]) ** 2).sum() / (skull_mask_data.sum())
+    mean_bg = (np.abs(anat_data[bg_mask_data == 1]) ** 2).sum() / (bg_mask_data.size - bg_mask_data.sum())
+    fber = mean_fg / mean_bg
 
     return fber
 
 
-
 def efc(anat_data):
+    """Calculate the Entropy Focus Criterion of the image.
 
-    """
-    Calculate the Entropy Focus Criterion (Atkinson 1997, IEEE TMI)
-    
-    We normalize the original equation by the maximum entropy so our EFC
-    can be easily compared across images with different dimensions.
+    - EFC based on Atkinson 1997, IEEE TMI
+    - We normalize the original equation by the maximum entropy so our EFC
+      can be easily compared across images with different dimensions.
+
+    :type anat_data: Nibabel data
+    :param anat_data: The anatomical image data.
+    :rtype: float
+    :return: The entropy focus criterion (EFC) value.
     """
 
     import numpy as np
@@ -186,28 +206,42 @@ def efc(anat_data):
     return efc
 
 
+def artifacts(anat_data, fg_mask_data, bg_mask_data, calculate_qi2=False):
+    """Calculates QI1, the fraction of total voxels that contain artifacts.
 
-def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
+    - Detect artifacts in the anatomical image using the method described in
+      Mortamet et al. 2009 (MRM).
+    - Optionally, also calculates QI2, the distance between the distribution
+      of noise voxel (non-artifact background voxels) intensities, and a
+      Ricean distribution.
 
-    # Detect artifacts in the anatomical image using the method described in
-    # Mortamet et al. 2009 (MRM)
-    # Calculates QI1, the fraction of total voxels that within artifacts.
-    
-    # Optionally, also calculates QI2, the distance between the distribution 
-    # of noise voxel (non-artifact background voxels) intensities, and a 
-    # Ricean distribution.
+    :type anat_data: Nibabel data
+    :param anat_data: The anatomical image data.
+    :type fg_mask_data: Nibabel data
+    :param fg_mask_data: The binary mask of the head.
+    :type bg_mask_data: Nibabel data
+    :param bg_mask_data: The binary mask of the background.
+    :type calculate_qi2: bool
+    :param calculate_qi2: (default: False) Whether to calculate Qi2.
+    :rtype: tuple
+    :return: The Qi1 and Qi2 values (Qi2 = None if not calculated).
+    """
 
     import numpy as np
+    import scipy.ndimage as nd
 
-    background, bg_mask = get_background(anat_data, fg_mask_data)
+    # Create an image containing only background voxels (everything 
+    # outside bg_mask set to 0)
+    background = anat_data.copy()
+    background[bg_mask_data != 1] = 0
     
     # make sure the datatype is an int
     background = check_datatype(background)
        
     # Find the background threshold (the most frequently occurring value 
     # excluding 0)
-    bg_counts       = np.bincount(background.flatten())
-    bg_threshold    = np.argmax(bg_counts[1:]) + 1
+    bg_counts = np.bincount(background.flatten())
+    bg_threshold = np.argmax(bg_counts[1:]) + 1
 
     # Apply this threshold to the background voxels to identify voxels
     # contributing artifacts. 
@@ -215,30 +249,30 @@ def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
     background[background != 0] = 1
 
     # Create a structural element to be used in an opening operation.
-    struct_elmnt    = np.zeros((3,3,3))
+    struct_elmnt = np.zeros((3,3,3))
     struct_elmnt[0,1,1] = 1
     struct_elmnt[1,1,:] = 1
     struct_elmnt[1,:,1] = 1
     struct_elmnt[2,1,1] = 1
 
     # Perform an opening operation on the background data.
-    background      = nd.binary_opening(background, structure=struct_elmnt)
+    background = nd.binary_opening(background, structure=struct_elmnt)
 
     # Count the number of voxels that remain after the opening operation. 
     # These are artifacts.
-    QI1             = background.sum() / float(bg_mask.sum())
+    QI1 = background.sum() / float(bg_mask_data.sum())
     
     ''' "bg" in code below not defined- need to ascertain what that should '''
     '''      be, and correct it- unit test for this part disabled for now  '''
     if calculate_qi2:
         # Now lets focus on the noise, which is everything in the background
         # that was not identified as artifact
-        bgNoise     = anat_data[(fg_mask_data-bg)==1]
+        bgNoise = anat_data[(fg_mask_data-bg)==1]
 
         # calculate the histogram of the noise and its derivative
-        H           = np.bincount(bgNoise)
-        H           = 1.0*H/H.sum()
-        dH          = H[1:]-H[:-1]
+        H = np.bincount(bgNoise)
+        H = 1.0*H/H.sum()
+        dH = H[1:]-H[:-1]
 
         # find the first value on the right tail, i.e. tail with negative
         # slope, i.e. dH < 0 that is less than or equal to half of the
@@ -247,96 +281,97 @@ def artifacts(anat_data, fg_mask_data, calculate_qi2=False):
         halfMaxRightTail = np.nonzero(H[firstNegSlope:]<(H.max()/2))[0][0]
 
         # divide by the standard deviation
-        bgNoiseZ    = bgNoise / bgNoise.std()
+        bgNoiseZ = bgNoise / bgNoise.std()
         bgChiParams = ss.chi.fit(bgNoiseZ)
         #print bgChiParams
     
         # now generate values that are consistent with the histogram
-        yx          = range(0,H.size)/bgNoise.std()
-        rvs         = ss.chi.pdf(yx,bgChiParams[0],loc=bgChiParams[1],scale=bgChiParams[2])
+        yx = range(0,H.size)/bgNoise.std()
+        rvs = ss.chi.pdf(yx,bgChiParams[0],loc=bgChiParams[1],scale=bgChiParams[2])
 
         # now we can calculate the goodness of fit
-        gof         = np.average(np.absolute(H[halfMaxRightTail:]-rvs[halfMaxRightTail:]))
-        QI2         = QI1+gof
+        gof = np.average(np.absolute(H[halfMaxRightTail:]-rvs[halfMaxRightTail:]))
+        QI2 = QI1+gof
     else:
-        QI2         = None
+        QI2 = None
 
     return (QI1,QI2)
 
 
-
 def fwhm(anat_file, mask_file, out_vox=False):
+    """Calculate the FWHM of the input image using AFNI's 3dFWHMx.
 
-    """
-    Calculate the FWHM of the input image.
-    
-    Parameters
-    ----------
-    anat_file: str
-        path to anatomical file
-    mask_file: str
-        path to brain mask
-    out_vox: bool
-        output the FWHM as # of voxels (otherwise as mm)
-    
-    Returns
-    -------
-    fwhm: tuple (x,y,z,combined)
-        FWHM in the x, y, x, and combined direction
+    - Uses AFNI 3dFWHMx. More details here:
+        https://afni.nimh.nih.gov/pub/dist/doc/program_help/3dFWHMx.html
+
+    :type anat_file: str
+    :param anat_file: The filepath to the anatomical image NIFTI file.
+    :type mask_file: str
+    :param mask_file: The filepath to the binary head mask NIFTI file.
+    :type out_vox: bool
+    :param out_vox: (default: False) Output the FWHM as number of voxels
+                    instead of mm (the default).
+    :rtype: tuple
+    :return: A tuple of the FWHM values (x, y, z, and combined).
     """
 
-    import commands
     import nibabel as nib
     import numpy as np
     from scipy.special import cbrt
-    
-    # call AFNI command to get the FWHM in x,y,z and combined
-    cmd     = "3dFWHMx -combined -mask %s -input %s" % (mask_file, anat_file)
-    out     = commands.getoutput(cmd)
-    
+
+    import subprocess
+
+    fwhm_string_list = ["3dFWHMx", "-combined", "-mask", mask_file,
+                        "-input", anat_file]
+    try:
+        retcode = subprocess.check_output(fwhm_string_list)
+    except Exception as e:
+        err = "\n\n[!] Something went wrong with AFNI's 3dFWHMx. Error " \
+              "details: %s\n\n" % e
+        raise Exception(err)
+
     # extract output
-    line    = out.splitlines()[-1].strip()
-    vals    = np.array(line.split(), dtype=np.float)
+    vals = np.array(retcode.split(), dtype=np.float)
     
     if out_vox:
         # get pixel dimensions
-        img     = nib.load(anat_file)
-        hdr     = img.get_header()
-        pixdim  = hdr['pixdim'][1:4]
+        img = nib.load(anat_file)
+        hdr = img.get_header()
+        pixdim = hdr['pixdim'][1:4]
     
         # convert to voxels
-        pixdim  = np.append(pixdim, cbrt(pixdim.prod()))
+        pixdim = np.append(pixdim, cbrt(pixdim.prod()))
         # get the geometrix mean
-        vals    = vals / pixdim
+        vals = vals / pixdim
     
     return tuple(vals)
 
 
-
 def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
                     out_file=None):
+    """Calculate the Ghost to Signal Ratio of EPI images.
 
-    """
-    Ghost to Signal Ratio
-    Giannelli 2010 -
-        http://www.jacmp.org/index.php/jacmp/article/view/3237/2035
-    
-    This should be used for EPI images where the phase encoding direction
-    is known.
-    
-    Parameters
-    ----------
-    epi_file: str
-        path to epi file
-    mask_file: str
-        path to brain mask
-    direction: str
-        the direction of phase encoding (x, y, z)
-    
-    Returns
-    -------
-    gsr: float
-        ghost to signal ratio
+    - GSR from Giannelli 2010. More details here:
+        https://www.ncbi.nlm.nih.gov/pubmed/21081879
+    - This should be used for EPI images where the phase encoding direction
+      is known.
+
+    :type epi_data: Nibabel data
+    :param epi_data: The mean of the functional timeseries.
+    :type mask_data: Nibabel data
+    :param mask_data: The functional brain binary mask data.
+    :type direction: str
+    :param direction: (default: 'y') The phase encoding direction of the EPI
+                      image.
+    :type ref_file: str
+    :param ref_file: (default: None) If you are saving the Nyquist ghost mask,
+                      this is the filepath of the reference file to use to
+                     populate the header of the ghost mask NIFTI file.
+    :type out_file: str
+    :param out_file: (default: None) If you are saving the Nyquist ghost mask,
+                      this is the filepath to the ghost mask NIFTI file.
+    :rtype: float
+    :return: The ghost-to-signal ratio (GSR) value.
     """
     
     import numpy as np
@@ -344,30 +379,30 @@ def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
     # first we need to make a nyquist ghost mask, we do this by circle 
     # shifting the original mask by N/2 and then removing the intersection
     # with the original mask
-    n2_mask_data    = np.zeros_like(mask_data)
+    n2_mask_data = np.zeros_like(mask_data)
     
-    ## rotate by n/2
+    # rotate by n/2
     if direction == "x":
-        n2                      = np.floor(mask_data.shape[0]/2)
-        n2_mask_data[:n2,:,:]   = mask_data[n2:(n2*2),:,:]
-        n2_mask_data[n2:(n2*2),:,:]   = mask_data[:n2,:,:]
+        n2 = np.floor(mask_data.shape[0]/2)
+        n2_mask_data[:n2,:,:] = mask_data[n2:(n2*2),:,:]
+        n2_mask_data[n2:(n2*2),:,:] = mask_data[:n2,:,:]
     elif direction == "y":
-        n2                      = np.floor(mask_data.shape[1]/2)
-        n2_mask_data[:,:n2,:]   = mask_data[:,n2:(n2*2),:]
-        n2_mask_data[:,n2:(n2*2),:]   = mask_data[:,:n2,:]
+        n2 = np.floor(mask_data.shape[1]/2)
+        n2_mask_data[:,:n2,:] = mask_data[:,n2:(n2*2),:]
+        n2_mask_data[:,n2:(n2*2),:] = mask_data[:,:n2,:]
     elif direction == "z":
-        n2                      = np.floor(mask_data.shape[2]/2)
-        n2_mask_data[:,:,:n2]   = mask_data[:,:,n2:(n2*2)]
-        n2_mask_data[:,:,n2:(n2*2)]   = mask_data[:,:,:n2]        
+        n2 = np.floor(mask_data.shape[2]/2)
+        n2_mask_data[:,:,:n2] = mask_data[:,:,n2:(n2*2)]
+        n2_mask_data[:,:,n2:(n2*2)] = mask_data[:,:,:n2]
     else:
         raise Exception("Unknown direction %s, should be x, y, or z" \
                         % direction)
     
-    ## now remove the intersection with the original mask
-    n2_mask_data    = n2_mask_data * (1-mask_data)
+    # now remove the intersection with the original mask
+    n2_mask_data = n2_mask_data * (1-mask_data)
     
-    ## now create a non-ghost background region, that contains 2s
-    n2_mask_data    = n2_mask_data + 2*(1-n2_mask_data-mask_data)
+    # now create a non-ghost background region, that contains 2s
+    n2_mask_data = n2_mask_data + 2*(1-n2_mask_data-mask_data)
     
     # Save mask
     if ref_file is not None and out_file is not None:
@@ -378,38 +413,26 @@ def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
    
     # now we calculate the Ghost to signal ratio, but here we define signal
     # as the entire foreground image
-    gsr             = (epi_data[n2_mask_data==1].mean() - epi_data[n2_mask_data==2].mean())/epi_data[n2_mask_data==0].mean()
+    gsr = (epi_data[n2_mask_data==1].mean() - epi_data[n2_mask_data==2].mean())/epi_data[n2_mask_data==0].mean()
 
     
     return gsr
 
 
-
 def ghost_all(epi_data, mask_data):
+    """Call the 'ghost_direction' function on all possible phase encoding 
+    directions.
 
-    """
-    Ghost to Signal Ratio (GSR)
-    Giannelli 2010 -
-        http://www.jacmp.org/index.php/jacmp/article/view/3237/2035
-    
-    This calls on `ghost_direction` to measure GSR in all possible phase
-    encoding directions.
-    
-    Parameters
-    ----------
-    epi_file: str
-        path to epi file
-    mask_file: str
-        path to brain mask
-    
-    Returns
-    -------
-    gsr: tuple
-        ghost to signal ratio for phase encoding in the x,y,z direction
+    :type epi_data: Nibabel data
+    :param epi_data: The mean of the functional timeseries.
+    :type mask_data: Nibabel data
+    :param mask_data: The functional brain binary mask data.
+    :rtype: tuple
+    :return: The ghost-to-signal ratios (GSR) of each phase encoding direction.
     """
     
     directions = ["x", "y"]
-    gsrs = [ ghost_direction(epi_data, mask_data, d) for d in directions ]
+    gsrs = [ghost_direction(epi_data, mask_data, d) for d in directions]
     
     return tuple(gsrs + [None])
 

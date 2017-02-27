@@ -21,46 +21,31 @@ For more information, please see our recent [resting-state poster and associated
 * [Running the QAP Pipelines on AWS Cloud Instances](#running-the-qap-pipelines-on-aws-amazon-cloud-instances)
 * [Merging Outputs](#merging-outputs)
 * [Generating Reports](#generating-reports) 
-* [The QAP Team](#the-qap-team) 
 * [References](#references)
 
 ## Installing the QAP Package
 
 ### System Requirements
 
-* Any *nix-based operating system capable of running QAP will work, so long as it can run [AFNI](http://afni.nimh.nih.gov), and [FSL](http://fsl.fmrib.ox.ac.uk).
+* Any *nix-based operating system capable of running QAP will work, so long as it can run [AFNI](http://afni.nimh.nih.gov).
 * The total amount of free hard disk space required is 5.7 GB.
 
 ### Application Dependencies
 
-QAP requires AFNI and FSL to run. Links to installation instructions for AFNI and FSL are listed below:
+QAP requires AFNI to run. Links to installation instructions for AFNI are listed below:
 
 * [AFNI Installation](http://afni.nimh.nih.gov/pub/dist/HOWTO/howto/ht00_inst/html)
-* [FSL Installation](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation)
 
-If you are using a Debian-based Linux distribution, you can use `apt-get` to install FSL by first adding Neurodebian to the apt repository list:
+If you are using a Debian-based Linux distribution, you can use `apt-get` by first adding Neurodebian to the apt repository list and then installing the Neurodebian AFNI package:
 
     wget -O- http://neuro.debian.net/lists/$(lsb_release -cs).us-nh.full | tee /etc/apt/sources.list.d/neurodebian.sources.list
     apt-key adv --recv-keys --keyserver pgp.mit.edu 2649A5A9
     apt-get update
-    apt-get install -y fsl-5.0-complete 
-
-We do not recommend using Neurodebian's AFNI binary, as we have encountered difficulty using QAP with this binary.
+    apt-get install -y afni
 
 ### Python Dependencies and QAP
 
-QAP is compatible with Python 2, so you will first want to ensure that you are not using Python 3 before proceeding any further.  The version number for Python should be visible at the top of the console window if you open a fresh Python interpreter with `python` in a Unix shell.  If you are not using Python 2, make sure that your configuration is set up so that it is used instead of Python 3.
-
-QAP depends on some visualization packages, which in turn require that some additional [system-level dependencies](http://pillow.readthedocs.org/en/3.0.x/installation.html#external-libraries) be installed.  Under Ubuntu 14.04, you can install these system-level dependencies by typing:
-
-    sudo apt-get build-dep python-imaging
-    sudo apt-get install libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev xvfb
-
-To install QAP you will the Python package manager, `pip`, which is included by default on many systems.  If your system does not already have this you will need to install it by following the directions [here](https://pip.pypa.io/en/stable/installing/).  On Debian-based systems in particular (such as Ubuntu), you may need to install pip with the following command:
-
-    sudo apt-get install python-pip
-
-In addtion to the visualization packges above, QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run. If you have `pip`, you may install all of these, the visualization packages, and QAP itself by typing in the command below:
+QAP requires Numpy, Scipy, Nipype, Nibabel, Nitime, PyYAML, and pandas to run.  If you have `pip`, you may install all of these and QAP itself by typing in the command below:
 
     pip install qap
 
@@ -88,13 +73,10 @@ To determine subjects that are outliers for any of these measures, run QAP on an
 * **Percent Artifact Voxels (Qi1) [qi1]:** The proportion of voxels outside the brain with artifacts to the total number of voxels outside the brain.  Lower values are better [^5].
 * **Smoothness of Voxels (FWHM) [fwhm, fwhm_x, fwhm_y, fwhm_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in voxel units.  Lower values are better [^3].
 * **Entropy Focus Criterion (EFC) [efc]:** The Shannon entropy of voxel intensities proportional to the maximum possibly entropy for a similarly sized image. Indicates ghosting and head motion-induced blurring.  Lower values are better [^1].
-* **Summary Measures [fg_mean, fg_std, fg_size, bg_mean, bg_std, bg_size, gm_mean, gm_std, gm_size, wm_mean, wm_std, wm_size, csf_mean, csf_std, csf_size]:** Intermediate measures used to calculate the metrics above. Mean, standard deviation, and mask size are given for foreground, background, white matter, and CSF masks.
 
 ### Spatial Functional
 
 * **Ghost to Signal Ratio (GSR) [ghost_x, ghost_y or ghost_z]:** A measure of the mean signal in the areas of the image that are prone to ghosting based off the phase encoding direction.  Lower values are better. [^10]
-* **Summary Measures [fg_mean, fg_std, fg_size, bg_mean, bg_std, bg_size]:** Intermediate measures used to calculate the metrics above. Mean, standard deviation, and mask size are given for foreground and background masks.
-
 
 ### Temporal Functional
 
@@ -128,40 +110,32 @@ Some examples of customizable features include segmentation thresholds for anato
 
 Templates for these files are provided in the [`/configs` folder](https://github.com/preprocessed-connectomes-project/quality-assessment-protocol/tree/master/configs) in the QAP main repository directory. Below is a list of options which can be configured for each of the pipelines.
 
-### General (both types)
-
-* **num_cores_per_subject**: Number of cores (on a single machine) or slots on a node (cluster/grid) per subject (or per instance of the pipeline). Slots are cores on a cluster/grid node. Dedicating multiple nodes allows each subject's processing pipeline to run certain operations in parallel to save time. 
-* **num_subjects_at_once**: Similar to *num_cores_per_subject*, except this determines how many pipelines to run at once.   
+* **pipeline_name**: A label for your pipeline run.
+* **num_processors**: The number of CPUs to dedicate to the entire run.
+* **num_sessions_at_once**: Number of sessions to include in each bundle/workflow. When running on a cluster, this is how many sessions will be sent to each sub-node at a time.
+* **available_memory**: The amount of memory (RAM) you wish to allocate for the *entire* run.
+* **cluster_system**: Which cluster system you are using, if running QAP on a cluster/grid (ex. SGE, PBS, or SLURM).
 * **output_directory**: The directory to write output files to.
 * **working_directory**: The directory to store intermediary processing files in.
+* **template_head_for_anat**: Template head to be used during anatomical registration, as a reference.
 * **write_all_outputs**: A boolean option to determine whether or not all files used in the process of calculating the QAP measures will be saved to the output directory or not.  If *True*, all outputs will be saved.  If *False*, only the csv file containing the measures will be saved.
 * **write_report**: A boolean option to determine whether or not to generate report plots and a group measure CSV ([see below](#generating-reports)).  If *True*, plots and a CSV will be produced; if *False*, QAP will not produce reports.
-* **write_graph**: A boolean option to determine whether or not to write a representation of the graph that corresponds to the workflow that will be applied to each of the subjects. If *True*, it uses the *write_graph()* function of nipype Workflows to save the corresponding graph in dot format.  Note that you will need to have grapviz/pygraphviz installed (see installation section above), otherwise you will receive an error.
+* **exclude_zeros**: (Only impacts anatomical spatial measures). Exclude zero-value voxels from the background of the anatomical scan. This is meant for images that have been manually altered (ex. ears removed for privacy considerations), where the artificial inclusion of zeros into the image would skew the QAP metric results.
+* **start_idx**: (Only impacts functional temporal measures). This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the first timepoint you wish to include in the analysis. Enter *0* to include the first volume.
+* **stop_idx**: (Only impacts functional temporal measures). This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the last timepoint you wish to include in the analysis. Enter *End* to include the final volume. Enter *0* in start_idx and *End* in stop_idx to include the entire timeseries.
+* **ghost_direction**: (Only impacts functional spatial measures). Allows you to specify the phase encoding (*x* - RL/LR, *y* - AP/PA, *z* - SI/IS, or *all*) used to acquire the scan.  Omitting this option will default to *y*.
 
-### Anatomical pipelines
-
-* **template_brain_for_anat**: Template brain to be used during anatomical registration, as a reference.
-
-### Functional pipelines
-
-* **start_idx**: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the first timepoint you wish to include in the analysis. Enter *0* to include the first volume.          
-* **stop_idx**: This allows you to select an arbitrary range of volumes to include from your 4-D functional timeseries. Enter the number of the last timepoint you wish to include in the analysis. Enter *End* to include the final volume. Enter *0* in start_idx and *End* in stop_idx to include the entire timeseries. 
-* **slice_timing_correction**: Whether or not to run slice timing correction - *True* or *False*. Interpolates voxel timeseries so that sampling occurs at the same time.
-* **ghost_direction**: Allows you to specify the phase encoding (*x* - RL/LR, *y* - AP/PA, *z* - SI/IS, or *all*) used to acquire the scan.  Omitting this option will default to *y*.
-
-Make sure that you multiply *num_cores_per_subject* and *num_subjects_at_once* for the maximum amount of cores that could potentially be used during an anatomical or functional pipeline run.
-
-## Subject List YAML Files
+## Data Configuration (Participant List) YAML Files
 
 ### Providing Raw Data
 
-The QAP pipelines take in subject list YAML (.yml) files as an input. The filepaths to your raw data are defined in these subject lists, and these YAML files can be easily generated using the *qap_raw_data_sublist_generator.py* script included in the QAP software package. After installing the QAP software package, this script can be run from any directory. This subject list generator script assumes a specific directory structure for your input data:
+The QAP pipelines take in subject list YAML (.yml) files as an input. The filepaths to your raw data are defined in these data configuration files, and these YAML files can be easily generated using the *qap_sublist_generator.py* script included in the QAP software package. After installing the QAP software package, this script can be run from any directory. Note the sublist generator also accepts links to data stored on Amazon Web Services (AWS) S3 storage buckets, with the raw data filepaths pre-pended with the "s3://" prefix.  This subject list generator script supports both the BIDS specification directory structure, and the following structure:
 
-	/data_directory/site_name/subject_id/session_id/scan_id/file.nii.gz
+	/data_directory/site_name/participant_id/session_id/scan_id/file.nii.gz
 
-Where `subject_id` is replaced with a subject ID code, `session_id` is replaced with a folder of the form `session_<number>`, and `scan_id` is replaced with `anat_<number>`, `func_<number>` or `rest_<number>` depending on the scan type. To make the script parse the above directory structure and generate the subject list YAML file, invoke the following command:
+Where `participant_id` is replaced with a participant ID code, `session_id` is replaced with a folder of the form `session_<number>`, and `scan_id` is replaced with `anat_<number>`, `func_<number>` or `rest_<number>` depending on the scan type. To make the script parse the above directory structure and generate the subject list YAML file, invoke the following command:
 
-    qap_raw_data_sublist_generator.py {absolute path to site_name directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'}
+    qap_sublist_generator.py {absolute path to site_name directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'}
 
 These subject lists can also be created or edited by hand if you wish, though this can be cumbersome for larger data sets. For reference, an example of the subject list format follows:
 
@@ -180,69 +154,19 @@ These subject lists can also be created or edited by hand if you wish, though th
 
 Note that *anatomical_scan* is the label for the type of resource (in this case, anatomical raw data for the anatomical spatial QAP measures), and *anat_1* is the name of the scan. There can be multiple scans, which will be combined with subject and session in the output. 
 
-### Providing Already Pre-Processed Data
-
-Alternatively, if you have already preprocessed some or all of your raw data, you can provide these pre-existing files as inputs directly to the QAP pipelines via your subject list manually.  The QAP pipelines will then use these files and skip any pre-processing steps involved in creating them, saving time and allowing you to use your own method of processing your data.  If these files were processed using the [C-PAC](http://fcp-indi.github.io/docs/user/index.html) software package, there is a script named *qap_cpac_output_sublist_generator.py* which will create a subject list YAML file pointing to these already generated files.  Note that this script will only work for C-PAC runs where FSL is used.  Its usage is as follows:
-
-    qap_cpac_output_sublist_generator.py {absolute path to the C-PAC output pipeline directory} {path to where the output YAML file should be stored} {the scan type- can be 'anat' or 'func'} {the session format- can be '1','2', or '3', whose corresponding formats are described in more detail below}
-
-The values for the session format argument can either be:
-
-    1 - For output organized in the form: /output/pipeline/subject_id/session_id/output/
-    2 - For output organized in the form: /output/pipeline/subject_id/output/
-    3 - For output organized in the form: /output/pipeline/subject_session/output/
-
-For example, if C-PAC results were stored in participant directories of the form */home/wintermute/output/pipeline_FLIRT/80386_session_1*, you wanted to run anatomical measures, and you wanted to store the subject list in *subj_list.yml*, you would invoke:
-
-    qap_cpac_output_sublist_generator.py /home/wintermute/output/pipeline_FLIRT /home/wintermute/qap_analysis/subj_list.yml anat 3
-
-Below is a list of intermediary files used in the steps leading to the final QAP measures calculations. If you already have some of these processed for your data, they can be included in the subject list with the label on the left. For example, if you've already deobliqued, reoriented and skull-stripped your anatomical scans, you would list them in your subject list YAML file like so:
-
-	anatomical_brain:  /path/to/image.nii.gz
-
-###Anatomical Spatial measures workflow resources
-
-* **anatomical_reorient**: anatomical (structural) scan that has been deobliqued and reoriented to RPI (.nii/.nii.gz)
-* **anatomical_brain**: deobliqued & reoriented anatomical that has been skull-stripped (.nii/.nii.gz)
-* **flirt_affine_xfm**: a warp matrix file output by [FLIRT](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FLIRT) (.mat)
-* **flirt_linear_warped_image**: the [FLIRT](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FLIRT)-warped anatomical scan (.nii/.nii.gz)
-* **anatomical_csf_mask**: segmentation mask of the anatomical scan's CSF (.nii/.nii.gz)
-* **anatomical_gm_mask**: segmentation mask of the anatomical scan's gray matter (.nii/.nii.gz)
-* **anatomical_wm_mask**: segmentation mask of the anatomical scan's white matter (.nii/.nii.gz)
-* **qap_head_mask**: a whole-skull binarized mask
-
-In the QAP head mask workflow, we also mask the background immediately in front of the scan participant's mouth.  We do this to exclude breathing-induced noise from the calculation for the FBER QAP measure
-
-### Functional Spatial measures workflow resources
-
-* **func_motion_correct**: motion-corrected 4-D functional timeseries (.nii/.nii.gz)
-* **mcflirt_rel_rms**: if motion correction was performed using FSL's [MCFLIRT](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/MCFLIRT), use this to specify the path to the motion parameters file.  Note that a motion parameters file will only be generated if you pass the *-rmsrel* flag to [MCFLIRT](http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/MCFLIRT).  This resource requires that *func_motion_correct* also be defined manually (.rms)
-* **functional_brain_mask**: a binarized mask of the functional scan (.nii/.nii.gz)
-* **mean_functional**: a 3-D file containing the mean of the functional 4-D timeseries (.nii/.nii.gz)
-
-### Functional Temporal measures workflow resources
-
-* **func_motion_correct**: motion-corrected 4-D functional timeseries (.nii/.nii.gz)
-* **functional_brain_mask**: a binarized mask of the functional scan (.nii/.nii.gz)
-* **coordinate_transformation**: the matrix transformation from base to input coordinates, produced during motion correction (.aff12.1D)
-
-Note that these are complete lists- obviously, not all intermediary files are required if you choose to provide them. For example, if you provide the skull-stripped *anatomical_brain*, then *anatomical_reorient* would not be necessary, and the pipeline will skip all steps before skull-stripping. Alternatively, if you do not have the *functional_brain_mask* for either of the functional pipelines, providing the *func_motion_correct* file will allow the pipeline to create it for you. Having none of these will simply cause the pipeline to take in the original *functional_scan* and produce all of these files on its own.
-
 ## Running the QAP Pipelines
 
-There is a launch script for each of these measures, with each one featuring a similar interface. The Python-friendly YAML file format is used for the input subject list and pipeline configuration files. You can use these scripts from the command line, from within iPython, or with AWS Cloud instances. After installing the QAP software package, these scripts can be run from any directory:
+There is one launch script for all three QAP measure sets. The Python-friendly YAML file format is used for the input subject list and pipeline configuration files. You can use these scripts from the command line, from within iPython, or with AWS Cloud instances. After installing the QAP software package, this script can be run from any directory:
 
-* qap_anatomical_spatial.py
-* qap_functional_spatial.py
-* qap_functional_temporal.py
+* qap_measures_pipeline.py
 
 For command-line runs:
 
-    qap_anatomical_spatial.py --sublist {path to subject list YAML file} {path to pipeline configuration YAML file}
+    qap_measures_pipeline.py {path to data configuration YAML file} {path to pipeline configuration YAML file}
 
 Executing any of the scripts with only the *-h* flag will produce a short help manual listing the command line arguments.
 
-##Running the QAP Pipelines on AWS Amazon Cloud Instances
+## Running the QAP Pipelines on AWS Amazon Cloud Instances
 
 With access to the Amazon Cloud, the QAP measures can be calculated for a large volume of subjects quickly.
 
@@ -250,62 +174,13 @@ Since there is substantial overlap between the software pre-requisites of QAP an
 
 If you choose to use another AMI, you will need to install both QAP and its pre-requisites from scratch by [following the instructions above](#installing-the-qap-package).  You will also need to configure Starcluster to use the `mnt_config` and `cpac_sge` plugins by following the instructions [here](http://fcp-indi.github.io/docs/user/cloud.html#installing-the-c-pac-starcluster-plug-ins).
 
-### Generating Your S3 Subject Dictionary File
-
-The QAP software package comes with a script called *qap_aws_s3_dict_generator.py*, which can be run from any directory once the package is installed. This script requires you to install C-PAC before it will work properly.  This script will create a YAML file containing the filepaths to the data stored in your AWS S3 bucket storage. You will need this dictionary YAML file to start an AWS Cloud run for QAP. This script takes in five input parameters:
-
-* **scan_type**: *anat* or *func*, depending on which QAP measures you will be using the S3 subject dictionary for
-* **bucket_name**: the name of your AWS S3 bucket
-* **bucket_prefix**:  the filepath prefix to the top level of your raw data directory on S3 storage
-
-For example, if your S3 storage is arranged like so:
-
-	/data/project/raw_data/sub001/session_1/scan_1/file.nii.gz
-	/data/project/raw_data/sub001/session_1/scan_2/file.nii.gz
-	/data/project/raw_data/sub002/session_1/scan_1/file.nii.gz
-                    
-Then the bucket_prefix would be:
-
-	/data/project/raw_data
-
-
-* **creds_path**: the path to the file containing your AWS credentials
-* **outfile_path**: the full filepath for the S3 subject YAML dictionary this script will create
-
-Once this script is run, it will output the S3 dictionary YAML file, and it will give you the total number of subject-session-scans. Take note of this number, because you will need to list it in your SGE batch file (more below).
-
-### Setting Up Your SGE File
-
-Sun Grid Engine (SGE) allows you to parallelize your cloud analyses by having each node in an HPC cluster run QAP on an individual subject.  To use SGE on your AWS instance, create a new batch file in your favorite text editor and set up an SGE job in a format similar to below (with settings in curly brackets replaced and the appropriate qap utility used according to your needs):
-
-	#! /bin/bash
-	#$ -cwd
-	#$ -S /bin/bash
-	#$ -V
-	#$ -t 1-{number of subjects}
-	#$ -q all.q
-	#$ -pe mpi_smp {number of CPU cores to use}
-	#$ -e {absolute path to a file to store standard error from the terminal}
-	#$ -o /{absolute path to a file to store standard out from the terminal}
-	source /etc/bash.bashrc
-	ANAT_S3_DICT={absolute path to S3 subject dictionary YAML file}
-	ANAT_SP_CONFIG_FILE={absolute path to configuration YAML file}
-	echo "Start - TASKID " $SGE_TASK_ID " : " $(date)
-	# Run anatomical spatial qap
-	qap_anatomical_spatial.py --subj_idx $SGE_TASK_ID --s3_dict_yml $ANAT_S3_DICT $ANAT_SP_CONFIG_FILE
-	echo "End - TASKID " $SGE_TASK_ID " : " $(date)
-
-Note that the *mpi_smp* environment is created by the *cpac_sge* Starcluster plug-in mentioned earlier.  The *cpac_env.sh* script is a script containing all of the environmental variables used by AFNI and FSL.  If you opt to not use the C-PAC AMI, you will need to create a comparable script and have the batch script source it.  Submit the job to the SGE scheduler by typing:
-
-    qsub {path to the text file}
-
 ## Merging Outputs
 
-QAP generates outputs for each subject and session separately.  To view a comprehensive summary for all the measures for all the subjects, you will need to merge these separate outputs into a single file.  You can do this by running the following command:
+QAP generates outputs for each participant and session separately.  To view a comprehensive summary for all the measures for all the subjects, you will need to merge these separate outputs into a single file.  You can do this by running the following command:
 
-    qap_merge_outputs.py {path to qap output directory}
+    qap_jsons_to_csv.py {path to qap output directory}
 
-`qap_merge_outputs.py` will automatically determine if you have calculated anatomical spatial, functional spatial or functional temporal measures.  The merged outputs will appear in a file named `qap_anatomical_spatial_{qap output directory name}.csv` in the directory from which the command is run.
+This script will automatically determine if you have calculated anatomical spatial, functional spatial or functional temporal measures.  The merged outputs will appear in a file named `qap_anatomical_spatial_{qap output directory name}.csv` in the directory from which the command is run.
 
 ## Generating Reports
 
@@ -348,28 +223,6 @@ For example, if you wanted to obtain functional spatial measures from an S3 buck
     qap_download_output_from_S3.py subjects/outputs /home/wintermute/Documents/aws-keys.csv the_big_run func_spatial /home/wintermute/qap_outputs
 
 With the above commands, the outputs will be stored in a directory named `qap_outputs` in the user *wintermute*'s home folder.  As with the pipeline commands from earlier, more information on this command's usage can be obtained by running it with the *-h* flag.  
-
-## The QAP Team
-
-### Primary Development
-
-Cameron Craddock (Team Lead)
-
-Steven Giavasis (Developer)
-
-Daniel Clark (Developer)
-
-Zarrar Shezhad (Developer)
-
-John Pellman (User Support and Documentation)
-
-### Other Contributors
-
-Chris Filo Gorgolewski
-
-Craig Moodie
-
-Oscar Esteban
 
 ## References
 

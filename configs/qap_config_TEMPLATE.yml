@@ -1,0 +1,60 @@
+# name for this run
+pipeline_name: qap_run
+
+# how many processors you wish to use in the run
+num_processors: 1
+
+# how many sessions to run per workflow
+num_sessions_at_once: 1
+
+# the amount of memory (in GB) to allocate to the entire run
+available_memory: 2
+
+# which cluster system being used, if any
+cluster_system: None
+
+# where to place output files
+output_directory: /path/to/output/directory
+
+# where to place Nipype workflow working files
+working_directory: /path/to/working/directory
+
+# path to whole head template
+# only required if you have anatomical scans
+template_head_for_anat: /path/to/head/template
+
+# exclude zero-value voxels from the background of the anatomical scan
+# this is meant for images that have been manually altered (ex. ears removed
+# for privacy considerations), where the artificial inclusion of zeros into
+# the image would skew the QAP metric results
+# (optional) will default to False if not included in this config file
+exclude_zeros: False
+
+# for functional timeseries, do not include timepoints before this
+# (optional) will default to 0 if not included in this config file
+start_idx: 0
+
+# for functional timeseries, only include timepoints up to this
+# "End" means it will include all of the timepoints up until the scan's end
+# (optional) will default to "End" if not included in this config file
+stop_idx: End
+
+# produce PDF reports visualizing the results of the QAP metrics
+# (optional) will default to False if not included in this config file
+write_report: False
+
+# produce workflow dependency graphs
+# (optional) will default to False if not included in this config file
+write_graph: False
+
+# whether or not to keep all output files, or only the QAP numbers CSVs
+# (optional) will default to False if not included in this config file
+write_all_outputs: False
+
+# whether or not to upload output files to S3 bucket
+upload_to_s3: False
+
+# bucket output prefix (where to push output files to S3, if applicable)
+bucket_out_prefix: bucket/prefix/output/destination
+
+

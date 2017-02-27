@@ -4,8 +4,8 @@ def download_outputs(path_prefix, creds_path, bucket_name, qap_type, \
                           download_to):
                           
     import pickle
-    from CPAC.AWS import fetch_creds
-    from CPAC.AWS.aws_utils import s3_download
+    from indi_aws import fetch_creds
+    from indi_aws.aws_utils import s3_download
 
     src_list = []
 
