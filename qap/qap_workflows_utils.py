@@ -619,6 +619,9 @@ def qap_functional_temporal(
     :rtype: dict
     :return: A dictionary mapping out the QAP measure values for the current
              participant.
+    :rtype: dict
+    :return: A dictionary containing the output measure timeseries for the
+             quality assurance output file for visualization and reporting.
     """
 
     import numpy as np
@@ -660,7 +663,7 @@ def qap_functional_temporal(
 
     # Compile
     id_string = "%s %s %s" % (subject_id, session_id, scan_id)
-    qc = {
+    qap = {
             id_string:
             {
               "QAP_pipeline_id": "QAP version %s" % qap.__version__,
@@ -701,10 +704,17 @@ def qap_functional_temporal(
     }
 
     if site_name:
-        qc[id_string]['Site'] = str(site_name)
+        qap[id_string]['Site'] = str(site_name)
 
-    for key in qc[id_string]["functional_temporal"].keys():
-        qc[id_string]["functional_temporal"][key] = \
-            str(qc[id_string]["functional_temporal"][key])
+    for key in qap[id_string]["functional_temporal"].keys():
+        qap[id_string]["functional_temporal"][key] = \
+            str(qap[id_string]["functional_temporal"][key])
 
-    return qc
+    qa = {
+        id_string:
+            {
+                "Motion parameters timeseries": None
+            }
+    }
+
+    return qap, qa

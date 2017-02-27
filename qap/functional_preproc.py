@@ -310,7 +310,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
         
     # calculate motion parameters
     func_motion_correct = pe.Node(interface=preprocess.Volreg(),
-                             name='func_motion_correct%s' % name)
+                                  name='func_motion_correct%s' % name)
 
     func_motion_correct.inputs.args = '-Fourier -twopass'
     func_motion_correct.inputs.zpad = 4
