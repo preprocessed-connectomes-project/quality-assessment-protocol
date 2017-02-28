@@ -1175,7 +1175,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         input_names=['func_timeseries', 'func_brain_mask',
                      'bg_func_brain_mask', 'fd_file', 'subject_id',
                      'session_id', 'scan_id', 'site_name', 'starter'],
-        output_names=['qc'],
+        output_names=['qap', 'qa'],
         function=qap_functional_temporal),
         name='qap_functional_temporal%s' % name)
     temporal.inputs.subject_id = config['subject_id']
@@ -1236,8 +1236,23 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
                               name="qap_functional_temporal_to_json%s" % name)
     temporal_to_json.inputs.json_file = out_json
 
-    workflow.connect(temporal, 'qc', temporal_to_json, 'output_dict')
+    workflow.connect(temporal, 'qap', temporal_to_json, 'output_dict')
     resource_pool['qap_functional_temporal'] = out_json
+
+    qa_out_dir = op.join(config['output_directory'], config["run_name"],
+        config["subject_id"], config["session_id"], config["scan_id"])
+    qa_out_json = op.join(qa_out_dir, "QA.json")
+
+    qa_to_json = pe.Node(niu.Function(
+                                  input_names=["output_dict",
+                                               "json_file"],
+                                  output_names=["json_file"],
+                                  function=write_json),
+                         name="qap_qa_to_json%s" % name)
+    qa_to_json.inputs.json_file = qa_out_json
+
+    workflow.connect(temporal, 'qa', qa_to_json, 'output_dict')
+    resource_pool['qa'] = qa_out_json
 
     return workflow, resource_pool
 

@@ -8,6 +8,7 @@ class TestQapFunctionalTemporal(unittest.TestCase):
     def setUp(self):
         # init
         import os
+        import pickle
         import pkg_resources as p
         from qap.qap_workflows_utils import qap_functional_temporal as qft
         self.qft = qft
@@ -25,9 +26,15 @@ class TestQapFunctionalTemporal(unittest.TestCase):
         self.rmsd_file = \
             p.resource_filename("qap", os.path.join("test_data",
                                                     "meanFD.1D"))
+        qual_ts_file = \
+            p.resource_filename("qap", os.path.join("test_data",
+                                                    "quality_timepoints_output.p"))
 
         # outputs
         self.ref_motion_param_ts = None
+
+        with open(qual_ts_file, "r") as f:
+            self.qual_ts = pickle.load(f)
 
     def test_qap_measures_dict(self):
         qap_dict, qa_dict = self.qft(self.func_ts, self.func_mask,
@@ -44,5 +51,5 @@ class TestQapFunctionalTemporal(unittest.TestCase):
         qap_dict, qa_dict = self.qft(self.func_ts, self.func_mask,
                                      self.func_bg_mask, self.rmsd_file,
                                      "sub1", "ses1", "scan1", "site1")
-        motion_param_ts = qa_dict['sub1 ses1 scan1']['Motion parameters timeseries']
-        self.assertListEqual(self.ref_motion_param_ts, motion_param_ts)
+        qual_ts = qa_dict['sub1 ses1 scan1']['Quality timeseries']
+        self.assertListEqual(self.qual_ts, qual_ts)

@@ -713,7 +713,11 @@ def qap_functional_temporal(
     qa = {
         id_string:
             {
-                "Motion parameters timeseries": None
+                "Standardized DVARS": dvars,
+                "RMSD": fd,
+                "Outliers": outliers,
+                "OOB Outliers": oob_outliers,
+                "Quality": quality
             }
     }
 
