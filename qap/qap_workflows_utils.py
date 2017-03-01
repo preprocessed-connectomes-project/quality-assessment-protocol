@@ -713,8 +713,8 @@ def qap_functional_temporal(
     qa = {
         id_string:
             {
-                "Standardized DVARS": dvars,
-                "RMSD": fd,
+                "Standardized DVARS": [float(x) for x in list(dvars)],
+                "RMSD": list(fd),
                 "Outliers": outliers,
                 "OOB Outliers": oob_outliers,
                 "Quality": quality

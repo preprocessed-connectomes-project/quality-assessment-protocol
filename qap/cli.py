@@ -909,6 +909,9 @@ def run_workflow(args, run=True):
         logger.info('Resource pool keys after workflow connection: '
                     '{}'.format(str(resource_pool.keys())))
 
+        if ("qa" in resource_pool.keys()) and ("qa" not in out_list):
+            out_list += ['qa']
+
         # Save reports to out_dir if necessary
         if config.get('write_report', False):
 
