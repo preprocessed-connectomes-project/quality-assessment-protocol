@@ -519,8 +519,10 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
     out_dir = op.join(config['output_directory'], config["run_name"], 
-        config["subject_id"], config["session_id"], config["scan_id"])
-    out_json = op.join(out_dir, "qap_anatomical.json")
+                      config["subject_id"], config["session_id"], "qap")
+    out_json = op.join(out_dir, "%s_%s_%s_qap_anatomical.json"
+                       % (config["subject_id"], config["session_id"],
+                          config["scan_id"]))
 
     spatial_to_json = pe.Node(niu.Function(
                                   input_names=["output_dict",
@@ -862,8 +864,10 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
     out_dir = op.join(config['output_directory'], config["run_name"], 
-        config["subject_id"], config["session_id"], config["scan_id"])
-    out_json = op.join(out_dir, "qap_functional.json")
+                      config["subject_id"], config["session_id"], "qap")
+    out_json = op.join(out_dir, "%s_%s_%s_qap_functional.json"
+                       % (config["subject_id"], config["session_id"],
+                          config["scan_id"]))
 
     spatial_epi_to_json = pe.Node(niu.Function(
                                   input_names=["output_dict",
@@ -1225,8 +1229,10 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         resource_pool['qap_fd'] = (fdplot, 'out_file')
 
     out_dir = op.join(config['output_directory'], config["run_name"], 
-        config["subject_id"], config["session_id"], config["scan_id"])
-    out_json = op.join(out_dir, "qap_functional.json")
+                      config["subject_id"], config["session_id"], "qap")
+    out_json = op.join(out_dir, "%s_%s_%s_qap_functional.json"
+                       % (config["subject_id"], config["session_id"],
+                          config["scan_id"]))
 
     temporal_to_json = pe.Node(niu.Function(
                                   input_names=["output_dict",
@@ -1240,8 +1246,10 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     resource_pool['qap_functional_temporal'] = out_json
 
     qa_out_dir = op.join(config['output_directory'], config["run_name"],
-        config["subject_id"], config["session_id"], config["scan_id"])
-    qa_out_json = op.join(qa_out_dir, "QA.json")
+                         config["subject_id"], config["session_id"], "QA")
+    qa_out_json = op.join(qa_out_dir, "%s_%s_%s_QA.json"
+                          % (config["subject_id"], config["session_id"],
+                             config["scan_id"]))
 
     qa_to_json = pe.Node(niu.Function(
                                   input_names=["output_dict",
