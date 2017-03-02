@@ -826,6 +826,8 @@ def run_workflow(args, run=True):
                      "functional_spatial", 
                      "functional_temporal"]
 
+        qa_outputs = ["qa", "qap_fd", "qap_mosaic"]
+
         # update that resource pool with what's already in the output
         # directory
         for resource in os.listdir(output_dir):
@@ -939,7 +941,7 @@ def run_workflow(args, run=True):
                                                   % (output,name))
                 if output in qap_types:
                     ds_dir = os.path.join(output_dir, "qap")
-                elif output == "qa":
+                elif output in qa_outputs:
                     ds_dir = os.path.join(output_dir, "QA")
                 else:
                     ds_dir = os.path.join(output_dir, "derivatives")

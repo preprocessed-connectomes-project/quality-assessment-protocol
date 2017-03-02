@@ -432,7 +432,7 @@ def json_to_csv(json_dict, csv_output_dir=None):
 
     import os
     import pandas as pd
-    from qap_utils import raise_smart_exception
+    from qap.qap_utils import raise_smart_exception
 
     qap_types = ["anatomical_spatial",
                  "functional_spatial",
