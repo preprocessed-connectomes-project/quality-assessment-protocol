@@ -15,7 +15,7 @@ def main():
           url='https://github.com/preprocessed-connectomes-project/'
               'quality-assessment-protocol',
           download_url='https://github.com/preprocessed-connectomes-project/'
-                       'quality-assessment-protocol/archive/v1.0.8.zip',
+                       'quality-assessment-protocol/archive/v1.0.8b.zip',
           license='',
           packages=['qap', 'qap.viz'],
           package_data={'qap': ['inpoint*.txt',
