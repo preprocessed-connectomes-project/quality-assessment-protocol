@@ -275,7 +275,6 @@ def test_fwhm_no_out_vox():
 def test_ghost_direction():
 
     import os
-    import pickle
     import pkg_resources as p
     
     import numpy.testing as nt

@@ -44,7 +44,8 @@ def main():
                     'reportlab (>=3.3.0)', 'scipy (>=0.17.1)', 
                     'seaborn (>=0.7.0)', 'simplejson (>=3.8.2)', 
                     'six (>=1.10.0)', 'traits (>=4.5.0)', 'wsgiref (>=0.1.2)',
-                    'xhtml2pdf (>=0.1a4)', 'configparser (>=3.5.0)'],
+                    'xhtml2pdf (>=0.1a4)', 'configparser (>=3.5.0)',
+                    'lockfile (>=0.12)'],
           install_requires=['numpy >=1.11.0', 'INDI-Tools >=0.0.6', 
                     'PyPDF2 >=1.26.0', 'PyYAML >=3.11', 'Pillow >=3.2.0', 
                     'argparse >=1.2.1', 'boto3 >=1.3.1', 
@@ -62,7 +63,7 @@ def main():
                     'seaborn >=0.7.0', 'simplejson >=3.8.2', 
                     'six >=1.10.0', 'traits >=4.5.0', 'wsgiref >=0.1.2',
                     'xhtml2pdf >=0.1a4', 'configparser >=3.5.0', 
-                    'numpy >=1.11.0'], 
+                    'numpy >=1.11.0', 'lockfile >=0.12'],
           zip_safe=False)
 
 if __name__ == "__main__":
