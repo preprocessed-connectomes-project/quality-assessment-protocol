@@ -6,7 +6,7 @@ def main():
     import os
     import argparse
     from qap.script_utils import gather_json_info, json_to_csv
-    from qap.workflow_utils import raise_smart_exception
+    from qap.qap_utils import raise_smart_exception
 
     parser = argparse.ArgumentParser()
     parser.add_argument("output_dir", type=str,

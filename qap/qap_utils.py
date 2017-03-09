@@ -23,7 +23,7 @@ def read_nifti_image(nifti_infile):
     """
 
     import nibabel as nb
-    from qap_utils import raise_smart_exception
+    from qap.qap_utils import raise_smart_exception
 
     try:
         nifti_img = nb.load(nifti_infile)
@@ -45,7 +45,7 @@ def write_nifti_image(nifti_img, file_path):
     """
 
     import nibabel as nb
-    from qap_utils import raise_smart_exception
+    from qap.qap_utils import raise_smart_exception
 
     try:
         nb.save(nifti_img, file_path)
@@ -66,7 +66,7 @@ def read_json(json_filename):
 
     import os
     import json
-    from qap_utils import raise_smart_exception
+    from qap.qap_utils import raise_smart_exception
 
     if not os.path.exists(json_filename):
         err = "\n\n[!] The JSON file provided does not exist.\nFilepath: " \
@@ -135,7 +135,7 @@ def load_image(image_file):
 
     import nibabel as nib
     import numpy as np
-    from qap_utils import raise_smart_exception
+    from qap.qap_utils import raise_smart_exception
 
     try:
         img = nib.load(image_file)
@@ -180,7 +180,7 @@ def load_mask(mask_file, ref_file):
     import nibabel as nib
     import numpy as np
 
-    from qap_utils import raise_smart_exception
+    from qap.qap_utils import raise_smart_exception
 
     try:
         mask_img = nib.load(mask_file)
@@ -229,7 +229,7 @@ def create_anatomical_background_mask(anatomical_data, fg_mask_data,
     :return bg_mask_data: Background mask data in Nibabel format.
     """
 
-    from qap_utils import raise_smart_exception
+    from qap.qap_utils import raise_smart_exception
 
     # invert the foreground mask
     try:

@@ -63,7 +63,7 @@ def csv_to_pandas_df(csv_file):
     """
 
     import pandas as pd
-    from qap_utils import raise_smart_exception
+    from qap.qap_utils import raise_smart_exception
 
     try:
         data = pd.read_csv(csv_file, dtype={"Participant": str})
@@ -432,7 +432,7 @@ def json_to_csv(json_dict, csv_output_dir=None):
 
     import os
     import pandas as pd
-    from qap_utils import raise_smart_exception
+    from qap.qap_utils import raise_smart_exception
 
     qap_types = ["anatomical_spatial",
                  "functional_spatial",
