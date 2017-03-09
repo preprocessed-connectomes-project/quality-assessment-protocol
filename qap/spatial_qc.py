@@ -383,15 +383,15 @@ def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
     
     # rotate by n/2
     if direction == "x":
-        n2 = np.floor(mask_data.shape[0]/2)
+        n2 = int(np.floor(mask_data.shape[0]/2))
         n2_mask_data[:n2,:,:] = mask_data[n2:(n2*2),:,:]
         n2_mask_data[n2:(n2*2),:,:] = mask_data[:n2,:,:]
     elif direction == "y":
-        n2 = np.floor(mask_data.shape[1]/2)
+        n2 = int(np.floor(mask_data.shape[1]/2))
         n2_mask_data[:,:n2,:] = mask_data[:,n2:(n2*2),:]
         n2_mask_data[:,n2:(n2*2),:] = mask_data[:,:n2,:]
     elif direction == "z":
-        n2 = np.floor(mask_data.shape[2]/2)
+        n2 = int(np.floor(mask_data.shape[2]/2))
         n2_mask_data[:,:,:n2] = mask_data[:,:,n2:(n2*2)]
         n2_mask_data[:,:,n2:(n2*2)] = mask_data[:,:,:n2]
     else:
