@@ -392,6 +392,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     import nipype.interfaces.utility as niu
     from qap_workflows_utils import qap_anatomical_spatial
     from qap.viz.interfaces import PlotMosaic
+    from qap.viz.interfaces import overlay_figure
     from qap_utils import check_config_settings, write_json
 
     check_config_settings(config, "template_head_for_anat")
@@ -503,6 +504,13 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         plot = pe.Node(PlotMosaic(), name='plot_mosaic%s' % name)
         plot.inputs.subject = config['subject_id']
 
+        qc = pe.Node(interface=niu.Function(input_names=['overlays','underlay', 'fig_name'],
+                                                 output_names=['x_fig', 'z_fig'], function=overlay_figure),
+                                   name='qc_segmentation_{num}'.format(num=num_strat))
+        wf.connect(wrapper, 'overlays', qc, 'overlays')
+        qc.inputs.fig_name = fname
+        wf.connect(node, out_file, qc, 'underlay')
+
         metadata = [config['session_id'], config['scan_id']]
         if 'site_name' in config.keys():
             metadata.append(config['site_name'])
@@ -516,6 +524,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         else:
             plot.inputs.in_file = resource_pool['anatomical_reorient']
 
+        resource_pool['mean_epi_mosaic'] = (plot, 'out_file')
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
     out_dir = op.join(config['output_directory'], config["run_name"], 

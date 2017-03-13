@@ -15,6 +15,55 @@ from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
 import seaborn as sns
 
 
+'''
+plots nilearn figure. mosaic 3x8
+'''
+def overlay_figure(overlays, underlay, fig_name):
+    import nibabel as nb
+    import matplotlib.pyplot as plt
+    from nilearn import plotting
+
+    affine = nb.load(overlays[0]).get_affine()
+    result = None
+    for i, overlay in enumerate(overlays):
+        #load data
+        overlay = nb.load(overlay).get_data()
+        #change masks values to draw different color for each one
+        overlay[overlay == 1] = i+1
+
+        #add overlays together
+        if result is None:
+            result = overlay
+        else:
+            result += overlay
+
+    #create new img
+    result = nb.Nifti1Image(result, affine)
+    
+    slices = [x*5 for x in range(-12,12)]
+
+    #x slices
+    fig, ax = plt.subplots(nrows=3, ncols=1, figsize=(7,3))
+    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[0], display_mode='x',cmap=plt.cm.prism, cut_coords=slices[:8]) 
+    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[1], display_mode='x',cmap=plt.cm.prism, cut_coords=slices[8:16])
+    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[2], display_mode='x',cmap=plt.cm.prism, cut_coords=slices[16:])
+
+    plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
+    fig.savefig(fig_name+'_x.png', pad_inches = 0, dpi=400)
+    display.close()
+
+    #z slices
+    fig, ax = plt.subplots(nrows=3, ncols=1)
+    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[0], display_mode='z',cmap=plt.cm.prism, cut_coords=slices[:8])
+    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[1], display_mode='z',cmap=plt.cm.prism, cut_coords=slices[8:16])
+    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[2], display_mode='z',cmap=plt.cm.prism, cut_coords=slices[16:])
+
+    plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
+    fig.savefig(fig_name+'_z.png', pad_inches = 0, dpi=400)
+    display.close()
+
+    return fig_name+'_x.png', fig_name+'_z.png'
+
 def plot_measures(df, measures, ncols=4, title='Group level report',
                   subject=None, figsize=(8.27, 11.69)):
     import matplotlib.gridspec as gridspec
