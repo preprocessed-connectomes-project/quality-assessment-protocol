@@ -91,6 +91,7 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as util
     from nipype.interfaces.afni import preprocess
+    from nipype.interfaces.afni import utils as afni_utils
 
     if "functional_scan" not in resource_pool.keys():
         return workflow, resource_pool
@@ -131,9 +132,12 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
         workflow.connect(func_get_idx, 'stopidx',
                          func_drop_trs, 'stop_idx')
     
-
-    func_deoblique = pe.Node(interface=preprocess.Refit(),
-                            name='func_deoblique%s' % name)
+    try:
+        func_deoblique = pe.Node(interface=preprocess.Refit(),
+                                 name='func_deoblique%s' % name)
+    except AttributeError:
+        func_deoblique = pe.Node(interface=afni_utils.Refit(),
+                                 name='func_deoblique%s' % name)
     func_deoblique.inputs.deoblique = True
     
     if drop_trs:
@@ -142,8 +146,12 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
     else:
         func_deoblique.inputs.in_file = resource_pool["functional_scan"]
 
-    func_reorient = pe.Node(interface=preprocess.Resample(),
-                               name='func_reorient%s' % name)
+    try:
+        func_reorient = pe.Node(interface=preprocess.Resample(),
+                                name='func_reorient%s' % name)
+    except AttributeError:
+        func_reorient = pe.Node(interface=afni_utils.Resample(),
+                                name='func_reorient%s' % name)
     func_reorient.inputs.orientation = 'RPI'
     func_reorient.inputs.outputtype = 'NIFTI_GZ'
 
@@ -295,8 +303,13 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
             return workflow, resource_pool
     
     # get the first volume of the time series
-    get_func_volume = pe.Node(interface=preprocess.Calc(),
-                              name='get_func_volume%s' % name)
+    try:
+        get_func_volume = pe.Node(interface=preprocess.Calc(),
+                                  name='get_func_volume%s' % name)
+    except AttributeError:
+        from nipype.interfaces.afni import utils as afni_utils
+        get_func_volume = pe.Node(interface=afni_utils.Calc(),
+                                  name='get_func_volume%s' % name)
          
     get_func_volume.inputs.expr = 'a'
     get_func_volume.inputs.single_idx = 0
@@ -594,6 +607,7 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
     import copy
     import nipype.pipeline.engine as pe
     from nipype.interfaces.afni import preprocess
+    from nipype.interfaces.afni import utils as afni_utils
 
     if "functional_brain_mask" not in resource_pool.keys():
 
@@ -605,8 +619,12 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
             return workflow, resource_pool
   
     # 3dcalc to invert the binary functional brain mask
-    invert_mask = pe.Node(interface=preprocess.Calc(), 
-                          name='invert_mask%s' % name)
+    try:
+        invert_mask = pe.Node(interface=preprocess.Calc(),
+                              name='invert_mask%s' % name)
+    except AttributeError:
+        invert_mask = pe.Node(interface=afni_utils.Calc(),
+                              name='invert_mask%s' % name)
 
     invert_mask.inputs.expr = "iszero(a)"
     invert_mask.inputs.outputtype = "NIFTI_GZ"
@@ -736,6 +754,7 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
     import copy
     import nipype.pipeline.engine as pe
     from nipype.interfaces.afni import preprocess
+    from nipype.interfaces.afni import utils as afni_utils
 
     if "func_reorient" not in resource_pool.keys():
 
@@ -745,9 +764,13 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
             func_preproc_workflow(workflow, resource_pool, config, name)
         if resource_pool == old_rp:
             return workflow, resource_pool
-   
-    func_mean_tstat = pe.Node(interface=preprocess.TStat(),
-                           name='func_mean_tstat%s' % name)
+
+    try:
+        func_mean_tstat = pe.Node(interface=preprocess.TStat(),
+                                  name='func_mean_tstat%s' % name)
+    except AttributeError:
+        func_mean_tstat = pe.Node(interface=afni_utils.TStat(),
+                                  name='func_mean_tstat%s' % name)
 
     func_mean_tstat.inputs.options = '-mean'
     func_mean_tstat.inputs.outputtype = 'NIFTI_GZ'

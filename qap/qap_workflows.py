@@ -2,7 +2,6 @@
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 
-import os.path as op
 
 def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to create the QAP anatomical head mask.
@@ -100,15 +99,24 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
                          create_expr_string, 'clip_level_value')
 
     # let's create a binary mask of the skull image with that threshold
-    mask_skull = pe.Node(interface=preprocess.Calc(),
-                         name='qap_headmask_mask_skull%s' % name)
+    try:
+        mask_skull = pe.Node(interface=preprocess.Calc(),
+                             name='qap_headmask_mask_skull%s' % name)
+    except AttributeError:
+        from nipype.interfaces.afni import utils as afni_utils
+        mask_skull = pe.Node(interface=afni_utils.Calc(),
+                             name='qap_headmask_mask_skull%s' % name)
+
     mask_skull.inputs.outputtype = "NIFTI_GZ"
 
     workflow.connect(create_expr_string, 'expr_string', mask_skull, 'expr')
 
-
-    dilate_erode = pe.Node(interface=preprocess.MaskTool(),
-                           name='qap_headmask_mask_tool%s' % name)
+    try:
+        dilate_erode = pe.Node(interface=preprocess.MaskTool(),
+                               name='qap_headmask_mask_tool%s' % name)
+    except AttributeError:
+        dilate_erode = pe.Node(interface=afni_utils.MaskTool(),
+                               name='qap_headmask_mask_tool%s' % name)
 
     dilate_erode.inputs.dilate_inputs = "6 -6"
     dilate_erode.inputs.outputtype = "NIFTI_GZ"
@@ -120,16 +128,24 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
         output_names=['outfile_path'], function=slice_head_mask),
         name='qap_headmask_slice_head_mask%s' % name)
 
-    combine_masks = pe.Node(interface=preprocess.Calc(),
-                            name='qap_headmask_combine_masks%s' % name)
+    try:
+        combine_masks = pe.Node(interface=preprocess.Calc(),
+                                name='qap_headmask_combine_masks%s' % name)
+    except AttributeError:
+        combine_masks = pe.Node(interface=afni_utils.Calc(),
+                                name='qap_headmask_combine_masks%s' % name)
 
     combine_masks.inputs.expr = "(a+b)-(a*b)"
     combine_masks.inputs.outputtype = "NIFTI_GZ"
 
     # subtract the slice mask from the original head mask to create a
     # skull-only mask for FG calculations
-    subtract_mask = pe.Node(interface=preprocess.Calc(),
-                            name='qap_headmask_subtract_masks%s' % name)
+    try:
+        subtract_mask = pe.Node(interface=preprocess.Calc(),
+                                name='qap_headmask_subtract_masks%s' % name)
+    except AttributeError:
+        subtract_mask = pe.Node(interface=afni_utils.Calc(),
+                                name='qap_headmask_subtract_masks%s' % name)
 
     subtract_mask.inputs.expr = "a-b"
     subtract_mask.inputs.outputtype = "NIFTI_GZ"
@@ -290,6 +306,7 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
              applicable) with the newest outputs and connections.
     """
 
+    import os
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
     from qap_workflows_utils import create_header_dict_entry
@@ -314,9 +331,10 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
             gather_header.inputs.in_file = resource_pool["functional_scan"]
             gather_header.inputs.type = data_type
 
-    out_dir = op.join(config['output_directory'], config["run_name"], 
-        config["subject_id"], config["session_id"], config["scan_id"])
-    out_json = op.join(out_dir, "qap_%s.json" % data_type)
+    out_dir = os.path.join(config['output_directory'], config["run_name"],
+                           config["subject_id"], config["session_id"],
+                           config["scan_id"])
+    out_json = os.path.join(out_dir, "qap_%s.json" % data_type)
 
     header_to_json = pe.Node(niu.Function(
                                  input_names=["output_dict",
@@ -387,6 +405,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
              applicable) with the newest outputs and connections.
     """
 
+    import os
     import copy
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
@@ -518,9 +537,9 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
 
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
-    out_dir = op.join(config['output_directory'], config["run_name"], 
+    out_dir = os.path.join(config['output_directory'], config["run_name"], 
                       config["subject_id"], config["session_id"], "qap")
-    out_json = op.join(out_dir, "%s_%s_%s_qap_anatomical.json"
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap_anatomical.json"
                        % (config["subject_id"], config["session_id"],
                           config["scan_id"]))
 
@@ -790,6 +809,7 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
              applicable) with the newest outputs and connections.
     """
 
+    import os
     import copy
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
@@ -863,9 +883,9 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
 
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
-    out_dir = op.join(config['output_directory'], config["run_name"], 
+    out_dir = os.path.join(config['output_directory'], config["run_name"], 
                       config["subject_id"], config["session_id"], "qap")
-    out_json = op.join(out_dir, "%s_%s_%s_qap_functional.json"
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap_functional.json"
                        % (config["subject_id"], config["session_id"],
                           config["scan_id"]))
 
@@ -1129,6 +1149,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
              applicable) with the newest outputs and connections.
     """
 
+    import os
     import copy
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
@@ -1162,6 +1183,14 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         if resource_pool == old_rp:
             return workflow, resource_pool
 
+    if 'mean_functional' not in resource_pool.keys():
+        from functional_preproc import mean_functional_workflow
+        old_rp = copy.copy(resource_pool)
+        workflow, resource_pool = \
+            mean_functional_workflow(workflow, resource_pool, config, name)
+        if resource_pool == old_rp:
+            return workflow, resource_pool
+
     fd = pe.Node(niu.Function(
         input_names=['in_file'], output_names=['out_file'],
         function=fd_jenkinson), name='generate_FD_file%s' % name)
@@ -1176,7 +1205,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
             fd.inputs.in_file = resource_pool['coordinate_transformation']
 
     temporal = pe.Node(niu.Function(
-        input_names=['func_timeseries', 'func_brain_mask',
+        input_names=['func_timeseries', 'func_mean', 'func_brain_mask',
                      'bg_func_brain_mask', 'fd_file', 'subject_id',
                      'session_id', 'scan_id', 'site_name', 'starter'],
         output_names=['qap', 'qa'],
@@ -1199,6 +1228,16 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         check_input_resources(resource_pool, 'func_reorient')
         input_file = resource_pool['func_reorient']
         temporal.inputs.func_timeseries = input_file
+
+    # func mean (one volume) -> QAP func temp
+    if len(resource_pool['mean_functional']) == 2:
+        node, out_file = resource_pool['mean_functional']
+        workflow.connect(node, out_file, temporal, 'func_mean')
+    else:
+        from qap_utils import check_input_resources
+        check_input_resources(resource_pool, 'mean_functional')
+        input_file = resource_pool['mean_functional']
+        temporal.inputs.func_mean = input_file
 
     # functional brain mask -> QAP func temp
     if len(resource_pool['functional_brain_mask']) == 2:
@@ -1228,9 +1267,9 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         workflow.connect(fd, 'out_file', fdplot, 'in_file')
         resource_pool['qap_fd'] = (fdplot, 'out_file')
 
-    out_dir = op.join(config['output_directory'], config["run_name"], 
+    out_dir = os.path.join(config['output_directory'], config["run_name"], 
                       config["subject_id"], config["session_id"], "qap")
-    out_json = op.join(out_dir, "%s_%s_%s_qap_functional.json"
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap_functional.json"
                        % (config["subject_id"], config["session_id"],
                           config["scan_id"]))
 
@@ -1245,9 +1284,9 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     workflow.connect(temporal, 'qap', temporal_to_json, 'output_dict')
     resource_pool['qap_functional_temporal'] = out_json
 
-    qa_out_dir = op.join(config['output_directory'], config["run_name"],
+    qa_out_dir = os.path.join(config['output_directory'], config["run_name"],
                          config["subject_id"], config["session_id"], "QA")
-    qa_out_json = op.join(qa_out_dir, "%s_%s_%s_QA.json"
+    qa_out_json = os.path.join(qa_out_dir, "%s_%s_%s_QA.json"
                           % (config["subject_id"], config["session_id"],
                              config["scan_id"]))
 

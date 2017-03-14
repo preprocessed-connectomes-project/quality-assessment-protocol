@@ -584,8 +584,9 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
 
 def qap_functional_temporal(
-        func_timeseries, func_brain_mask, bg_func_brain_mask, fd_file,
-        subject_id, session_id, scan_id, site_name=None, starter=None):
+        func_timeseries, func_mean, func_brain_mask, bg_func_brain_mask,
+        fd_file, subject_id, session_id, scan_id, site_name=None,
+        starter=None):
     """ Calculate the functional temporal QAP measures for a functional scan.
 
     - The inclusion of the starter node allows several QAP measure pipelines
@@ -595,6 +596,8 @@ def qap_functional_temporal(
 
     :type func_timeseries: str
     :param func_timeseries: Filepath to the 4D functional timeseries.
+    :type func_mean: str
+    :param func_mean: Filepath to the averaged functional timeseries.
     :type func_brain_mask: str
     :param func_brain_mask: Filepath to the binary mask defining the brain
                             within the functional image.
@@ -629,7 +632,8 @@ def qap_functional_temporal(
 
     import qap
     from qap.temporal_qc import outlier_timepoints, quality_timepoints, \
-                                global_correlation, calculate_percent_outliers
+                                global_correlation, get_temporal_std_map, \
+                                calculate_percent_outliers, sfs_timeseries
     from qap.dvars import calc_dvars
 
     # DVARS
@@ -657,6 +661,13 @@ def qap_functional_temporal(
     # 3dTqual
     quality = quality_timepoints(func_timeseries)
     quality_outliers, quality_IQR = calculate_percent_outliers(quality)
+
+    # Temporal Standard Deviation
+    temporal_std_map = get_temporal_std_map(func_timeseries, func_brain_mask)
+    tstd_inbrain = temporal_std_map.nonzero()
+
+    # Signal Fluctuation Sensitivity
+    sfs_voxels = sfs_timeseries(func_mean, func_brain_mask, temporal_std_map)
 
     # GCOR
     gcor = global_correlation(func_timeseries, func_brain_mask)
@@ -698,6 +709,8 @@ def qap_functional_temporal(
                  "Quality (Median)": np.median(quality),
                  "Quality IQR": quality_IQR,
                  "Quality percent outliers": quality_outliers,
+                 "Temporal STD (Mean)": np.mean(tstd_inbrain),
+                 "Signal Fluctuation Sensitivity (Mean)": np.mean(sfs_voxels),
                  "GCOR": gcor
               }
             }

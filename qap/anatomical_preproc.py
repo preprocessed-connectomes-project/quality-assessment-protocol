@@ -55,14 +55,24 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     if "anatomical_scan" not in resource_pool.keys():
         return workflow, resource_pool
 
-    anat_deoblique = pe.Node(interface=preprocess.Refit(),
-                                name='anat_deoblique%s' % name)
+    try:
+        anat_deoblique = pe.Node(interface=preprocess.Refit(),
+                                 name='anat_deoblique%s' % name)
+    except AttributeError:
+        from nipype.interfaces.afni import utils as afni_utils
+        anat_deoblique = pe.Node(interface=afni_utils.Refit(),
+                                 name='anat_deoblique%s' % name)
+
 
     anat_deoblique.inputs.in_file = resource_pool["anatomical_scan"]
     anat_deoblique.inputs.deoblique = True
 
-    anat_reorient = pe.Node(interface=preprocess.Resample(),
-                            name='anat_reorient%s' % name)
+    try:
+        anat_reorient = pe.Node(interface=preprocess.Resample(),
+                                name='anat_reorient%s' % name)
+    except AttributeError:
+        anat_reorient = pe.Node(interface=afni_utils.Resample(),
+                                name='anat_reorient%s' % name)
 
     anat_reorient.inputs.orientation = 'RPI'
     anat_reorient.inputs.outputtype = 'NIFTI_GZ'
@@ -187,12 +197,11 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
     from nipype.interfaces.afni import preprocess
 
     if "anatomical_reorient" not in resource_pool.keys():
-
         from anatomical_preproc import anatomical_reorient_workflow
         old_rp = copy.copy(resource_pool)
         workflow, new_resource_pool = \
-            anatomical_reorient_workflow(workflow, resource_pool, config, name)
-
+            anatomical_reorient_workflow(workflow, resource_pool, config,
+                                         name)
         if resource_pool == old_rp:
             return workflow, resource_pool
 
@@ -200,8 +209,16 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
                               name='anat_skullstrip%s' % name)
     anat_skullstrip.inputs.outputtype = 'NIFTI_GZ'
 
-    anat_skullstrip_orig_vol = pe.Node(interface=preprocess.Calc(),
-                                       name='anat_skullstrip_orig_vol%s' % name)
+    try:
+        anat_skullstrip_orig_vol = pe.Node(interface=preprocess.Calc(),
+                                           name='anat_skullstrip_orig_vol%s'
+                                                % name)
+    except AttributeError:
+        from nipype.interfaces.afni import utils as afni_utils
+        anat_skullstrip_orig_vol = pe.Node(interface=afni_utils.Calc(),
+                                           name='anat_skullstrip_orig_vol%s'
+                                                % name)
+
     anat_skullstrip_orig_vol.inputs.expr = 'a*step(b)'
     anat_skullstrip_orig_vol.inputs.outputtype = 'NIFTI_GZ'
 
@@ -221,7 +238,7 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
             resource_pool["anatomical_reorient"]
 
     workflow.connect(anat_skullstrip, 'out_file',
-                        anat_skullstrip_orig_vol, 'in_file_b')
+                     anat_skullstrip_orig_vol, 'in_file_b')
 
     resource_pool["anatomical_brain"] = (anat_skullstrip_orig_vol, 'out_file')
 
@@ -294,8 +311,10 @@ def run_anatomical_skullstrip(anatomical_reorient, out_dir=None, run=True):
         return workflow, workflow.base_dir
 
 
-def afni_anatomical_linear_registration(workflow, resource_pool, \
-    config, name="_"):
+def afni_anatomical_linear_registration(workflow, resource_pool,
+                                        config, name="_",
+                                        in_file="anatomical_reorient",
+                                        ref="template_head_for_anat"):
     """Build Nipype workflow to calculate the linear registration (participant
     to template) of an anatomical image using AFNI's 3dAllineate.
 
@@ -353,70 +372,41 @@ def afni_anatomical_linear_registration(workflow, resource_pool, \
     import nipype.pipeline.engine as pe
     import nipype.interfaces.afni as afni
 
-    if "skull_on_registration" not in config.keys():
-        config["skull_on_registration"] = True
-
     calc_allineate_warp = pe.Node(interface=afni.Allineate(),
                                     name='calc_3dAllineate_warp%s' % name)
     calc_allineate_warp.inputs.outputtype = "NIFTI_GZ"
 
-    if config["skull_on_registration"]:
-
+    if in_file == "anatomical_reorient":
         if "anatomical_reorient" not in resource_pool.keys():
-
             from anatomical_preproc import anatomical_reorient_workflow
             old_rp = copy.copy(resource_pool)
             workflow, new_resource_pool = \
                 anatomical_reorient_workflow(workflow, resource_pool,
                                              config, name)
-
             if resource_pool == old_rp:
                 return workflow, resource_pool
 
-        if len(resource_pool["anatomical_reorient"]) == 2:
-            node, out_file = resource_pool["anatomical_reorient"]
-            workflow.connect(node, out_file, calc_allineate_warp, 'in_file')
-        else:
-            calc_allineate_warp.inputs.in_file = \
-                resource_pool["anatomical_reorient"]
-
-        calc_allineate_warp.inputs.reference = \
-            config["template_head_for_anat"]
-
-        calc_allineate_warp.inputs.out_file = "allineate_warped_head.nii.gz"
-
+    if len(resource_pool[in_file]) == 2:
+        node, out_file = resource_pool[in_file]
+        workflow.connect(node, out_file, calc_allineate_warp, 'in_file')
     else:
+        calc_allineate_warp.inputs.in_file = resource_pool[in_file]
 
-        if "anatomical_brain" not in resource_pool.keys():
+    if ref == "template_head_for_anat":
+        calc_allineate_warp.inputs.reference = config[ref]
+    else:
+        calc_allineate_warp.inputs.reference = resource_pool[ref]
 
-            from anatomical_preproc import anatomical_skullstrip_workflow
-            old_rp = copy.copy(resource_pool)
-            workflow, new_resource_pool = \
-                anatomical_skullstrip_workflow(workflow, resource_pool, \
-                                               config, name)
-
-            if resource_pool == old_rp:
-                return workflow, resource_pool
-
-        if len(resource_pool["anatomical_brain"]) == 2:
-            node, out_file = resource_pool["anatomical_brain"]
-            workflow.connect(node, out_file, calc_allineate_warp, 'in_file')
-        else:
-            calc_allineate_warp.inputs.in_file = \
-                resource_pool["anatomical_brain"]
-
-        calc_allineate_warp.inputs.reference = \
-            config["template_brain_for_anat"]
-
-        calc_allineate_warp.inputs.out_file = \
-            "allineate_warped_brain.nii.gz"
+    calc_allineate_warp.inputs.out_file = "allineate_warped_%s.nii.gz" \
+                                          % in_file
 
     calc_allineate_warp.inputs.out_matrix = "3dallineate_warp"
 
-    resource_pool["allineate_linear_xfm"] = \
-        (calc_allineate_warp, 'matrix')
+    if in_file == "anatomical_reorient":
+        resource_pool["allineate_linear_xfm"] = \
+            (calc_allineate_warp, 'matrix')
 
-    resource_pool["afni_linear_warped_image"] = \
+    resource_pool["afni_linear_warped_%s" % in_file] = \
         (calc_allineate_warp, 'out_file')
 
     return workflow, resource_pool
@@ -509,7 +499,6 @@ def run_afni_anatomical_linear_registration(input_image, reference_image,
         return workflow, workflow.base_dir
 
 
-
 def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
     """Build a Nipype workflow to generate anatomical tissue segmentation maps
     using AFNI's 3dSeg.
@@ -583,8 +572,13 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
         segment.inputs.in_file = resource_pool["anatomical_brain"]
 
     # output processing
-    AFNItoNIFTI = pe.Node(interface=preprocess.AFNItoNIFTI(),
-                          name="segment_AFNItoNIFTI%s" % name)
+    try:
+        AFNItoNIFTI = pe.Node(interface=preprocess.AFNItoNIFTI(),
+                              name="segment_AFNItoNIFTI%s" % name)
+    except AttributeError:
+        from nipype.interfaces.afni import utils as afni_utils
+        AFNItoNIFTI = pe.Node(interface=afni_utils.AFNItoNIFTI(),
+                              name="segment_AFNItoNIFTI%s" % name)
 
     AFNItoNIFTI.inputs.out_file = "classes.nii.gz"
 
@@ -592,18 +586,28 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
 
     # break out each of the three tissue types into
     # three separate NIFTI files
-    extract_CSF = pe.Node(interface=preprocess.Calc(),
-                          name='extract_CSF_mask%s' % name)
+    try:
+        extract_CSF = pe.Node(interface=preprocess.Calc(),
+                              name='extract_CSF_mask%s' % name)
+        extract_GM = pe.Node(interface=preprocess.Calc(),
+                              name='extract_GM_mask%s' % name)
+        extract_WM = pe.Node(interface=preprocess.Calc(),
+                             name='extract_WM_mask%s' % name)
+    except AttributeError:
+        from nipype.interfaces.afni import utils as afni_utils
+        extract_CSF = pe.Node(interface=afni_utils.Calc(),
+                              name='extract_CSF_mask%s' % name)
+        extract_GM = pe.Node(interface=afni_utils.Calc(),
+                              name='extract_GM_mask%s' % name)
+        extract_WM = pe.Node(interface=afni_utils.Calc(),
+                             name='extract_WM_mask%s' % name)
+
     extract_CSF.inputs.expr = "within(a,1,1)"
     extract_CSF.inputs.out_file = "anatomical_csf_mask.nii.gz"
 
-    extract_GM = pe.Node(interface=preprocess.Calc(),
-                          name='extract_GM_mask%s' % name)
     extract_GM.inputs.expr = "within(a,2,2)"
     extract_GM.inputs.out_file = "anatomical_gm_mask.nii.gz"
 
-    extract_WM = pe.Node(interface=preprocess.Calc(),
-                          name='extract_WM_mask%s' % name)
     extract_WM.inputs.expr = "within(a,3,3)"
     extract_WM.inputs.out_file = "anatomical_wm_mask.nii.gz"
 
