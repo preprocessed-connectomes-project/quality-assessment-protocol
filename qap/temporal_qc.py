@@ -297,3 +297,131 @@ def global_correlation(func_reorient, func_mask):
     gcor = (avg_ts.transpose().dot(avg_ts)) / len(avg_ts)
 
     return gcor
+
+
+def calc_temporal_std(voxel_ts):
+
+    import numpy as np
+
+    voxel_std = np.std(voxel_ts)
+
+    return voxel_std
+
+
+def get_temporal_std_map(func_reorient, func_mask):
+
+    import numpy as np
+    from qap.qap_utils import get_masked_data
+
+    func_data = get_masked_data(func_reorient, func_mask)
+
+    temporal_std_map = np.zeros(func_data.shape[0:3])
+
+    for i in range(0, len(func_data)):
+        for j in range(0, len(func_data[0])):
+            for k in range(0, len(func_data[0][0])):
+                std = np.std(func_data[i][j][k])
+                temporal_std_map[i][j][k] = std
+
+    return temporal_std_map
+
+
+def create_threshold_mask(data, threshold):
+
+    import numpy as np
+
+    mask = np.zeros(data.shape)
+
+    for i in range(0, len(data)):
+        for j in range(0, len(data[0])):
+            for k in range(0, len(data[0][0])):
+                if data[i][j][k] > threshold:
+                    mask[i][j][k] = 1
+                else:
+                    mask[i][j][k] = 0
+
+    return mask
+
+
+def calc_estimated_csf_nuisance(temporal_std_map):
+
+    import numpy as np
+    from qap.qap_utils import get_masked_data
+
+    all_tstd = np.asarray(temporal_std_map.nonzero()).flatten()
+    all_tstd_sorted = sorted(all_tstd)
+    top_2 = 0.98 * len(all_tstd)
+
+    top_2_std = all_tstd_sorted[int(top_2):]
+    cutoff = top_2_std[0]
+
+    estimated_nuisance_mask = create_threshold_mask(temporal_std_map, cutoff)
+
+    nuisance_stds = get_masked_data(temporal_std_map, estimated_nuisance_mask)
+
+    nuisance_mean_std = np.mean(np.asarray(nuisance_stds.nonzero()).flatten())
+
+    return nuisance_mean_std
+
+
+def sfs_voxel(voxel_ts, total_func_mean, nuisance_mean_std):
+    """Calculate the Signal Fluctuation Intensity (SFS) of one voxel's
+    functional time series.
+
+    - From "Signal Fluctuation Sensitivity: An Improved Metric for Optimizing
+      Detection of Resting-State fMRI Networks", Daniel J. DeDora1,
+      Sanja Nedic, Pratha Katti, Shafique Arnab, Lawrence L. Wald, Atsushi
+      Takahashi, Koene R. A. Van Dijk, Helmut H. Strey and
+      Lilianne R. Mujica-Parodi. More info here:
+        http://journal.frontiersin.org/article/10.3389/fnins.2016.00180/full
+
+    :rtype: NumPy array
+    :return: The signal fluctuation intensity timecourse for the voxel
+             timeseries provided.
+    """
+
+    import numpy as np
+
+    voxel_ts_mean = np.mean(voxel_ts)
+    voxel_ts_std = np.std(voxel_ts)
+
+    sfs_vox = \
+        (voxel_ts_mean/total_func_mean) * (voxel_ts_std/nuisance_mean_std)
+
+    return sfs_vox
+
+
+def sfs_timeseries(func_mean, func_mask, temporal_std_map):
+    """Average the SFS timecourses of each voxel into one SFS timeseries.
+
+    :rtype: NumPy array
+    :return: The averaged signal fluctuation intensity timeseries for the
+             entire brain.
+    """
+
+    import numpy as np
+    import nibabel as nb
+
+    func_mean_img = nb.load(func_mean)
+    func_mean_data = func_mean_img.get_data()
+    func_mask_img = nb.load(func_mask)
+    func_mask_data = func_mask_img.get_data()
+
+    masked_func_mean = func_mean_data[func_mask_data.nonzero()]
+    total_func_mean = np.mean(masked_func_mean)
+
+    masked_tstd = temporal_std_map[func_mask_data.nonzero()]
+
+    nuisance_mean_std = calc_estimated_csf_nuisance(temporal_std_map)
+
+    arg_tuples = []
+    for voxel_ts, voxel_std in zip(masked_func_mean, masked_tstd):
+        arg_tuples.append(voxel_ts, total_func_mean, voxel_std,
+                          nuisance_mean_std)
+
+    sfs_voxels = map(sfs_voxel, arg_tuples)
+
+    return sfs_voxels
+
+
+

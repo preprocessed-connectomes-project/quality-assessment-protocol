@@ -800,8 +800,8 @@ def run_workflow(args, run=True):
         logger.info("Participant info: %s" % name)
 
         # set output directory
-        output_dir = op.join(config["output_directory"], run_name,
-                             sub_id, session_id, scan_id)
+        output_dir = op.join(config["output_directory"], run_name, sub_id,
+                             session_id)
 
         try:
             os.makedirs(output_dir)
@@ -825,6 +825,8 @@ def run_workflow(args, run=True):
         qap_types = ["anatomical_spatial", 
                      "functional_spatial", 
                      "functional_temporal"]
+
+        qa_outputs = ["qa", "qap_fd", "qap_mosaic"]
 
         # update that resource pool with what's already in the output
         # directory
@@ -909,6 +911,9 @@ def run_workflow(args, run=True):
         logger.info('Resource pool keys after workflow connection: '
                     '{}'.format(str(resource_pool.keys())))
 
+        if ("qa" in resource_pool.keys()) and ("qa" not in out_list):
+            out_list += ['qa']
+
         # Save reports to out_dir if necessary
         if config.get('write_report', False):
 
@@ -934,7 +939,13 @@ def run_workflow(args, run=True):
             if (len(resource_pool[output]) == 2) and (output != "starter"):
                 ds = pe.Node(nio.DataSink(), name='datasink_%s%s'
                                                   % (output,name))
-                ds.inputs.base_directory = output_dir
+                if output in qap_types:
+                    ds_dir = os.path.join(output_dir, "qap")
+                elif output in qa_outputs:
+                    ds_dir = os.path.join(output_dir, "QA")
+                else:
+                    ds_dir = os.path.join(output_dir, "derivatives")
+                ds.inputs.base_directory = ds_dir
                 node, out_file = resource_pool[output]
                 workflow.connect(node, out_file, ds, output)
                 new_outputs += 1

@@ -213,7 +213,22 @@ def load_mask(mask_file, ref_file):
     return mask_dat
 
 
-def create_anatomical_background_mask(anatomical_data, fg_mask_data, 
+def get_masked_data(data_file, mask_file):
+
+    import numpy as np
+    import nibabel as nb
+
+    img = nb.load(data_file)
+    data = img.get_data()
+    mask_img = nb.load(mask_file)
+    mask = mask_img.get_data()
+
+    masked_data = np.asarray([volume * mask.T for volume in data.T]).T
+
+    return masked_data
+
+
+def create_anatomical_background_mask(anatomical_data, fg_mask_data,
     exclude_zeroes=False):
     """Create a mask of the area outside the head in an anatomical scan by
     inverting a provided foreground mask.
