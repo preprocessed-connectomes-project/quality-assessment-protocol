@@ -392,7 +392,6 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     import nipype.interfaces.utility as niu
     from qap_workflows_utils import qap_anatomical_spatial
     from qap.viz.interfaces import PlotMosaic
-    from qap.viz.interfaces import overlay_figure
     from qap_utils import check_config_settings, write_json
 
     check_config_settings(config, "template_head_for_anat")
@@ -504,12 +503,6 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         plot = pe.Node(PlotMosaic(), name='plot_mosaic%s' % name)
         plot.inputs.subject = config['subject_id']
 
-        qc = pe.Node(interface=niu.Function(input_names=['overlays','underlay', 'fig_name'],
-                                                 output_names=['x_fig', 'z_fig'], function=overlay_figure),
-                                   name='qc_segmentation_{num}'.format(num=num_strat))
-        wf.connect(wrapper, 'overlays', qc, 'overlays')
-        qc.inputs.fig_name = fname
-        wf.connect(node, out_file, qc, 'underlay')
 
         metadata = [config['session_id'], config['scan_id']]
         if 'site_name' in config.keys():
@@ -1142,6 +1135,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     from qap_utils import write_json
     from temporal_qc import fd_jenkinson
     from qap.viz.interfaces import PlotMosaic, PlotFD
+    from qap.viz.plotting import organize_individual_html
 
     def _getfirst(inlist):
         if isinstance(inlist, list):
@@ -1221,18 +1215,6 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         temporal.inputs.bg_func_brain_mask = \
             resource_pool['inverted_functional_brain_mask']
 
-    # Write mosaic and FD plot
-    if config.get('write_report', False):
-        metadata = [config['session_id'], config['scan_id']]
-        if 'site_name' in config.keys():
-            metadata.append(config['site_name'])
-
-        fdplot = pe.Node(PlotFD(), name='plot_fd%s' % name)
-        fdplot.inputs.subject = config['subject_id']
-        fdplot.inputs.metadata = metadata
-        workflow.connect(fd, 'out_file', fdplot, 'in_file')
-        resource_pool['qap_fd'] = (fdplot, 'out_file')
-
     out_dir = op.join(config['output_directory'], config["run_name"], 
         config["subject_id"], config["session_id"], config["scan_id"])
     out_json = op.join(out_dir, "qap_functional.json")
@@ -1246,7 +1228,29 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     temporal_to_json.inputs.json_file = out_json
 
     workflow.connect(temporal, 'qc', temporal_to_json, 'output_dict')
+
     resource_pool['qap_functional_temporal'] = out_json
+
+
+    # Write mosaic and FD plot
+    if config.get('write_report', False):
+        metadata = [config['session_id'], config['scan_id']]
+        if 'site_name' in config.keys():
+            metadata.append(config['site_name'])
+
+        fdplot = pe.Node(PlotFD(), name='plot_fd%s' % name)
+        fdplot.inputs.subject = config['subject_id']
+        fdplot.inputs.metadata = metadata
+        workflow.connect(fd, 'out_file', fdplot, 'in_file')
+        resource_pool['qap_fd'] = (fdplot, 'out_file')
+
+        #html individual pages
+        html = pe.Node(niu.Function(input_names=["subid", "output_path", "ts_plot"], output_names=["none"], function=organize_individual_html), name="individual_report_html%s" % name)
+        html.inputs.subid = config['subject_id']
+        #html.inputs.mean_epi_mosaic = resource_pool['qap_fd']#resource_pool['mean_epi_mosaic']
+        html.inputs.output_path = out_dir
+        workflow.connect(fdplot, 'out_file', html, 'ts_plot')
+        #workflow.add_nodes([html])
 
     return workflow, resource_pool
 

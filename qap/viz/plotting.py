@@ -6,7 +6,7 @@ import os.path as op
 import numpy as np
 import nibabel as nb
 import pandas as pd
-
+import os
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -14,6 +14,93 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
 import seaborn as sns
 
+
+def organize_individual_html(subid, output_path, ts_plot):
+
+    head_template = '''
+    <!DOCTYPE html>
+<html>
+  <head>
+    <style>
+    body{ margin: 0px;}
+    ul {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #333;
+    }
+
+    li { float: left; }
+
+    li a {
+        display: block;
+        color: white;
+        text-align: center;
+        padding: 14px 16px;
+        text-decoration: none;
+    }
+
+    li a:hover:not(.active) { background-color: #111;  }
+
+    .active {background-color: #4CAF50;
+    }
+    </style>
+    '''
+    template = '''
+    <meta charset="UTF-8">
+    <title>QAP REport {subjectid}</title>
+  </head>
+  <body>
+    <!-- start navbar -->
+    <div class="navbar">
+        <ul>
+          <li><a href="#">{subjectid}</a></li>
+          <li style="float:right"><a href="#about">QAP</a></li>
+          <li style="float:right"><a href="#about">All Subjects</a></li>
+          <li style="float:right"><a href="#about">Group Measures</a></li>
+          
+        </ul>
+    </div>
+    <!-- end navbar -->
+    '''
+
+    end_template = '''
+    <!-- start Mean FD, DVARS, Global Signal -->
+    <div id="meanfdplots">
+        <h2>Mean FD, DVARS, Global Signal</h2>
+        <embed src="{ts_plot}" width="100%" height="100%" type='application/pdf'>
+    </div>
+    <!-- end Mean FD, DVARS, Global Signal -->
+
+    <!-- start Gray Plot -->
+    <div id="grayplots">
+        <h2>Gray Plot</h2>
+    </div>
+    <!-- end Gray Plot -->
+
+    <!-- start Mean EPI Mosaic -->
+    <div id="meanepi">
+        <h2>Mean EPI Mosaic</h2>
+    </div>
+    <!-- end Mean EPI Mosaic -->
+
+    <!-- start Signal Fluctuation Sensitivity Mosaic Mosaic -->
+    <div id="sfs">
+        <h2>Signal Fluctuation Sensitivity Mosaic</h2>
+    </div>
+    <!-- end Signal Fluctuation Sensitivity Mosaic Mosaic -->
+
+  </body>
+</html>
+    '''
+    import os.path as op
+    template = template.format(subjectid=subid)
+    end_template = end_template.format(ts_plot=ts_plot)
+    template = head_template + template + end_template
+    with open(op.join(output_path, subid+'.html') , 'w+') as f:
+        f.write(template)
+    return None
 
 '''
 plots nilearn figure. mosaic 3x8
