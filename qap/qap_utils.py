@@ -213,15 +213,16 @@ def load_mask(mask_file, ref_file):
     return mask_dat
 
 
-def get_masked_data(data_file, mask_file):
+def get_masked_data(data, mask, files=False):
 
     import numpy as np
-    import nibabel as nb
 
-    img = nb.load(data_file)
-    data = img.get_data()
-    mask_img = nb.load(mask_file)
-    mask = mask_img.get_data()
+    if files:
+        import nibabel as nb
+        img = nb.load(data)
+        data = img.get_data()
+        mask_img = nb.load(mask)
+        mask = mask_img.get_data()
 
     masked_data = np.asarray([volume * mask.T for volume in data.T]).T
 

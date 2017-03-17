@@ -313,7 +313,7 @@ def get_temporal_std_map(func_reorient, func_mask):
     import numpy as np
     from qap.qap_utils import get_masked_data
 
-    func_data = get_masked_data(func_reorient, func_mask)
+    func_data = get_masked_data(func_reorient, func_mask, files=True)
 
     temporal_std_map = np.zeros(func_data.shape[0:3])
 
@@ -364,7 +364,7 @@ def calc_estimated_csf_nuisance(temporal_std_map):
     return nuisance_mean_std
 
 
-def sfs_voxel(voxel_ts, total_func_mean, nuisance_mean_std):
+def sfs_voxel(arg_tuple):
     """Calculate the Signal Fluctuation Intensity (SFS) of one voxel's
     functional time series.
 
@@ -382,8 +382,10 @@ def sfs_voxel(voxel_ts, total_func_mean, nuisance_mean_std):
 
     import numpy as np
 
+    voxel_ts, total_func_mean, voxel_ts_std, nuisance_mean_std = arg_tuple
+
     voxel_ts_mean = np.mean(voxel_ts)
-    voxel_ts_std = np.std(voxel_ts)
+    #voxel_ts_std = np.std(voxel_ts)
 
     sfs_vox = \
         (voxel_ts_mean/total_func_mean) * (voxel_ts_std/nuisance_mean_std)
@@ -416,8 +418,8 @@ def sfs_timeseries(func_mean, func_mask, temporal_std_map):
 
     arg_tuples = []
     for voxel_ts, voxel_std in zip(masked_func_mean, masked_tstd):
-        arg_tuples.append(voxel_ts, total_func_mean, voxel_std,
-                          nuisance_mean_std)
+        arg_tuples.append((voxel_ts, total_func_mean, voxel_std,
+                          nuisance_mean_std))
 
     sfs_voxels = map(sfs_voxel, arg_tuples)
 
