@@ -344,7 +344,7 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
     return fig
 
 
-def plot_fd(fd_file, title='FD plot', mean_fd_dist=None, figsize=(11.7, 8.3)):
+def plot_fd(fd_file, dvars, global_signal, title='Mean FD, DVARS, Global Signal plot', mean_fd_dist=None, figsize=(11.7, 8.3)):
 
     fd_power = _calc_fd(fd_file)
 
@@ -359,8 +359,10 @@ def plot_fd(fd_file, title='FD plot', mean_fd_dist=None, figsize=(11.7, 8.3)):
 
     ax = fig.add_subplot(grid[0, :-1])
     ax.plot(fd_power)
+    ax.plot(dvars_file)
+    ax.plot(global_signal)
     ax.set_xlim((0, len(fd_power)))
-    ax.set_ylabel("Frame Displacement [mm]")
+    ax.set_ylabel("Frame Displacement [mm], DVARS and Global Signal")
     ax.set_xlabel("Frame number")
     ylim = ax.get_ylim()
 
