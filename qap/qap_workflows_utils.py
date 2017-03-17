@@ -199,7 +199,7 @@ def slice_head_mask(infile, transform):
     allineate_mat_list = read_txt_file(transform)
 
     # get the 3dAllineate output affine matrix into a list
-    mat_list = filter(None,allineate_mat_list[1].rstrip("\n").split(" "))
+    mat_list = filter(None, allineate_mat_list[1].rstrip("\n").split(" "))
 
     # convert 3dAllineate's affine transform
     allineate_mat = convert_allineate_xfm(mat_list)
@@ -730,7 +730,8 @@ def qap_functional_temporal(
                 "RMSD": list(fd),
                 "Outliers": outliers,
                 "OOB Outliers": oob_outliers,
-                "Quality": quality
+                "Quality": quality,
+                "Signal Fluctuation Sensitivity": sfs_voxels
             }
     }
 
