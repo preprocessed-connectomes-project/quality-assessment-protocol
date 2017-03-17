@@ -91,7 +91,6 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as util
     from nipype.interfaces.afni import preprocess
-    from nipype.interfaces.afni import utils as afni_utils
 
     if "functional_scan" not in resource_pool.keys():
         return workflow, resource_pool
@@ -136,6 +135,7 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
         func_deoblique = pe.Node(interface=preprocess.Refit(),
                                  name='func_deoblique%s' % name)
     except AttributeError:
+        from nipype.interfaces.afni import utils as afni_utils
         func_deoblique = pe.Node(interface=afni_utils.Refit(),
                                  name='func_deoblique%s' % name)
     func_deoblique.inputs.deoblique = True
@@ -607,7 +607,6 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
     import copy
     import nipype.pipeline.engine as pe
     from nipype.interfaces.afni import preprocess
-    from nipype.interfaces.afni import utils as afni_utils
 
     if "functional_brain_mask" not in resource_pool.keys():
 
@@ -623,6 +622,7 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
         invert_mask = pe.Node(interface=preprocess.Calc(),
                               name='invert_mask%s' % name)
     except AttributeError:
+        from nipype.interfaces.afni import utils as afni_utils
         invert_mask = pe.Node(interface=afni_utils.Calc(),
                               name='invert_mask%s' % name)
 
@@ -754,7 +754,6 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
     import copy
     import nipype.pipeline.engine as pe
     from nipype.interfaces.afni import preprocess
-    from nipype.interfaces.afni import utils as afni_utils
 
     if "func_reorient" not in resource_pool.keys():
 
@@ -769,6 +768,7 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
         func_mean_tstat = pe.Node(interface=preprocess.TStat(),
                                   name='func_mean_tstat%s' % name)
     except AttributeError:
+        from nipype.interfaces.afni import utils as afni_utils
         func_mean_tstat = pe.Node(interface=afni_utils.TStat(),
                                   name='func_mean_tstat%s' % name)
 
