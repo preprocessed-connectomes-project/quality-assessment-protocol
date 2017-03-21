@@ -69,7 +69,7 @@ def organize_individual_html(subid, output_path, ts_plot):
     <!-- start Mean FD, DVARS, Global Signal -->
     <div id="meanfdplots">
         <h2>Mean FD, DVARS, Global Signal</h2>
-        <embed src="{ts_plot}" width="100%" height="100%" type='application/pdf'>
+        <embed src="{ts_plot}" width="100%" height="400px" type='application/pdf'>
     </div>
     <!-- end Mean FD, DVARS, Global Signal -->
 
@@ -344,10 +344,12 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
     return fig
 
 
-def plot_fd(fd_file, dvars, global_signal, title='Mean FD, DVARS, Global Signal plot', mean_fd_dist=None, figsize=(11.7, 8.3)):
+def plot_fd(meanfd_file, dvars, global_signal, metadata, figsize=(11.7, 8.3), mean_fd_dist=None, title='Mean FD, DVARS, Global Signal'):
 
-    fd_power = _calc_fd(fd_file)
-
+    fd_power = _calc_fd(meanfd_file)
+    x = metadata[0]
+    a = dvars[x]
+    dvars = a['Standardized DVARS']
     fig = plt.Figure(figsize=figsize)
     FigureCanvas(fig)
 
@@ -358,12 +360,14 @@ def plot_fd(fd_file, dvars, global_signal, title='Mean FD, DVARS, Global Signal 
         grid.update(hspace=1.0, right=0.95, left=0.1, bottom=0.2)
 
     ax = fig.add_subplot(grid[0, :-1])
-    ax.plot(fd_power)
-    ax.plot(dvars_file)
-    ax.plot(global_signal)
+    fd = ax.plot(fd_power, label='Mean FD')
+    d, = ax.plot(dvars, label='DVARS')
+    gs, = ax.plot(global_signal, label='Global Signal')
     ax.set_xlim((0, len(fd_power)))
     ax.set_ylabel("Frame Displacement [mm], DVARS and Global Signal")
     ax.set_xlabel("Frame number")
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels)
     ylim = ax.get_ylim()
 
     ax = fig.add_subplot(grid[0, -1])

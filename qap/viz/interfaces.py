@@ -81,19 +81,13 @@ class PlotMosaic(BaseInterface):
 
 
 class PlotFDInputSpec(BaseInterfaceInputSpec):
-    meanfd_file = File(exists=True, mandatory=True,
-                   desc='mean fd file to be plotted')
-    dvars = traits.List(traits.Float, mandatory=True,
-                   desc='dvars float array be plotted')
-    global_signal = traits.List(traits.Float, mandatory=True,
-                   desc='global signal to be plotted')
+    meanfd_file = File(exists=True, mandatory=True, desc='mean fd file to be plotted')
+    dvars = traits.Dict(mandatory=True, desc='dvars float array be plotted')
+    global_signal = traits.List(traits.Float, mandatory=True, desc='global signal to be plotted')
+    metadata = traits.List(traits.Str, mandatory=True, desc='additional metadata')
     title = traits.Str('Mean FD, DVARS ad global Signal', usedefault=True,
                        desc='modality name to be prepended')
     subject = traits.Str(desc='Subject id')
-    metadata = traits.List(traits.Str, desc='additional metadata')
-    figsize = traits.Tuple(
-        (8.27, 3.0), traits.Float, traits.Float, usedefault=True,
-        desc='Figure size')
     dpi = traits.Int(300, usedefault=True, desc='Desired DPI of figure')
     out_file = File('fd.pdf', usedefault=True, desc='output file name')
 
@@ -115,20 +109,7 @@ class PlotFD(BaseInterface):
         if isdefined(self.inputs.subject):
             title += ', subject %s' % self.inputs.subject
 
-        if isdefined(self.inputs.metadata):
-            title += ' (' + '_'.join(self.inputs.metadata) + ')'
-
-        if isdefined(self.inputs.figsize):
-            fig = plot_fd(
-                self.inputs.meanfd_file,
-                self.inputs.dvars,
-                self.inputs.global_signal
-                title=title,
-                figsize=self.inputs.figsize)
-        else:
-            fig = plot_fd(self.inputs.meanfd_file,
-                        self.inputs.dvars,
-                        self.inputs.global_signal
+        fig = plot_fd(self.inputs.meanfd_file, self.inputs.dvars, self.inputs.global_signal, self.inputs.metadata)
 
         fig.savefig(self.inputs.out_file, dpi=float(self.inputs.dpi))
 

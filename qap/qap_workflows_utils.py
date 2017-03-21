@@ -18,7 +18,7 @@ def global_signal_time_series(functional_file):
     # that is a stupid way of calculating the mean of each volume,
     # maybe numpy can do it in one line
     for i in range(time):
-        result[i] = func[:,:,:,i].mean()
+        output[i] = func[:,:,:,i].mean()
     return output
 
 
