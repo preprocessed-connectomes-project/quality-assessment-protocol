@@ -69,7 +69,7 @@ def organize_individual_html(subid, output_path, ts_plot):
     <!-- start Mean FD, DVARS, Global Signal -->
     <div id="meanfdplots">
         <h2>Mean FD, DVARS, Global Signal</h2>
-        <embed src="{ts_plot}" width="100%" height="400px" type='application/pdf'>
+        <embed src="{ts_plot}" width="100%" height="800px" type='application/pdf'>
     </div>
     <!-- end Mean FD, DVARS, Global Signal -->
 
@@ -347,6 +347,7 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
 def plot_fd(meanfd_file, dvars, global_signal, metadata, figsize=(11.7, 8.3), mean_fd_dist=None, title='Mean FD, DVARS, Global Signal'):
 
     fd_power = _calc_fd(meanfd_file)
+    global_signal = (global_signal - min(global_signal))/(max(global_signal) - min(global_signal))
     x = metadata[0]
     a = dvars[x]
     dvars = a['Standardized DVARS']
@@ -370,9 +371,9 @@ def plot_fd(meanfd_file, dvars, global_signal, metadata, figsize=(11.7, 8.3), me
     ax.legend(handles, labels)
     ylim = ax.get_ylim()
 
-    ax = fig.add_subplot(grid[0, -1])
-    sns.distplot(fd_power, vertical=True, ax=ax)
-    ax.set_ylim(ylim)
+    ax1 = fig.add_subplot(grid[0, -1])
+    sns.distplot(fd_power, vertical=True, ax=ax1)
+    ax1.set_ylim((min(fd_power), max(fd_power)))
 
     if mean_fd_dist:
         ax = fig.add_subplot(grid[1, :])
