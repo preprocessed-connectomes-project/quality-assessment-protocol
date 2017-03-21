@@ -73,29 +73,29 @@ To determine subjects that are outliers for any of these measures, run QAP on an
 
 ### Spatial Anatomical
 
-* **Signal-to-Noise Ratio (SNR) [snr]:** The mean intensity within gray matter divided by the standard deviation of the values outside the brain.  Higher values are better [^4].
-* **Contrast to Noise Ratio (CNR) [cnr]:** The mean of the gray matter intensity values minus the mean of the white matter intensity values divided by the standard deviation of the values outside the brain.  Higher values are better [^4].
-* **Foreground to Background Energy Ratio [fber]:** The variance of voxels inside the brain divided by the variance of voxels outside the brain.  Higher values are better. 
+* **Signal-to-Noise Ratio (SNR) [SNR]:** The mean intensity within gray matter divided by the standard deviation of the values outside the brain.  Higher values are better [^4].
+* **Contrast to Noise Ratio (CNR) [CNR]:** The mean of the gray matter intensity values minus the mean of the white matter intensity values divided by the standard deviation of the values outside the brain.  Higher values are better [^4].
+* **Foreground to Background Energy Ratio [FBER]:** The variance of voxels inside the brain divided by the variance of voxels outside the brain.  Higher values are better. 
 * **Percent Artifact Voxels (Qi1) [qi1]:** The proportion of voxels outside the brain with artifacts to the total number of voxels outside the brain.  Lower values are better [^5].
-* **Smoothness of Voxels (FWHM) [fwhm, fwhm_x, fwhm_y, fwhm_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in voxel units.  Lower values are better [^3].
-* **Entropy Focus Criterion (EFC) [efc]:** The Shannon entropy of voxel intensities proportional to the maximum possibly entropy for a similarly sized image. Indicates ghosting and head motion-induced blurring.  Lower values are better [^1].
+* **Smoothness of Voxels (FWHM) [FWHM, FWHM_x, FWHM_y, FWHM_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in voxel units.  Lower values are better [^3].
+* **Entropy Focus Criterion (EFC) [EFC]:** The Shannon entropy of voxel intensities proportional to the maximum possibly entropy for a similarly sized image. Indicates ghosting and head motion-induced blurring.  Lower values are better [^1].
+* **Cortical Contrast:** The mean intensity within white matter subtracted by the mean intensity within gray matter divided by half the sum of both mean intensities of gray and white matter. Higher values are better.
 
 ### Spatial Functional
 
-* **Ghost to Signal Ratio (GSR) [ghost_x, ghost_y or ghost_z]:** A measure of the mean signal in the areas of the image that are prone to ghosting based off the phase encoding direction.  Lower values are better. [^10]
+* **Ghost to Signal Ratio (GSR) [Ghost_x, Ghost_y or Ghost_z]:** A measure of the mean signal in the areas of the image that are prone to ghosting based off the phase encoding direction.  Lower values are better. [^10]
 
 ### Temporal Functional
 
-* **Foreground to Background Energy Ratio [fber]:** The variance of voxels inside the brain divided by the variance of voxels outside the brain.  Higher values are better. 
-* **Smoothness of Voxels (FWHM) [fwhm, fwhm_x, fwhm_y, fwhm_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in voxel units.  Lower values are better [^3].
-* **Entropy Focus Criterion (EFC) [efc]:** The Shannon entropy of voxel intensities proportional to the maximum possibly entropy for a similarly sized image. Indicates ghosting and head motion-induced blurring.  Lower values are better [^1].
-* **Standardized DVARS [dvars]:** The average change in mean intensity between each pair of fMRI volumes in a series scaled to make comparisons across scanning protocols possible.  Lower values are better [^7]. 
-* **Outlier Detection [outlier]:** The mean count of outliers found in each volume using the [3dToutcount](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni).  Lower values are better [^2]. 
-* **Global Correlation [gcorr]:** The average correlation of all pairs of voxel time series inside of the brain.  Illustrates differences between data due to motion/physiological noise/imaging artifacts (such as signal bleeding).  Values closer to zero are better. [^11]
-* **Median Distance Index [quality]:** The mean distance (1 – spearman’s rho) between each time point's volume and the median volume using AFNI’s [3dTqual](https://afni.nimh.nih.gov/pub/dist/doc/program_help/3dTqual.html) command.  Lower values are better [^2]. 
-* **Mean RMSD [mean_fd]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere.  Lower values are better [^9][^13]. 
-* **Number of volumes with FD greater than 0.2mm [num_fd]:** Lower values are better.
-* **Percent of volumes with FD greater than 0.2mm [perc_fd]:** Lower values are better.
+* **Foreground to Background Energy Ratio [FBER]:** The variance of voxels inside the brain divided by the variance of voxels outside the brain.  Higher values are better. 
+* **Smoothness of Voxels (FWHM) [FWHM, FWHM_x, FWHM_y, FWHM_z]:** The full-width half maximum (FWHM) of the spatial distribution of the image intensity values in voxel units.  Lower values are better [^3].
+* **Entropy Focus Criterion (EFC) [EFC]:** The Shannon entropy of voxel intensities proportional to the maximum possibly entropy for a similarly sized image. Indicates ghosting and head motion-induced blurring.  Lower values are better [^1].
+* **Standardized DVARS [DVARS]:** The average change in mean intensity between each pair of fMRI volumes in a series scaled to make comparisons across scanning protocols possible.  Lower values are better [^7]. 
+* **Outlier Detection [Outliers]:** The mean count of outliers found in each volume using the [3dToutcount](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni).  Lower values are better [^2].
+* **Out-of-Brain Outliers [OOB Outliers]:** The mean count of outliers found in each volume in the space outside the head using the [3dToutcount](http://afni.nimh.nih.gov/pub/dist/doc/program_help/3dToutcount.html) command from [AFNI](http://afni.nimh.nih.gov/afni). Lower values are better [^2]. 
+* **Global Correlation [GCOR]:** The average correlation of all pairs of voxel time series inside of the brain.  Illustrates differences between data due to motion/physiological noise/imaging artifacts (such as signal bleeding).  Values closer to zero are better. [^11]
+* **Median Distance Index [Quality]:** The mean distance (1 – spearman’s rho) between each time point's volume and the median volume using AFNI’s [3dTqual](https://afni.nimh.nih.gov/pub/dist/doc/program_help/3dTqual.html) command.  Lower values are better [^2]. 
+* **Mean RMSD [RMSD (Mean)]:** A measure of subject head motion, which compares the motion between the current and previous volumes. This is calculated by summing the absolute value of displacement changes in the x, y and z directions and rotational changes about those three axes. The rotational changes are given distance values based on the changes across the surface of a 80mm radius sphere. Lower values are better [^9][^13]. 
 
 ## Normative Metrics
 
