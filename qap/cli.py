@@ -725,6 +725,24 @@ def run_workflow(args, run=True):
     # set a dummy variable
     starter_node.inputs.starter = ""
 
+    # set output directory
+    output_dir = op.join(config["output_directory"], run_name)
+
+    sub_out_dirs = ["qap", "QA"]
+    if keep_outputs:
+        sub_out_dirs.append("derivatives")
+
+    for dirname in sub_out_dirs:
+        try:
+            os.makedirs(op.join(output_dir, dirname))
+        except:
+            if not op.isdir(op.join(output_dir, dirname)):
+                err = "[!] Output directory unable to be created.\n" \
+                      "Path: %s\n\n" % op.join(output_dir, dirname)
+                raise Exception(err)
+            else:
+                pass
+
     new_outputs = 0
 
     # iterate over each subject in the bundle
@@ -767,30 +785,30 @@ def run_workflow(args, run=True):
         # process subject info
         sub_id = str(sub_info[0])
         # for nipype
-        if "-" in sub_id:
-            sub_id = sub_id.replace("-","_")
+        #if "-" in sub_id:
+        #    sub_id = sub_id.replace("-","_")
         if "." in sub_id:
             sub_id = sub_id.replace(".","_")
 
         if sub_info[1]:
             session_id = str(sub_info[1])
             # for nipype
-            if "-" in session_id:
-                session_id = session_id.replace("-","_")
+            #if "-" in session_id:
+            #    session_id = session_id.replace("-","_")
             if "." in session_id:
                 session_id = session_id.replace(".","_")
         else:
-            session_id = "session_0"
+            session_id = "ses-1"
 
         if sub_info[2]:
             scan_id = str(sub_info[2])
             # for nipype
-            if "-" in scan_id:
-                scan_id = scan_id.replace("-","_")
+            #if "-" in scan_id:
+            #    scan_id = scan_id.replace("-","_")
             if "." in scan_id:
                 scan_id = scan_id.replace(".","_")
         else:
-            scan_id = "scan_0"
+            scan_id = "scan-1"
 
         name = "_".join(["", sub_id, session_id, scan_id])
 
@@ -798,20 +816,6 @@ def run_workflow(args, run=True):
                     'resource_pool': str(resource_pool)}
 
         logger.info("Participant info: %s" % name)
-
-        # set output directory
-        output_dir = op.join(config["output_directory"], run_name, sub_id,
-                             session_id)
-
-        try:
-            os.makedirs(output_dir)
-        except:
-            if not op.isdir(output_dir):
-                err = "[!] Output directory unable to be created.\n" \
-                      "Path: %s\n\n" % output_dir
-                raise Exception(err)
-            else:
-                pass
 
         # for QAP spreadsheet generation only
         config.update({"subject_id": sub_id, "session_id": session_id,
@@ -830,36 +834,51 @@ def run_workflow(args, run=True):
 
         # update that resource pool with what's already in the output
         # directory
-        for resource in os.listdir(output_dir):
-            if (op.exists(op.join(output_dir, resource)) and
-                    resource not in resource_pool.keys()):
-                try:
-                    resource_pool[resource] = \
-                        glob.glob(op.join(output_dir, resource, "*"))[0]
-                except IndexError:
-                    if ".json" in resource:
-                        # load relevant json info into resource pool
-                        json_file = op.join(output_dir, resource)
-                        json_dict = read_json(json_file)
-                        sub_json_dict = json_dict["%s %s %s" % (sub_id,
-                                                                session_id,
-                                                                scan_id)]
+        if op.exists(op.join(output_dir, "derivatives")):
+            for resource in os.listdir(op.join(output_dir, "derivatives")):
+                if resource not in resource_pool.keys():
+                    try:
+                        resource_pool[resource] = \
+                            glob.glob(op.join(output_dir, resource, "*"))[0]
+                    except IndexError:
+                        # a stray file in the sub-sess-scan output directory
+                        pass
 
-                        if "anatomical_header_info" in sub_json_dict.keys():
-                            resource_pool["anatomical_header_info"] = \
-                                sub_json_dict["anatomical_header_info"]
+        anat_json = op.join(output_dir, "qap", "%s_%s_%s_anatomical.json"
+                            % (sub_id, session_id, scan_id))
+        if op.exists(anat_json):
+            json_dict = read_json(anat_json)
+            sub_json_dict = json_dict["%s %s %s" % (sub_id,
+                                                    session_id,
+                                                    scan_id)]
 
-                        if "functional_header_info" in sub_json_dict.keys():
-                            resource_pool["functional_header_info"] = \
-                                sub_json_dict["functional_header_info"]
+            if "anatomical_header_info" in sub_json_dict.keys():
+                resource_pool["anatomical_header_info"] = \
+                    sub_json_dict["anatomical_header_info"]
 
-                        for qap_type in qap_types:
-                            if qap_type in sub_json_dict.keys():
-                                resource_pool["_".join(["qap",qap_type])] = \
-                                    sub_json_dict[qap_type]
-                except:
-                    # a stray file in the sub-sess-scan output directory
-                    pass
+            if "anatomical_spatial" in sub_json_dict.keys():
+                resource_pool["qap_anatomical_spatial"] = \
+                    sub_json_dict["anatomical_spatial"]
+
+        func_json = op.join(output_dir, "qap", "%s_%s_%s_functional.json"
+                            % (sub_id, session_id, scan_id))
+        if op.exists(func_json):
+            json_dict = read_json(func_json)
+            sub_json_dict = json_dict["%s %s %s" % (sub_id,
+                                                    session_id,
+                                                    scan_id)]
+
+            if "functional_header_info" in sub_json_dict.keys():
+                resource_pool["anatomical_header_info"] = \
+                    sub_json_dict["anatomical_header_info"]
+
+            if "functional_spatial" in sub_json_dict.keys():
+                resource_pool["qap_functional_spatial"] = \
+                    sub_json_dict["functional_spatial"]
+
+            if "functional_temporal" in sub_json_dict.keys():
+                resource_pool["qap_functional_temporal"] = \
+                    sub_json_dict["functional_temporal"]
 
         # create starter node which links all of the parallel workflows within
         # the bundle together as a Nipype pipeline
@@ -937,17 +956,30 @@ def run_workflow(args, run=True):
             # were not present in the subject list YML (the starting resource
             # pool) and had to be generated
             if (len(resource_pool[output]) == 2) and (output != "starter"):
-                ds = pe.Node(nio.DataSink(), name='datasink_%s%s'
-                                                  % (output,name))
-                if output in qap_types:
-                    ds_dir = os.path.join(output_dir, "qap")
-                elif output in qa_outputs:
-                    ds_dir = os.path.join(output_dir, "QA")
-                else:
-                    ds_dir = os.path.join(output_dir, "derivatives")
-                ds.inputs.base_directory = ds_dir
                 node, out_file = resource_pool[output]
-                workflow.connect(node, out_file, ds, output)
+                # create the datasink
+                ds = pe.Node(nio.DataSink(), name='datasink_%s%s'
+                                                  % (output, name))
+                ds.inputs.base_directory = output_dir
+
+                if output.replace("qap_", "") in qap_types:
+                    # if the output is one of the main output JSON files
+                    workflow.connect(node, out_file, ds, 'qap.@%s' % output)
+                elif output in qa_outputs:
+                    # if the output is one of the QA JSON files
+                    workflow.connect(node, out_file, ds, 'QA.@%s' % output)
+                else:
+                    # if the output is a derivative/intermediary file
+                    # rename file to BIDS format
+                    rename = pe.Node(niu.Rename(), name='rename_%s%s'
+                                                        % (output, name))
+                    rename.inputs.keep_ext = True
+                    rename.inputs.format_string = "%s_%s_%s_%s" \
+                                                  % (sub_id, session_id,
+                                                     scan_id, output)
+                    workflow.connect(node, out_file, rename, 'in_file')
+                    workflow.connect(rename, 'out_file', ds,
+                                     'derivatives.@%s' % output)
                 new_outputs += 1
             elif ".json" in resource_pool[output]:
                 new_outputs += 1

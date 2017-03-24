@@ -539,7 +539,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
 
     out_dir = os.path.join(config['output_directory'], config["run_name"], 
                       config["subject_id"], config["session_id"], "qap")
-    out_json = os.path.join(out_dir, "%s_%s_%s_qap_anatomical.json"
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap-anatomical.json"
                        % (config["subject_id"], config["session_id"],
                           config["scan_id"]))
 
@@ -885,7 +885,7 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
 
     out_dir = os.path.join(config['output_directory'], config["run_name"], 
                       config["subject_id"], config["session_id"], "qap")
-    out_json = os.path.join(out_dir, "%s_%s_%s_qap_functional.json"
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional.json"
                        % (config["subject_id"], config["session_id"],
                           config["scan_id"]))
 
@@ -1269,7 +1269,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
 
     out_dir = os.path.join(config['output_directory'], config["run_name"], 
                       config["subject_id"], config["session_id"], "qap")
-    out_json = os.path.join(out_dir, "%s_%s_%s_qap_functional.json"
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional.json"
                        % (config["subject_id"], config["session_id"],
                           config["scan_id"]))
 
