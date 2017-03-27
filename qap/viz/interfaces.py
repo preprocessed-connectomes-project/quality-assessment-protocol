@@ -31,7 +31,7 @@ class PlotMosaicInputSpec(BaseInterfaceInputSpec):
         (11.69, 8.27), traits.Float, traits.Float, usedefault=True,
         desc='Figure size')
     dpi = traits.Int(300, usedefault=True, desc='Desired DPI of figure')
-    out_file = File('mosaic.pdf', usedefault=True, desc='output file name')
+    out_file = File('mosaic.png', usedefault=True, desc='output file name')
 
 
 class PlotMosaicOutputSpec(TraitedSpec):
@@ -89,7 +89,7 @@ class PlotFDInputSpec(BaseInterfaceInputSpec):
                        desc='modality name to be prepended')
     subject = traits.Str(desc='Subject id')
     dpi = traits.Int(300, usedefault=True, desc='Desired DPI of figure')
-    out_file = File('fd.pdf', usedefault=True, desc='output file name')
+    out_file = File('fd.png', usedefault=True, desc='output file name')
 
 
 class PlotFDOutputSpec(TraitedSpec):

@@ -1160,7 +1160,6 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     from qap_utils import write_json
     from temporal_qc import fd_jenkinson
     from qap.viz.interfaces import PlotMosaic, PlotFD
-    from qap.viz.plotting import organize_individual_html
 
     def _getfirst(inlist):
         if isinstance(inlist, list):
@@ -1312,13 +1311,6 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         workflow.connect(temporal, 'qa', fdplot, 'dvars')    
         workflow.connect(gs_ts, 'output', fdplot, 'global_signal')
         resource_pool['qap_fd'] = (fdplot, 'out_file')
-
-        #html individual pages
-        html = pe.Node(niu.Function(input_names=["subid", "output_path", "ts_plot"], output_names=["none"], function=organize_individual_html), name="individual_report_html%s" % name)
-        html.inputs.subid = config['subject_id']
-        #html.inputs.mean_epi_mosaic = resource_pool['qap_fd']#resource_pool['mean_epi_mosaic']
-        html.inputs.output_path = out_dir
-        workflow.connect(fdplot, 'out_file', html, 'ts_plot')
 
     return workflow, resource_pool
 

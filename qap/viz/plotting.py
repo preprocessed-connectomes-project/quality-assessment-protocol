@@ -15,7 +15,7 @@ from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
 import seaborn as sns
 
 
-def organize_individual_html(subid, output_path, ts_plot):
+def organize_individual_html(subid, output_path, ts_plot, mean_epi_plot):
 
     head_template = '''
     <!DOCTYPE html>
@@ -82,6 +82,7 @@ def organize_individual_html(subid, output_path, ts_plot):
     <!-- start Mean EPI Mosaic -->
     <div id="meanepi">
         <h2>Mean EPI Mosaic</h2>
+        <embed src="{mean_epi_plot}" width="100%" height="800px" type='application/pdf'>
     </div>
     <!-- end Mean EPI Mosaic -->
 
@@ -96,7 +97,7 @@ def organize_individual_html(subid, output_path, ts_plot):
     '''
     import os.path as op
     template = template.format(subjectid=subid)
-    end_template = end_template.format(ts_plot=ts_plot)
+    end_template = end_template.format(ts_plot=ts_plot, mean_epi_plot=mean_epi_plot)
     template = head_template + template + end_template
     with open(op.join(output_path, subid+'.html') , 'w+') as f:
         f.write(template)
