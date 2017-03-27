@@ -69,7 +69,7 @@ def organize_individual_html(subid, output_path, ts_plot, mean_epi_plot):
     <!-- start Mean FD, DVARS, Global Signal -->
     <div id="meanfdplots">
         <h2>Mean FD, DVARS, Global Signal</h2>
-        <embed src="{ts_plot}" width="100%" height="800px" type='application/pdf'>
+        <img src="{ts_plot}" alt="Mean FD, DVARS, Global Signal" width="100%">
     </div>
     <!-- end Mean FD, DVARS, Global Signal -->
 
@@ -82,7 +82,7 @@ def organize_individual_html(subid, output_path, ts_plot, mean_epi_plot):
     <!-- start Mean EPI Mosaic -->
     <div id="meanepi">
         <h2>Mean EPI Mosaic</h2>
-        <embed src="{mean_epi_plot}" width="100%" height="800px" type='application/pdf'>
+        <img src="{mean_epi_plot}" alt="Mean EPI Mosaic" width="100%">
     </div>
     <!-- end Mean EPI Mosaic -->
 
