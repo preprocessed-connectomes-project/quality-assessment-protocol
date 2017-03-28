@@ -415,7 +415,6 @@ def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
     # as the entire foreground image
     gsr = (epi_data[n2_mask_data==1].mean() - epi_data[n2_mask_data==2].mean())/epi_data[n2_mask_data==0].mean()
 
-    
     return gsr
 
 

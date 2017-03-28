@@ -540,8 +540,9 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
     out_dir = os.path.join(config['output_directory'], config["run_name"], 
-                      config["subject_id"], config["session_id"], "QA")
-    out_json = os.path.join(out_dir, "%s_%s_%s_qap_anatomical.json"
+                      config["subject_id"], config["session_id"], "qap")
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap-anatomical.json"
+
                        % (config["subject_id"], config["session_id"],
                           config["scan_id"]))
 
@@ -886,8 +887,9 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
     out_dir = os.path.join(config['output_directory'], config["run_name"], 
-                      config["subject_id"], config["session_id"], "QA")
-    out_json = os.path.join(out_dir, "%s_%s_%s_qap_functional.json"
+                      config["subject_id"], config["session_id"], "qap")
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional.json"
+
                        % (config["subject_id"], config["session_id"],
                           config["scan_id"]))
 
@@ -1264,8 +1266,8 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
             resource_pool['inverted_functional_brain_mask']
 
     out_dir = os.path.join(config['output_directory'], config["run_name"], 
-                      config["subject_id"], config["session_id"], "QA")
-    out_json = os.path.join(out_dir, "%s_%s_%s_qap_functional.json"
+                      config["subject_id"], config["session_id"], "qap")
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional.json"
                        % (config["subject_id"], config["session_id"],
                           config["scan_id"]))
 
