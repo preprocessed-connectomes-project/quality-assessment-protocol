@@ -539,8 +539,8 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         resource_pool['mean_epi_mosaic'] = (plot, 'out_file')
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
-    out_dir = os.path.join(config['output_directory'], config["run_name"],
-                           "qap")
+    out_dir = os.path.join(config['output_directory'], config["run_name"], 
+                      config["subject_id"], config["session_id"], "qap")
     out_json = os.path.join(out_dir, "%s_%s_%s_qap-anatomical.json"
 
                        % (config["subject_id"], config["session_id"],
@@ -555,7 +555,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     spatial_to_json.inputs.json_file = out_json
 
     workflow.connect(spatial, 'qc', spatial_to_json, 'output_dict')
-    resource_pool['qap-anatomical-spatial'] = out_json
+    resource_pool['qap_anatomical_spatial'] = out_json
 
     return workflow, resource_pool
 
@@ -887,7 +887,7 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
     out_dir = os.path.join(config['output_directory'], config["run_name"], 
-                           "qap")
+                      config["subject_id"], config["session_id"], "qap")
     out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional.json"
 
                        % (config["subject_id"], config["session_id"],
@@ -1266,7 +1266,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
             resource_pool['inverted_functional_brain_mask']
 
     out_dir = os.path.join(config['output_directory'], config["run_name"], 
-                           "qap")
+                      config["subject_id"], config["session_id"], "qap")
     out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional.json"
                        % (config["subject_id"], config["session_id"],
                           config["scan_id"]))
@@ -1283,7 +1283,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     resource_pool['qap_functional_temporal'] = out_json
 
     qa_out_dir = os.path.join(config['output_directory'], config["run_name"],
-                              "QA")
+                         config["subject_id"], config["session_id"], "QA")
     qa_out_json = os.path.join(qa_out_dir, "%s_%s_%s_QA.json"
                           % (config["subject_id"], config["session_id"],
                              config["scan_id"]))

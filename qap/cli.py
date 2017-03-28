@@ -951,9 +951,6 @@ def run_workflow(args, run=True):
             # resource pool which are tuples of (node, node_output), instead
             # of the items which are straight paths to files
 
-            # for now, until resource names are changed
-            output_name = output.replace("_", "-")
-
             # resource pool items which are in the tuple format are the
             # outputs that have been created in this workflow because they
             # were not present in the subject list YML (the starting resource
@@ -967,12 +964,10 @@ def run_workflow(args, run=True):
 
                 if output.replace("qap_", "") in qap_types:
                     # if the output is one of the main output JSON files
-                    workflow.connect(node, out_file, ds, 'qap.@%s'
-                                     % output_name)
+                    workflow.connect(node, out_file, ds, 'qap.@%s' % output)
                 elif output in qa_outputs:
                     # if the output is one of the QA JSON files
-                    workflow.connect(node, out_file, ds, 'QA.@%s'
-                                     % output_name)
+                    workflow.connect(node, out_file, ds, 'QA.@%s' % output)
                 else:
                     # if the output is a derivative/intermediary file
                     # rename file to BIDS format
@@ -981,10 +976,10 @@ def run_workflow(args, run=True):
                     rename.inputs.keep_ext = True
                     rename.inputs.format_string = "%s_%s_%s_%s" \
                                                   % (sub_id, session_id,
-                                                     scan_id, output_name)
+                                                     scan_id, output)
                     workflow.connect(node, out_file, rename, 'in_file')
                     workflow.connect(rename, 'out_file', ds,
-                                     'derivatives.@%s' % output_name)
+                                     'derivatives.@%s' % output)
                 new_outputs += 1
             elif ".json" in resource_pool[output]:
                 new_outputs += 1
