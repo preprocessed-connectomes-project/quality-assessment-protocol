@@ -1010,6 +1010,29 @@ def run_workflow(args, run=True):
                 simple_form=False)
         if run:
             try:
+
+                #add html report
+                from qap.viz.plotting import organize_individual_html
+
+                out_dir = os.path.join(config['output_directory'], config["run_name"], 
+                      config["subject_id"], config["session_id"], "QA")
+
+                
+                html = pe.Node(niu.Function(input_names=["subid", "output_path", "ts_plot", "mean_epi_plot"], output_names=["none"], function=organize_individual_html), name="individual_report_html%s" % name)
+                html.inputs.subid = config['subject_id']
+                html.inputs.output_path = out_dir
+                if len(resource_pool['qap_fd']) == 1:
+                    html.inputs.ts_plot = resource_pool['qap_fd']
+                else:
+                    fd_node, fd_out_file = resource_pool['qap_fd']
+                    workflow.connect(fd_node, fd_out_file, html, 'ts_plot')
+                if len(resource_pool['qap_mosaic']) == 1:
+                    html.inputs.mean_epi_plot = resource_pool['qap_mosaic']
+                else:
+                    mean_epi_node, mean_epi_out = resource_pool['qap_mosaic']
+                    workflow.connect(mean_epi_node, mean_epi_out, html, 'mean_epi_plot')
+                
+
                 logger.info("Running with plugin %s" % runargs["plugin"])
                 logger.info("Using plugin args %s" % runargs["plugin_args"])
                 workflow.run(plugin=runargs["plugin"],

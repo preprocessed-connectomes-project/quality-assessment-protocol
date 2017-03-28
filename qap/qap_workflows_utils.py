@@ -1,4 +1,26 @@
 
+"""Calculates the global signal time series of a functional file
+   by averaging all voxels in each volume
+
+    :type functional_file: nifti file
+    :param functional_file: Functional file
+    :rtype: float array
+    :return: global signal time series 
+    """
+def global_signal_time_series(functional_file):
+    import numpy as np
+    import nibabel as nb
+
+    func = nb.load(functional_file).get_data()
+    time = func.shape[-1]
+    output = [0]*time
+
+    # that is a stupid way of calculating the mean of each volume,
+    # maybe numpy can do it in one line
+    for i in range(time):
+        output[i] = func[:,:,:,i].mean()
+    return output
+
 
 def convert_allineate_xfm(mat_list):
     """Convert the affine transform output of AFNI's 3dAllineate into an
