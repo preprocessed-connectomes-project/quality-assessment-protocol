@@ -49,7 +49,7 @@ def organize_individual_html(subid, output_path, ts_plot, mean_epi_plot):
     '''
     template = '''
     <meta charset="UTF-8">
-    <title>QAP REport {subjectid}</title>
+    <title>QAP Report {subjectid}</title>
   </head>
   <body>
     <!-- start navbar -->
@@ -57,8 +57,7 @@ def organize_individual_html(subid, output_path, ts_plot, mean_epi_plot):
         <ul>
           <li><a href="#">{subjectid}</a></li>
           <li style="float:right"><a href="#about">QAP</a></li>
-          <li style="float:right"><a href="#about">All Subjects</a></li>
-          <li style="float:right"><a href="#about">Group Measures</a></li>
+          <li style="float:right"><a href="# http://preprocessed-connectomes-project.github.io/quality-assessment-protocol">Group Measures</a></li>
           
         </ul>
     </div>

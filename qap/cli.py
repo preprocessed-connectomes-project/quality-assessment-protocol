@@ -1010,9 +1010,8 @@ def run_workflow(args, run=True):
                 from qap.viz.plotting import organize_individual_html
 
                 out_dir = os.path.join(config['output_directory'], config["run_name"], 
-                      config["subject_id"], config["session_id"], "QA")
+                      "QA")
 
-                
                 html = pe.Node(niu.Function(input_names=["subid", "output_path", "ts_plot", "mean_epi_plot"], output_names=["none"], function=organize_individual_html), name="individual_report_html%s" % name)
                 html.inputs.subid = config['subject_id']
                 html.inputs.output_path = out_dir
