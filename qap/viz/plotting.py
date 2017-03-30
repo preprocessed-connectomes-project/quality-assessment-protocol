@@ -345,12 +345,8 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
 
 
 def plot_fd(meanfd_file, dvars, global_signal, metadata, figsize=(11.7, 8.3), mean_fd_dist=None, title='Mean FD, DVARS, Global Signal'):
-
     fd_power = _calc_fd(meanfd_file)
     global_signal = (global_signal - min(global_signal))/(max(global_signal) - min(global_signal))
-    x = metadata[0]
-    a = dvars[x]
-    dvars = a['Standardized DVARS']
     fig = plt.Figure(figsize=figsize)
     FigureCanvas(fig)
 

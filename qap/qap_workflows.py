@@ -1308,12 +1308,17 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
                        % (config["subject_id"], config["session_id"],
                           config["scan_id"]))
 
+        def pick_dvars(qa, dict_id):
+            dvars = qa[dict_id]['Standardized DVARS']
+            return dvars
+
         fdplot = pe.Node(PlotFD(), name='plot_fd%s' % name)
         fdplot.inputs.subject = config['subject_id']
         fdplot.inputs.out_file = out_fd
         fdplot.inputs.metadata = [id_string]
         workflow.connect(fd, 'out_file', fdplot, 'meanfd_file')
-        workflow.connect(temporal, 'qa', fdplot, 'dvars')    
+        dict_id = "%s %s %s"%(config["subject_id"], config["session_id"],config["scan_id"])
+        workflow.connect(temporal, ('qa', pick_dvars, dict_id), fdplot, 'dvars')    
         workflow.connect(gs_ts, 'output', fdplot, 'global_signal')
         resource_pool['qap_fd'] = (fdplot, 'out_file')
 
