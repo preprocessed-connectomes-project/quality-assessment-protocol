@@ -728,20 +728,15 @@ def run_workflow(args, run=True):
     # set output directory
     output_dir = op.join(config["output_directory"], run_name)
 
-    sub_out_dirs = ["qap", "QA"]
-    if keep_outputs:
-        sub_out_dirs.append("derivatives")
-
-    for dirname in sub_out_dirs:
-        try:
-            os.makedirs(op.join(output_dir, dirname))
-        except:
-            if not op.isdir(op.join(output_dir, dirname)):
-                err = "[!] Output directory unable to be created.\n" \
-                      "Path: %s\n\n" % op.join(output_dir, dirname)
-                raise Exception(err)
-            else:
-                pass
+    try:
+        os.makedirs(op.join(output_dir, "derivatives"))
+    except:
+        if not op.isdir(op.join(output_dir, "derivatives")):
+            err = "[!] Output directory unable to be created.\n" \
+                  "Path: %s\n\n" % op.join(output_dir, "derivatives")
+            raise Exception(err)
+        else:
+            pass
 
     new_outputs = 0
 
@@ -830,7 +825,7 @@ def run_workflow(args, run=True):
                      "functional_spatial", 
                      "functional_temporal"]
 
-        qa_outputs = ["qa", "qap_fd", "qap_mosaic"]
+        qa_outputs = ["qa", "qap_fd", "qap_mosaic", "temporal-std-map"]
 
         # update that resource pool with what's already in the output
         # directory
@@ -963,28 +958,21 @@ def run_workflow(args, run=True):
                 # create the datasink
                 ds = pe.Node(nio.DataSink(), name='datasink_%s%s'
                                                   % (output, name))
-                ds.inputs.base_directory = output_dir
+                ds.inputs.base_directory = os.path.join(output_dir, "qap",
+                                                        "derivatives",
+                                                        config["pipeline_name"],
+                                                        sub_id)
 
-                if output.replace("qap_", "") in qap_types:
-                    # if the output is one of the main output JSON files
-                    workflow.connect(node, out_file, ds, 'qap.@%s'
-                                     % output_name)
-                elif output in qa_outputs:
-                    # if the output is one of the QA JSON files
-                    workflow.connect(node, out_file, ds, 'QA.@%s'
-                                     % output_name)
-                else:
-                    # if the output is a derivative/intermediary file
-                    # rename file to BIDS format
-                    rename = pe.Node(niu.Rename(), name='rename_%s%s'
-                                                        % (output, name))
-                    rename.inputs.keep_ext = True
-                    rename.inputs.format_string = "%s_%s_%s_%s" \
-                                                  % (sub_id, session_id,
-                                                     scan_id, output_name)
-                    workflow.connect(node, out_file, rename, 'in_file')
-                    workflow.connect(rename, 'out_file', ds,
-                                     'derivatives.@%s' % output_name)
+                # rename file to BIDS format
+                rename = pe.Node(niu.Rename(), name='rename_%s%s'
+                                                    % (output, name))
+                rename.inputs.keep_ext = True
+                rename.inputs.format_string = "%s_%s_%s_%s" \
+                                              % (sub_id, session_id,
+                                                 scan_id, output_name)
+                workflow.connect(node, out_file, rename, 'in_file')
+                workflow.connect(rename, 'out_file', ds,
+                                 '%s.@%s' % (session_id, output_name))
                 new_outputs += 1
             elif ".json" in resource_pool[output]:
                 new_outputs += 1

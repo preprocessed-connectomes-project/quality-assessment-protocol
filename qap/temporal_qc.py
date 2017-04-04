@@ -310,8 +310,10 @@ def calc_temporal_std(voxel_ts):
 
 def get_temporal_std_map(func_reorient, func_mask):
 
+    import os
     import numpy as np
-    from qap.qap_utils import get_masked_data
+    import nibabel as nb
+    from qap.qap_utils import get_masked_data, write_nifti_image
 
     func_data = get_masked_data(func_reorient, func_mask, files=True)
 
@@ -322,6 +324,13 @@ def get_temporal_std_map(func_reorient, func_mask):
             for k in range(0, len(func_data[0][0])):
                 std = np.std(func_data[i][j][k])
                 temporal_std_map[i][j][k] = std
+
+    # write the image
+    func_img = nb.load(func_reorient)
+    tstd_img = nb.Nifti2Image(temporal_std_map, func_img.affine,
+                              func_img.header)
+    temporal_std_map = os.path.join(os.getcwd(), "tstd.nii.gz")
+    write_nifti_image(tstd_img, temporal_std_map)
 
     return temporal_std_map
 

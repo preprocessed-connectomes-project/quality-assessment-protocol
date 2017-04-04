@@ -350,6 +350,38 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
     return workflow, resource_pool
 
 
+def calculate_temporal_std(workflow, resource_pool, config, name="_"):
+
+    import nipype.pipeline.engine as pe
+    import nipype.interfaces.utility as niu
+    from qap.temporal_qc import get_temporal_std_map
+
+    calculate_tstd_map = pe.Node(niu.Function(input_names=['func_reorient',
+                                                           'func_mask'],
+                                              output_names=['temporal_std_map'],
+                                              function=get_temporal_std_map),
+                                 name="calculate_temporal_std%s" % name)
+
+    if len(resource_pool["func_reorient"]) == 2:
+        node, out_file = resource_pool["func_reorient"]
+        workflow.connect(node, out_file, calculate_tstd_map, 'func_reorient')
+    else:
+        calculate_tstd_map.inputs.func_reorient = \
+            resource_pool["func_reorient"]
+
+    if len(resource_pool["functional_brain_mask"]) == 2:
+        node, out_file = resource_pool["functional_brain_mask"]
+        workflow.connect(node, out_file, calculate_tstd_map, 'func_mask')
+    else:
+        calculate_tstd_map.inputs.func_mask = \
+            resource_pool["functional_brain_mask"]
+
+    resource_pool['temporal-std-map'] = (calculate_tstd_map,
+                                         'temporal_std_map')
+
+    return workflow, resource_pool
+
+
 def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
                                     report=False):
     """Build and run a Nipype workflow to calculate the QAP anatomical spatial
@@ -1191,6 +1223,14 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         if resource_pool == old_rp:
             return workflow, resource_pool
 
+    if 'temporal-std-map' not in resource_pool.keys():
+        from qap_workflows import calculate_temporal_std
+        old_rp = copy.copy(resource_pool)
+        workflow, resource_pool = \
+            calculate_temporal_std(workflow, resource_pool, config, name)
+        if resource_pool == old_rp:
+            return workflow, resource_pool
+
     fd = pe.Node(niu.Function(
         input_names=['in_file'], output_names=['out_file'],
         function=fd_jenkinson), name='generate_FD_file%s' % name)
@@ -1206,8 +1246,9 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
 
     temporal = pe.Node(niu.Function(
         input_names=['func_timeseries', 'func_mean', 'func_brain_mask',
-                     'bg_func_brain_mask', 'fd_file', 'subject_id',
-                     'session_id', 'scan_id', 'site_name', 'starter'],
+                     'bg_func_brain_mask', 'fd_file', 'temporal_std_map',
+                     'subject_id', 'session_id', 'scan_id', 'site_name',
+                     'starter'],
         output_names=['qap', 'qa'],
         function=qap_functional_temporal),
         name='qap_functional_temporal%s' % name)
@@ -1254,6 +1295,13 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     else:
         temporal.inputs.bg_func_brain_mask = \
             resource_pool['inverted_functional_brain_mask']
+
+    # temporal STD -> QAP func temp
+    if len(resource_pool['temporal-std-map']) == 2:
+        node, out_file = resource_pool['temporal-std-map']
+        workflow.connect(node, out_file, temporal, 'temporal_std_map')
+    else:
+        temporal.inputs.temporal_std_map = resource_pool['temporal-std-map']
 
     # Write mosaic and FD plot
     if config.get('write_report', False):

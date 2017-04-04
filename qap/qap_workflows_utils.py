@@ -585,8 +585,8 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
 def qap_functional_temporal(
         func_timeseries, func_mean, func_brain_mask, bg_func_brain_mask,
-        fd_file, subject_id, session_id, scan_id, site_name=None,
-        starter=None):
+        fd_file, temporal_std_map, subject_id, session_id, scan_id,
+        site_name=None, starter=None):
     """ Calculate the functional temporal QAP measures for a functional scan.
 
     - The inclusion of the starter node allows several QAP measure pipelines
@@ -628,6 +628,7 @@ def qap_functional_temporal(
     """
 
     import numpy as np
+    import nibabel as nb
     from time import strftime
 
     import qap
@@ -663,11 +664,11 @@ def qap_functional_temporal(
     quality_outliers, quality_IQR = calculate_percent_outliers(quality)
 
     # Temporal Standard Deviation
-    temporal_std_map = get_temporal_std_map(func_timeseries, func_brain_mask)
-    tstd_inbrain = temporal_std_map.nonzero()
+    temporal_std_data = nb.load(temporal_std_map).get_data()
+    tstd_inbrain = temporal_std_data.nonzero()
 
     # Signal Fluctuation Sensitivity
-    sfs_voxels = sfs_timeseries(func_mean, func_brain_mask, temporal_std_map)
+    sfs_voxels = sfs_timeseries(func_mean, func_brain_mask, temporal_std_data)
 
     # GCOR
     gcor = global_correlation(func_timeseries, func_brain_mask)

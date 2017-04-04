@@ -195,20 +195,20 @@ def load_mask(mask_file, ref_file):
     if (mask_vals.size != 2) or not (mask_vals == [0, 1]).all():
         err = "Error: Mask is not binary, has %i unique val(s) of %s " \
               "(see file %s)" % (mask_vals.size, mask_vals, mask_file)
-        raise_smart_exception(locals(),err)
+        raise_smart_exception(locals(), err)
 
     # Verify that the mask and anatomical images have the same dimensions.
     if ref_img.shape != mask_img.shape:
         err = "Error: Mask and anatomical image are different dimensions " \
               "for %s" % mask_file
-        raise_smart_exception(locals(),err)
+        raise_smart_exception(locals(), err)
 
     # Verify that the mask and anatomical images are in the same space
     # (have the same affine matrix)
     if (mask_img.get_affine() == ref_img.get_affine()).all == False:
         err = "Error: Mask and anatomical image are not in the same space " \
               "for %s vs %s" % (mask_file, ref_file)
-        raise_smart_exception(locals(),err)
+        raise_smart_exception(locals(), err)
 
     return mask_dat
 
