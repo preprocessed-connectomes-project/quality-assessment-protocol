@@ -1,5 +1,39 @@
 
 import pytest
+import unittest
+
+
+class TestGetMaskedData(unittest.TestCase):
+
+    def setUp(self):
+        # init
+        import os
+        import pkg_resources as p
+        import nibabel as nb
+        from qap.qap_utils import get_masked_data as gmd
+        self.gmd = gmd
+
+        # inputs
+        self.func_mean = \
+            p.resource_filename("qap", os.path.join("test_data",
+                                                    "func_reorient.nii.gz"))
+        self.func_mask = \
+            p.resource_filename("qap", os.path.join("test_data",
+                                                    "functional_brain_mask.nii.gz"))
+        self.masked_func = \
+            p.resource_filename("qap", os.path.join("test_data",
+                                                    "masked_func.nii.gz"))
+
+        ref_masked = nb.load(self.masked_func)
+        self.ref_masked_data = ref_masked.get_data()
+
+    def test_masking_files(self):
+        import numpy.testing as nt
+        masked_data = self.gmd(self.func_mean, self.func_mask, files=True)
+        msg = "%s\n%s" % (str(self.ref_masked_data.shape),
+                          str(masked_data.shape))
+        nt.assert_array_equal(self.ref_masked_data, masked_data, msg)
+
 
 @pytest.mark.quick
 def test_create_anatomical_background_mask():

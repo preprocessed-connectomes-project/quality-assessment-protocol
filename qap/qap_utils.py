@@ -214,6 +214,18 @@ def load_mask(mask_file, ref_file):
 
 
 def get_masked_data(data, mask, files=False):
+    """Extract data from a NIFTI file and apply a mask to it.
+
+    :type data: NumPy array or str
+    :param data: The data (either in a NumPy array, or the filepath to a NIFTI
+                 file).
+    :type mask: NumPy array or str
+    :param mask: The mask data (either in a NumPy array, or the filepath to a
+                 NIFTI file).
+    :type files: bool
+    :param files: Whether or not the input parameters are filepath strings or
+                  NumPy array objects.
+    """
 
     import numpy as np
 

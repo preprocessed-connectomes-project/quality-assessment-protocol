@@ -109,7 +109,8 @@ class PlotFD(BaseInterface):
         if isdefined(self.inputs.subject):
             title += ', subject %s' % self.inputs.subject
 
-        fig = plot_fd(self.inputs.meanfd_file, self.inputs.dvars, self.inputs.global_signal, self.inputs.metadata)
+        fig = plot_fd(self.inputs.meanfd_file, self.inputs.dvars,
+                      self.inputs.global_signal, self.inputs.metadata)
 
         fig.savefig(self.inputs.out_file, dpi=float(self.inputs.dpi))
 

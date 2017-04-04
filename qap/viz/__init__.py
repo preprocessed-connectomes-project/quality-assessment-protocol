@@ -4,4 +4,4 @@
 
 from reports import *
 from plotting import plot_measures, plot_mosaic, plot_all, plot_fd
-import individual_report
+#import individual_report
