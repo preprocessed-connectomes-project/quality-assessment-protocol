@@ -6,7 +6,7 @@ import os.path as op
 import numpy as np
 import nibabel as nb
 import pandas as pd
-
+import os
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -14,6 +14,143 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
 import seaborn as sns
 
+
+def organize_individual_html(subid, output_path, ts_plot, mean_epi_plot):
+
+    head_template = '''
+    <!DOCTYPE html>
+<html>
+  <head>
+    <style>
+    body{ margin: 0px;}
+    ul {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #333;
+    }
+
+    li { float: left; }
+
+    li a {
+        display: block;
+        color: white;
+        text-align: center;
+        padding: 14px 16px;
+        text-decoration: none;
+    }
+
+    li a:hover:not(.active) { background-color: #111;  }
+
+    .active {background-color: #4CAF50;
+    }
+    </style>
+    '''
+    template = '''
+    <meta charset="UTF-8">
+    <title>QAP REport {subjectid}</title>
+  </head>
+  <body>
+    <!-- start navbar -->
+    <div class="navbar">
+        <ul>
+          <li><a href="#">{subjectid}</a></li>
+          <li style="float:right"><a href="#about">QAP</a></li>
+          <li style="float:right"><a href="#about">All Subjects</a></li>
+          <li style="float:right"><a href="#about">Group Measures</a></li>
+          
+        </ul>
+    </div>
+    <!-- end navbar -->
+    '''
+
+    end_template = '''
+    <!-- start Mean FD, DVARS, Global Signal -->
+    <div id="meanfdplots">
+        <h2>Mean FD, DVARS, Global Signal</h2>
+        <img src="{ts_plot}" alt="Mean FD, DVARS, Global Signal" width="100%">
+    </div>
+    <!-- end Mean FD, DVARS, Global Signal -->
+
+    <!-- start Gray Plot -->
+    <div id="grayplots">
+        <h2>Gray Plot</h2>
+    </div>
+    <!-- end Gray Plot -->
+
+    <!-- start Mean EPI Mosaic -->
+    <div id="meanepi">
+        <h2>Mean EPI Mosaic</h2>
+        <img src="{mean_epi_plot}" alt="Mean EPI Mosaic" width="100%">
+    </div>
+    <!-- end Mean EPI Mosaic -->
+
+    <!-- start Signal Fluctuation Sensitivity Mosaic Mosaic -->
+    <div id="sfs">
+        <h2>Signal Fluctuation Sensitivity Mosaic</h2>
+    </div>
+    <!-- end Signal Fluctuation Sensitivity Mosaic Mosaic -->
+
+  </body>
+</html>
+    '''
+    import os.path as op
+    template = template.format(subjectid=subid)
+    end_template = end_template.format(ts_plot=ts_plot, mean_epi_plot=mean_epi_plot)
+    template = head_template + template + end_template
+    with open(op.join(output_path, subid+'.html') , 'w+') as f:
+        f.write(template)
+    return None
+
+'''
+plots nilearn figure. mosaic 3x8
+'''
+def overlay_figure(overlays, underlay, fig_name):
+    import nibabel as nb
+    import matplotlib.pyplot as plt
+    from nilearn import plotting
+
+    affine = nb.load(overlays[0]).get_affine()
+    result = None
+    for i, overlay in enumerate(overlays):
+        #load data
+        overlay = nb.load(overlay).get_data()
+        #change masks values to draw different color for each one
+        overlay[overlay == 1] = i+1
+
+        #add overlays together
+        if result is None:
+            result = overlay
+        else:
+            result += overlay
+
+    #create new img
+    result = nb.Nifti1Image(result, affine)
+    
+    slices = [x*5 for x in range(-12,12)]
+
+    #x slices
+    fig, ax = plt.subplots(nrows=3, ncols=1, figsize=(7,3))
+    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[0], display_mode='x',cmap=plt.cm.prism, cut_coords=slices[:8]) 
+    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[1], display_mode='x',cmap=plt.cm.prism, cut_coords=slices[8:16])
+    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[2], display_mode='x',cmap=plt.cm.prism, cut_coords=slices[16:])
+
+    plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
+    fig.savefig(fig_name+'_x.png', pad_inches = 0, dpi=400)
+    display.close()
+
+    #z slices
+    fig, ax = plt.subplots(nrows=3, ncols=1)
+    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[0], display_mode='z',cmap=plt.cm.prism, cut_coords=slices[:8])
+    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[1], display_mode='z',cmap=plt.cm.prism, cut_coords=slices[8:16])
+    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[2], display_mode='z',cmap=plt.cm.prism, cut_coords=slices[16:])
+
+    plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
+    fig.savefig(fig_name+'_z.png', pad_inches = 0, dpi=400)
+    display.close()
+
+    return fig_name+'_x.png', fig_name+'_z.png'
 
 def plot_measures(df, measures, ncols=4, title='Group level report',
                   subject=None, figsize=(8.27, 11.69)):
@@ -208,10 +345,13 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
     return fig
 
 
-def plot_fd(fd_file, title='FD plot', mean_fd_dist=None, figsize=(11.7, 8.3)):
+def plot_fd(meanfd_file, dvars, global_signal, metadata, figsize=(11.7, 8.3), mean_fd_dist=None, title='Mean FD, DVARS, Global Signal'):
 
-    fd_power = _calc_fd(fd_file)
-
+    fd_power = _calc_fd(meanfd_file)
+    global_signal = (global_signal - min(global_signal))/(max(global_signal) - min(global_signal))
+    x = metadata[0]
+    a = dvars[x]
+    dvars = a['Standardized DVARS']
     fig = plt.Figure(figsize=figsize)
     FigureCanvas(fig)
 
@@ -222,15 +362,19 @@ def plot_fd(fd_file, title='FD plot', mean_fd_dist=None, figsize=(11.7, 8.3)):
         grid.update(hspace=1.0, right=0.95, left=0.1, bottom=0.2)
 
     ax = fig.add_subplot(grid[0, :-1])
-    ax.plot(fd_power)
+    fd = ax.plot(fd_power, label='Mean FD')
+    d, = ax.plot(dvars, label='DVARS')
+    gs, = ax.plot(global_signal, label='Global Signal')
     ax.set_xlim((0, len(fd_power)))
-    ax.set_ylabel("Frame Displacement [mm]")
+    ax.set_ylabel("Frame Displacement [mm], DVARS and Global Signal")
     ax.set_xlabel("Frame number")
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels)
     ylim = ax.get_ylim()
 
-    ax = fig.add_subplot(grid[0, -1])
-    sns.distplot(fd_power, vertical=True, ax=ax)
-    ax.set_ylim(ylim)
+    ax1 = fig.add_subplot(grid[0, -1])
+    sns.distplot(fd_power, vertical=True, ax=ax1)
+    ax1.set_ylim((min(fd_power), max(fd_power)))
 
     if mean_fd_dist:
         ax = fig.add_subplot(grid[1, :])
