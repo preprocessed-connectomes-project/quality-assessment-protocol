@@ -337,8 +337,9 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
                            whole_head_mask_path, skull_mask_path,
                            anatomical_gm_mask, anatomical_wm_mask,
                            anatomical_csf_mask, subject_id, session_id,
-                           scan_id, site_name=None, exclude_zeroes=False,
-                           out_vox=True, starter=None):
+                           scan_id, run_name, site_name=None,
+                           exclude_zeroes=False, out_vox=True,
+                           session_output_dir=None, starter=None):
     """Calculate the anatomical spatial QAP measures for an anatomical scan.
 
     - The exclude_zeroes flag is useful for when a large amount of zero
@@ -378,6 +379,8 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     :param session_id: The session ID.
     :type scan_id: str
     :param scan_id: The scan ID.
+    :type run_name: str
+    :param run_name: The name of the pipeline run.
     :type site_name: str
     :param site_name: (default: None) The name of the site where the scan was
                       acquired.
@@ -396,10 +399,11 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
              participant.
     """
 
+    import os
     from time import strftime
     import qap
     from qap.spatial_qc import summary_mask, snr, cnr, fber, efc, \
-        artifacts, fwhm, cortical_contrast
+        artifacts, fwhm, cortical_contrast, skew_and_kurt
     from qap.qap_utils import load_image, load_mask, \
                               create_anatomical_background_mask
 
@@ -410,7 +414,7 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
 
     # bg_mask is the inversion of the "qap_head_mask"
     bg_mask = create_anatomical_background_mask(anat_data, fg_mask,
-        exclude_zeroes)
+                                                exclude_zeroes)
 
     whole_head_mask = load_mask(whole_head_mask_path, anatomical_reorient)
     skull_mask = load_mask(skull_mask_path, anatomical_reorient)
@@ -433,17 +437,12 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     fwhm_x, fwhm_y, fwhm_z, fwhm_out = tmp
 
     # Summary Measures
-    fg_mean, fg_std, fg_size = summary_mask(anat_data, whole_head_mask)
-    bg_mean, bg_std, bg_size = summary_mask(anat_data, bg_mask)
-
-    gm_mean, gm_std, gm_size = (None, None, None)
-    wm_mean, wm_std, wm_size = (None, None, None)
-    csf_mean, csf_std, csf_size = (None, None, None)
+    fg, fg_mean, fg_std, fg_size = summary_mask(anat_data, whole_head_mask)
+    bg, bg_mean, bg_std, bg_size = summary_mask(anat_data, bg_mask)
 
     # More Summary Measures
-    gm_mean, gm_std, gm_size = summary_mask(anat_data, gm_mask)
-    wm_mean, wm_std, wm_size = summary_mask(anat_data, wm_mask)
-    csf_mean, csf_std, csf_size = summary_mask(anat_data, csf_mask)
+    gm, gm_mean, gm_std, gm_size = summary_mask(anat_data, gm_mask)
+    wm, wm_mean, wm_std, wm_size = summary_mask(anat_data, wm_mask)
 
     # SNR
     snr_out = snr(fg_mean, bg_std)
@@ -454,47 +453,79 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     # Cortical contrast
     cort_out = cortical_contrast(gm_mean, wm_mean)
 
+    # Skewness and Kurtosis
+    gm_skew, gm_kurt = skew_and_kurt(gm.flatten())
+    wm_skew, wm_kurt = skew_and_kurt(wm.flatten())
+    bg_skew, bg_kurt = skew_and_kurt(bg.flatten())
+
     id_string = "%s %s %s" % (subject_id, session_id, scan_id)
-    qc = {
-            id_string:
+    qap_version = qap.__version__
+    qap = {
+        id_string: {
+            "QAP_Version": "QAP version %s" % qap_version,
+            "QAP_pipeline_id": run_name,
+            "Time": strftime("%Y-%m-%d %H:%M:%S"),
+            "Participant": str(subject_id),
+            "Session": str(session_id),
+            "Series": str(scan_id),
+            "anatomical_spatial":
             {
-               "QAP_pipeline_id": "QAP version %s" % qap.__version__,
-               "Time": strftime("%Y-%m-%d %H:%M:%S"),
-               "Participant": str(subject_id),
-               "Session": str(session_id),
-               "Series": str(scan_id),
-               "anatomical_spatial":
-               { 
-                  "FBER": fber_out,
-                  "EFC": efc_out,
-                  "Qi1": qi1,
-                  "FWHM_x": fwhm_x,
-                  "FWHM_y": fwhm_y,
-                  "FWHM_z": fwhm_z,
-                  "FWHM": fwhm_out,
-                  "CNR": cnr_out,
-                  "SNR": snr_out,
-                  "Cortical Contrast": cort_out
-               }
+                "FBER": fber_out,
+                "EFC": efc_out,
+                "Qi1": qi1,
+                "FWHM_x": fwhm_x,
+                "FWHM_y": fwhm_y,
+                "FWHM_z": fwhm_z,
+                "FWHM": fwhm_out,
+                "CNR": cnr_out,
+                "SNR": snr_out,
+                "Cortical Contrast": cort_out,
+                "Gray Matter Skewness": gm_skew,
+                "Gray Matter Kurtosis": gm_kurt,
+                "White Matter Skewness": wm_skew,
+                "White Matter Kurtosis": wm_kurt,
+                "Background Skewness": bg_skew,
+                "Background Kurtosis": bg_kurt
             }
+        }
     }
 
     if site_name:
-        qc[id_string]['Site'] = str(site_name)
+        qap[id_string]['Site'] = str(site_name)
 
     if exclude_zeroes:
-        qc[id_string]['_zeros_excluded'] = "True"
+        qap[id_string]['_zeros_excluded'] = "True"
 
-    for key in qc[id_string]["anatomical_spatial"].keys():
-        qc[id_string]["anatomical_spatial"][key] = \
-            str(qc[id_string]["anatomical_spatial"][key])
+    for key in qap[id_string]["anatomical_spatial"].keys():
+        qap[id_string]["anatomical_spatial"][key] = \
+            str(qap[id_string]["anatomical_spatial"][key])
 
-    return qc
+    qa = {
+        id_string: {
+            "QAP_Version": "QAP version %s" % qap_version,
+            "QAP_pipeline_id": run_name,
+            "sub": subject_id,
+            "ses": session_id,
+            "metrics": {
+                "scan": anatomical_reorient
+            }
+        }
+    }
+
+    # prospective filepaths
+    if session_output_dir:
+        anat_file = os.path.join(session_output_dir,
+                                 "_".join([subject_id, session_id, scan_id,
+                                           "anatomical-reorient.nii.gz"]))
+        if os.path.exists(anat_file):
+            qa[id_string]["metrics"]["scan filepath"] = anat_file
+
+    return qap, qa
 
 
 def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
-                           session_id, scan_id, site_name=None, out_vox=True,
-                           starter=None):
+                           session_id, scan_id, run_name, site_name=None,
+                           out_vox=True, starter=None):
     """ Calculate the functional spatial QAP measures for a functional scan.
 
     - The inclusion of the starter node allows several QAP measure pipelines
@@ -517,6 +548,8 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
     :param session_id: The session ID.
     :type scan_id: str
     :param scan_id: The scan ID.
+    :type run_name: str
+    :param run_name: The pipeline run name.
     :type site_name: str
     :param site_name: (default: None) The name of the site where the scan was
                       acquired.
@@ -555,36 +588,37 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
     fwhm_x, fwhm_y, fwhm_z, fwhm_out = tmp
 
     # Summary Measures
-    fg_mean, fg_std, fg_size = summary_mask(anat_data, fg_mask)
-    bg_mean, bg_std, bg_size = summary_mask(anat_data, bg_mask)
+    fg, fg_mean, fg_std, fg_size = summary_mask(anat_data, fg_mask)
+    bg, bg_mean, bg_std, bg_size = summary_mask(anat_data, bg_mask)
 
     # SNR
     snr_out = snr(fg_mean, bg_std)
 
     id_string = "%s %s %s" % (subject_id, session_id, scan_id)
     qc = {
-            id_string:
-            {
-               "QAP_pipeline_id": "QAP version %s" % qap.__version__,
-               "Time": strftime("%Y-%m-%d %H:%M:%S"),
-               "Participant": str(subject_id),
-               "Session": str(session_id),
-               "Series": str(scan_id),
-               "functional_spatial":
-               {
-                  "FBER": fber_out,
-                  "EFC": efc_out,
-                  "FWHM": fwhm_out,
-                  "FWHM_x": fwhm_x,
-                  "FWHM_y": fwhm_y,
-                  "FWHM_z": fwhm_z,
-                  "SNR": snr_out
-               }
-            }
+        id_string:
+        {
+           "QAP_Version": "QAP version %s" % qap.__version__,
+           "QAP_pipeline_id": run_name,
+           "Time": strftime("%Y-%m-%d %H:%M:%S"),
+           "Participant": str(subject_id),
+           "Session": str(session_id),
+           "Series": str(scan_id),
+           "functional_spatial":
+           {
+              "FBER": fber_out,
+              "EFC": efc_out,
+              "FWHM": fwhm_out,
+              "FWHM_x": fwhm_x,
+              "FWHM_y": fwhm_y,
+              "FWHM_z": fwhm_z,
+              "SNR": snr_out
+           }
         }
+    }
 
     # Ghosting
-    if (direction == "all"):
+    if direction == "all":
         qc[id_string]["functional_spatial"]['Ghost_x'] = \
             ghost_direction(anat_data, fg_mask, "x")
         qc[id_string]["functional_spatial"]['Ghost_y'] = \
@@ -607,14 +641,14 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
 def qap_functional_temporal(
         func_timeseries, func_mean, func_brain_mask, bg_func_brain_mask,
-        fd_file, temporal_std_map, subject_id, session_id, scan_id,
-        site_name=None, starter=None):
+        fd_file, sfs, subject_id, session_id, scan_id, run_name,
+        site_name=None, session_output_dir=None, starter=None):
     """ Calculate the functional temporal QAP measures for a functional scan.
 
     - The inclusion of the starter node allows several QAP measure pipelines
       which are not dependent on one another to be executed as one pipeline.
-      This allows the MultiProc Nipype plugin to efficiently manage
-      resources when parallelizing.
+      This allows the MultiProc Nipype plugin to efficiently manage resources
+      when parallelizing.
 
     :type func_timeseries: str
     :param func_timeseries: Filepath to the 4D functional timeseries.
@@ -634,6 +668,8 @@ def qap_functional_temporal(
     :param session_id: The session ID.
     :type scan_id: str
     :param scan_id: The scan ID.
+    :type run_name: str
+    :param run_name: The pipeline run name.
     :type site_name: str
     :param site_name: (default: None) The name of the site where the scan was
                       acquired.
@@ -649,6 +685,7 @@ def qap_functional_temporal(
              quality assurance output file for visualization and reporting.
     """
 
+    import os
     import numpy as np
     import nibabel as nb
     from time import strftime
@@ -677,7 +714,7 @@ def qap_functional_temporal(
 
     # 3dTout (outside of brain)
     oob_outliers = outlier_timepoints(func_timeseries,
-        mask_file=bg_func_brain_mask)
+                                      mask_file=bg_func_brain_mask)
     oob_outlier_perc_out, oob_outlier_IQR = \
         calculate_percent_outliers(oob_outliers)
 
@@ -685,58 +722,56 @@ def qap_functional_temporal(
     quality = quality_timepoints(func_timeseries)
     quality_outliers, quality_IQR = calculate_percent_outliers(quality)
 
-    # Temporal Standard Deviation
-    temporal_std_data = nb.load(temporal_std_map).get_data()
-    tstd_inbrain = temporal_std_data.nonzero()
-
-    # Signal Fluctuation Sensitivity
-    sfs_voxels = sfs_timeseries(func_mean, func_brain_mask, temporal_std_data)
+    # Signal Fluctuation Sensitivity (SFS)
+    sfs_data = nb.load(sfs).get_data()
+    sfs_inbrain = sfs_data.nonzero()
 
     # GCOR
     gcor = global_correlation(func_timeseries, func_brain_mask)
 
     # Compile
     id_string = "%s %s %s" % (subject_id, session_id, scan_id)
+    qap_version = qap.__version__
     qap = {
-            id_string:
-            {
-              "QAP_pipeline_id": "QAP version %s" % qap.__version__,
-              "Time": strftime("%Y-%m-%d %H:%M:%S"),
-              "Participant": str(subject_id),
-              "Session": str(session_id),
-              "Series": str(scan_id),
-              "functional_temporal":
-              {
-                 "Std. DVARS (Mean)": mean_dvars,
-                 "Std. DVARS (Std Dev)": np.std(dvars),
-                 "Std. DVARS (Median)": np.median(dvars),
-                 "Std. DVARs IQR": dvars_IQR,
-                 "Std. DVARS percent outliers": dvars_outliers,
-                 "RMSD (Mean)": np.mean(fd),
-                 "RMSD (Std Dev)": np.std(fd),
-                 "RMSD (Median)": np.median(fd),
-                 "RMSD IQR": meanfd_IQR,
-                 "RMSD percent outliers": meanfd_outliers,
-                 "Fraction of Outliers (Mean)": np.mean(outliers),
-                 "Fraction of Outliers (Std Dev)": np.std(outliers),
-                 "Fraction of Outliers (Median)": np.median(outliers),
-                 "Fraction of Outliers IQR": outlier_IQR,
-                 "Fraction of Outliers percent outliers": outlier_perc_out,
-                 "Fraction of OOB Outliers (Mean)": np.mean(oob_outliers),
-                 "Fraction of OOB Outliers (Std Dev)": np.std(oob_outliers),
-                 "Fraction of OOB Outliers (Median)": np.median(oob_outliers),
-                 "Fraction of OOB Outliers IQR": oob_outlier_IQR,
-                 "Fraction of OOB Outliers percent outliers": oob_outlier_perc_out,
-                 "Quality (Mean)": np.mean(quality),
-                 "Quality (Std Dev)": np.std(quality),
-                 "Quality (Median)": np.median(quality),
-                 "Quality IQR": quality_IQR,
-                 "Quality percent outliers": quality_outliers,
-                 "Temporal STD (Mean)": np.mean(tstd_inbrain),
-                 "Signal Fluctuation Sensitivity (Mean)": np.mean(sfs_voxels),
-                 "GCOR": gcor
-              }
-            }
+        id_string:
+        {
+          "QAP_Version": "QAP version %s" % qap_version,
+          "QAP_pipeline_id": run_name,
+          "Time": strftime("%Y-%m-%d %H:%M:%S"),
+          "Participant": str(subject_id),
+          "Session": str(session_id),
+          "Series": str(scan_id),
+          "functional_temporal":
+          {
+             "Std. DVARS (Mean)": mean_dvars,
+             "Std. DVARS (Std Dev)": np.std(dvars),
+             "Std. DVARS (Median)": np.median(dvars),
+             "Std. DVARs IQR": dvars_IQR,
+             "Std. DVARS percent outliers": dvars_outliers,
+             "RMSD (Mean)": np.mean(fd),
+             "RMSD (Std Dev)": np.std(fd),
+             "RMSD (Median)": np.median(fd),
+             "RMSD IQR": meanfd_IQR,
+             "RMSD percent outliers": meanfd_outliers,
+             "Fraction of Outliers (Mean)": np.mean(outliers),
+             "Fraction of Outliers (Std Dev)": np.std(outliers),
+             "Fraction of Outliers (Median)": np.median(outliers),
+             "Fraction of Outliers IQR": outlier_IQR,
+             "Fraction of Outliers percent outliers": outlier_perc_out,
+             "Fraction of OOB Outliers (Mean)": np.mean(oob_outliers),
+             "Fraction of OOB Outliers (Std Dev)": np.std(oob_outliers),
+             "Fraction of OOB Outliers (Median)": np.median(oob_outliers),
+             "Fraction of OOB Outliers IQR": oob_outlier_IQR,
+             "Fraction of OOB Outliers percent outliers": oob_outlier_perc_out,
+             "Quality (Mean)": np.mean(quality),
+             "Quality (Std Dev)": np.std(quality),
+             "Quality (Median)": np.median(quality),
+             "Quality IQR": quality_IQR,
+             "Quality percent outliers": quality_outliers,
+             "Signal Fluctuation Sensitivity (Mean)": np.mean(sfs_inbrain),
+             "GCOR": gcor
+          }
+        }
     }
 
     if site_name:
@@ -747,15 +782,40 @@ def qap_functional_temporal(
             str(qap[id_string]["functional_temporal"][key])
 
     qa = {
-        id_string:
-            {
+        id_string: {
+            "QAP_Version": "QAP version %s" % qap_version,
+            "QAP_pipeline_id": run_name,
+            "sub": subject_id,
+            "ses": session_id,
+            "metrics": {
                 "Standardized DVARS": [float(x) for x in list(dvars)],
                 "RMSD": list(fd),
                 "Outliers": outliers,
                 "OOB Outliers": oob_outliers,
                 "Quality": quality,
-                "Signal Fluctuation Sensitivity": sfs_voxels
+                "Signal Fluctuation Sensitivity": sfs_data.tolist()
             }
+        }
     }
+
+    # prospective filepaths
+    if session_output_dir:
+        func_file = os.path.join(session_output_dir,
+                                 "_".join([subject_id, session_id, scan_id,
+                                           "func_reorient.nii.gz"]))
+        if os.path.exists(func_file):
+            qa[id_string]["metrics"]["scan filepath"] = func_file
+
+        tstd_file = os.path.join(session_output_dir,
+                                 "_".join([subject_id, session_id, scan_id,
+                                           "temporal-std-map.nii.gz"]))
+        if os.path.exists(tstd_file):
+            qa[id_string]["metrics"]["tSTD filepath"] = tstd_file
+
+        sfs_file = os.path.join(session_output_dir,
+                                "_".join([subject_id, session_id, scan_id,
+                                          "SFS.nii.gz"]))
+        if os.path.exists(sfs_file):
+            qa[id_string]["metrics"]["SFS filepath"] = sfs_file
 
     return qap, qa

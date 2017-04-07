@@ -317,7 +317,8 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
                                           'scan', 'type'],
                              output_names=['qap_dict'],
                              function=create_header_dict_entry),
-                             name="gather_header_info%s" % name)
+                             name="gather_header_info_%s%s"
+                                  % (data_type, name))
     gather_header.inputs.subject = config["subject_id"]
     gather_header.inputs.session = config["session_id"]
     gather_header.inputs.scan = config["scan_id"]
@@ -326,22 +327,25 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
         if "anatomical_scan" in resource_pool.keys():
             gather_header.inputs.in_file = resource_pool["anatomical_scan"]
             gather_header.inputs.type = data_type
-    elif data_type == "functional":
+    elif "functional" in data_type:
         if "functional_scan" in resource_pool.keys():
             gather_header.inputs.in_file = resource_pool["functional_scan"]
             gather_header.inputs.type = data_type
 
-    out_dir = os.path.join(config['output_directory'], config["run_name"],
-                           config["subject_id"], config["session_id"],
-                           config["scan_id"])
-    out_json = os.path.join(out_dir, "qap_%s.json" % data_type)
-
+    out_dir = os.path.join(config['output_directory'], "derivatives",
+                           config["run_name"], config["subject_id"],
+                           config["session_id"])
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap-%s.json"
+                            % (config["subject_id"], config["session_id"],
+                               config["scan_id"],
+                               data_type.replace("_", "-")))
     header_to_json = pe.Node(niu.Function(
                                  input_names=["output_dict",
                                               "json_file"],
                                  output_names=["json_file"],
                                  function=write_json),
-                             name="qap_header_to_json%s" % name)
+                             name="qap_header_to_json_%s%s"
+                                  % (data_type, name))
     header_to_json.inputs.json_file = out_json
 
     workflow.connect(gather_header, 'qap_dict', header_to_json, 'output_dict')
@@ -378,6 +382,61 @@ def calculate_temporal_std(workflow, resource_pool, config, name="_"):
 
     resource_pool['temporal_std_map'] = (calculate_tstd_map,
                                          'temporal_std_map')
+
+    return workflow, resource_pool
+
+
+def calculate_sfs_workflow(workflow, resource_pool, config, name="_"):
+
+    import copy
+    import nipype.pipeline.engine as pe
+    import nipype.interfaces.utility as niu
+    from qap.temporal_qc import sfs_timeseries
+
+    if 'mean_functional' not in resource_pool.keys():
+        from functional_preproc import mean_functional_workflow
+        old_rp = copy.copy(resource_pool)
+        workflow, resource_pool = \
+            mean_functional_workflow(workflow, resource_pool, config, name)
+        if resource_pool == old_rp:
+            return workflow, resource_pool
+
+    if 'temporal_std_map' not in resource_pool.keys():
+        from qap_workflows import calculate_temporal_std
+        old_rp = copy.copy(resource_pool)
+        workflow, resource_pool = \
+            calculate_temporal_std(workflow, resource_pool, config, name)
+        if resource_pool == old_rp:
+            return workflow, resource_pool
+
+    calculate_sfs = pe.Node(niu.Function(input_names=['func_mean',
+                                                      'func_mask',
+                                                      'temporal_std_file'],
+                                         output_names=['sfs_file'],
+                                         function=sfs_timeseries),
+                            name="calculate_sfs%s" % name)
+
+    if isinstance(resource_pool["mean_functional"], tuple):
+        node, out_file = resource_pool["mean_functional"]
+        workflow.connect(node, out_file, calculate_sfs, 'func_mean')
+    else:
+        calculate_sfs.inputs.func_mean = resource_pool["mean_functional"]
+
+    if isinstance(resource_pool["functional_brain_mask"], tuple):
+        node, out_file = resource_pool["functional_brain_mask"]
+        workflow.connect(node, out_file, calculate_sfs, 'func_mask')
+    else:
+        calculate_sfs.inputs.func_mask = \
+            resource_pool["functional_brain_mask"]
+
+    if isinstance(resource_pool["temporal_std_map"], tuple):
+        node, out_file = resource_pool["temporal_std_map"]
+        workflow.connect(node, out_file, calculate_sfs, 'temporal_std_file')
+    else:
+        calculate_sfs.inputs.temporal_std_file = \
+            resource_pool["temporal_std_map"]
+
+    resource_pool['SFS'] = (calculate_sfs, 'sfs_file')
 
     return workflow, resource_pool
 
@@ -487,16 +546,18 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
                      'whole_head_mask_path', 'skull_mask_path',
                      'anatomical_gm_mask', 'anatomical_wm_mask',
                      'anatomical_csf_mask', 'subject_id', 'session_id',
-                     'scan_id', 'site_name', 'exclude_zeroes',
-                     'starter'],
-        output_names=['qc'], function=qap_anatomical_spatial),
+                     'scan_id', 'run_name', 'site_name', 'exclude_zeroes',
+                     'session_output_dir', 'starter'],
+        output_names=['qap', 'qa'], function=qap_anatomical_spatial),
         name='qap_anatomical_spatial%s' % name)
 
     # Subject infos
     spatial.inputs.subject_id = config['subject_id']
     spatial.inputs.session_id = config['session_id']
     spatial.inputs.scan_id = config['scan_id']
+    spatial.inputs.run_name = config['run_name']
     spatial.inputs.exclude_zeroes = config['exclude_zeros']
+    spatial.inputs.session_output_dir = config['session_output_dir']
 
     node, out_file = resource_pool['starter']
     workflow.connect(node, out_file, spatial, 'starter')
@@ -570,7 +631,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         resource_pool['mean_epi_mosaic'] = (plot, 'out_file')
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
-    out_dir = os.path.join(config['output_directory'], "qap", "derivatives",
+    out_dir = os.path.join(config['output_directory'], "derivatives",
                            config["run_name"], config["subject_id"],
                            config["session_id"])
     out_json = os.path.join(out_dir, "%s_%s_%s_qap-anatomical.json"
@@ -585,8 +646,26 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
                               name="qap_anatomical_spatial_to_json%s" % name)
     spatial_to_json.inputs.json_file = out_json
 
-    workflow.connect(spatial, 'qc', spatial_to_json, 'output_dict')
+    workflow.connect(spatial, 'qap', spatial_to_json, 'output_dict')
     resource_pool['qap_anatomical_spatial'] = out_json
+
+    qa_out_dir = os.path.join(config['output_directory'], "derivatives",
+                              config["run_name"], config["subject_id"],
+                              config["session_id"])
+    qa_out_json = os.path.join(qa_out_dir, "%s_%s_%s_QA-anat.json"
+                          % (config["subject_id"], config["session_id"],
+                             config["scan_id"]))
+
+    qa_to_json = pe.Node(niu.Function(
+                                  input_names=["output_dict",
+                                               "json_file"],
+                                  output_names=["json_file"],
+                                  function=write_json),
+                         name="qap_qa_anat_to_json%s" % name)
+    qa_to_json.inputs.json_file = qa_out_json
+
+    workflow.connect(spatial, 'qa', qa_to_json, 'output_dict')
+    resource_pool['QA_anat'] = qa_out_json
 
     return workflow, resource_pool
 
@@ -869,7 +948,8 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
 
     spatial_epi = pe.Node(niu.Function(
         input_names=['mean_epi', 'func_brain_mask', 'direction', 'subject_id',
-                     'session_id', 'scan_id', 'site_name', 'starter'],
+                     'session_id', 'scan_id', 'run_name', 'site_name',
+                     'starter'],
         output_names=['qc'], function=qap_functional_spatial),
         name='qap_functional_spatial%s' % name)
 
@@ -881,6 +961,7 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
     spatial_epi.inputs.subject_id = config['subject_id']
     spatial_epi.inputs.session_id = config['session_id']
     spatial_epi.inputs.scan_id = config['scan_id']
+    spatial_epi.inputs.run_name = config['run_name']
 
     if 'site_name' in config.keys():
         spatial_epi.inputs.site_name = config['site_name']
@@ -917,10 +998,10 @@ def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
 
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
-    out_dir = os.path.join(config['output_directory'], "qap", "derivatives",
+    out_dir = os.path.join(config['output_directory'], "derivatives",
                            config["run_name"], config["subject_id"],
                            config["session_id"])
-    out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional.json"
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional-spatial.json"
                             % (config["subject_id"], config["session_id"],
                                config["scan_id"]))
 
@@ -1229,11 +1310,11 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         if resource_pool == old_rp:
             return workflow, resource_pool
 
-    if 'temporal_std_map' not in resource_pool.keys():
-        from qap_workflows import calculate_temporal_std
+    if 'SFS' not in resource_pool.keys():
+        from qap_workflows import calculate_sfs_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
-            calculate_temporal_std(workflow, resource_pool, config, name)
+            calculate_sfs_workflow(workflow, resource_pool, config, name)
         if resource_pool == old_rp:
             return workflow, resource_pool
 
@@ -1252,15 +1333,17 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
 
     temporal = pe.Node(niu.Function(
         input_names=['func_timeseries', 'func_mean', 'func_brain_mask',
-                     'bg_func_brain_mask', 'fd_file', 'temporal_std_map',
-                     'subject_id', 'session_id', 'scan_id', 'site_name',
-                     'starter'],
+                     'bg_func_brain_mask', 'fd_file', 'sfs', 'subject_id',
+                     'session_id', 'scan_id', 'run_name', 'site_name',
+                     'session_output_dir', 'starter'],
         output_names=['qap', 'qa'],
         function=qap_functional_temporal),
         name='qap_functional_temporal%s' % name)
     temporal.inputs.subject_id = config['subject_id']
     temporal.inputs.session_id = config['session_id']
     temporal.inputs.scan_id = config['scan_id']
+    temporal.inputs.run_name = config['run_name']
+    temporal.inputs.session_output_dir = config['session_output_dir']
     workflow.connect(fd, 'out_file', temporal, 'fd_file')
 
     if 'site_name' in config.keys():
@@ -1309,11 +1392,11 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
             resource_pool['inverted_functional_brain_mask']
 
     # temporal STD -> QAP func temp
-    if len(resource_pool['temporal_std_map']) == 2:
-        node, out_file = resource_pool['temporal_std_map']
-        workflow.connect(node, out_file, temporal, 'temporal_std_map')
+    if isinstance(resource_pool['SFS'], tuple):
+        node, out_file = resource_pool['SFS']
+        workflow.connect(node, out_file, temporal, 'sfs')
     else:
-        temporal.inputs.temporal_std_map = resource_pool['temporal_std_map']
+        temporal.inputs.sfs = resource_pool['SFS']
 
     # Write mosaic and FD plot
     if config['write_report']:
@@ -1327,10 +1410,10 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
         workflow.connect(fd, 'out_file', fdplot, 'in_file')
         resource_pool['qap_fd'] = (fdplot, 'out_file')
 
-    out_dir = os.path.join(config['output_directory'], "qap", "derivatives",
+    out_dir = os.path.join(config['output_directory'], "derivatives",
                            config["run_name"], config["subject_id"],
                            config["session_id"])
-    out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional.json"
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional-temporal.json"
                        % (config["subject_id"], config["session_id"],
                           config["scan_id"]))
 
@@ -1345,10 +1428,10 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     workflow.connect(temporal, 'qap', temporal_to_json, 'output_dict')
     resource_pool['qap_functional_temporal'] = out_json
 
-    qa_out_dir = os.path.join(config['output_directory'], config["run_name"],
-                              "derivatives", config["subject_id"],
+    qa_out_dir = os.path.join(config['output_directory'], "derivatives",
+                              config["run_name"], config["subject_id"],
                               config["session_id"])
-    qa_out_json = os.path.join(qa_out_dir, "%s_%s_%s_QA.json"
+    qa_out_json = os.path.join(qa_out_dir, "%s_%s_%s_QA-func.json"
                           % (config["subject_id"], config["session_id"],
                              config["scan_id"]))
 
@@ -1361,7 +1444,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     qa_to_json.inputs.json_file = qa_out_json
 
     workflow.connect(temporal, 'qa', qa_to_json, 'output_dict')
-    resource_pool['qa'] = qa_out_json
+    resource_pool['QA_func'] = qa_out_json
 
     id_string = "%s %s %s" % (config["subject_id"], config["session_id"],
                               config["scan_id"])

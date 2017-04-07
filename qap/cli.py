@@ -726,18 +726,7 @@ def run_workflow(args, run=True):
     starter_node.inputs.starter = ""
 
     # set output directory
-    output_dir = op.join(config["output_directory"], "qap", "derivatives",
-                         run_name)
-
-    try:
-        os.makedirs(output_dir)
-    except:
-        if not op.isdir(output_dir):
-            err = "[!] Output directory unable to be created.\n" \
-                  "Path: %s\n\n" % op.join(output_dir)
-            raise Exception(err)
-        else:
-            pass
+    output_dir = op.join(config["output_directory"], "derivatives", run_name)
 
     new_outputs = 0
 
@@ -762,7 +751,8 @@ def run_workflow(args, run=True):
 
         for resource in resource_pool.keys():
             try:
-                if not op.isfile(resource_pool[resource]) and resource != "site_name":
+                if not op.isfile(resource_pool[resource]) and \
+                                resource != "site_name":
                     invalid_paths.append((resource, resource_pool[resource]))
             except:
                 err = "\n\n[!]"
@@ -812,6 +802,9 @@ def run_workflow(args, run=True):
         name = "_".join(["", sub_id, session_id, scan_id])
         name = name.replace("-", "_")
 
+        config["session_output_dir"] = os.path.join(output_dir, sub_id,
+                                                    session_id)
+
         rt[name] = {'id': sub_id, 'session': session_id, 'scan': scan_id,
                     'resource_pool': str(resource_pool)}
 
@@ -830,7 +823,8 @@ def run_workflow(args, run=True):
                      "functional_spatial", 
                      "functional_temporal"]
 
-        qa_outputs = ["qa", "qap_fd", "qap_mosaic", "temporal-std-map"]
+        qa_outputs = ["QA", "QA-anat", "qap_fd", "qap_mosaic",
+                      "temporal-std-map"]
 
         # update that resource pool with what's already in the output
         # directory
@@ -847,8 +841,20 @@ def run_workflow(args, run=True):
                     except IndexError:
                         # a stray file in the sub-sess-scan output directory
                         pass
+        else:
+            try:
+                os.makedirs(op.join(output_dir, sub_id, session_id))
+            except:
+                if not op.isdir(op.join(output_dir, sub_id, session_id)):
+                    err = "[!] Output directory unable to be created.\n" \
+                          "Path: %s\n\n" % op.join(output_dir, sub_id,
+                                                   session_id)
+                    raise Exception(err)
+                else:
+                    pass
 
-        anat_json = op.join(output_dir, "%s_%s_%s_anatomical.json"
+        anat_json = op.join(output_dir, sub_id, session_id,
+                            "%s_%s_%s_qap-anatomical.json"
                             % (sub_id, session_id, scan_id))
         if op.exists(anat_json):
             json_dict = read_json(anat_json)
@@ -864,10 +870,11 @@ def run_workflow(args, run=True):
                 resource_pool["qap_anatomical_spatial"] = \
                     sub_json_dict["anatomical_spatial"]
 
-        func_json = op.join(output_dir, "%s_%s_%s_functional.json"
-                            % (sub_id, session_id, scan_id))
-        if op.exists(func_json):
-            json_dict = read_json(func_json)
+        func_spat_json = op.join(output_dir, sub_id, session_id,
+                                 "%s_%s_%s_qap-functional-spatial.json"
+                                 % (sub_id, session_id, scan_id))
+        if op.exists(func_spat_json):
+            json_dict = read_json(func_spat_json)
             sub_json_dict = json_dict["%s %s %s" % (sub_id,
                                                     session_id,
                                                     scan_id)]
@@ -879,6 +886,19 @@ def run_workflow(args, run=True):
             if "functional_spatial" in sub_json_dict.keys():
                 resource_pool["qap_functional_spatial"] = \
                     sub_json_dict["functional_spatial"]
+
+        func_temp_json = op.join(output_dir, sub_id, session_id,
+                                 "%s_%s_%s_qap-functional-temporal.json"
+                                 % (sub_id, session_id, scan_id))
+        if op.exists(func_temp_json):
+            json_dict = read_json(func_temp_json)
+            sub_json_dict = json_dict["%s %s %s" % (sub_id,
+                                                    session_id,
+                                                    scan_id)]
+
+            if "functional_header_info" in sub_json_dict.keys():
+                resource_pool["anatomical_header_info"] = \
+                    sub_json_dict["anatomical_header_info"]
 
             if "functional_temporal" in sub_json_dict.keys():
                 resource_pool["qap_functional_temporal"] = \
@@ -917,7 +937,10 @@ def run_workflow(args, run=True):
                 from qap import qap_workflows as qw
             workflow, resource_pool = \
                 qw.qap_gather_header_info(workflow, resource_pool, config,
-                    name, "functional")
+                                          name, "functional_spatial")
+            workflow, resource_pool = \
+                qw.qap_gather_header_info(workflow, resource_pool, config,
+                                          name, "functional_temporal")
 
         # set up the datasinks
         out_list = []
@@ -963,13 +986,16 @@ def run_workflow(args, run=True):
                 ds = pe.Node(nio.DataSink(), name='datasink_%s%s'
                                                   % (output, name))
 
-                ds.inputs.base_directory = \
-                    os.path.join(output_dir, sub_id)
+                ds.inputs.base_directory = os.path.join(output_dir, sub_id)
 
                 # rename file to BIDS format
                 rename = pe.Node(niu.Rename(), name='rename_%s%s'
                                                     % (output, name))
                 rename.inputs.keep_ext = True
+                # replace the underscores in 'output' (which are the keys of
+                # the resource pool) with dashes - need to be underscores for
+                # the workflow names, but need to be dashes for BIDS output
+                # file naming format
                 rename.inputs.format_string = "%s_%s_%s_%s" \
                                               % (sub_id, session_id,
                                                  scan_id,

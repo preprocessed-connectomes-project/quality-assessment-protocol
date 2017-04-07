@@ -92,7 +92,7 @@ def write_json(output_dict, json_file):
 
     import os
     import json
-    from lockfile import FileLock
+    #from lockfile import FileLock
 
     from qap.qap_utils import read_json
 
@@ -113,11 +113,11 @@ def write_json(output_dict, json_file):
         current_dict = output_dict
 
     if write:
-        lock = FileLock(json_file)
-        lock.acquire()
+        #lock = FileLock(json_file)
+        #lock.acquire()
         with open(json_file, "wt") as f:
             json.dump(current_dict, f, indent=2, sort_keys=True)
-        lock.release()
+        #lock.release()
 
     if os.path.exists(json_file):
         return json_file

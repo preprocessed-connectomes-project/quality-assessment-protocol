@@ -300,7 +300,8 @@ def global_correlation(func_reorient, func_mask):
 
 
 def calc_temporal_std(voxel_ts):
-
+    '''this can be used in a map in the below function later when you'''
+    '''move to optimize it'''
     import numpy as np
 
     voxel_std = np.std(voxel_ts)
@@ -326,9 +327,9 @@ def get_temporal_std_map(func_reorient, func_mask):
                 temporal_std_map[i][j][k] = std
 
     # write the image
-    func_img = nb.load(func_reorient)
-    tstd_img = nb.Nifti2Image(temporal_std_map, func_img.affine,
-                              func_img.header)
+    mask_img = nb.load(func_mask)
+    tstd_img = nb.Nifti2Image(temporal_std_map, mask_img.affine)
+    # this writes it into the node's folder in the working directory
     temporal_std_map = os.path.join(os.getcwd(), "tstd.nii.gz")
     write_nifti_image(tstd_img, temporal_std_map)
 
@@ -393,16 +394,13 @@ def sfs_voxel(arg_tuple):
 
     voxel_ts, total_func_mean, voxel_ts_std, nuisance_mean_std = arg_tuple
 
-    voxel_ts_mean = np.mean(voxel_ts)
-    #voxel_ts_std = np.std(voxel_ts)
-
     sfs_vox = \
-        (voxel_ts_mean/total_func_mean) * (voxel_ts_std/nuisance_mean_std)
+        (voxel_ts/total_func_mean) * (voxel_ts_std/nuisance_mean_std)
 
     return sfs_vox
 
 
-def sfs_timeseries(func_mean, func_mask, temporal_std_map):
+def sfs_timeseries(func_mean, func_mask, temporal_std_file):
     """Average the SFS timecourses of each voxel into one SFS timeseries.
 
     :rtype: NumPy array
@@ -410,18 +408,23 @@ def sfs_timeseries(func_mean, func_mask, temporal_std_map):
              entire brain.
     """
 
+    import os
     import numpy as np
     import nibabel as nb
+    from qap.temporal_qc import calc_estimated_csf_nuisance, sfs_voxel
+    from qap.qap_utils import write_nifti_image
 
     func_mean_img = nb.load(func_mean)
     func_mean_data = func_mean_img.get_data()
     func_mask_img = nb.load(func_mask)
     func_mask_data = func_mask_img.get_data()
+    tstd_img = nb.load(temporal_std_file)
+    temporal_std_map = tstd_img.get_data()
 
-    masked_func_mean = func_mean_data[func_mask_data.nonzero()]
+    masked_func_mean = func_mean_data#[func_mask_data.nonzero()]
     total_func_mean = np.mean(masked_func_mean)
 
-    masked_tstd = temporal_std_map[func_mask_data.nonzero()]
+    masked_tstd = temporal_std_map#[func_mask_data.nonzero()]
 
     nuisance_mean_std = calc_estimated_csf_nuisance(temporal_std_map)
 
@@ -430,9 +433,13 @@ def sfs_timeseries(func_mean, func_mask, temporal_std_map):
         arg_tuples.append((voxel_ts, total_func_mean, voxel_std,
                           nuisance_mean_std))
 
-    sfs_voxels = map(sfs_voxel, arg_tuples)
+    sfs_voxels = np.asarray(map(sfs_voxel, arg_tuples))
 
-    return sfs_voxels
+    # write the image
+    mask_img = nb.load(func_mask)
+    sfs_img = nb.Nifti2Image(sfs_voxels, mask_img.affine)
+    # this writes it into the node's folder in the working directory
+    sfs_file = os.path.join(os.getcwd(), "SFS.nii.gz")
+    write_nifti_image(sfs_img, sfs_file)
 
-
-
+    return sfs_file
