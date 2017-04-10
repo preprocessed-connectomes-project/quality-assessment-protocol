@@ -13,7 +13,7 @@ from nipype.interfaces.base import (BaseInterface, traits, TraitedSpec, File,
                                     BaseInterfaceInputSpec, isdefined,
                                     DynamicTraitedSpec, Undefined)
 
-from .plotting import (plot_mosaic, plot_fd)
+from .plotting import (plot_mosaic, grayplot)
 
 from nipype import logging
 iflogger = logging.getLogger('interface')
@@ -80,7 +80,9 @@ class PlotMosaic(BaseInterface):
         return outputs
 
 
-class PlotFDInputSpec(BaseInterfaceInputSpec):
+class GrayPlotInputSpec(BaseInterfaceInputSpec):
+    func_file = File(exists=True, mandatory=True, desc='functional file to be plotted in gray plot')
+    mask_file = File(exists=True, mandatory=True, desc='file for mask functional data')
     meanfd_file = File(exists=True, mandatory=True, desc='mean fd file to be plotted')
     dvars = traits.List(traits.Float, mandatory=True, desc='dvars float array be plotted')
     global_signal = traits.List(traits.Float, mandatory=True, desc='global signal to be plotted')
@@ -89,14 +91,14 @@ class PlotFDInputSpec(BaseInterfaceInputSpec):
                        desc='modality name to be prepended')
     subject = traits.Str(desc='Subject id')
     dpi = traits.Int(300, usedefault=True, desc='Desired DPI of figure')
-    out_file = File('fd.png', usedefault=True, desc='output file name')
+    out_file = File('grayplot.png', usedefault=True, desc='output file name')
 
 
-class PlotFDOutputSpec(TraitedSpec):
+class GrayPlotOutputSpec(TraitedSpec):
     out_file = File(exists=True, desc='output pdf file')
 
 
-class PlotFD(BaseInterface):
+class GrayPlot(BaseInterface):
 
     """
     Plots the frame displacement of a dataset
@@ -109,7 +111,7 @@ class PlotFD(BaseInterface):
         if isdefined(self.inputs.subject):
             title += ', subject %s' % self.inputs.subject
 
-        fig = plot_fd(self.inputs.meanfd_file, self.inputs.dvars, self.inputs.global_signal, self.inputs.metadata, title=title)
+        fig = grayplot(self.inputs.meanfd_file, self.inputs.dvars, self.inputs.global_signal, self.inputs.metadata, title=title)
 
         fig.savefig(self.inputs.out_file, dpi=float(self.inputs.dpi))
 

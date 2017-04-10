@@ -15,20 +15,56 @@ from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
 import seaborn as sns
 
 
+def calculate_gray_plot(func_file, mask_file):
+    import numpy as np
+    from matplotlib import pyplot as plt
+    import nibabel as nb
+    from sklearn import preprocessing
+
+    # read in and mask the data 
+    func = nb.load(func_file)
+    mask = nb.load(mask_file)
+    mask_affine = mask.affine
+    mask = mask.get_data()
+
+    new_shape = func.shape[0]*func.shape[1]*func.shape[2]
+    func = func.get_data()
+    func = np.resize(func, (new_shape,func.shape[-1] ))
+    func = func[np.where( mask.ravel() == 1 )[0], :]
+
+    # z-score the rows so that they can be viewed on the same image
+    func = preprocessing.scale(func, axis=1)
+
+    #now try some basic reordering
+    from sklearn.cluster.bicluster import SpectralBiclustering
+    model = SpectralBiclustering(n_clusters=(5,1),n_components=5, method='log',random_state=0)
+    model.fit(func)
+    reordered_func=func[np.argsort(model.row_labels_)]
+
+    #create a matrix with cluster ids, 
+    #make sure cluster ids > func values so we can display both easily. 
+    out_clusters=np.zeros(np.shape(func[:,0]))
+    func_max = func.max()+1
+    for i in range(0,5):
+        out_clusters[model.get_indices(i)[0]]=int(i*2+func_max)
+    reordered_clusters=out_clusters[np.argsort(model.row_labels_)]
+
+    return reordered_func, reordered_clusters 
+
 def organize_individual_html(subid, output_path, ts_plot, mean_epi_plot):
 
     head_template = '''
     <!DOCTYPE html>
-<html>
-  <head>
-    <style>
-    body{ margin: 0px;}
-    ul {
-        list-style-type: none;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background-color: #333;
+    <html>
+      <head>
+        <style>
+        body{ margin: 0px;}
+        ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #333;
     }
 
     li { float: left; }
@@ -91,8 +127,8 @@ def organize_individual_html(subid, output_path, ts_plot, mean_epi_plot):
     </div>
     <!-- end Signal Fluctuation Sensitivity Mosaic Mosaic -->
 
-  </body>
-</html>
+      </body>
+    </html>
     '''
     import os.path as op
     template = template.format(subjectid=subid)
@@ -344,42 +380,71 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
     return fig
 
 
-def plot_fd(meanfd_file, dvars, global_signal, metadata, figsize=(11.7, 8.3), mean_fd_dist=None, title='Mean FD, DVARS, Global Signal'):
+def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, figsize=(11.7, 8.3), title='Mean FD, DVARS, Global Signal'):
     fd_power = _calc_fd(meanfd_file)
-    global_signal = (global_signal - min(global_signal))/(max(global_signal) - min(global_signal))
+    gray_matrix, color_matrix = calculate_gray_plot(func_file, mask_file)
+
+    #create grid with 2 rows
     fig = plt.Figure(figsize=figsize)
     FigureCanvas(fig)
 
-    if mean_fd_dist:
-        grid = GridSpec(2, 4)
-    else:
-        grid = GridSpec(1, 2, width_ratios=[3, 1])
-        grid.update(hspace=1.0, right=0.95, left=0.1, bottom=0.2)
+    grid = GridSpec(2, 1)
+    ax1 = plt.subplot(grid[0])
+    ax2 = plt.subplot(grid[1])
 
-    ax = fig.add_subplot(grid[0, :-1])
-    fd = ax.plot(fd_power, label='Mean FD')
-    d, = ax.plot(dvars, label='DVARS')
-    gs, = ax.plot(global_signal, label='Global Signal')
-    ax.set_xlim((0, len(fd_power)))
-    ax.set_ylabel("Frame Displacement [mm], DVARS and Global Signal")
-    ax.set_xlabel("Frame number")
-    handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles, labels)
+    #gray plot part
+    #add brain labels to grayplot
+    gray_plot = np.insert(gray_matrix, 0, color_matrix, axis=1)
+    gray_plot = np.insert(gray_plot, 0, color_matrix, axis=1)
+
+    #plot grayplot
+    from numpy.ma import masked_array
+    gray = masked_array(gray_plot,gray_plot>=func_max)
+    colors = masked_array(gray_plot,gray_plot<func_max)
+
+    pa = ax1.imshow(gray,interpolation='None',cmap='gray',aspect=aspect)
+    pb = ax1.imshow(colors,interpolation='None',cmap='Spectral',aspect=aspect)
+    plt.xlabel('Time (seconds)')
+    plt.ylabel('Voxels')
+    ax.yaxis.set_ticklabels([])
+
+    #dvars plot
+    fd = ax2.plot(fd_power, label='Mean FD')
+    d, = ax2.plot(dvars, label='DVARS')
+    gs, = ax2.plot(global_signal, label='Global Signal')
+    ax2.set_xlim((0, len(fd_power)))
+    ax2.set_ylabel("Frame Displacement [mm], DVARS and Global Signal")
+    ax2.set_xlabel("Frame number")
+    handles, labels = ax2.get_legend_handles_labels()
+    ax2.legend(handles, labels)
     ylim = ax.get_ylim()
 
-    ax1 = fig.add_subplot(grid[0, -1])
-    sns.distplot(fd_power, vertical=True, ax=ax1)
-    ax1.set_ylim((min(fd_power), max(fd_power)))
-
-    if mean_fd_dist:
-        ax = fig.add_subplot(grid[1, :])
-        sns.distplot(mean_fd_dist, ax=ax)
-        ax.set_xlabel("Mean Frame Displacement (over all subjects) [mm]")
-        mean_fd = fd_power.mean()
-        label = r'$\overline{\text{FD}}$ = %g' % mean_fd
-        plot_vline(mean_fd, label, ax=ax)
-
     fig.suptitle(title)
+
+    #do it later
+    #plt.savefig('grayplot.png', figsize=(8,24), dpi=400)
+    
+
+    #create nii file with cluster values
+    out_clusters_img=np.zeros(np.prod(mask.shape)) 
+    out_clusters_img[mask.ravel()==1]=reordered_clusters 
+    out_clusters_img=out_clusters_img.reshape(mask.shape)
+    clust_img=nb.Nifti1Image(out_clusters_img, mask_affine)
+    nb.save(clust_img, "cluster.nii.gz")
+
+    #save image
+    from nilearn import plotting
+    plotting.plot_roi(clust_img,mask_file, cmap='Spectral',output_file='brain.png')
+
+
+
+    
+
+    
+    grid.update(hspace=1.0, right=0.95, left=0.1, bottom=0.2)
+
+    ax = fig.add_subplot(grid[0, :-1])
+    
     return fig
 
 
