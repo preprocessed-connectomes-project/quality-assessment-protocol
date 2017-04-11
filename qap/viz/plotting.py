@@ -396,8 +396,8 @@ def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, 
 
     #gray plot part
     #add brain labels to grayplot
-    gray_plot = np.insert(gray_matrix, 0, color_matrix, axis=1)
-    gray_plot = np.insert(gray_plot, 0, color_matrix, axis=1)
+    gray_plot = np.insert(gray_matrix, gray_matrix.shape[1], color_matrix, axis=1)
+    gray_plot = np.insert(gray_plot, gray_matrix.shape[1], color_matrix, axis=1)
 
     #plot grayplot
     from numpy.ma import masked_array
@@ -411,6 +411,7 @@ def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, 
     ax1.set_xlabel('Time (seconds)')
     ax1.set_ylabel('Voxels')
     ax1.yaxis.set_ticklabels([])
+    ax1.grid(False)
 
     #dvars plot
     fd = ax2.plot(fd_power, label='Mean FD')
@@ -422,11 +423,11 @@ def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, 
     handles, labels = ax2.get_legend_handles_labels()
     ax2.legend(handles, labels)
     ylim = ax2.get_ylim()
-    #ax2.set_aspect(1.5)
+    ax2.grid(True)
 
     plt.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0)
 
-    #fig.suptitle(title)
+    fig.suptitle(title)
     return fig
     #do it later
     #plt.savefig('grayplot.png', figsize=(8,24), dpi=400)

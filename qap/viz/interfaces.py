@@ -87,7 +87,7 @@ class GrayPlotInputSpec(BaseInterfaceInputSpec):
     dvars = traits.List(traits.Float, mandatory=True, desc='dvars float array be plotted')
     global_signal = traits.List(traits.Float, mandatory=True, desc='global signal to be plotted')
     metadata = traits.List(traits.Str, mandatory=True, desc='additional metadata')
-    title = traits.Str('Mean FD, DVARS ad Global Signal', usedefault=True,
+    title = traits.Str('Gray Plot', usedefault=True,
                        desc='modality name to be prepended')
     subject = traits.Str(desc='Subject id')
     dpi = traits.Int(300, usedefault=True, desc='Desired DPI of figure')
@@ -108,7 +108,7 @@ class GrayPlot(BaseInterface):
     def _run_interface(self, runtime):
         title = self.inputs.title
         if isdefined(self.inputs.subject):
-            title += ', subject %s' % self.inputs.subject
+            title += ', %s' % self.inputs.subject
 
         fig = grayplot(self.inputs.func_file, self.inputs.mask_file, self.inputs.meanfd_file, self.inputs.dvars, self.inputs.global_signal, self.inputs.metadata, title=title)
 
