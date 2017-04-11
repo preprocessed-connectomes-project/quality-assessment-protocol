@@ -873,343 +873,7 @@ def run_everything_qap_anatomical_spatial(
         return workflow, workflow.base_dir
 
 
-def qap_functional_spatial_workflow(workflow, resource_pool, config, name="_"):
-    """Build and run a Nipype workflow to calculate the QAP functional spatial
-    quality measures.
-
-    - If any resources/outputs required by this workflow are not in the
-      resource pool, this workflow will call pre-requisite workflow builder
-      functions to further populate the pipeline with workflows which will
-      calculate/generate these necessary pre-requisites.
-
-    Expected Resources in Resource Pool
-      - mean_functional: The one-volume averaged functional timeseries image.
-      - functional_brain_mask: A binary mask of the brain in the functional
-                               image.
-
-    New Resources Added to Resource Pool
-      - qap_functional_spatial: The path to the output JSON file containing
-                                the participant's QAP measure values.
-      - func_spat_csv: The path to the CSV file containing the QAP measure
-                       values.
-      - qap_mosaic: (if enabled) The path to the mosaic QC report file.
-
-    Workflow Steps
-      1. qap_functional_spatial function node to calculate the QAP measures.
-      2. PlotMosaic() node (if enabled) to generate QC mosaic.
-      3. qap_functional_spatial_to_json function node to write/update numbers
-         to the output JSON file.
-
-    :type workflow: Nipype workflow object
-    :param workflow: A Nipype workflow object which can already contain other
-                     connected nodes; this function will insert the following
-                     workflow into this one provided.
-    :type resource_pool: dict
-    :param resource_pool: A dictionary defining input files and pointers to
-                          Nipype node outputs / workflow connections; the keys
-                          are the resource names.
-    :type config: dict
-    :param config: A dictionary defining the configuration settings for the
-                   workflow, such as directory paths or toggled options.
-    :type name: str
-    :param name: (default: "_") A string to append to the end of each node
-                 name.
-    :rtype: Nipype workflow object
-    :return: The Nipype workflow originally provided, but with this function's
-              sub-workflow connected into it.
-    :rtype: dict
-    :return: The resource pool originally provided, but updated (if
-             applicable) with the newest outputs and connections.
-    """
-
-    import os
-    import copy
-    import nipype.pipeline.engine as pe
-    import nipype.interfaces.utility as niu
-    from qap_workflows_utils import qap_functional_spatial
-    from qap_utils import write_json
-    from qap.viz.interfaces import PlotMosaic
-
-    if 'mean_functional' not in resource_pool.keys():
-        from functional_preproc import mean_functional_workflow
-        old_rp = copy.copy(resource_pool)
-        workflow, resource_pool = \
-            mean_functional_workflow(workflow, resource_pool, config, name)
-        if resource_pool == old_rp:
-            return workflow, resource_pool
-
-    if 'functional_brain_mask' not in resource_pool.keys():
-        from functional_preproc import functional_brain_mask_workflow
-        old_rp = copy.copy(resource_pool)
-        workflow, resource_pool = \
-            functional_brain_mask_workflow(workflow, resource_pool, config, name)
-        if resource_pool == old_rp:
-            return workflow, resource_pool
-
-    spatial_epi = pe.Node(niu.Function(
-        input_names=['mean_epi', 'func_brain_mask', 'direction', 'subject_id',
-                     'session_id', 'scan_id', 'run_name', 'site_name',
-                     'starter'],
-        output_names=['qc'], function=qap_functional_spatial),
-        name='qap_functional_spatial%s' % name)
-
-    # Subject infos
-    if 'ghost_direction' not in config.keys():
-        config['ghost_direction'] = 'y'
-
-    spatial_epi.inputs.direction = config['ghost_direction']
-    spatial_epi.inputs.subject_id = config['subject_id']
-    spatial_epi.inputs.session_id = config['session_id']
-    spatial_epi.inputs.scan_id = config['scan_id']
-    spatial_epi.inputs.run_name = config['run_name']
-
-    if 'site_name' in config.keys():
-        spatial_epi.inputs.site_name = config['site_name']
-
-    if len(resource_pool['mean_functional']) == 2:
-        node, out_file = resource_pool['mean_functional']
-        workflow.connect(node, out_file, spatial_epi, 'mean_epi')
-    else:
-        spatial_epi.inputs.mean_epi = resource_pool['mean_functional']
-
-    if len(resource_pool['functional_brain_mask']) == 2:
-        node, out_file = resource_pool['functional_brain_mask']
-        workflow.connect(node, out_file, spatial_epi, 'func_brain_mask')
-    else:
-        spatial_epi.inputs.func_brain_mask = \
-            resource_pool['functional_brain_mask']
-
-    if config.get('write_report', False):
-        plot = pe.Node(PlotMosaic(), name='plot_mosaic%s' % name)
-        plot.inputs.subject = config['subject_id']
-
-        metadata = [config['session_id'], config['scan_id']]
-        if 'site_name' in config.keys():
-            metadata.append(config['site_name'])
-
-        plot.inputs.metadata = metadata
-        plot.inputs.title = 'Mean EPI'
-
-        if len(resource_pool['mean_functional']) == 2:
-            node, out_file = resource_pool['mean_functional']
-            workflow.connect(node, out_file, plot, 'in_file')
-        else:
-            plot.inputs.in_file = resource_pool['mean_functional']
-
-        resource_pool['qap_mosaic'] = (plot, 'out_file')
-
-    out_dir = os.path.join(config['output_directory'], "derivatives",
-                           config["run_name"], config["subject_id"],
-                           config["session_id"])
-    out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional-spatial.json"
-                            % (config["subject_id"], config["session_id"],
-                               config["scan_id"]))
-
-    spatial_epi_to_json = pe.Node(niu.Function(
-                                  input_names=["output_dict",
-                                               "json_file"],
-                                  output_names=["json_file"],
-                                  function=write_json),
-                              name="qap_functional_spatial_to_json%s" % name)
-    spatial_epi_to_json.inputs.json_file = out_json
-
-    workflow.connect(spatial_epi, 'qc', spatial_epi_to_json, 'output_dict')
-
-    resource_pool['qap_functional_spatial'] = out_json
-
-    return workflow, resource_pool
-
-
-def run_only_qap_functional_spatial(
-        mean_functional, functional_brain_mask, partic_id, session_id,
-        scan_id, site_name=None, ghost_direction=None, out_dir=None,
-        run=True):
-    """Run the 'qap_functional_spatial' workflow with the provided inputs.
-
-    :type mean_functional: str
-    :param mean_functional: Filepath to the one-volume average of the
-                            functional timeseries.
-    :type functional_brain_mask: str
-    :param functional_brain_mask: Filepath to the binary functional brain
-                                  mask.
-    :type partic_id: str
-    :param partic_id: The participant ID.
-    :type session_id: str
-    :param session_id: (default: None) The session name/ID.
-    :type scan_id: str
-    :param scan_id: (default: None) the scan name/ID.
-    :type site_name: str
-    :param site_name: (default: None) The site name/ID.
-    :type out_dir: str
-    :param out_dir: (default: None) The output directory to write the results
-                    to; if left as None, will write to the current directory.
-    :type run: bool
-    :param run: (default: True) Will run the workflow; if set to False, will
-                connect the Nipype workflow and return the workflow object
-                instead.
-    :rtype: str
-    :return: (if run=True) The filepath of the generated anatomical_reorient
-             file.
-    :rtype: Nipype workflow object
-    :return: (if run=False) The connected Nipype workflow object.
-    :rtype: str
-    :return: (if run=False) The base directory of the workflow if it were to
-             be run.
-    """
-
-    import os
-    import glob
-    import nipype.interfaces.io as nio
-    import nipype.pipeline.engine as pe
-
-    output = 'qap_functional_spatial'
-    workflow = pe.Workflow(name='%s_workflow' % output)
-
-    if not out_dir:
-        out_dir = os.getcwd()
-
-    workflow_dir = os.path.join(out_dir, "workflow_output", output)
-    workflow.base_dir = workflow_dir
-
-    resource_pool = {}
-    config = {}
-    num_cores_per_subject = 1
-
-    resource_pool['mean_functional'] = mean_functional
-    resource_pool['functional_brain_mask'] = functional_brain_mask
-
-    config['subject_id'] = partic_id
-    config['session_id'] = session_id
-    config['scan_id'] = scan_id
-
-    if site_name:
-        config['site_name'] = site_name
-
-    if ghost_direction:
-        config['ghost_direction'] = ghost_direction
-
-    workflow, resource_pool = \
-        qap_functional_spatial_workflow(workflow, resource_pool, config)
-
-    ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
-    ds.inputs.base_directory = workflow_dir
-    ds.inputs.output = resource_pool[output]
-
-    if run:
-        workflow.run(
-            plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
-        outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
-        return outpath
-
-    else:
-        return workflow, workflow.base_dir
-
-
-def run_everything_qap_functional_spatial(
-        functional_scan, partic_id, session_id=None, scan_id=None,
-        site_name=None, out_dir=None, run=True):
-    """Run the entire QAP functional spatial pipeline with the provided 
-    inputs.
-
-    :type functional_scan: str
-    :param functional_scan: Filepath to the 4D functional timeseries.
-    :type partic_id: str
-    :param partic_id: The participant ID.
-    :type session_id: str
-    :param session_id: (default: None) The session name/ID.
-    :type scan_id: str
-    :param scan_id: (default: None) the scan name/ID.
-    :type site_name: str
-    :param site_name: (default: None) The site name/ID.
-    :type out_dir: str
-    :param out_dir: (default: None) The output directory to write the results
-                    to; if left as None, will write to the current directory.
-    :type run: bool
-    :param run: (default: True) Will run the workflow; if set to False, will
-                connect the Nipype workflow and return the workflow object
-                instead.
-    :rtype: str
-    :return: (if run=True) The filepath of the generated anatomical_reorient
-             file.
-    :rtype: Nipype workflow object
-    :return: (if run=False) The connected Nipype workflow object.
-    :rtype: str
-    :return: (if run=False) The base directory of the workflow if it were to
-             be run.
-    """
-
-    import os
-    import glob
-    import nipype.interfaces.io as nio
-    import nipype.interfaces.utility as niu
-    import nipype.pipeline.engine as pe
-
-    from qap import cli
-
-    output = 'qap_functional_spatial'
-    workflow = pe.Workflow(name='%s_workflow' % output)
-
-    if not out_dir:
-        out_dir = os.getcwd()
-
-    if site_name != None:
-        workflow_dir = os.path.join(out_dir, "workflow_output", output, \
-            site_name, partic_id)
-    else:
-        workflow_dir = os.path.join(out_dir, "workflow_output", output, \
-            partic_id)
-
-    if session_id != None:
-        workflow_dir = os.path.join(workflow_dir, session_id)
-
-    if scan_id != None:
-        workflow_dir = os.path.join(workflow_dir, scan_id)
-
-    workflow.base_dir = workflow_dir
-
-    num_cores_per_subject = 1
-    resource_pool = {
-        'functional_scan': functional_scan
-    }
-
-    config = {
-        'subject_id': partic_id,
-        'session_id': session_id,
-        'scan_id': scan_id,
-        'output_directory': workflow_dir
-    }
-
-    if site_name:
-        config['site_name'] = site_name
-
-    # create the one node all participants will start from
-    starter_node = pe.Node(niu.Function(input_names=['starter'],
-                                        output_names=['starter'],
-                                        function=cli.starter_node_func),
-                           name='starter_node')
-
-    # set a dummy variable
-    starter_node.inputs.starter = ""
-
-    resource_pool["starter"] = (starter_node, 'starter')
-
-    workflow, resource_pool = \
-        qap_functional_spatial_workflow(workflow, resource_pool, config)
-
-    ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
-    ds.inputs.base_directory = workflow_dir
-    ds.inputs.output = resource_pool[output]
-
-    if run:
-        workflow.run(
-            plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
-        outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
-        return outpath
-    else:
-        return workflow, workflow.base_dir
-
-
-def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
+def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to calculate the QAP functional 
     temporal quality measures.
 
@@ -1271,7 +935,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     import nipype.interfaces.utility as niu
 
     from qap_workflows_utils import qap_functional_temporal, \
-        global_signal_time_series
+        qap_functional_spatial, global_signal_time_series
     from qap_utils import write_json
     from temporal_qc import fd_jenkinson
     from qap.viz.interfaces import PlotMosaic, PlotFD
@@ -1330,6 +994,58 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
             workflow.connect(node, out_file, fd, 'in_file')
         else:
             fd.inputs.in_file = resource_pool['coordinate_transformation']
+
+    spatial_epi = pe.Node(niu.Function(
+        input_names=['mean_epi', 'func_brain_mask', 'direction', 'subject_id',
+                     'session_id', 'scan_id', 'run_name', 'site_name',
+                     'starter'],
+        output_names=['qap'], function=qap_functional_spatial),
+        name='qap_functional_spatial%s' % name)
+
+    # Subject infos
+    if 'ghost_direction' not in config.keys():
+        config['ghost_direction'] = 'y'
+
+    spatial_epi.inputs.direction = config['ghost_direction']
+    spatial_epi.inputs.subject_id = config['subject_id']
+    spatial_epi.inputs.session_id = config['session_id']
+    spatial_epi.inputs.scan_id = config['scan_id']
+    spatial_epi.inputs.run_name = config['run_name']
+
+    if 'site_name' in config.keys():
+        spatial_epi.inputs.site_name = config['site_name']
+
+    if len(resource_pool['mean_functional']) == 2:
+        node, out_file = resource_pool['mean_functional']
+        workflow.connect(node, out_file, spatial_epi, 'mean_epi')
+    else:
+        spatial_epi.inputs.mean_epi = resource_pool['mean_functional']
+
+    if len(resource_pool['functional_brain_mask']) == 2:
+        node, out_file = resource_pool['functional_brain_mask']
+        workflow.connect(node, out_file, spatial_epi, 'func_brain_mask')
+    else:
+        spatial_epi.inputs.func_brain_mask = \
+            resource_pool['functional_brain_mask']
+
+    if config.get('write_report', False):
+        plot = pe.Node(PlotMosaic(), name='plot_mosaic%s' % name)
+        plot.inputs.subject = config['subject_id']
+
+        metadata = [config['session_id'], config['scan_id']]
+        if 'site_name' in config.keys():
+            metadata.append(config['site_name'])
+
+        plot.inputs.metadata = metadata
+        plot.inputs.title = 'Mean EPI'
+
+        if len(resource_pool['mean_functional']) == 2:
+            node, out_file = resource_pool['mean_functional']
+            workflow.connect(node, out_file, plot, 'in_file')
+        else:
+            plot.inputs.in_file = resource_pool['mean_functional']
+
+        resource_pool['qap_mosaic'] = (plot, 'out_file')
 
     temporal = pe.Node(niu.Function(
         input_names=['func_timeseries', 'func_mean', 'func_brain_mask',
@@ -1413,9 +1129,17 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     out_dir = os.path.join(config['output_directory'], "derivatives",
                            config["run_name"], config["subject_id"],
                            config["session_id"])
-    out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional-temporal.json"
-                       % (config["subject_id"], config["session_id"],
-                          config["scan_id"]))
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional.json"
+                            % (config["subject_id"], config["session_id"],
+                               config["scan_id"]))
+
+    spatial_epi_to_json = pe.Node(niu.Function(
+                                  input_names=["output_dict",
+                                               "json_file"],
+                                  output_names=["json_file"],
+                                  function=write_json),
+                               name="qap_functional_spatial_to_json%s" % name)
+    spatial_epi_to_json.inputs.json_file = out_json
 
     temporal_to_json = pe.Node(niu.Function(
                                   input_names=["output_dict",
@@ -1425,15 +1149,16 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
                               name="qap_functional_temporal_to_json%s" % name)
     temporal_to_json.inputs.json_file = out_json
 
+    workflow.connect(spatial_epi, 'qap', spatial_epi_to_json, 'output_dict')
     workflow.connect(temporal, 'qap', temporal_to_json, 'output_dict')
-    resource_pool['qap_functional_temporal'] = out_json
+    resource_pool['qap_functional'] = out_json
 
     qa_out_dir = os.path.join(config['output_directory'], "derivatives",
                               config["run_name"], config["subject_id"],
                               config["session_id"])
     qa_out_json = os.path.join(qa_out_dir, "%s_%s_%s_QA-func.json"
-                          % (config["subject_id"], config["session_id"],
-                             config["scan_id"]))
+                               % (config["subject_id"], config["session_id"],
+                                  config["scan_id"]))
 
     qa_to_json = pe.Node(niu.Function(
                                   input_names=["output_dict",
@@ -1538,7 +1263,7 @@ def run_only_qap_functional_temporal(func_reorient, functional_brain_mask,
         config['site_name'] = site_name
 
     workflow, resource_pool = \
-        qap_functional_temporal_workflow(workflow, resource_pool, config)
+        qap_functional_workflow(workflow, resource_pool, config)
 
     ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
     ds.inputs.base_directory = workflow_dir
@@ -1642,7 +1367,7 @@ def run_everything_qap_functional_temporal(
     resource_pool["starter"] = (starter_node, 'starter')
 
     workflow, resource_pool = \
-        qap_functional_temporal_workflow(workflow, resource_pool, config)
+        qap_functional_workflow(workflow, resource_pool, config)
 
     ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
     ds.inputs.base_directory = workflow_dir

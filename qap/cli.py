@@ -628,9 +628,8 @@ def starter_node_func(starter):
     - This is used for a Nipype utility function node to serve as a starting
       node to connect to multiple unrelated Nipype workflows. Each of these
       workflows runs QAP for one participant in the current bundle being run.
-    - Connecting the multiple non-interdependent participant workflows as
-      one workflow allows the Nipype resource scheduler to maximize
-      performance.
+    - Connecting the multiple non-interdependent participant workflows as one
+      workflow allows the Nipype resource scheduler to maximize performance.
 
     :type starter: str
     :param starter: A dummy string.
@@ -727,7 +726,6 @@ def run_workflow(args, run=True):
 
     # set output directory
     output_dir = op.join(config["output_directory"], "derivatives", run_name)
-
     new_outputs = 0
 
     # iterate over each subject in the bundle
@@ -819,9 +817,7 @@ def run_workflow(args, run=True):
 
         logger.info("Configuration settings:\n%s" % str(config))
 
-        qap_types = ["anatomical_spatial", 
-                     "functional_spatial", 
-                     "functional_temporal"]
+        qap_types = ["anatomical_spatial", "functional"]
 
         qa_outputs = ["QA", "QA-anat", "qap_fd", "qap_mosaic",
                       "temporal-std-map"]
@@ -870,11 +866,11 @@ def run_workflow(args, run=True):
                 resource_pool["qap_anatomical_spatial"] = \
                     sub_json_dict["anatomical_spatial"]
 
-        func_spat_json = op.join(output_dir, sub_id, session_id,
-                                 "%s_%s_%s_qap-functional-spatial.json"
+        func_json = op.join(output_dir, sub_id, session_id,
+                                 "%s_%s_%s_qap-functional.json"
                                  % (sub_id, session_id, scan_id))
-        if op.exists(func_spat_json):
-            json_dict = read_json(func_spat_json)
+        if op.exists(func_json):
+            json_dict = read_json(func_json)
             sub_json_dict = json_dict["%s %s %s" % (sub_id,
                                                     session_id,
                                                     scan_id)]
@@ -886,19 +882,6 @@ def run_workflow(args, run=True):
             if "functional_spatial" in sub_json_dict.keys():
                 resource_pool["qap_functional_spatial"] = \
                     sub_json_dict["functional_spatial"]
-
-        func_temp_json = op.join(output_dir, sub_id, session_id,
-                                 "%s_%s_%s_qap-functional-temporal.json"
-                                 % (sub_id, session_id, scan_id))
-        if op.exists(func_temp_json):
-            json_dict = read_json(func_temp_json)
-            sub_json_dict = json_dict["%s %s %s" % (sub_id,
-                                                    session_id,
-                                                    scan_id)]
-
-            if "functional_header_info" in sub_json_dict.keys():
-                resource_pool["anatomical_header_info"] = \
-                    sub_json_dict["anatomical_header_info"]
 
             if "functional_temporal" in sub_json_dict.keys():
                 resource_pool["qap_functional_temporal"] = \
@@ -937,10 +920,7 @@ def run_workflow(args, run=True):
                 from qap import qap_workflows as qw
             workflow, resource_pool = \
                 qw.qap_gather_header_info(workflow, resource_pool, config,
-                                          name, "functional_spatial")
-            workflow, resource_pool = \
-                qw.qap_gather_header_info(workflow, resource_pool, config,
-                                          name, "functional_temporal")
+                                          name, "functional")
 
         # set up the datasinks
         out_list = []

@@ -506,9 +506,7 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
             "QAP_pipeline_id": run_name,
             "sub": subject_id,
             "ses": session_id,
-            "metrics": {
-                "scan": anatomical_reorient
-            }
+            "metrics": {}
         }
     }
 
@@ -595,7 +593,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
     snr_out = snr(fg_mean, bg_std)
 
     id_string = "%s %s %s" % (subject_id, session_id, scan_id)
-    qc = {
+    qap = {
         id_string:
         {
            "QAP_Version": "QAP version %s" % qap.__version__,
@@ -619,24 +617,24 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
     # Ghosting
     if direction == "all":
-        qc[id_string]["functional_spatial"]['Ghost_x'] = \
+        qap[id_string]["functional_spatial"]['Ghost_x'] = \
             ghost_direction(anat_data, fg_mask, "x")
-        qc[id_string]["functional_spatial"]['Ghost_y'] = \
+        qap[id_string]["functional_spatial"]['Ghost_y'] = \
             ghost_direction(anat_data, fg_mask, "y")
-        qc[id_string]["functional_spatial"]['Ghost_z'] = \
+        qap[id_string]["functional_spatial"]['Ghost_z'] = \
             ghost_direction(anat_data, fg_mask, "z")
     else:
-        qc[id_string]["functional_spatial"]['Ghost_%s' % direction] = \
+        qap[id_string]["functional_spatial"]['Ghost_%s' % direction] = \
             ghost_direction(anat_data, fg_mask, direction)
 
     if site_name:
-        qc[id_string]['Site'] = str(site_name)
+        qap[id_string]['Site'] = str(site_name)
 
-    for key in qc[id_string]["functional_spatial"].keys():
-        qc[id_string]["functional_spatial"][key] = \
-            str(qc[id_string]["functional_spatial"][key])
+    for key in qap[id_string]["functional_spatial"].keys():
+        qap[id_string]["functional_spatial"][key] = \
+            str(qap[id_string]["functional_spatial"][key])
 
-    return qc
+    return qap
 
 
 def qap_functional_temporal(
