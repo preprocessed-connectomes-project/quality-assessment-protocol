@@ -1161,7 +1161,7 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     from qap_workflows_utils import qap_functional_temporal, global_signal_time_series
     from qap_utils import write_json
     from temporal_qc import fd_jenkinson
-    from qap.viz.interfaces import PlotMosaic, PlotFD
+    from qap.viz.interfaces import PlotMosaic, GrayPlot
 
     def _getfirst(inlist):
         if isinstance(inlist, list):
@@ -1227,17 +1227,50 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
       output_names=["output"], function=global_signal_time_series), 
       name="global_signal_time_series%s" % name)
 
+    qa_out_dir = os.path.join(config['output_directory'], config["run_name"], "QA")
+
+    if config.get('write_report', False):
+        metadata = [config['session_id'], config['scan_id']]
+        if 'site_name' in config.keys():
+            metadata.append(config['site_name'])
+
+        out_fd = os.path.join(qa_out_dir, "%s_%s_%s_timeseries_measures.png"
+                       % (config["subject_id"], config["session_id"],
+                          config["scan_id"]))
+
+        def pick_dvars(qa, dict_id):
+            dvars = qa[dict_id]['Standardized DVARS']
+            return dvars
+
+        grayplot = pe.Node(GrayPlot(), name='grayplot%s' % name)
+        grayplot.inputs.subject = config['subject_id']
+        grayplot.inputs.out_file = out_fd
+        id_string = "%s %s %s" % (config["subject_id"], config["session_id"], config["scan_id"])
+        grayplot.inputs.metadata = [id_string]
+        workflow.connect(fd, 'out_file', grayplot, 'meanfd_file')
+        dict_id = "%s %s %s"%(config["subject_id"], config["session_id"],config["scan_id"])
+        workflow.connect(temporal, ('qa', pick_dvars, dict_id), grayplot, 'dvars')    
+        workflow.connect(gs_ts, 'output', grayplot, 'global_signal')
+        resource_pool['qap_fd'] = (grayplot, 'out_file')
+
     # func reorient (timeseries) -> QAP func temp
     if len(resource_pool['func_reorient']) == 2:
         node, out_file = resource_pool['func_reorient']
         workflow.connect(node, out_file, temporal, 'func_timeseries')
         workflow.connect(node, out_file, gs_ts, 'functional_file')
+
+        if config.get('write_report', False):
+            workflow.connect(node, out_file, grayplot, 'func_file')
+
     else:
         from qap_utils import check_input_resources
         check_input_resources(resource_pool, 'func_reorient')
         input_file = resource_pool['func_reorient']
         temporal.inputs.func_timeseries = input_file
         gs_ts.inputs.functional_file = input_file
+
+        if config.get('write_report', False):
+            grayplot.inputs.func_file = input_file
 
     # func mean (one volume) -> QAP func temp
     if len(resource_pool['mean_functional']) == 2:
@@ -1253,9 +1286,16 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     if len(resource_pool['functional_brain_mask']) == 2:
         node, out_file = resource_pool['functional_brain_mask']
         workflow.connect(node, out_file, temporal, 'func_brain_mask')
+
+        if config.get('write_report', False):
+            workflow.connect(node, out_file, grayplot, 'mask_file')
+
     else:
         temporal.inputs.func_brain_mask = \
             resource_pool['functional_brain_mask']
+            
+        if config.get('write_report', False):
+            grayplot.inputs.mask_file = resource_pool['functional_brain_mask']
 
     # inverted functional brain mask -> QAP func temp
     if len(resource_pool['inverted_functional_brain_mask']) == 2:
@@ -1281,7 +1321,6 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
     workflow.connect(temporal, 'qap', temporal_to_json, 'output_dict')
     resource_pool['qap_functional_temporal'] = out_json
 
-    qa_out_dir = os.path.join(config['output_directory'], config["run_name"], "QA")
     qa_out_json = os.path.join(qa_out_dir, "%s_%s_%s_QA.json"
                           % (config["subject_id"], config["session_id"],
                              config["scan_id"]))
@@ -1296,31 +1335,6 @@ def qap_functional_temporal_workflow(workflow, resource_pool, config, name="_"):
 
     workflow.connect(temporal, 'qa', qa_to_json, 'output_dict')
     resource_pool['qa'] = qa_out_json
-
-    id_string = "%s %s %s" % (config["subject_id"], config["session_id"], config["scan_id"])
-
-    if config.get('write_report', False):
-        metadata = [config['session_id'], config['scan_id']]
-        if 'site_name' in config.keys():
-            metadata.append(config['site_name'])
-
-        out_fd = os.path.join(qa_out_dir, "%s_%s_%s_timeseries_measures.png"
-                       % (config["subject_id"], config["session_id"],
-                          config["scan_id"]))
-
-        def pick_dvars(qa, dict_id):
-            dvars = qa[dict_id]['Standardized DVARS']
-            return dvars
-
-        fdplot = pe.Node(PlotFD(), name='plot_fd%s' % name)
-        fdplot.inputs.subject = config['subject_id']
-        fdplot.inputs.out_file = out_fd
-        fdplot.inputs.metadata = [id_string]
-        workflow.connect(fd, 'out_file', fdplot, 'meanfd_file')
-        dict_id = "%s %s %s"%(config["subject_id"], config["session_id"],config["scan_id"])
-        workflow.connect(temporal, ('qa', pick_dvars, dict_id), fdplot, 'dvars')    
-        workflow.connect(gs_ts, 'output', fdplot, 'global_signal')
-        resource_pool['qap_fd'] = (fdplot, 'out_file')
 
     return workflow, resource_pool
 

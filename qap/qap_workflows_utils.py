@@ -20,7 +20,7 @@ def global_signal_time_series(functional_file):
     for i in range(time):
         output[i] = func[:,:,:,i].mean()
     output = (output - min(output))/(max(output) - min(output))
-    return output
+    return output.tolist()
 
 
 def convert_allineate_xfm(mat_list):

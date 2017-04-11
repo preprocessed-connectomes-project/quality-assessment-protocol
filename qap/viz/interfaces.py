@@ -95,23 +95,22 @@ class GrayPlotInputSpec(BaseInterfaceInputSpec):
 
 
 class GrayPlotOutputSpec(TraitedSpec):
-    out_file = File(exists=True, desc='output pdf file')
+    out_file = File(exists=True, desc='output png file')
 
 
 class GrayPlot(BaseInterface):
-
     """
     Plots the frame displacement of a dataset
     """
-    input_spec = PlotFDInputSpec
-    output_spec = PlotFDOutputSpec
+    input_spec = GrayPlotInputSpec
+    output_spec = GrayPlotOutputSpec
 
     def _run_interface(self, runtime):
         title = self.inputs.title
         if isdefined(self.inputs.subject):
             title += ', subject %s' % self.inputs.subject
 
-        fig = grayplot(self.inputs.meanfd_file, self.inputs.dvars, self.inputs.global_signal, self.inputs.metadata, title=title)
+        fig = grayplot(self.inputs.func_file, self.inputs.mask_file, self.inputs.meanfd_file, self.inputs.dvars, self.inputs.global_signal, self.inputs.metadata, title=title)
 
         fig.savefig(self.inputs.out_file, dpi=float(self.inputs.dpi))
 

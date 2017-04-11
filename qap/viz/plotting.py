@@ -385,12 +385,14 @@ def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, 
     gray_matrix, color_matrix = calculate_gray_plot(func_file, mask_file)
 
     #create grid with 2 rows
+    figsize=(11, 8)
     fig = plt.Figure(figsize=figsize)
+    #fig,ax1 = plt.subplots()
     FigureCanvas(fig)
 
-    grid = GridSpec(2, 1)
-    ax1 = plt.subplot(grid[0])
-    ax2 = plt.subplot(grid[1])
+    grid = GridSpec(2, 1, wspace=0.01)
+    ax1 = fig.add_subplot(grid[0, 0])
+    ax2 = fig.add_subplot(grid[1, 0])
 
     #gray plot part
     #add brain labels to grayplot
@@ -399,14 +401,16 @@ def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, 
 
     #plot grayplot
     from numpy.ma import masked_array
+    func_max = gray_matrix.max()+1
     gray = masked_array(gray_plot,gray_plot>=func_max)
     colors = masked_array(gray_plot,gray_plot<func_max)
 
+    aspect = (float(gray_matrix.shape[1])/float(gray_matrix.shape[0]))/3.0
     pa = ax1.imshow(gray,interpolation='None',cmap='gray',aspect=aspect)
     pb = ax1.imshow(colors,interpolation='None',cmap='Spectral',aspect=aspect)
-    plt.xlabel('Time (seconds)')
-    plt.ylabel('Voxels')
-    ax.yaxis.set_ticklabels([])
+    ax1.set_xlabel('Time (seconds)')
+    ax1.set_ylabel('Voxels')
+    ax1.yaxis.set_ticklabels([])
 
     #dvars plot
     fd = ax2.plot(fd_power, label='Mean FD')
@@ -417,24 +421,27 @@ def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, 
     ax2.set_xlabel("Frame number")
     handles, labels = ax2.get_legend_handles_labels()
     ax2.legend(handles, labels)
-    ylim = ax.get_ylim()
+    ylim = ax2.get_ylim()
+    #ax2.set_aspect(1.5)
 
-    fig.suptitle(title)
+    plt.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0)
 
+    #fig.suptitle(title)
+    return fig
     #do it later
     #plt.savefig('grayplot.png', figsize=(8,24), dpi=400)
     
 
-    #create nii file with cluster values
-    out_clusters_img=np.zeros(np.prod(mask.shape)) 
-    out_clusters_img[mask.ravel()==1]=reordered_clusters 
-    out_clusters_img=out_clusters_img.reshape(mask.shape)
-    clust_img=nb.Nifti1Image(out_clusters_img, mask_affine)
-    nb.save(clust_img, "cluster.nii.gz")
+    # TODO: create nii file with cluster values
+    # out_clusters_img=np.zeros(np.prod(mask.shape)) 
+    # out_clusters_img[mask.ravel()==1]=reordered_clusters 
+    # out_clusters_img=out_clusters_img.reshape(mask.shape)
+    # clust_img=nb.Nifti1Image(out_clusters_img, mask_affine)
+    # nb.save(clust_img, "cluster.nii.gz")
 
-    #save image
-    from nilearn import plotting
-    plotting.plot_roi(clust_img,mask_file, cmap='Spectral',output_file='brain.png')
+    # #save image
+    # from nilearn import plotting
+    # plotting.plot_roi(clust_img,mask_file, cmap='Spectral',output_file='brain.png')
 
 
 
