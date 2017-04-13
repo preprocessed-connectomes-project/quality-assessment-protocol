@@ -1115,6 +1115,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         temporal.inputs.sfs = resource_pool['SFS']
 
     # Write mosaic and FD plot
+    '''
     if config['write_report']:
         metadata = [config['session_id'], config['scan_id']]
         if 'site_name' in config.keys():
@@ -1125,6 +1126,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         fdplot.inputs.metadata = metadata
         workflow.connect(fd, 'out_file', fdplot, 'in_file')
         resource_pool['qap_fd'] = (fdplot, 'out_file')
+    '''
 
     out_dir = os.path.join(config['output_directory'], "derivatives",
                            config["run_name"], config["subject_id"],
