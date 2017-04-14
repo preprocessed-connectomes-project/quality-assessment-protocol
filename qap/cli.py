@@ -876,8 +876,8 @@ def run_workflow(args, run=True):
                                                     scan_id)]
 
             if "functional_header_info" in sub_json_dict.keys():
-                resource_pool["anatomical_header_info"] = \
-                    sub_json_dict["anatomical_header_info"]
+                resource_pool["functional_header_info"] = \
+                    sub_json_dict["functional_header_info"]
 
             if "functional_spatial" in sub_json_dict.keys():
                 resource_pool["qap_functional_spatial"] = \
