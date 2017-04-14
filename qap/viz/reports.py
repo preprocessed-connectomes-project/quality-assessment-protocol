@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
 from .plotting import (plot_measures, plot_mosaic, plot_all,
-                       plot_fd, plot_dist)
+                       plot_dist)
 
 
 def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,

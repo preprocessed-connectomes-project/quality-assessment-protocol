@@ -19,7 +19,8 @@ def global_signal_time_series(functional_file):
     # maybe numpy can do it in one line
     for i in range(time):
         output[i] = func[:,:,:,i].mean()
-    return output
+    output = (output - min(output))/(max(output) - min(output))
+    return output.tolist()
 
 
 def convert_allineate_xfm(mat_list):

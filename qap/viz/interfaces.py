@@ -13,7 +13,7 @@ from nipype.interfaces.base import (BaseInterface, traits, TraitedSpec, File,
                                     BaseInterfaceInputSpec, isdefined,
                                     DynamicTraitedSpec, Undefined)
 
-from .plotting import (plot_mosaic, plot_fd)
+from .plotting import (plot_mosaic, grayplot)
 
 from nipype import logging
 iflogger = logging.getLogger('interface')
@@ -80,37 +80,37 @@ class PlotMosaic(BaseInterface):
         return outputs
 
 
-class PlotFDInputSpec(BaseInterfaceInputSpec):
+class GrayPlotInputSpec(BaseInterfaceInputSpec):
+    func_file = File(exists=True, mandatory=True, desc='functional file to be plotted in gray plot')
+    mask_file = File(exists=True, mandatory=True, desc='file for mask functional data')
     meanfd_file = File(exists=True, mandatory=True, desc='mean fd file to be plotted')
-    dvars = traits.Dict(mandatory=True, desc='dvars float array be plotted')
+    dvars = traits.List(traits.Float, mandatory=True, desc='dvars float array be plotted')
     global_signal = traits.List(traits.Float, mandatory=True, desc='global signal to be plotted')
     metadata = traits.List(traits.Str, mandatory=True, desc='additional metadata')
-    title = traits.Str('Mean FD, DVARS ad global Signal', usedefault=True,
+    title = traits.Str('Timeseries  Plot', usedefault=True,
                        desc='modality name to be prepended')
     subject = traits.Str(desc='Subject id')
     dpi = traits.Int(300, usedefault=True, desc='Desired DPI of figure')
-    out_file = File('fd.png', usedefault=True, desc='output file name')
+    out_file = File('grayplot.png', usedefault=True, desc='output file name')
 
 
-class PlotFDOutputSpec(TraitedSpec):
-    out_file = File(exists=True, desc='output pdf file')
+class GrayPlotOutputSpec(TraitedSpec):
+    out_file = File(exists=True, desc='output png file')
 
 
-class PlotFD(BaseInterface):
-
+class GrayPlot(BaseInterface):
     """
     Plots the frame displacement of a dataset
     """
-    input_spec = PlotFDInputSpec
-    output_spec = PlotFDOutputSpec
+    input_spec = GrayPlotInputSpec
+    output_spec = GrayPlotOutputSpec
 
     def _run_interface(self, runtime):
         title = self.inputs.title
         if isdefined(self.inputs.subject):
-            title += ', subject %s' % self.inputs.subject
+            title += ', %s' % self.inputs.subject
+        fig = grayplot(self.inputs.func_file, self.inputs.mask_file, self.inputs.meanfd_file, self.inputs.dvars, self.inputs.global_signal, self.inputs.metadata, title=title)
 
-        fig = plot_fd(self.inputs.meanfd_file, self.inputs.dvars,
-                      self.inputs.global_signal, self.inputs.metadata)
 
         fig.savefig(self.inputs.out_file, dpi=float(self.inputs.dpi))
 

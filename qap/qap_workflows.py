@@ -332,6 +332,7 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
             gather_header.inputs.in_file = resource_pool["functional_scan"]
             gather_header.inputs.type = data_type
 
+
     out_dir = os.path.join(config['output_directory'], "derivatives",
                            config["run_name"], config["subject_id"],
                            config["session_id"])
@@ -612,8 +613,14 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
             resource_pool['anatomical_csf_mask']
 
     if config.get('write_report', False):
+        qa_out_dir = os.path.join(config['output_directory'], config["run_name"], "QA")
+        out_mosaic = os.path.join(qa_out_dir, "%s_%s_%s_mosaic.png"
+                       % (config["subject_id"], config["session_id"],
+                          config["scan_id"]))
         plot = pe.Node(PlotMosaic(), name='plot_mosaic%s' % name)
         plot.inputs.subject = config['subject_id']
+        plot.inputs.out_file = out_mosaic
+
 
         metadata = [config['session_id'], config['scan_id']]
         if 'site_name' in config.keys():
@@ -630,6 +637,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
 
         resource_pool['mean_epi_mosaic'] = (plot, 'out_file')
         resource_pool['qap_mosaic'] = (plot, 'out_file')
+
 
     out_dir = os.path.join(config['output_directory'], "derivatives",
                            config["run_name"], config["subject_id"],
@@ -873,6 +881,7 @@ def run_everything_qap_anatomical_spatial(
         return workflow, workflow.base_dir
 
 
+
 def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to calculate the QAP functional 
     temporal quality measures.
@@ -938,7 +947,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         qap_functional_spatial, global_signal_time_series
     from qap_utils import write_json
     from temporal_qc import fd_jenkinson
-    from qap.viz.interfaces import PlotMosaic, PlotFD
+    from qap.viz.interfaces import PlotMosaic, GrayPlot
 
     def _getfirst(inlist):
         if isinstance(inlist, list):
@@ -1069,17 +1078,50 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
       output_names=["output"], function=global_signal_time_series), 
       name="global_signal_time_series%s" % name)
 
+    qa_out_dir = os.path.join(config['output_directory'], config["run_name"], "QA")
+
+    if config.get('write_report', False):
+        metadata = [config['session_id'], config['scan_id']]
+        if 'site_name' in config.keys():
+            metadata.append(config['site_name'])
+
+        out_fd = os.path.join(qa_out_dir, "%s_%s_%s_timeseries_measures.png"
+                       % (config["subject_id"], config["session_id"],
+                          config["scan_id"]))
+
+        def pick_dvars(qa, dict_id):
+            dvars = qa[dict_id]['Standardized DVARS']
+            return dvars
+
+        grayplot = pe.Node(GrayPlot(), name='grayplot%s' % name)
+        grayplot.inputs.subject = config['subject_id']
+        grayplot.inputs.out_file = out_fd
+        id_string = "%s %s %s" % (config["subject_id"], config["session_id"], config["scan_id"])
+        grayplot.inputs.metadata = [id_string]
+        workflow.connect(fd, 'out_file', grayplot, 'meanfd_file')
+        dict_id = "%s %s %s"%(config["subject_id"], config["session_id"],config["scan_id"])
+        workflow.connect(temporal, ('qa', pick_dvars, dict_id), grayplot, 'dvars')    
+        workflow.connect(gs_ts, 'output', grayplot, 'global_signal')
+        resource_pool['qap_fd'] = (grayplot, 'out_file')
+
     # func reorient (timeseries) -> QAP func temp
     if len(resource_pool['func_reorient']) == 2:
         node, out_file = resource_pool['func_reorient']
         workflow.connect(node, out_file, temporal, 'func_timeseries')
         workflow.connect(node, out_file, gs_ts, 'functional_file')
+
+        if config.get('write_report', False):
+            workflow.connect(node, out_file, grayplot, 'func_file')
+
     else:
         from qap_utils import check_input_resources
         check_input_resources(resource_pool, 'func_reorient')
         input_file = resource_pool['func_reorient']
         temporal.inputs.func_timeseries = input_file
         gs_ts.inputs.functional_file = input_file
+
+        if config.get('write_report', False):
+            grayplot.inputs.func_file = input_file
 
     # func mean (one volume) -> QAP func temp
     if len(resource_pool['mean_functional']) == 2:
@@ -1095,9 +1137,16 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     if len(resource_pool['functional_brain_mask']) == 2:
         node, out_file = resource_pool['functional_brain_mask']
         workflow.connect(node, out_file, temporal, 'func_brain_mask')
+
+        if config.get('write_report', False):
+            workflow.connect(node, out_file, grayplot, 'mask_file')
+
     else:
         temporal.inputs.func_brain_mask = \
             resource_pool['functional_brain_mask']
+            
+        if config.get('write_report', False):
+            grayplot.inputs.mask_file = resource_pool['functional_brain_mask']
 
     # inverted functional brain mask -> QAP func temp
     if len(resource_pool['inverted_functional_brain_mask']) == 2:
@@ -1106,6 +1155,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     else:
         temporal.inputs.bg_func_brain_mask = \
             resource_pool['inverted_functional_brain_mask']
+
 
     # temporal STD -> QAP func temp
     if isinstance(resource_pool['SFS'], tuple):
@@ -1129,6 +1179,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     out_dir = os.path.join(config['output_directory'], "derivatives",
                            config["run_name"], config["subject_id"],
                            config["session_id"])
+
     out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional.json"
                             % (config["subject_id"], config["session_id"],
                                config["scan_id"]))
@@ -1153,6 +1204,8 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     workflow.connect(temporal, 'qap', temporal_to_json, 'output_dict')
     resource_pool['qap_functional'] = out_json
 
+               config["scan_id"]))
+
     qa_out_dir = os.path.join(config['output_directory'], "derivatives",
                               config["run_name"], config["subject_id"],
                               config["session_id"])
@@ -1170,6 +1223,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
 
     workflow.connect(temporal, 'qa', qa_to_json, 'output_dict')
     resource_pool['QA_func'] = qa_out_json
+
 
     id_string = "%s %s %s" % (config["subject_id"], config["session_id"],
                               config["scan_id"])

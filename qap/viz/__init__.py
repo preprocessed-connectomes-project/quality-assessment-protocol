@@ -3,5 +3,5 @@
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 
 from reports import *
-from plotting import plot_measures, plot_mosaic, plot_all, plot_fd
-#import individual_report
+from plotting import plot_measures, plot_mosaic, plot_all, grayplot
+
