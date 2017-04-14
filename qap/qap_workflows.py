@@ -1090,6 +1090,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
                           config["scan_id"]))
 
         def pick_dvars(qa, dict_id):
+            print qa[dict_id]
             dvars = qa[dict_id]['Standardized DVARS']
             return dvars
 
@@ -1164,18 +1165,6 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     else:
         temporal.inputs.sfs = resource_pool['SFS']
 
-    # Write mosaic and FD plot
-    if config['write_report']:
-        metadata = [config['session_id'], config['scan_id']]
-        if 'site_name' in config.keys():
-            metadata.append(config['site_name'])
-
-        fdplot = pe.Node(PlotFD(), name='plot_fd%s' % name)
-        fdplot.inputs.subject = config['subject_id']
-        fdplot.inputs.metadata = metadata
-        workflow.connect(fd, 'out_file', fdplot, 'in_file')
-        resource_pool['qap_fd'] = (fdplot, 'out_file')
-
     out_dir = os.path.join(config['output_directory'], "derivatives",
                            config["run_name"], config["subject_id"],
                            config["session_id"])
@@ -1204,8 +1193,6 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     workflow.connect(temporal, 'qap', temporal_to_json, 'output_dict')
     resource_pool['qap_functional'] = out_json
 
-               config["scan_id"]))
-
     qa_out_dir = os.path.join(config['output_directory'], "derivatives",
                               config["run_name"], config["subject_id"],
                               config["session_id"])
@@ -1227,19 +1214,6 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
 
     id_string = "%s %s %s" % (config["subject_id"], config["session_id"],
                               config["scan_id"])
-
-    if config['write_report']:
-        metadata = [config['session_id'], config['scan_id']]
-        if 'site_name' in config.keys():
-            metadata.append(config['site_name'])
-
-        fdplot = pe.Node(PlotFD(), name='plot_fd%s' % name)
-        fdplot.inputs.subject = config['subject_id']
-        fdplot.inputs.metadata = [id_string]
-        workflow.connect(fd, 'out_file', fdplot, 'meanfd_file')
-        workflow.connect(temporal, 'qa', fdplot, 'dvars')
-        workflow.connect(gs_ts, 'output', fdplot, 'global_signal')
-        resource_pool['qap_fd'] = (fdplot, 'out_file')
 
     return workflow, resource_pool
 
