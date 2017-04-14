@@ -49,7 +49,20 @@ def calculate_gray_plot(func_file, mask_file):
         out_clusters[model.get_indices(i)[0]]=int(i*2+func_max)
     reordered_clusters=out_clusters[np.argsort(model.row_labels_)]
 
-    return reordered_func, reordered_clusters 
+    #calculte each cluster global signal
+    cluster_gs = []
+    for i in np.unique(out_clusters):
+        c = func[np.where( out_clusters.ravel() == i )[0], :]
+        time = func.shape[-1]
+        output = [0]*time
+    
+        for i in range(time):
+            output[i] = c[:,i].mean()
+        output = (output - min(output))/(max(output) - min(output))
+        cluster_gs.append(output)
+
+
+    return reordered_func, reordered_clusters, cluster_gs
 
 def organize_individual_html(subid, output_path, ts_plot, mean_epi_plot):
 
@@ -380,9 +393,9 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
     return fig
 
 
-def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, figsize=(11.7, 8.3), title='Mean FD, DVARS, Global Signal'):
+def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, figsize=(11.7, 8.3), title='Timeseries Plot'):
     fd_power = _calc_fd(meanfd_file)
-    gray_matrix, color_matrix = calculate_gray_plot(func_file, mask_file)
+    gray_matrix, color_matrix, cluster_gs = calculate_gray_plot(func_file, mask_file)
 
     #create grid with 2 rows
     figsize=(11, 8)
@@ -407,31 +420,39 @@ def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, 
 
     aspect = (float(gray_matrix.shape[1])/float(gray_matrix.shape[0]))/3.0
     pa = ax1.imshow(gray,interpolation='None',cmap='gray',aspect=aspect)
-    pb = ax1.imshow(colors,interpolation='None',cmap='Spectral',aspect=aspect)
-    ax1.set_xlabel('Time (seconds)')
+    pb = ax1.imshow(colors,interpolation='None',cmap='rainbow',aspect=aspect)
+    ax1.set_xlabel('Frame number')
     ax1.set_ylabel('Voxels')
     ax1.yaxis.set_ticklabels([])
     ax1.grid(False)
 
     #dvars plot
-    fd = ax2.plot(fd_power, label='Mean FD')
-    d, = ax2.plot(dvars, label='DVARS')
-    gs, = ax2.plot(global_signal, label='Global Signal')
+    fd = ax2.plot(fd_power, label='Mean FD', color='#7bc71b')
+    d, = ax2.plot(dvars, label='DVARS',color='#FFC830')
+    gs, = ax2.plot(global_signal, label='Global Signal',color='#FF5624')
+    cluster_colors = ['#ffffff','#7f00ff', '#2adcdc', '#d4dc7f', '#ff0000']
+    for i in range(5):
+        c, = ax2.plot(cluster_gs[i], color=cluster_colors[i], linewidth=0.7, label='cluster gs')
+
+    #adjust fig params
     ax2.set_xlim((0, len(fd_power)))
-    ax2.set_ylabel("Frame Displacement [mm], DVARS and Global Signal")
     ax2.set_xlabel("Frame number")
-    handles, labels = ax2.get_legend_handles_labels()
-    ax2.legend(handles, labels)
     ylim = ax2.get_ylim()
+    fig.suptitle(title)
     ax2.grid(True)
 
-    plt.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0)
-
-    fig.suptitle(title)
-    return fig
-    #do it later
-    #plt.savefig('grayplot.png', figsize=(8,24), dpi=400)
+    #remove cluster gs labls
+    handles, labels = ax2.get_legend_handles_labels()
+    newLabels, newHandles = [], []
+    for handle, label in zip(handles, labels):
+      if label != 'cluster gs':
+        newLabels.append(label)
+        newHandles.append(handle)
+    ax2.legend(newHandles, newLabels) 
     
+    plt.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0)
+    
+    return fig 
 
     # TODO: create nii file with cluster values
     # out_clusters_img=np.zeros(np.prod(mask.shape)) 

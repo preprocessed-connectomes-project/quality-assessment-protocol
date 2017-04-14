@@ -87,7 +87,7 @@ class GrayPlotInputSpec(BaseInterfaceInputSpec):
     dvars = traits.List(traits.Float, mandatory=True, desc='dvars float array be plotted')
     global_signal = traits.List(traits.Float, mandatory=True, desc='global signal to be plotted')
     metadata = traits.List(traits.Str, mandatory=True, desc='additional metadata')
-    title = traits.Str('Gray Plot', usedefault=True,
+    title = traits.Str('Timeseries  Plot', usedefault=True,
                        desc='modality name to be prepended')
     subject = traits.Str(desc='Subject id')
     dpi = traits.Int(300, usedefault=True, desc='Desired DPI of figure')
