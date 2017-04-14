@@ -92,7 +92,7 @@ def write_json(output_dict, json_file):
 
     import os
     import json
-    from lockfile import FileLock
+    #from lockfile import FileLock
 
     from qap.qap_utils import read_json
 
@@ -113,11 +113,11 @@ def write_json(output_dict, json_file):
         current_dict = output_dict
 
     if write:
-        lock = FileLock(json_file)
-        lock.acquire()
+        #lock = FileLock(json_file)
+        #lock.acquire()
         with open(json_file, "wt") as f:
             json.dump(current_dict, f, indent=2, sort_keys=True)
-        lock.release()
+        #lock.release()
 
     if os.path.exists(json_file):
         return json_file
@@ -195,25 +195,37 @@ def load_mask(mask_file, ref_file):
     if (mask_vals.size != 2) or not (mask_vals == [0, 1]).all():
         err = "Error: Mask is not binary, has %i unique val(s) of %s " \
               "(see file %s)" % (mask_vals.size, mask_vals, mask_file)
-        raise_smart_exception(locals(),err)
+        raise_smart_exception(locals(), err)
 
     # Verify that the mask and anatomical images have the same dimensions.
     if ref_img.shape != mask_img.shape:
         err = "Error: Mask and anatomical image are different dimensions " \
               "for %s" % mask_file
-        raise_smart_exception(locals(),err)
+        raise_smart_exception(locals(), err)
 
     # Verify that the mask and anatomical images are in the same space
     # (have the same affine matrix)
     if (mask_img.get_affine() == ref_img.get_affine()).all == False:
         err = "Error: Mask and anatomical image are not in the same space " \
               "for %s vs %s" % (mask_file, ref_file)
-        raise_smart_exception(locals(),err)
+        raise_smart_exception(locals(), err)
 
     return mask_dat
 
 
 def get_masked_data(data, mask, files=False):
+    """Extract data from a NIFTI file and apply a mask to it.
+
+    :type data: NumPy array or str
+    :param data: The data (either in a NumPy array, or the filepath to a NIFTI
+                 file).
+    :type mask: NumPy array or str
+    :param mask: The mask data (either in a NumPy array, or the filepath to a
+                 NIFTI file).
+    :type files: bool
+    :param files: Whether or not the input parameters are filepath strings or
+                  NumPy array objects.
+    """
 
     import numpy as np
 

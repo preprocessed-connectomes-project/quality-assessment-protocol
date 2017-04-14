@@ -18,7 +18,7 @@ def summary_mask(anat_data, mask_data):
     std = anat_masked.std(ddof=1)
     size = len(anat_masked)
     
-    return (mean, std, size)
+    return anat_masked, mean, std, size
 
 
 def check_datatype(background):
@@ -345,6 +345,16 @@ def fwhm(anat_file, mask_file, out_vox=False):
         vals = vals / pixdim
     
     return tuple(vals)
+
+
+def skew_and_kurt(anat_data):
+
+    from scipy import stats
+
+    skew = stats.skew(anat_data)
+    kurt = stats.kurtosis(anat_data)
+
+    return skew, kurt
 
 
 def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,

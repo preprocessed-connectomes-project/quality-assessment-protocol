@@ -421,8 +421,8 @@ def json_to_csv(json_dict, csv_output_dir=None):
     """Extract the data from the JSON output file and write it to a CSV file.
 
     :type json_dict: dict
-    :param json_dict: Dictionary containing all of the JSON output
-                      information from the QAP run.
+    :param json_dict: Dictionary containing all of the JSON output information
+                      from the QAP run.
     :type csv_output_dir: str
     :param csv_output_dir: (default: None) Path to the directory to write the
                            CSV file into.

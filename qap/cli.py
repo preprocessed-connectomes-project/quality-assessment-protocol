@@ -628,9 +628,8 @@ def starter_node_func(starter):
     - This is used for a Nipype utility function node to serve as a starting
       node to connect to multiple unrelated Nipype workflows. Each of these
       workflows runs QAP for one participant in the current bundle being run.
-    - Connecting the multiple non-interdependent participant workflows as
-      one workflow allows the Nipype resource scheduler to maximize
-      performance.
+    - Connecting the multiple non-interdependent participant workflows as one
+      workflow allows the Nipype resource scheduler to maximize performance.
 
     :type starter: str
     :param starter: A dummy string.
@@ -726,23 +725,7 @@ def run_workflow(args, run=True):
     starter_node.inputs.starter = ""
 
     # set output directory
-    output_dir = op.join(config["output_directory"], run_name)
-
-    sub_out_dirs = ["qap", "QA"]
-    if keep_outputs:
-        sub_out_dirs.append("derivatives")
-
-    for dirname in sub_out_dirs:
-        try:
-            os.makedirs(op.join(output_dir, dirname))
-        except:
-            if not op.isdir(op.join(output_dir, dirname)):
-                err = "[!] Output directory unable to be created.\n" \
-                      "Path: %s\n\n" % op.join(output_dir, dirname)
-                raise Exception(err)
-            else:
-                pass
-
+    output_dir = op.join(config["output_directory"], "derivatives", run_name)
     new_outputs = 0
 
     # iterate over each subject in the bundle
@@ -766,7 +749,8 @@ def run_workflow(args, run=True):
 
         for resource in resource_pool.keys():
             try:
-                if not op.isfile(resource_pool[resource]) and resource != "site_name":
+                if not op.isfile(resource_pool[resource]) and \
+                                resource != "site_name":
                     invalid_paths.append((resource, resource_pool[resource]))
             except:
                 err = "\n\n[!]"
@@ -810,7 +794,14 @@ def run_workflow(args, run=True):
         else:
             scan_id = "scan-1"
 
+        # we need the sub_id, session_id, scan_id variables to have the -'s
+        # for BIDS format, but need the node names to have only _'s, otherwise
+        # dot will crash if we generate workflow graphs
         name = "_".join(["", sub_id, session_id, scan_id])
+        name = name.replace("-", "_")
+
+        config["session_output_dir"] = os.path.join(output_dir, sub_id,
+                                                    session_id)
 
         rt[name] = {'id': sub_id, 'session': session_id, 'scan': scan_id,
                     'resource_pool': str(resource_pool)}
@@ -826,25 +817,40 @@ def run_workflow(args, run=True):
 
         logger.info("Configuration settings:\n%s" % str(config))
 
-        qap_types = ["anatomical_spatial", 
-                     "functional_spatial", 
-                     "functional_temporal"]
+        qap_types = ["anatomical_spatial", "functional"]
 
-        qa_outputs = ["qa", "qap_fd", "qap_mosaic"]
+        qa_outputs = ["QA", "QA-anat", "qap_fd", "qap_mosaic",
+                      "temporal-std-map"]
 
         # update that resource pool with what's already in the output
         # directory
-        if op.exists(op.join(output_dir, "derivatives")):
-            for resource in os.listdir(op.join(output_dir, "derivatives")):
+        if op.exists(op.join(output_dir, sub_id, session_id)):
+            for resource in os.listdir(op.join(output_dir, sub_id,
+                                               session_id)):
                 if resource not in resource_pool.keys():
                     try:
                         resource_pool[resource] = \
-                            glob.glob(op.join(output_dir, resource, "*"))[0]
+                            glob.glob(op.join(output_dir, sub_id, session_id,
+                                              "%s_%s_%s_%s.nii.gz"
+                                              % (sub_id, session_id, scan_id,
+                                                 resource)))[0]
                     except IndexError:
                         # a stray file in the sub-sess-scan output directory
                         pass
+        else:
+            try:
+                os.makedirs(op.join(output_dir, sub_id, session_id))
+            except:
+                if not op.isdir(op.join(output_dir, sub_id, session_id)):
+                    err = "[!] Output directory unable to be created.\n" \
+                          "Path: %s\n\n" % op.join(output_dir, sub_id,
+                                                   session_id)
+                    raise Exception(err)
+                else:
+                    pass
 
-        anat_json = op.join(output_dir, "qap", "%s_%s_%s_anatomical.json"
+        anat_json = op.join(output_dir, sub_id, session_id,
+                            "%s_%s_%s_qap-anatomical.json"
                             % (sub_id, session_id, scan_id))
         if op.exists(anat_json):
             json_dict = read_json(anat_json)
@@ -860,8 +866,9 @@ def run_workflow(args, run=True):
                 resource_pool["qap_anatomical_spatial"] = \
                     sub_json_dict["anatomical_spatial"]
 
-        func_json = op.join(output_dir, "qap", "%s_%s_%s_functional.json"
-                            % (sub_id, session_id, scan_id))
+        func_json = op.join(output_dir, sub_id, session_id,
+                                 "%s_%s_%s_qap-functional.json"
+                                 % (sub_id, session_id, scan_id))
         if op.exists(func_json):
             json_dict = read_json(func_json)
             sub_json_dict = json_dict["%s %s %s" % (sub_id,
@@ -913,7 +920,7 @@ def run_workflow(args, run=True):
                 from qap import qap_workflows as qw
             workflow, resource_pool = \
                 qw.qap_gather_header_info(workflow, resource_pool, config,
-                    name, "functional")
+                                          name, "functional")
 
         # set up the datasinks
         out_list = []
@@ -934,7 +941,7 @@ def run_workflow(args, run=True):
             out_list += ['qa']
 
         # Save reports to out_dir if necessary
-        if config.get('write_report', False):
+        if config['write_report']:
 
             if ("qap_mosaic" in resource_pool.keys()) and  \
                     ("qap_mosaic" not in out_list):
@@ -947,39 +954,35 @@ def run_workflow(args, run=True):
                     out_list += ['qap_fd']
 
         for output in out_list:
-            # we use a check for len()==2 here to select those items in the
-            # resource pool which are tuples of (node, node_output), instead
-            # of the items which are straight paths to files
-
             # resource pool items which are in the tuple format are the
             # outputs that have been created in this workflow because they
             # were not present in the subject list YML (the starting resource
             # pool) and had to be generated
-            if (len(resource_pool[output]) == 2) and (output != "starter"):
+            if isinstance(resource_pool[output], tuple) and \
+                    (output != "starter"):
+
                 node, out_file = resource_pool[output]
                 # create the datasink
                 ds = pe.Node(nio.DataSink(), name='datasink_%s%s'
                                                   % (output, name))
-                ds.inputs.base_directory = output_dir
 
-                if output.replace("qap_", "") in qap_types:
-                    # if the output is one of the main output JSON files
-                    workflow.connect(node, out_file, ds, 'qap.@%s' % output)
-                elif output in qa_outputs:
-                    # if the output is one of the QA JSON files
-                    workflow.connect(node, out_file, ds, 'QA.@%s' % output)
-                else:
-                    # if the output is a derivative/intermediary file
-                    # rename file to BIDS format
-                    rename = pe.Node(niu.Rename(), name='rename_%s%s'
-                                                        % (output, name))
-                    rename.inputs.keep_ext = True
-                    rename.inputs.format_string = "%s_%s_%s_%s" \
-                                                  % (sub_id, session_id,
-                                                     scan_id, output)
-                    workflow.connect(node, out_file, rename, 'in_file')
-                    workflow.connect(rename, 'out_file', ds,
-                                     'derivatives.@%s' % output)
+                ds.inputs.base_directory = os.path.join(output_dir, sub_id)
+
+                # rename file to BIDS format
+                rename = pe.Node(niu.Rename(), name='rename_%s%s'
+                                                    % (output, name))
+                rename.inputs.keep_ext = True
+                # replace the underscores in 'output' (which are the keys of
+                # the resource pool) with dashes - need to be underscores for
+                # the workflow names, but need to be dashes for BIDS output
+                # file naming format
+                rename.inputs.format_string = "%s_%s_%s_%s" \
+                                              % (sub_id, session_id,
+                                                 scan_id,
+                                                 output.replace("_", "-"))
+                workflow.connect(node, out_file, rename, 'in_file')
+                workflow.connect(rename, 'out_file', ds,
+                                 '%s.@%s' % (session_id, output))
                 new_outputs += 1
             elif ".json" in resource_pool[output]:
                 new_outputs += 1
@@ -988,7 +991,7 @@ def run_workflow(args, run=True):
 
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
-        if config.get('write_graph', False):
+        if config['write_graph']:
             workflow.write_graph(
                 dotfilename=op.join(config["output_directory"],
                                     "".join([run_name, ".dot"])),
@@ -1005,27 +1008,34 @@ def run_workflow(args, run=True):
                 simple_form=False)
         if run:
             try:
-
                 #add html report
-                from qap.viz.plotting import organize_individual_html
+                if config["write_report"]:
+                    from qap.viz.plotting import organize_individual_html
+                    out_dir = os.path.join(config['output_directory'],
+                                           config["run_name"],
+                                           config["subject_id"],
+                                           config["session_id"], "QA")
 
-                out_dir = os.path.join(config['output_directory'], config["run_name"], 
-                      "QA")
-
-                html = pe.Node(niu.Function(input_names=["subid", "output_path", "ts_plot", "mean_epi_plot"], output_names=["none"], function=organize_individual_html), name="individual_report_html%s" % name)
-                html.inputs.subid = config['subject_id']
-                html.inputs.output_path = out_dir
-                if len(resource_pool['qap_fd']) == 1:
-                    html.inputs.ts_plot = resource_pool['qap_fd']
-                else:
-                    fd_node, fd_out_file = resource_pool['qap_fd']
-                    workflow.connect(fd_node, fd_out_file, html, 'ts_plot')
-                if len(resource_pool['qap_mosaic']) == 1:
-                    html.inputs.mean_epi_plot = resource_pool['qap_mosaic']
-                else:
-                    mean_epi_node, mean_epi_out = resource_pool['qap_mosaic']
-                    workflow.connect(mean_epi_node, mean_epi_out, html, 'mean_epi_plot')
-                
+                    html = pe.Node(niu.Function(input_names=["subid",
+                                                             "output_path",
+                                                             "ts_plot",
+                                                             "mean_epi_plot"],
+                                                output_names=["none"],
+                                                function=organize_individual_html),
+                                   name="individual_report_html%s" % name)
+                    html.inputs.subid = config['subject_id']
+                    html.inputs.output_path = out_dir
+                    if len(resource_pool['qap_fd']) == 1:
+                        html.inputs.ts_plot = resource_pool['qap_fd']
+                    else:
+                        fd_node, fd_out_file = resource_pool['qap_fd']
+                        workflow.connect(fd_node, fd_out_file, html, 'ts_plot')
+                    if len(resource_pool['qap_mosaic']) == 1:
+                        html.inputs.mean_epi_plot = resource_pool['qap_mosaic']
+                    else:
+                        mean_epi_node, mean_epi_out = resource_pool['qap_mosaic']
+                        workflow.connect(mean_epi_node, mean_epi_out, html,
+                                         'mean_epi_plot')
 
                 logger.info("Running with plugin %s" % runargs["plugin"])
                 logger.info("Using plugin args %s" % runargs["plugin_args"])

@@ -109,8 +109,8 @@ class GrayPlot(BaseInterface):
         title = self.inputs.title
         if isdefined(self.inputs.subject):
             title += ', %s' % self.inputs.subject
-
         fig = grayplot(self.inputs.func_file, self.inputs.mask_file, self.inputs.meanfd_file, self.inputs.dvars, self.inputs.global_signal, self.inputs.metadata, title=title)
+
 
         fig.savefig(self.inputs.out_file, dpi=float(self.inputs.dpi))
 
