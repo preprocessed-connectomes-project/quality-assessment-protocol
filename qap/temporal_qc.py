@@ -132,7 +132,8 @@ def fd_jenkinson(in_file, rmax=80., out_file=None, out_array=False):
     flag = 0
     X = [0]  # First timepoint
     for i in range(0, pm.shape[0]):
-        # making use of the fact that the order of aff12 matrix is "row-by-row"
+        # making use of the fact that the order of aff12 matrix is
+        # "row-by-row"
         T_rb = np.matrix(pm[i].reshape(4, 4))
 
         if flag == 0:
@@ -300,8 +301,9 @@ def global_correlation(func_reorient, func_mask):
 
 
 def calc_temporal_std(voxel_ts):
-    '''this can be used in a map in the below function later when you'''
-    '''move to optimize it'''
+    '''this can be used in a map in the below function later when you move to
+    optimize it
+    '''
     import numpy as np
 
     voxel_std = np.std(voxel_ts)
@@ -316,7 +318,7 @@ def get_temporal_std_map(func_reorient, func_mask):
     import nibabel as nb
     from qap.qap_utils import get_masked_data, write_nifti_image
 
-    func_data = get_masked_data(func_reorient, func_mask, files=True)
+    func_data = get_masked_data(func_reorient, func_mask)
 
     temporal_std_map = np.zeros(func_data.shape[0:3])
 

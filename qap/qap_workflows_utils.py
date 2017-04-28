@@ -404,11 +404,11 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     import qap
     from qap.spatial_qc import summary_mask, snr, cnr, fber, efc, \
         artifacts, fwhm, cortical_contrast, skew_and_kurt
-    from qap.qap_utils import load_image, load_mask, \
+    from qap.qap_utils import load_image, load_mask, write_nifti_image, \
                               create_anatomical_background_mask
 
     # Load the data
-    anat_data = load_image(anatomical_reorient)
+    anat_data, anat_aff = load_image(anatomical_reorient, return_affine=True)
 
     fg_mask = load_mask(qap_head_mask_path, anatomical_reorient)
 
@@ -430,7 +430,7 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     efc_out = efc(anat_data)
 
     # Artifact
-    qi1, _ = artifacts(anat_data, fg_mask, bg_mask, calculate_qi2=False)
+    qi1, _, qi_bg = artifacts(anat_data, fg_mask, bg_mask)
 
     # Smoothness in voxels
     tmp = fwhm(anatomical_reorient, whole_head_mask_path, out_vox=out_vox)
@@ -510,6 +510,12 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
         }
     }
 
+    import nibabel as nb
+    qi_bg_img = nb.Nifti2Image(qi_bg, anat_aff)
+    # this writes it into the node's folder in the working directory
+    qi_bg_file = os.path.join(os.getcwd(), "Qi1-background.nii.gz")
+    write_nifti_image(qi_bg_img, qi_bg_file)
+
     # prospective filepaths
     if session_output_dir:
         anat_file = os.path.join(session_output_dir,
@@ -517,6 +523,12 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
                                            "anatomical-reorient.nii.gz"]))
         if os.path.exists(anat_file):
             qa[id_string]["metrics"]["scan filepath"] = anat_file
+
+        qi_file = os.path.join(session_output_dir,
+                               "_".join([subject_id, session_id, scan_id,
+                                         "Qi1-background.nii.gz"]))
+        if os.path.exists(qi_file):
+            qa[id_string]["metrics"]["Qi1 background"] = qi_file
 
     return qap, qa
 

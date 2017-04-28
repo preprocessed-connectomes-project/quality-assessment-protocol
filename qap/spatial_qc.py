@@ -295,7 +295,7 @@ def artifacts(anat_data, fg_mask_data, bg_mask_data, calculate_qi2=False):
     else:
         QI2 = None
 
-    return (QI1,QI2)
+    return (QI1, QI2, background)
 
 
 def fwhm(anat_file, mask_file, out_vox=False):

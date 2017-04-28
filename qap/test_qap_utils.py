@@ -29,7 +29,7 @@ class TestGetMaskedData(unittest.TestCase):
 
     def test_masking_files(self):
         import numpy.testing as nt
-        masked_data = self.gmd(self.func_mean, self.func_mask, files=True)
+        masked_data = self.gmd(self.func_mean, self.func_mask)
         msg = "%s\n%s" % (str(self.ref_masked_data.shape),
                           str(masked_data.shape))
         nt.assert_array_equal(self.ref_masked_data, masked_data, msg)

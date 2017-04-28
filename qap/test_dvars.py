@@ -72,13 +72,13 @@ def test_remove_zero_variance_voxels():
     
     from qap.dvars import remove_zero_variance_voxels
 
-    func_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    func_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "func_reorient.nii.gz"))
                                       
-    func_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    func_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
                                     "functional_brain_mask.nii.gz"))
                                     
-    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir,
                                   "no_zero_variance_voxels_mask.p"))
                                    
     func_img = nb.load(func_reorient)
@@ -102,19 +102,17 @@ def test_load():
     import os
     import pickle
     import pkg_resources as p
-    
-    import nibabel as nb
     import numpy as np
     
     from qap.dvars import load
 
-    func_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    func_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "func_reorient.nii.gz"))
                                       
-    func_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    func_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
                                     "functional_brain_mask.nii.gz"))
                                     
-    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir,
                                   "loaded_func.p"))
                                     
     func_out_data = load(func_reorient, func_mask)
@@ -135,16 +133,14 @@ def test_robust_stdev():
     import os
     import pickle
     import pkg_resources as p
-    
-    import nibabel as nb
     import numpy as np
     
     from qap.dvars import robust_stdev
 
-    func_data_file = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    func_data_file = p.resource_filename("qap", os.path.join(test_sub_dir,
                                          "loaded_func.p"))
                                                                          
-    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir,
                                   "robust_stdev_output.p"))
                                     
     with open(func_data_file, "r") as f:
@@ -165,17 +161,15 @@ def test_ar1():
     import os
     import pickle
     import pkg_resources as p
-    
-    import nibabel as nb
     import numpy as np
     
     from qap.dvars import ar1
 
-    func_data_file = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                         "loaded_func.p"))
+    func_data_file = p.resource_filename("qap", os.path.join(test_sub_dir,
+                                                             "loaded_func.p"))
                                                                          
-    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                  "ar1_output.p"))
+    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir,
+                                                      "ar1_output.p"))
                                     
     with open(func_data_file, "r") as f:
         func_data = pickle.load(f)

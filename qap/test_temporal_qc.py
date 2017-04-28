@@ -8,8 +8,9 @@ def test_calculate_percent_outliers():
 
     from qap.temporal_qc import calculate_percent_outliers
 
-    dataset = [1,1,2,3,27,34,45,49,54,55,67,294,345,352,356,593,632,675,763,\
-        764,825,866,2954,4634,4856,5934,29954]
+    dataset = [1, 1, 2, 3, 27, 34, 45, 49, 54, 55, 67, 294, 345, 352, 356,
+               593, 632, 675, 763, 764, 825, 866, 2954, 4634, 4856, 5934,
+               29954]
 
     percent_outliers, IQR = calculate_percent_outliers(dataset)
 
@@ -27,10 +28,10 @@ def test_fd_jenkinson():
     
     from qap.temporal_qc import fd_jenkinson
 
-    coord_xfm = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    coord_xfm = p.resource_filename("qap", os.path.join(test_sub_dir,
                                     "coordinate_transformation.aff12.1D"))
 
-    ref_meanfd = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    ref_meanfd = p.resource_filename("qap", os.path.join(test_sub_dir,
                                      "meanFD.1D"))                    
 
     meanfd = fd_jenkinson(coord_xfm, out_array=True)
@@ -49,10 +50,10 @@ def test_outlier_timepoints_no_mask():
     
     from qap.temporal_qc import outlier_timepoints
 
-    func_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    func_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "func_reorient.nii.gz"))
                                   
-    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir,
                                   "outlier_timepoints_output_nomask.p"))
                                     
     out_list = outlier_timepoints(func_reorient)
@@ -72,13 +73,13 @@ def test_outlier_timepoints_with_mask():
     
     from qap.temporal_qc import outlier_timepoints
 
-    func_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    func_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "func_reorient.nii.gz"))
 
-    func_brain_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    func_brain_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
                                           "functional_brain_mask.nii.gz"))
                                   
-    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir,
                                   "outlier_timepoints_output_withmask.p"))
                                     
     out_list = outlier_timepoints(func_reorient, mask_file=func_brain_mask)
@@ -98,10 +99,10 @@ def test_quality_timepoints():
     
     from qap.temporal_qc import quality_timepoints
 
-    func_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    func_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "func_reorient.nii.gz"))
 
-    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    ref_out = p.resource_filename("qap", os.path.join(test_sub_dir,
                                   "quality_timepoints_output.p"))
                                     
     out_list = quality_timepoints(func_reorient)
@@ -122,10 +123,10 @@ def test_global_correlation():
 
     from qap.temporal_qc import global_correlation
 
-    func_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    func_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "func_reorient.nii.gz"))
                                   
-    func_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    func_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
                                     "functional_brain_mask.nii.gz"))
 
     gcor = global_correlation(func_reorient, func_mask)

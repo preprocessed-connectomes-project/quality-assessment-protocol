@@ -123,7 +123,7 @@ def write_json(output_dict, json_file):
         return json_file
 
 
-def load_image(image_file):
+def load_image(image_file, return_affine=False):
     """Load a raw scan image from a NIFTI file and check it.
 
     :type image_file: str
@@ -163,7 +163,10 @@ def load_image(image_file):
         msg = "Error: Unknown datatype %s" % dat.dtype
         raise_smart_exception(locals(),msg)
 
-    return dat
+    if return_affine:
+        return dat, img.affine
+    else:
+        return dat
 
 
 def load_mask(mask_file, ref_file):
@@ -213,7 +216,7 @@ def load_mask(mask_file, ref_file):
     return mask_dat
 
 
-def get_masked_data(data, mask, files=False):
+def get_masked_data(data, mask):
     """Extract data from a NIFTI file and apply a mask to it.
 
     :type data: NumPy array or str
@@ -228,11 +231,12 @@ def get_masked_data(data, mask, files=False):
     """
 
     import numpy as np
+    import nibabel as nb
 
-    if files:
-        import nibabel as nb
+    if isinstance(data, str):
         img = nb.load(data)
         data = img.get_data()
+    if isinstance(mask, str):
         mask_img = nb.load(mask)
         mask = mask_img.get_data()
 
