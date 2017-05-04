@@ -1,6 +1,13 @@
 
 import pytest
+import unittest
 test_sub_dir = "test_data"
+
+
+class TestArtifacts(unittest.TestCase):
+
+    def setUp(self):
+
 
 
 @pytest.mark.quick

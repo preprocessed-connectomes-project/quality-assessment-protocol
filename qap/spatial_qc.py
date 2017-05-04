@@ -206,34 +206,41 @@ def efc(anat_data):
     return efc
 
 
-def artifacts(anat_data, fg_mask_data, bg_mask_data, calculate_qi2=False):
-    """Calculates QI1, the fraction of total voxels that contain artifacts.
+def artifacts(anatomical_reorient, qap_head_mask_path, exclude_zeroes=False):
+    """Create a binary mask of the anatomical background voxels corrupted by
+    artifacts via a binary opening operation.
 
-    - Detect artifacts in the anatomical image using the method described in
-      Mortamet et al. 2009 (MRM).
-    - Optionally, also calculates QI2, the distance between the distribution
-      of noise voxel (non-artifact background voxels) intensities, and a
-      Ricean distribution.
-
-    :type anat_data: Nibabel data
-    :param anat_data: The anatomical image data.
-    :type fg_mask_data: Nibabel data
-    :param fg_mask_data: The binary mask of the head.
-    :type bg_mask_data: Nibabel data
-    :param bg_mask_data: The binary mask of the background.
-    :type calculate_qi2: bool
-    :param calculate_qi2: (default: False) Whether to calculate Qi2.
-    :rtype: tuple
-    :return: The Qi1 and Qi2 values (Qi2 = None if not calculated).
+    :param anatomical_reorient: String filepath to the deobliqued, reoriented
+                                anatomical scan NIFTI file.
+    :param qap_head_mask_path: String filepath to the binary head mask NIFTI
+                               file, including the region in front of and
+                               below the mouth and nose.
+    :param exclude_zeroes: Boolean choosing whether to exclude artificial
+                           zero voxels.
+    :return: String filepath to the background artifacts NIFTI file.
     """
 
+    import os
     import numpy as np
+    import nibabel as nb
     import scipy.ndimage as nd
+    from qap.spatial_qc import check_datatype
+    from qap.qap_utils import load_image, load_mask, \
+        create_anatomical_background_mask, write_nifti_image
+
+    # Load the data
+    anat_data, anat_aff, anat_hdr = load_image(anatomical_reorient,
+                                               return_affine=True)
+    fg_mask = load_mask(qap_head_mask_path, anatomical_reorient)
+
+    # bg_mask is the inversion of the "qap_head_mask"
+    bg_mask = create_anatomical_background_mask(anat_data, fg_mask,
+                                                exclude_zeroes)
 
     # Create an image containing only background voxels (everything 
     # outside bg_mask set to 0)
     background = anat_data.copy()
-    background[bg_mask_data != 1] = 0
+    background[bg_mask != 1] = 0
     
     # make sure the datatype is an int
     background = check_datatype(background)
@@ -249,25 +256,71 @@ def artifacts(anat_data, fg_mask_data, bg_mask_data, calculate_qi2=False):
     background[background != 0] = 1
 
     # Create a structural element to be used in an opening operation.
-    struct_elmnt = np.zeros((3,3,3))
-    struct_elmnt[0,1,1] = 1
-    struct_elmnt[1,1,:] = 1
-    struct_elmnt[1,:,1] = 1
-    struct_elmnt[2,1,1] = 1
+    struct_elmnt = np.zeros((3, 3, 3))
+    struct_elmnt[0, 1, 1] = 1
+    struct_elmnt[1, 1, :] = 1
+    struct_elmnt[1, :, 1] = 1
+    struct_elmnt[2, 1, 1] = 1
 
     # Perform an opening operation on the background data.
     background = nd.binary_opening(background, structure=struct_elmnt)
 
+    bg_mask_img = nb.Nifti1Image(bg_mask, anat_aff, anat_hdr)
+    # this writes it into the node's folder in the working directory
+    bg_mask_file = os.path.join(os.getcwd(), "qap-bg-head-mask.nii.gz")
+    bg_mask_img.to_filename(bg_mask_file)
+
+    fav_bg_img = nb.Nifti1Image(background.astype(int), anat_aff, anat_hdr)
+    # this writes it into the node's folder in the working directory
+    fav_bg_file = os.path.join(os.getcwd(), "fav-artifacts-background.nii.gz")
+    fav_bg_img.to_filename(fav_bg_file)
+
+    return fav_bg_file, bg_mask_file
+
+
+def fav(fav_artifacts_bg, anatomical_reorient, bg_head_mask,
+        qap_head_mask_path, calculate_qi2=False):
+    """Calculate FAV, the fraction of total voxels that contain artifacts.
+
+    - Detect artifacts in the anatomical image using the method described in
+      Mortamet et al. 2009 (MRM).
+    - Optionally, also calculates QI2, the distance between the distribution
+      of noise voxel (non-artifact background voxels) intensities, and a
+      Ricean distribution.
+
+    :param fav_artifacts_bg: String filepath to the mask NIFTI file outlining
+                             the background voxels containing artifacts.
+    :param anatomical_reorient: String filepath to the anatomical scan NIFTI
+                                file.
+    :param bg_head_mask: String filepath to the binary background mask NIFTI
+                         file.
+    :param qap_head_mask_path: String filepath to the binary foreground mask
+                               NIFTI file.
+    :param calculate_qi2: Boolean switch determining whether to calculate Qi2.
+    :return: Float values of Qi1 and Qi2 (if Qi2 not calculated, return None).
+    """
+
+    import numpy as np
+    from qap.qap_utils import read_nifti_image, get_masked_data, load_image, \
+        load_mask
+
+    # Load the data
+    background = read_nifti_image(fav_artifacts_bg)
+    bg_mask_data = get_masked_data(anatomical_reorient, bg_head_mask)
+
     # Count the number of voxels that remain after the opening operation. 
     # These are artifacts.
     QI1 = background.sum() / float(bg_mask_data.sum())
-    
-    ''' "bg" in code below not defined- need to ascertain what that should '''
-    '''      be, and correct it- unit test for this part disabled for now  '''
+
     if calculate_qi2:
+        # Load the data
+        anat_data = load_image(anatomical_reorient, return_affine=False)
+
+        fg_mask_data = load_mask(qap_head_mask_path, anatomical_reorient)
+
         # Now lets focus on the noise, which is everything in the background
         # that was not identified as artifact
-        bgNoise = anat_data[(fg_mask_data-bg)==1]
+        bgNoise = anat_data[(fg_mask_data-bg_mask_data)==1]
 
         # calculate the histogram of the noise and its derivative
         H = np.bincount(bgNoise)
@@ -295,7 +348,7 @@ def artifacts(anat_data, fg_mask_data, bg_mask_data, calculate_qi2=False):
     else:
         QI2 = None
 
-    return (QI1, QI2, background)
+    return (QI1, QI2)
 
 
 def fwhm(anat_file, mask_file, out_vox=False):

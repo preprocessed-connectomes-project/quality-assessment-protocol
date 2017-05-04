@@ -354,15 +354,72 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
     return workflow, resource_pool
 
 
+def calculate_artifacts_background(workflow, resource_pool, config, name="_"):
+
+    import copy
+    import nipype.pipeline.engine as pe
+    import nipype.interfaces.utility as niu
+    from qap.spatial_qc import artifacts
+
+    if 'qap_head_mask' not in resource_pool.keys():
+        from qap_workflows import qap_mask_workflow
+        old_rp = copy.copy(resource_pool)
+        workflow, resource_pool = \
+            qap_mask_workflow(workflow, resource_pool, config, name)
+        if resource_pool == old_rp:
+            return workflow, resource_pool
+
+    if 'anatomical_reorient' not in resource_pool.keys():
+        from anatomical_preproc import anatomical_reorient_workflow
+        old_rp = copy.copy(resource_pool)
+        workflow, new_resource_pool = \
+            anatomical_reorient_workflow(workflow, resource_pool, config,
+                                         name)
+        if resource_pool == old_rp:
+            return workflow, resource_pool
+
+    calculate_artifacts = \
+        pe.Node(niu.Function(input_names=['anatomical_reorient',
+                                          'qap_head_mask_path',
+                                          'exclude_zeroes'],
+                             output_names=['fav_bg_file', 'bg_mask_file'],
+                             function=artifacts),
+                name="calculate_artifacts%s" % name)
+
+    calculate_artifacts.inputs.exclude_zeroes = config["exclude_zeros"]
+
+    if isinstance(resource_pool["anatomical_reorient"], tuple):
+        node, out_file = resource_pool["anatomical_reorient"]
+        workflow.connect(node, out_file,
+                         calculate_artifacts, 'anatomical_reorient')
+    else:
+        calculate_artifacts.inputs.anatomical_reorient = \
+            resource_pool["anatomical_reorient"]
+
+    if isinstance(resource_pool["qap_head_mask"], tuple):
+        node, out_file = resource_pool["qap_head_mask"]
+        workflow.connect(node, out_file,
+                         calculate_artifacts, 'qap_head_mask_path')
+    else:
+        calculate_artifacts.inputs.qap_head_mask_path = \
+            resource_pool["qap_head_mask"]
+
+    resource_pool["fav_artifacts_background"] = \
+        (calculate_artifacts, 'fav_bg_file')
+    resource_pool["qap_bg_head_mask"] = (calculate_artifacts, 'bg_mask_file')
+
+    return workflow, resource_pool
+
+
 def calculate_temporal_std(workflow, resource_pool, config, name="_"):
 
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
-    from qap.temporal_qc import get_temporal_std_map
+    from qap.qap_workflows_utils import get_temporal_std_map
 
     calculate_tstd_map = pe.Node(niu.Function(input_names=['func_reorient',
                                                            'func_mask'],
-                                              output_names=['temporal_std_map'],
+                                              output_names=['temporal_std_map_file'],
                                               function=get_temporal_std_map),
                                  name="calculate_temporal_std%s" % name)
 
@@ -381,7 +438,7 @@ def calculate_temporal_std(workflow, resource_pool, config, name="_"):
             resource_pool["functional_brain_mask"]
 
     resource_pool['temporal_std_map'] = (calculate_tstd_map,
-                                         'temporal_std_map')
+                                         'temporal_std_map_file')
 
     return workflow, resource_pool
 
@@ -391,7 +448,7 @@ def calculate_sfs_workflow(workflow, resource_pool, config, name="_"):
     import copy
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
-    from qap.temporal_qc import sfs_timeseries
+    from qap.qap_workflows_utils import sfs_timeseries
 
     if 'mean_functional' not in resource_pool.keys():
         from functional_preproc import mean_functional_workflow
@@ -412,7 +469,8 @@ def calculate_sfs_workflow(workflow, resource_pool, config, name="_"):
     calculate_sfs = pe.Node(niu.Function(input_names=['func_mean',
                                                       'func_mask',
                                                       'temporal_std_file'],
-                                         output_names=['sfs_file'],
+                                         output_names=['sfs_file',
+                                                       'est_nuisance_file'],
                                          function=sfs_timeseries),
                             name="calculate_sfs%s" % name)
 
@@ -437,6 +495,7 @@ def calculate_sfs_workflow(workflow, resource_pool, config, name="_"):
             resource_pool["temporal_std_map"]
 
     resource_pool['SFS'] = (calculate_sfs, 'sfs_file')
+    resource_pool['estimated_nuisance'] = (calculate_sfs, 'est_nuisance_file')
 
     return workflow, resource_pool
 
@@ -509,13 +568,12 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     if "exclude_zeros" not in config.keys():
         config["exclude_zeros"] = False
 
-    if 'qap_head_mask' not in resource_pool.keys():
-
-        from qap_workflows import qap_mask_workflow
+    if 'fav-artifacts-background' not in resource_pool.keys():
+        from qap.qap_workflows import calculate_artifacts_background
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
-            qap_mask_workflow(workflow, resource_pool, config, name)
-
+            calculate_artifacts_background(workflow, resource_pool, config,
+                                           name)
         if resource_pool == old_rp:
             return workflow, resource_pool
 
@@ -531,22 +589,13 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         if resource_pool == old_rp:
             return workflow, resource_pool
 
-    if 'anatomical_reorient' not in resource_pool.keys():
-
-        from anatomical_preproc import anatomical_reorient_workflow
-        old_rp = copy.copy(resource_pool)
-        workflow, new_resource_pool = \
-            anatomical_reorient_workflow(workflow, resource_pool, config, name)
-
-        if resource_pool == old_rp:
-            return workflow, resource_pool
-
     spatial = pe.Node(niu.Function(
         input_names=['anatomical_reorient', 'qap_head_mask_path',
-                     'whole_head_mask_path', 'skull_mask_path',
-                     'anatomical_gm_mask', 'anatomical_wm_mask',
-                     'anatomical_csf_mask', 'subject_id', 'session_id',
-                     'scan_id', 'run_name', 'site_name', 'exclude_zeroes',
+                     'qap_bg_head_mask_path', 'whole_head_mask_path',
+                     'skull_mask_path', 'anatomical_gm_mask',
+                     'anatomical_wm_mask', 'anatomical_csf_mask',
+                     'fav_artifacts', 'subject_id', 'session_id', 'scan_id',
+                     'run_name', 'site_name', 'exclude_zeroes', 'out_vox',
                      'session_output_dir', 'starter'],
         output_names=['qap', 'qa'], function=qap_anatomical_spatial),
         name='qap_anatomical_spatial%s' % name)
@@ -577,6 +626,13 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         workflow.connect(node, out_file, spatial, 'qap_head_mask_path')
     else:
         spatial.inputs.qap_head_mask_path = resource_pool['qap_head_mask']
+
+    if isinstance(resource_pool['qap_bg_head_mask'], tuple):
+        node, out_file = resource_pool['qap_bg_head_mask']
+        workflow.connect(node, out_file, spatial, 'qap_bg_head_mask_path')
+    else:
+        spatial.inputs.qap_bg_head_mask_path = \
+            resource_pool['qap_bg_head_mask']
 
     if len(resource_pool['whole_head_mask']) == 2:
         node, out_file = resource_pool['whole_head_mask']
@@ -610,6 +666,13 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     else:
         spatial.inputs.anatomical_csf_mask = \
             resource_pool['anatomical_csf_mask']
+
+    if isinstance(resource_pool['fav_artifacts_background'], tuple):
+        node, out_file = resource_pool['fav_artifacts_background']
+        workflow.connect(node, out_file, spatial, 'fav_artifacts')
+    else:
+        spatial.inputs.fav_artifacts = \
+            resource_pool['fav_artifacts_background']
 
     if config.get('write_report', False):
         plot = pe.Node(PlotMosaic(), name='plot_mosaic%s' % name)

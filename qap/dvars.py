@@ -236,11 +236,11 @@ def calc_dvars(func_file, mask_file, output_all=False):
 
     # standardization
     dvars_stdz = np.asarray(dvars_plain) / diff_sd_mean
-    # voxelwise standardization
-    diff_vx_stdz = func_deriv/func_sd_pd
-    dvars_vx_stdz = diff_vx_stdz.std(1, ddof=1)
-    
+
     if output_all:
+        # voxelwise standardization
+        diff_vx_stdz = func_deriv / func_sd_pd
+        dvars_vx_stdz = diff_vx_stdz.std(1, ddof=1)
         try:
             out = np.vstack((dvars_stdz, dvars_plain, dvars_vx_stdz))
         except Exception as e:

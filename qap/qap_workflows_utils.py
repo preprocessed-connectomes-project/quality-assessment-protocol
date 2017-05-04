@@ -256,6 +256,182 @@ def slice_head_mask(infile, transform):
     return outfile_path
 
 
+def calc_temporal_std(voxel_ts):
+    '''this can be used in a map in the below function later when you move to
+    optimize it
+    '''
+    import numpy as np
+
+    voxel_std = np.std(voxel_ts)
+
+    return voxel_std
+
+
+def get_temporal_std_map(func_reorient, func_mask):
+    """Create a map of the standard deviations of each voxel's timeseries.
+
+    :param func_reorient: String filepath of the deobliqued, reoriented
+                          functional timeseries NIFTI file.
+    :param func_mask: String filepath of the functional brain mask NIFTI file.
+    :return: String filepath of the temporal standard deviation map NIFTI
+             file.
+    """
+
+    import os
+    import numpy as np
+    import nibabel as nb
+    from qap.qap_utils import get_masked_data
+
+    func_data = get_masked_data(func_reorient, func_mask)
+    temporal_std_map = np.zeros(func_data.shape[0:3])
+
+    for i in range(0, len(func_data)):
+        for j in range(0, len(func_data[0])):
+            for k in range(0, len(func_data[0][0])):
+                std = np.std(func_data[i][j][k])
+                temporal_std_map[i][j][k] = std
+
+    # write the image
+    mask_img = nb.load(func_mask)
+    tstd_img = nb.Nifti1Image(temporal_std_map, mask_img.affine)
+    # this writes it into the node's folder in the working directory
+    temporal_std_map_file = os.path.join(os.getcwd(), "tstd.nii.gz")
+    tstd_img.to_filename(temporal_std_map_file)
+
+    return temporal_std_map_file
+
+
+def create_threshold_mask(data, threshold):
+    """Create a binary mask of a dataset based on a given threshold value.
+
+    :param data: Numpy array of a dataset.
+    :param threshold: The value to threshold the dataset with in order to
+                      define the binary mask.
+    :return: Numpy array of the binary mask values for each voxel.
+    """
+
+    import numpy as np
+
+    mask = np.zeros(data.shape)
+
+    for i in range(0, len(data)):
+        for j in range(0, len(data[0])):
+            for k in range(0, len(data[0][0])):
+                if data[i][j][k] > threshold:
+                    mask[i][j][k] = 1
+                else:
+                    mask[i][j][k] = 0
+
+    return mask
+
+
+def calc_estimated_csf_nuisance(temporal_std_map):
+    """Calculate the estimated CSF nuisance using a map of the temporal
+    standard deviation.
+
+    :param temporal_std_map: Numpy array of a map of the standard deviations
+                             of each voxel's timeseries.
+    :return: Numpy array of the map of estimated CSF nuisance for each voxel.
+    """
+
+    import numpy as np
+    from qap.qap_utils import get_masked_data
+
+    all_tstd = np.asarray(temporal_std_map.nonzero()).flatten()
+    all_tstd_sorted = sorted(all_tstd)
+    top_2 = 0.98 * len(all_tstd)
+
+    top_2_std = all_tstd_sorted[int(top_2):]
+    cutoff = top_2_std[0]
+
+    estimated_nuisance_mask = create_threshold_mask(temporal_std_map, cutoff)
+
+    nuisance_stds = get_masked_data(temporal_std_map, estimated_nuisance_mask)
+
+    return nuisance_stds
+
+
+def sfs_voxel(arg_tuple):
+    """Calculate the Signal Fluctuation Intensity (SFS) of one voxel's
+    functional time series.
+
+    - From "Signal Fluctuation Sensitivity: An Improved Metric for Optimizing
+      Detection of Resting-State fMRI Networks", Daniel J. DeDora1,
+      Sanja Nedic, Pratha Katti, Shafique Arnab, Lawrence L. Wald, Atsushi
+      Takahashi, Koene R. A. Van Dijk, Helmut H. Strey and
+      Lilianne R. Mujica-Parodi. More info here:
+        http://journal.frontiersin.org/article/10.3389/fnins.2016.00180/full
+
+    :param: Tuple of arguments, containing 1.) the timeseries of the current
+            voxel, 2.) the mean value of all of the voxel timeseries, 3.) the
+            standard deviation of the current voxel timeseries, and 4.) the
+            mean standard deviation of the estimated CSF nuisance.
+    :return: Numpy array of the signal fluctuation intensity timecourse for
+             the voxel timeseries provided.
+    """
+
+    voxel_ts, total_func_mean, voxel_ts_std, nuisance_mean_std = arg_tuple
+
+    sfs_vox = \
+        (voxel_ts/total_func_mean) * (voxel_ts_std/nuisance_mean_std)
+
+    return sfs_vox
+
+
+def sfs_timeseries(func_mean, func_mask, temporal_std_file):
+    """Average the SFS timecourses of each voxel into one SFS timeseries.
+
+    :param func_mean: String filepath to the mean functional NIFTI file.
+    :param func_mask: String filepath to the functional brain mask NIFTI file.
+    :param temporal_std_file: String filepath to the temporal standard
+                              deviation map NIFTI file.
+    :return: The string filepaths of the SFS map file, and the estimated CSF
+             nuisance map file.
+    """
+
+    import os
+    import numpy as np
+    import nibabel as nb
+    from qap.qap_workflows_utils import calc_estimated_csf_nuisance, sfs_voxel
+
+    func_mean_img = nb.load(func_mean)
+    func_mean_data = func_mean_img.get_data()
+    func_mask_img = nb.load(func_mask)
+    func_mask_data = func_mask_img.get_data()
+    tstd_img = nb.load(temporal_std_file)
+    temporal_std_map = tstd_img.get_data()
+
+    masked_func_mean = func_mean_data#[func_mask_data.nonzero()]
+    total_func_mean = np.mean(masked_func_mean)
+
+    masked_tstd = temporal_std_map#[func_mask_data.nonzero()]
+
+    nuisance_stds = calc_estimated_csf_nuisance(temporal_std_map)
+
+    nuisance_mean_std = np.mean(np.asarray(nuisance_stds.nonzero()).flatten())
+
+    arg_tuples = []
+    for voxel_ts, voxel_std in zip(masked_func_mean, masked_tstd):
+        arg_tuples.append((voxel_ts, total_func_mean, voxel_std,
+                          nuisance_mean_std))
+
+    sfs_voxels = np.asarray(map(sfs_voxel, arg_tuples))
+
+    # write the images
+    mask_img = nb.load(func_mask)
+    est_n_img = nb.Nifti1Image(nuisance_stds, mask_img.affine)
+    # this writes it into the node's folder in the working directory
+    est_nuisance_file = os.path.join(os.getcwd(), "estimated_nuisance.nii.gz")
+    est_n_img.to_filename(est_nuisance_file)
+
+    sfs_img = nb.Nifti1Image(sfs_voxels, mask_img.affine)
+    # this writes it into the node's folder in the working directory
+    sfs_file = os.path.join(os.getcwd(), "SFS.nii.gz")
+    sfs_img.to_filename(sfs_file)
+
+    return sfs_file, est_nuisance_file
+
+
 def create_header_dict_entry(in_file, subject, session, scan, type):
     """Gather the header information from a NIFTI file and arrange it into a
     Python dictionary.
@@ -334,12 +510,13 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
 
 
 def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
-                           whole_head_mask_path, skull_mask_path,
-                           anatomical_gm_mask, anatomical_wm_mask,
-                           anatomical_csf_mask, subject_id, session_id,
-                           scan_id, run_name, site_name=None,
-                           exclude_zeroes=False, out_vox=True,
-                           session_output_dir=None, starter=None):
+                           qap_bg_head_mask_path, whole_head_mask_path,
+                           skull_mask_path, anatomical_gm_mask,
+                           anatomical_wm_mask, anatomical_csf_mask,
+                           fav_artifacts, subject_id, session_id, scan_id,
+                           run_name, site_name=None, exclude_zeroes=False,
+                           out_vox=True, session_output_dir=None,
+                           starter=None):
     """Calculate the anatomical spatial QAP measures for an anatomical scan.
 
     - The exclude_zeroes flag is useful for when a large amount of zero
@@ -402,9 +579,9 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     import os
     from time import strftime
     import qap
-    from qap.spatial_qc import summary_mask, snr, cnr, fber, efc, \
-        artifacts, fwhm, cortical_contrast, skew_and_kurt
-    from qap.qap_utils import load_image, load_mask, write_nifti_image, \
+    from qap.spatial_qc import summary_mask, snr, cnr, fber, efc, fav, fwhm, \
+        cortical_contrast, skew_and_kurt
+    from qap.qap_utils import load_image, load_mask, \
                               create_anatomical_background_mask
 
     # Load the data
@@ -430,7 +607,8 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     efc_out = efc(anat_data)
 
     # Artifact
-    qi1, _, qi_bg = artifacts(anat_data, fg_mask, bg_mask)
+    qi1, _ = fav(fav_artifacts, anatomical_reorient, qap_bg_head_mask_path,
+                 qap_head_mask_path)
 
     # Smoothness in voxels
     tmp = fwhm(anatomical_reorient, whole_head_mask_path, out_vox=out_vox)
@@ -509,12 +687,6 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
             "metrics": {}
         }
     }
-
-    import nibabel as nb
-    qi_bg_img = nb.Nifti2Image(qi_bg, anat_aff)
-    # this writes it into the node's folder in the working directory
-    qi_bg_file = os.path.join(os.getcwd(), "Qi1-background.nii.gz")
-    write_nifti_image(qi_bg_img, qi_bg_file)
 
     # prospective filepaths
     if session_output_dir:
@@ -702,8 +874,7 @@ def qap_functional_temporal(
 
     import qap
     from qap.temporal_qc import outlier_timepoints, quality_timepoints, \
-                                global_correlation, get_temporal_std_map, \
-                                calculate_percent_outliers, sfs_timeseries
+                                global_correlation, calculate_percent_outliers
     from qap.dvars import calc_dvars
 
     # DVARS
@@ -816,11 +987,11 @@ def qap_functional_temporal(
         if os.path.exists(func_file):
             qa[id_string]["metrics"]["scan filepath"] = func_file
 
-        tstd_file = os.path.join(session_output_dir,
+        estn_file = os.path.join(session_output_dir,
                                  "_".join([subject_id, session_id, scan_id,
-                                           "temporal-std-map.nii.gz"]))
-        if os.path.exists(tstd_file):
-            qa[id_string]["metrics"]["tSTD filepath"] = tstd_file
+                                           "estimated-nuisance.nii.gz"]))
+        if os.path.exists(estn_file):
+            qa[id_string]["metrics"]["estimated nuisance"] = estn_file
 
         sfs_file = os.path.join(session_output_dir,
                                 "_".join([subject_id, session_id, scan_id,

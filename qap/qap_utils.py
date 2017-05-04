@@ -164,7 +164,7 @@ def load_image(image_file, return_affine=False):
         raise_smart_exception(locals(),msg)
 
     if return_affine:
-        return dat, img.affine
+        return dat, img.affine, img.header
     else:
         return dat
 

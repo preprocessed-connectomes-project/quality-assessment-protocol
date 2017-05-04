@@ -819,8 +819,9 @@ def run_workflow(args, run=True):
 
         qap_types = ["anatomical_spatial", "functional"]
 
-        qa_outputs = ["QA", "QA-anat", "qap_fd", "qap_mosaic",
-                      "temporal-std-map"]
+        qa_outputs = ["anatomical_reorient", "Qi1_background",
+                      "func_reorient", "estimated_nuisance", "SFS", "qap_fd",
+                      "qap_mosaic"]
 
         # update that resource pool with what's already in the output
         # directory
@@ -939,6 +940,12 @@ def run_workflow(args, run=True):
 
         if ("qa" in resource_pool.keys()) and ("qa" not in out_list):
             out_list += ['qa']
+
+        # write these outputs to the datasink even with "keep_outputs" off,
+        # because they are used in the visualization plots/overlays
+        for output in qa_outputs:
+            if (output in resource_pool.keys()) and (output not in out_list):
+                out_list += [output]
 
         # Save reports to out_dir if necessary
         if config['write_report']:
