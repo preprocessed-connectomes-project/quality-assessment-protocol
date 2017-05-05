@@ -20,10 +20,10 @@ def test_summary_mask():
     from qap.spatial_qc import summary_mask
     from qap.qap_utils import load_image, load_mask
 
-    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "anat_reorient.nii.gz"))
                                    
-    head_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    head_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
                                     "qap_head_mask.nii.gz"))
 
     anat_data = load_image(anat_reorient)
@@ -124,13 +124,13 @@ def test_fber():
     from qap.spatial_qc import fber
     from qap.qap_utils import load_image, load_mask
 
-    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "anat_reorient.nii.gz"))
                                    
-    head_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    head_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
                                     "qap_head_mask.nii.gz"))
 
-    skull_only_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    skull_only_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
                                           "skull_only_mask.nii.gz"))
 
     anat_data = load_image(anat_reorient)
@@ -156,7 +156,7 @@ def test_efc():
     from qap.spatial_qc import efc
     from qap.qap_utils import load_image
 
-    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "anat_reorient.nii.gz"))
                                    
     anat_data = load_image(anat_reorient)
@@ -178,13 +178,13 @@ def test_artifacts_no_qi2():
     from qap.spatial_qc import artifacts
     from qap.qap_utils import load_image, load_mask
 
-    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "anat_reorient.nii.gz"))
                                    
-    head_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    head_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
                                     "qap_head_mask.nii.gz"))
 
-    bg_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
+    bg_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
                                   "anat_bg_mask.nii.gz"))
 
     anat_data = load_image(anat_reorient)
@@ -209,14 +209,14 @@ def test_artifacts_with_qi2():
     from qap.spatial_qc import artifacts
     from qap.qap_utils import load_image, load_mask
 
-    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                        "anat_1", \
-                                        "anatomical_reorient", \
+    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
+                                        "anat_1",
+                                        "anatomical_reorient",
                                         "mprage_resample.nii.gz"))
                                    
-    head_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "anat_1", \
-                                    "qap_head_mask", \
+    head_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
+                                    "anat_1",
+                                    "qap_head_mask",
                                     "mprage_resample_thresh_maths_maths_" \
                                     "maths.nii.gz"))
 

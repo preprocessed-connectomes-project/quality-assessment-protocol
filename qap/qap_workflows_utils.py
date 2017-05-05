@@ -571,7 +571,6 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     :param starter: (default: None) If this function is being pulled into a
                     Nipype pipeline, this is the dummy input for the function
                     node.
-    :rtype: dict
     :return: A dictionary mapping out the QAP measure values for the current
              participant.
     """
@@ -585,7 +584,8 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
                               create_anatomical_background_mask
 
     # Load the data
-    anat_data, anat_aff = load_image(anatomical_reorient, return_affine=True)
+    anat_data, anat_aff, anat_hdr = \
+        load_image(anatomical_reorient, return_affine=True)
 
     fg_mask = load_mask(qap_head_mask_path, anatomical_reorient)
 

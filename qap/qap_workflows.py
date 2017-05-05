@@ -606,6 +606,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     spatial.inputs.scan_id = config['scan_id']
     spatial.inputs.run_name = config['run_name']
     spatial.inputs.exclude_zeroes = config['exclude_zeros']
+    spatial.inputs.out_vox = True
     spatial.inputs.session_output_dir = config['session_output_dir']
 
     node, out_file = resource_pool['starter']

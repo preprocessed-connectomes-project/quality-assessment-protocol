@@ -305,7 +305,7 @@ def fav(fav_artifacts_bg, anatomical_reorient, bg_head_mask,
         load_mask
 
     # Load the data
-    background = read_nifti_image(fav_artifacts_bg)
+    background = read_nifti_image(fav_artifacts_bg).get_data()
     bg_mask_data = get_masked_data(anatomical_reorient, bg_head_mask)
 
     # Count the number of voxels that remain after the opening operation. 
