@@ -7,6 +7,7 @@ test_sub_dir = "test_data"
 class TestArtifacts(unittest.TestCase):
 
     def setUp(self):
+        pass
 
 
 

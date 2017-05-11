@@ -924,11 +924,11 @@ def qap_functional_temporal(
           "Series": str(scan_id),
           "functional_temporal":
           {
-             "Std. DVARS (Mean)": mean_dvars,
-             "Std. DVARS (Std Dev)": np.std(dvars),
-             "Std. DVARS (Median)": np.median(dvars),
-             "Std. DVARs IQR": dvars_IQR,
-             "Std. DVARS percent outliers": dvars_outliers,
+             "Std DVARS (Mean)": mean_dvars,
+             "Std DVARS (Std Dev)": np.std(dvars),
+             "Std DVARS (Median)": np.median(dvars),
+             "Std DVARs IQR": dvars_IQR,
+             "Std DVARS percent outliers": dvars_outliers,
              "RMSD (Mean)": np.mean(fd),
              "RMSD (Std Dev)": np.std(fd),
              "RMSD (Median)": np.median(fd),

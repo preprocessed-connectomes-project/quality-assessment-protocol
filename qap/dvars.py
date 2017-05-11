@@ -201,12 +201,16 @@ def calc_dvars(func_file, mask_file, output_all=False):
     """
 
     import numpy as np
-    from qap.qap_utils import raise_smart_exception
+    from qap.qap_utils import get_masked_data, read_nifti_image, \
+        raise_smart_exception
 
     # load data
     # func is shape (x, y, z, t)
     # func_masked is shape (t, all voxels flattened)
     func, func_masked = load_timeseries(func_file, mask_file)
+
+    # get binary mask of functional brain
+    binary_mask_data = read_nifti_image(mask_file).get_data()
 
     # Robust standard deviation
     func_sd = robust_stdev(func)
@@ -216,33 +220,36 @@ def calc_dvars(func_file, mask_file, output_all=False):
 
     # Predicted standard deviation of temporal derivative
     func_sd_pd = np.sqrt(2 * (1 - func_ar1)) * func_sd
-    diff_sd_mean = func_sd_pd.mean()
 
-    # Compute temporal difference time series
+    # Compute temporal difference squared time series
     func_deriv = np.diff(func, axis=3)
+    func_deriv_sq = func_deriv**2
 
-    # DVARS
-    # (no standardization)
-
+    # Flip func_deriv_sq from (x, y, z, t) to (t, x, y, z)
     flipped_deriv = []
-    for x in range(0, len(func_deriv.T)):
-        flipped_deriv.append(func_deriv.T[x].flatten())
+    for x in range(0, len(func_deriv_sq.T)):
+        flipped_deriv.append(func_deriv_sq.T[x].T)
     flipped_deriv = np.asarray(flipped_deriv)
 
-    flipped_deriv_stuff = (flipped_deriv ** 2)
-    flipped_deriv_sqrt = np.sqrt(flipped_deriv_stuff)
-    nonzero_flipped = np.asarray([x[x.nonzero()] for x in flipped_deriv_sqrt])
-    dvars_plain = [x.mean() for x in nonzero_flipped]
+    # in (t, x, y, z), find the mean of nonzero voxels for all (x, y, z)
+    # voxels within each "t" (each volume)
+    diff_var = []
+    for ts in flipped_deriv:
+        diff_var.append(ts[ts.nonzero()].mean())
+    diff_var = np.asarray(diff_var)
 
-    # standardization
-    dvars_stdz = np.asarray(dvars_plain) / diff_sd_mean
+    diff_sd = get_masked_data(func_sd_pd, binary_mask_data)
+    diff_sd_mean = diff_sd[diff_sd.nonzero()].mean()
+
+    # calculate standardized DVARS
+    dvars_stdz = np.sqrt(diff_var)/diff_sd_mean
 
     if output_all:
         # voxelwise standardization
         diff_vx_stdz = func_deriv / func_sd_pd
         dvars_vx_stdz = diff_vx_stdz.std(1, ddof=1)
         try:
-            out = np.vstack((dvars_stdz, dvars_plain, dvars_vx_stdz))
+            out = np.vstack((dvars_stdz, diff_var, dvars_vx_stdz))
         except Exception as e:
             raise_smart_exception(locals(), e)
     else:

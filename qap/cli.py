@@ -819,7 +819,7 @@ def run_workflow(args, run=True):
 
         qap_types = ["anatomical_spatial", "functional"]
 
-        qa_outputs = ["anatomical_reorient", "Qi1_background",
+        qa_outputs = ["anatomical_reorient", "fav_artifacts_background",
                       "func_reorient", "estimated_nuisance", "SFS", "qap_fd",
                       "qap_mosaic"]
 

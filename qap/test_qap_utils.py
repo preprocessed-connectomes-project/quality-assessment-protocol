@@ -14,25 +14,41 @@ class TestGetMaskedData(unittest.TestCase):
         self.gmd = gmd
 
         # inputs
-        self.func_mean = \
+        self.func_reorient = \
             p.resource_filename("qap", os.path.join("test_data",
                                                     "func_reorient.nii.gz"))
+        self.func_mean = \
+            p.resource_filename("qap", os.path.join("test_data",
+                                                    "mean_functional.nii.gz"))
         self.func_mask = \
             p.resource_filename("qap", os.path.join("test_data",
                                                     "functional_brain_mask.nii.gz"))
         self.masked_func = \
             p.resource_filename("qap", os.path.join("test_data",
                                                     "masked_func.nii.gz"))
+        self.masked_mean_func = \
+            p.resource_filename("qap", os.path.join("test_data",
+                                                    "masked_mean_func.nii.gz"))
 
         ref_masked = nb.load(self.masked_func)
-        self.ref_masked_data = ref_masked.get_data()
+        self.ref_masked_ts = ref_masked.get_data()
 
-    def test_masking_files(self):
+        ref_masked = nb.load(self.masked_mean_func)
+        self.ref_masked_vol = ref_masked.get_data()
+
+    def test_masking_timeseries(self):
+        import numpy.testing as nt
+        masked_data = self.gmd(self.func_reorient, self.func_mask)
+        msg = "%s\n%s" % (str(self.ref_masked_ts.shape),
+                          str(masked_data.shape))
+        nt.assert_array_equal(self.ref_masked_ts, masked_data, msg)
+
+    def test_masking_one_volume(self):
         import numpy.testing as nt
         masked_data = self.gmd(self.func_mean, self.func_mask)
-        msg = "%s\n%s" % (str(self.ref_masked_data.shape),
+        msg = "%s\n%s" % (str(self.ref_masked_vol.shape),
                           str(masked_data.shape))
-        nt.assert_array_equal(self.ref_masked_data, masked_data, msg)
+        nt.assert_array_equal(self.ref_masked_vol, masked_data, msg)
 
 
 @pytest.mark.quick
