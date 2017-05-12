@@ -240,6 +240,9 @@ def get_masked_data(data, mask):
         mask_img = nb.load(mask)
         mask = mask_img.get_data()
 
+    data = np.asarray(data)
+    mask = np.asarray(mask)
+
     if len(data.shape) > 3:
         # if timeseries
         masked_data = np.asarray([volume * mask.T for volume in data.T]).T
