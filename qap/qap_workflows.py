@@ -1002,7 +1002,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         qap_functional_spatial, global_signal_time_series
     from qap_utils import write_json
     from temporal_qc import fd_jenkinson
-    from qap.viz.interfaces import PlotMosaic, PlotFD
+    from qap.viz.interfaces import PlotMosaic, GrayPlot
 
     def _getfirst(inlist):
         if isinstance(inlist, list):
@@ -1179,18 +1179,6 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         temporal.inputs.sfs = resource_pool['SFS']
 
     # Write mosaic and FD plot
-    '''
-    if config['write_report']:
-        metadata = [config['session_id'], config['scan_id']]
-        if 'site_name' in config.keys():
-            metadata.append(config['site_name'])
-
-        fdplot = pe.Node(PlotFD(), name='plot_fd%s' % name)
-        fdplot.inputs.subject = config['subject_id']
-        fdplot.inputs.metadata = metadata
-        workflow.connect(fd, 'out_file', fdplot, 'in_file')
-        resource_pool['qap_fd'] = (fdplot, 'out_file')
-    '''
 
     out_dir = os.path.join(config['output_directory'], "derivatives",
                            config["run_name"], config["subject_id"],
@@ -1245,13 +1233,48 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         if 'site_name' in config.keys():
             metadata.append(config['site_name'])
 
-        fdplot = pe.Node(PlotFD(), name='plot_fd%s' % name)
-        fdplot.inputs.subject = config['subject_id']
-        fdplot.inputs.metadata = [id_string]
-        workflow.connect(fd, 'out_file', fdplot, 'meanfd_file')
-        workflow.connect(temporal, 'qa', fdplot, 'dvars')
-        workflow.connect(gs_ts, 'output', fdplot, 'global_signal')
-        resource_pool['qap_fd'] = (fdplot, 'out_file')
+        #todo: fix code to new qap
+
+        out_ts_measures = os.path.join(qa_out_dir, "%s_%s_%s_timeseries-measures.png"
+                       % (config["subject_id"], config["session_id"],
+                          config["scan_id"]))
+        out_cluster = os.path.join(qa_out_dir, "%s_%s_%s_grayplot-cluster.nii.gz"
+                       % (config["subject_id"], config["session_id"],
+                          config["scan_id"]))
+
+        def pick_dvars(qa, dict_id):
+            print qa[dict_id]
+            dvars = qa[dict_id]['metrics']['Standardized DVARS']
+            return dvars
+
+        grayplot = pe.Node(GrayPlot(), name='grayplot%s' % name)
+        grayplot.inputs.subject = config['subject_id']
+        grayplot.inputs.out_file = out_ts_measures
+        grayplot.inputs.out_cluster = out_cluster
+        id_string = "%s %s %s" % (config["subject_id"], config["session_id"], config["scan_id"])
+        grayplot.inputs.metadata = [id_string]
+        workflow.connect(fd, 'out_file', grayplot, 'meanfd_file')
+        dict_id = "%s %s %s"%(config["subject_id"], config["session_id"],config["scan_id"])
+        workflow.connect(temporal, ('qa', pick_dvars, dict_id), grayplot, 'dvars')    
+        workflow.connect(gs_ts, 'output', grayplot, 'global_signal')
+        resource_pool['timeseries_measures'] = (grayplot, 'out_file')
+        resource_pool['grayplot_cluster'] = (grayplot, 'out_cluster')
+
+        if len(resource_pool['func_reorient']) == 2:
+            node, out_file = resource_pool['func_reorient']
+            workflow.connect(node, out_file, grayplot, 'func_file')
+        else:
+            input_file = resource_pool['func_reorient']
+            grayplot.inputs.func_file = input_file
+
+        if len(resource_pool['functional_brain_mask']) == 2:
+            node, out_file = resource_pool['functional_brain_mask']
+            workflow.connect(node, out_file, grayplot, 'mask_file')
+
+        else:   
+            grayplot.inputs.mask_file = resource_pool['functional_brain_mask']
+
+
 
     return workflow, resource_pool
 

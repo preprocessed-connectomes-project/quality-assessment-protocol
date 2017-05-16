@@ -14,143 +14,54 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
 import seaborn as sns
 
-
-def organize_individual_html(subid, output_path, ts_plot, mean_epi_plot):
-
-    head_template = '''
-    <!DOCTYPE html>
-<html>
-  <head>
-    <style>
-    body{ margin: 0px;}
-    ul {
-        list-style-type: none;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background-color: #333;
-    }
-
-    li { float: left; }
-
-    li a {
-        display: block;
-        color: white;
-        text-align: center;
-        padding: 14px 16px;
-        text-decoration: none;
-    }
-
-    li a:hover:not(.active) { background-color: #111;  }
-
-    .active {background-color: #4CAF50;
-    }
-    </style>
-    '''
-    template = '''
-    <meta charset="UTF-8">
-    <title>QAP REport {subjectid}</title>
-  </head>
-  <body>
-    <!-- start navbar -->
-    <div class="navbar">
-        <ul>
-          <li><a href="#">{subjectid}</a></li>
-          <li style="float:right"><a href="#about">QAP</a></li>
-          <li style="float:right"><a href="#about">All Subjects</a></li>
-          <li style="float:right"><a href="#about">Group Measures</a></li>
-          
-        </ul>
-    </div>
-    <!-- end navbar -->
-    '''
-
-    end_template = '''
-    <!-- start Mean FD, DVARS, Global Signal -->
-    <div id="meanfdplots">
-        <h2>Mean FD, DVARS, Global Signal</h2>
-        <img src="{ts_plot}" alt="Mean FD, DVARS, Global Signal" width="100%">
-    </div>
-    <!-- end Mean FD, DVARS, Global Signal -->
-
-    <!-- start Gray Plot -->
-    <div id="grayplots">
-        <h2>Gray Plot</h2>
-    </div>
-    <!-- end Gray Plot -->
-
-    <!-- start Mean EPI Mosaic -->
-    <div id="meanepi">
-        <h2>Mean EPI Mosaic</h2>
-        <img src="{mean_epi_plot}" alt="Mean EPI Mosaic" width="100%">
-    </div>
-    <!-- end Mean EPI Mosaic -->
-
-    <!-- start Signal Fluctuation Sensitivity Mosaic Mosaic -->
-    <div id="sfs">
-        <h2>Signal Fluctuation Sensitivity Mosaic</h2>
-    </div>
-    <!-- end Signal Fluctuation Sensitivity Mosaic Mosaic -->
-
-  </body>
-</html>
-    '''
-    import os.path as op
-    template = template.format(subjectid=subid)
-    end_template = end_template.format(ts_plot=ts_plot, mean_epi_plot=mean_epi_plot)
-    template = head_template + template + end_template
-    with open(op.join(output_path, subid+'.html') , 'w+') as f:
-        f.write(template)
-    return None
-
-'''
-plots nilearn figure. mosaic 3x8
-'''
-def overlay_figure(overlays, underlay, fig_name):
+def calculate_gray_plot(func_file, mask_file):
+    import numpy as np
+    from matplotlib import pyplot as plt
     import nibabel as nb
-    import matplotlib.pyplot as plt
-    from nilearn import plotting
+    from sklearn import preprocessing
 
-    affine = nb.load(overlays[0]).get_affine()
-    result = None
-    for i, overlay in enumerate(overlays):
-        #load data
-        overlay = nb.load(overlay).get_data()
-        #change masks values to draw different color for each one
-        overlay[overlay == 1] = i+1
+    # read in and mask the data 
+    func = nb.load(func_file)
+    mask = nb.load(mask_file)
+    mask_affine = mask.affine
+    mask = mask.get_data()
 
-        #add overlays together
-        if result is None:
-            result = overlay
-        else:
-            result += overlay
+    new_shape = func.shape[0]*func.shape[1]*func.shape[2]
+    func = func.get_data()
+    func = np.resize(func, (new_shape,func.shape[-1] ))
+    func = func[np.where( mask.ravel() == 1 )[0], :]
 
-    #create new img
-    result = nb.Nifti1Image(result, affine)
+    # z-score the rows so that they can be viewed on the same image
+    func = preprocessing.scale(func, axis=1)
+
+    #now try some basic reordering
+    from sklearn.cluster.bicluster import SpectralBiclustering
+    model = SpectralBiclustering(n_clusters=(5,1),n_components=5, method='log',random_state=0)
+    model.fit(func)
+    reordered_func=func[np.argsort(model.row_labels_)]
+
+    #create a matrix with cluster ids, 
+    #make sure cluster ids > func values so we can display both easily. 
+    out_clusters=np.zeros(np.shape(func[:,0]))
+    func_max = func.max()+1
+    for i in range(0,5):
+        out_clusters[model.get_indices(i)[0]]=int(i*2+func_max)
+    reordered_clusters=out_clusters[np.argsort(model.row_labels_)]
+
+    #calculte each cluster global signal
+    cluster_gs = []
+    for i in np.unique(out_clusters):
+        c = func[np.where( out_clusters.ravel() == i )[0], :]
+        time = func.shape[-1]
+        output = [0]*time
     
-    slices = [x*5 for x in range(-12,12)]
+        for i in range(time):
+            output[i] = c[:,i].mean()
+        output = (output - min(output))/(max(output) - min(output))
+        cluster_gs.append(output)
 
-    #x slices
-    fig, ax = plt.subplots(nrows=3, ncols=1, figsize=(7,3))
-    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[0], display_mode='x',cmap=plt.cm.prism, cut_coords=slices[:8]) 
-    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[1], display_mode='x',cmap=plt.cm.prism, cut_coords=slices[8:16])
-    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[2], display_mode='x',cmap=plt.cm.prism, cut_coords=slices[16:])
 
-    plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
-    fig.savefig(fig_name+'_x.png', pad_inches = 0, dpi=400)
-    display.close()
-
-    #z slices
-    fig, ax = plt.subplots(nrows=3, ncols=1)
-    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[0], display_mode='z',cmap=plt.cm.prism, cut_coords=slices[:8])
-    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[1], display_mode='z',cmap=plt.cm.prism, cut_coords=slices[8:16])
-    display = plotting.plot_roi(roi_img=result, bg_img=underlay, figure=fig, axes=ax[2], display_mode='z',cmap=plt.cm.prism, cut_coords=slices[16:])
-
-    plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
-    fig.savefig(fig_name+'_z.png', pad_inches = 0, dpi=400)
-    display.close()
-
-    return fig_name+'_x.png', fig_name+'_z.png'
+    return reordered_func, reordered_clusters, cluster_gs
 
 def plot_measures(df, measures, ncols=4, title='Group level report',
                   subject=None, figsize=(8.27, 11.69)):
@@ -348,7 +259,6 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
 
 
 def plot_fd(meanfd_file, dvars, global_signal, metadata, figsize=(11.7, 8.3), mean_fd_dist=None, title='Mean FD, DVARS, Global Signal'):
-    print "plot_fd"
     fd_power = _calc_fd(meanfd_file)
     global_signal = (global_signal - min(global_signal))/(max(global_signal) - min(global_signal))
     x = metadata[0]
@@ -489,3 +399,73 @@ def _get_values_inside_a_mask(main_file, mask_file):
 
     data = main_data[np.logical_and(nan_mask, mask)]
     return data
+
+def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, figsize=(11.7, 8.3), title='Timeseries Plot'):
+    fd_power = _calc_fd(meanfd_file)
+    gray_matrix, color_matrix, cluster_gs = calculate_gray_plot(func_file, mask_file)
+
+    #create grid with 2 rows
+    figsize=(11, 8)
+    fig = plt.Figure(figsize=figsize)
+    #fig,ax1 = plt.subplots()
+    FigureCanvas(fig)
+
+    grid = GridSpec(2, 1, wspace=0.01)
+    ax1 = fig.add_subplot(grid[0, 0])
+    ax2 = fig.add_subplot(grid[1, 0])
+
+    #gray plot part
+    #add brain labels to grayplot
+    gray_plot = np.insert(gray_matrix, gray_matrix.shape[1], color_matrix, axis=1)
+    gray_plot = np.insert(gray_plot, gray_matrix.shape[1], color_matrix, axis=1)
+
+    #plot grayplot
+    from numpy.ma import masked_array
+    func_max = gray_matrix.max()+1
+    gray = masked_array(gray_plot,gray_plot>=func_max)
+    colors = masked_array(gray_plot,gray_plot<func_max)
+
+    aspect = (float(gray_matrix.shape[1])/float(gray_matrix.shape[0]))/3.0
+    pa = ax1.imshow(gray,interpolation='None',cmap='gray',aspect=aspect)
+    pb = ax1.imshow(colors,interpolation='None',cmap='rainbow',aspect=aspect)
+    ax1.set_xlabel('Frame number')
+    ax1.set_ylabel('Voxels')
+    ax1.yaxis.set_ticklabels([])
+    ax1.grid(False)
+
+    #dvars plot
+    fd = ax2.plot(fd_power, label='Mean FD', color='#7bc71b')
+    d, = ax2.plot(dvars, label='DVARS',color='#FFC830')
+    gs, = ax2.plot(global_signal, label='Global Signal',color='#FF5624')
+    cluster_colors = ['#ffffff','#7f00ff', '#2adcdc', '#d4dc7f', '#ff0000']
+    for i in range(5):
+        c, = ax2.plot(cluster_gs[i], color=cluster_colors[i], linewidth=0.7, label='cluster gs')
+
+    #adjust fig params
+    ax2.set_xlim((0, len(fd_power)))
+    ax2.set_xlabel("Frame number")
+    ylim = ax2.get_ylim()
+    fig.suptitle(title)
+    ax2.grid(True)
+
+    #remove cluster gs labls
+    handles, labels = ax2.get_legend_handles_labels()
+    newLabels, newHandles = [], []
+    for handle, label in zip(handles, labels):
+      if label != 'cluster gs':
+        newLabels.append(label)
+        newHandles.append(handle)
+    ax2.legend(newHandles, newLabels) 
+    
+    plt.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0)
+
+    #create nii file with cluster values
+    mask = nb.load(mask_file)
+    mask_affine = mask.affine
+    mask = mask.get_data()
+    out_clusters_img = np.zeros(np.prod(mask.shape)) 
+    out_clusters_img[mask.ravel()==1] = cluster_gs 
+    out_clusters_img = out_clusters_img.reshape(mask.shape)
+    clust_img = nb.Nifti1Image(out_clusters_img, mask_affine)
+    
+    return fig, clust_img
