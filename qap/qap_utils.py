@@ -71,7 +71,7 @@ def read_json(json_filename):
     if not os.path.exists(json_filename):
         err = "\n\n[!] The JSON file provided does not exist.\nFilepath: " \
               "%s\n\n" % json_filename
-        raise_smart_exception(locals(),err)
+        raise_smart_exception(locals(), err)
 
     with open(json_filename, "r") as f:
         json_dict = json.load(f)
@@ -92,8 +92,6 @@ def write_json(output_dict, json_file):
 
     import os
     import json
-    #from lockfile import FileLock
-
     from qap.qap_utils import read_json
 
     write = True
@@ -113,11 +111,8 @@ def write_json(output_dict, json_file):
         current_dict = output_dict
 
     if write:
-        #lock = FileLock(json_file)
-        #lock.acquire()
         with open(json_file, "wt") as f:
             json.dump(current_dict, f, indent=2, sort_keys=True)
-        #lock.release()
 
     if os.path.exists(json_file):
         return json_file
@@ -233,15 +228,15 @@ def get_masked_data(data, mask):
     import numpy as np
     import nibabel as nb
 
-    if isinstance(data, str):
+    if isinstance(data, basestring):
         img = nb.load(data)
         data = img.get_data()
-    if isinstance(mask, str):
+    if isinstance(mask, basestring):
         mask_img = nb.load(mask)
         mask = mask_img.get_data()
 
-    data = np.asarray(data)
-    mask = np.asarray(mask)
+    data = np.asarray(data, dtype=float)
+    mask = np.asarray(mask, dtype=float)
 
     if len(data.shape) > 3:
         # if timeseries
