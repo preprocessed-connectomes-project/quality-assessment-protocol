@@ -10,8 +10,11 @@ class TestGetMaskedData(unittest.TestCase):
         import os
         import pkg_resources as p
         import nibabel as nb
+        import numpy.testing as nt
         from qap.qap_utils import get_masked_data as gmd
         self.gmd = gmd
+        self.nt = nt
+        self.nb = nb
 
         # inputs
         self.func_reorient = \
@@ -37,18 +40,36 @@ class TestGetMaskedData(unittest.TestCase):
         self.ref_masked_vol = ref_masked.get_data()
 
     def test_masking_timeseries(self):
-        import numpy.testing as nt
+        # inputs are filepath strings, for a 4D input file
         masked_data = self.gmd(self.func_reorient, self.func_mask)
         msg = "%s\n%s" % (str(self.ref_masked_ts.shape),
                           str(masked_data.shape))
-        nt.assert_array_equal(self.ref_masked_ts, masked_data, msg)
+        self.nt.assert_array_equal(self.ref_masked_ts, masked_data, msg)
 
     def test_masking_one_volume(self):
-        import numpy.testing as nt
+        # inputs are filepath strings, for a 3D input file
         masked_data = self.gmd(self.func_mean, self.func_mask)
         msg = "%s\n%s" % (str(self.ref_masked_vol.shape),
                           str(masked_data.shape))
-        nt.assert_array_equal(self.ref_masked_vol, masked_data, msg)
+        self.nt.assert_array_equal(self.ref_masked_vol, masked_data, msg)
+
+    def test_masking_timeseries_data(self):
+        # inputs are Numpy data arrays, for a 4D input file
+        func_data = self.nb.load(self.func_reorient).get_data()
+        mask_data = self.nb.load(self.func_mask).get_data()
+        masked_data = self.gmd(func_data, mask_data)
+        msg = "%s\n%s" % (str(self.ref_masked_vol.shape),
+                          str(masked_data.shape))
+        self.nt.assert_array_equal(self.ref_masked_ts, masked_data, msg)
+
+    def test_masking_one_volume_data(self):
+        # inputs are Numpy data arrays, for a 3D input file
+        func_data = self.nb.load(self.func_mean).get_data()
+        mask_data = self.nb.load(self.func_mask).get_data()
+        masked_data = self.gmd(func_data, mask_data)
+        msg = "%s\n%s" % (str(self.ref_masked_vol.shape),
+                          str(masked_data.shape))
+        self.nt.assert_array_equal(self.ref_masked_vol, masked_data, msg)
 
 
 @pytest.mark.quick
