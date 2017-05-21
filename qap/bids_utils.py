@@ -1,6 +1,7 @@
 import os
 import yaml
 import json
+import copy
 
 
 def bids_decode_fname(file_path, dbg=False):
@@ -16,7 +17,7 @@ def bids_decode_fname(file_path, dbg=False):
                       "a nifti or json file")
 
     if dbg:
-        print "parsing %s" % (file_path)
+        print("parsing %s" % (file_path))
 
     # first figure out if there is a site directory level, this isn't
     # specified in BIDS currently, but hopefully will be in the future
@@ -127,7 +128,7 @@ def bids_retrieve_params(bids_config_dict, f_dict, dbg=False):
 
     for key in t_dict.keys():
         if u'RepetitionTime' in key:
-            params = t_dict
+            params = copy.deepcopy(t_dict)
             break
 
     return params
@@ -436,13 +437,31 @@ def bids_gen_cpac_sublist(bids_dir, paths_list, config_dict=None, creds_path="",
 
     return sublist
 
-def bids_gen_qap_sublist(bids_dir, paths_list, config_dict=None, creds_path="", dbg=False):
+
+def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dictionary=None, credentials_path="",
+                                         dbg=False):
+    """
+
+    :param bids_dir:  base directory that contains all of the data, this could be
+       a directory that contains data for a multiple BIDS datasets, in which
+       case the intervening directories will be interpreted as site names
+    :param paths_list: lists of all nifti files found in bids_dir, these paths
+       are relative to bids_dir
+    :param configuration_dictionary: a dictionary containing BIDS parameter
+       information
+    :param credentials_path: if using S3 bucket, this path credentials needed to
+       access the bucket, if accessing anonymous bucket, this can be set
+       to None
+    :param dbg: boolean indicating whether or not the debug statements should
+       be printed
+    :return: a data configuration dictionary suitable for use by QAP to
+    """
     """
     Generates a QAP formatted subject list from information contained in a
     BIDS formatted set of data.
 
     :param bids_dir: base directory that contains all of the data, this could be
-       a directory that contains data for a multiple BIDS datasets, in which
+       a directory that contains data for a multiple BIDS data sets, in which
        case the intervening directories will be interpreted as site names
     :param paths_list: lists of all nifti files found in bids_dir, these paths
        are relative to bids_dir
@@ -456,107 +475,108 @@ def bids_gen_qap_sublist(bids_dir, paths_list, config_dict=None, creds_path="", 
     """
 
     if dbg:
-        print( "gen_bids_sublist called with:")
-        print( "  bids_dir: {0}".format(bids_dir))
-        print( "  # paths: {0}".format(str(len(paths_list))))
-        print( "  config_dict: {0}".format( "missing" if not config_dict else "found"))
-        print( "  creds_path: {0}".format(creds_path))
+        print("gen_bids_sublist called with:")
+        print("  bids_dir: {0}".format(bids_dir))
+        print("  # paths: {0}".format(str(len(paths_list))))
+        print("  configuration_dictionary: {0}".format("missing" if not configuration_dictionary else "found"))
+        print("  credentials_path: {0}".format(credentials_path))
 
     # if configuration information is not desired, config_dict will be empty,
     # otherwise parse the information in the sidecar json files into a dict
     # we can use to extract data for our nifti files
-    if config_dict:
-        bids_config_dict = bids_parse_sidecar(config_dict, dbg)
+    bids_configuration_dictionary = {}
+    if configuration_dictionary:
+        bids_configuration_dictionary = bids_parse_sidecar(configuration_dictionary, dbg)
 
-    subdict = {}
+    data_configuration = {}
 
-    for p in paths_list:
-        p = p.rstrip()
-        f = os.path.basename(p)
+    for file_path in paths_list:
+        file_path = file_path.rstrip()
+        file_name = os.path.basename(file_path)
 
-        if f.endswith(".nii") or f.endswith(".nii.gz"):
+        if file_name.endswith(".nii") or file_name.endswith(".nii.gz"):
 
-            f_dict = bids_decode_fname(p)
+            file_parts = bids_decode_fname(file_path)
 
-            if config_dict:
-                t_params = bids_retrieve_params(bids_config_dict,
-                                                f_dict)
-                if not t_params:
-                    print f_dict
-                    raise IOError("Did not receive any parameters for %s," % (p) +
-                                  " is this a problem?")
+            if "ses" not in file_parts:
+                file_parts["ses"] = "1"
 
-                task_info = {"path": os.path.join(bids_dir,p),
-                             "params": t_params}
+            if "sub" not in file_parts:
+                raise IOError('"sub" not found in {}, perhaps it is not in BIDS format?'.format(file_path))
+
+            # configuration information for indexing scan in data configuration
+            file_params = {}
+            scan_name = ''
+
+            # populate the file_parameters with information from bids sidecar files, if they exist
+            if bids_configuration_dictionary:
+                file_params = bids_retrieve_params(bids_configuration_dictionary, file_parts)
+                if not file_params:
+                    print file_parts
+                    raise IOError("Did not receive any parameters for {}, is this a problem?".format(file_path))
+
+            # add in the scan name and path, how this is done depends on whether the scan is an
+            # anatomical or functional
+            if "T1w" in file_parts["scantype"]:
+
+                if 'anatomical_scan' in file_params:
+                    print('Anatomical scan {0} already found in dictionary, replacing with {1}'.format(
+                        file_params['anatomical_scan'], file_path))
+
+                file_params['anatomical_scan'] = file_path
+
+            elif "bold" in file_parts["scantype"]:
+
+                if 'functional_scan' in file_params:
+                    print('Functional scan {0} already found in dictionary, replacing with {1}'.format(
+                        file_params['functional_scan'], file_path))
+
+                file_params['functional_scan'] = file_path
+
+                if 'task' not in file_parts:
+                    raise IOError('"task" not found in {}, perhaps it is not correct BIDS format for a'
+                                  ' functional file?'.format(file_path))
+
+                scan_name = "-".join(["task", file_parts["task"]])
+
+            if "run" in file_parts:
+                if scan_name:
+                    scan_name = "_".join([scan_name, "-".join(["run", file_parts["run"]])])
+                else:
+                    scan_name = "-".join(["run", file_parts["run"]])
+
+            if "acq" in file_parts:
+                if scan_name:
+                    scan_name = "_".join([scan_name, "-".join(["acq", file_parts["acq"]])])
+                else:
+                    scan_name = "-".join(["acq", file_parts["acq"]])
+
+            if scan_name:
+                scan_name = "_".join([scan_name, file_parts['scantype']])
             else:
-                task_info = os.path.join(bids_dir,p)
+                scan_name = file_parts['scantype']
 
-            if "ses" not in f_dict:
-                f_dict["ses"] = "1"
+            participant = "-".join(["sub", file_parts["sub"]])
+            session = "-".join(["ses", file_parts["ses"]])
+            site = "-".join(["site", file_parts["site"]])
 
-            if "sub" not in f_dict:
-                raise IOError("sub not found in %s," % (p) +
-                              " perhaps it isn't in BIDS format?")
+            if site not in data_configuration:
+                data_configuration[site] = {}
 
-            sub_key = "-".join(["sub", f_dict["sub"]])
-            ses_key = "-".join(["ses", f_dict["ses"]])
+            if participant not in data_configuration[site]:
+                data_configuration[site][participant] = {}
 
-            if sub_key not in subdict:
-                subdict[sub_key] = {}
+            if session not in data_configuration[site][participant]:
+                data_configuration[site][participant][session] = {}
 
-            if ses_key not in subdict[sub_key]:
-                subdict[sub_key][ses_key] = \
-                    {"creds_path": creds_path}
+            if scan_name in data_configuration[site][participant][session]:
+                print('Scan {0} already found in data configuration, replacing with {1}'.format(
+                    scan_name, file_path))
 
-            if "none" not in f_dict["site"]:
-                subdict[sub_key][ses_key]["site_name"]="-".join(["site", f_dict["site"]])
+            data_configuration[site][participant][session][scan_name] = file_params
 
-            if "T1w" in f_dict["scantype"]:
-                anat_key=''
-                if "acq" in f_dict:
-                    anat_key+="acq-"+f_dict["acq"]+"_"
-                if "run" in f_dict:
-                    anat_key += "run-" + f_dict["run"] + "_"
-                anat_key+=f_dict["scantype"]
+    return data_configuration
 
-                if "anatomical_scan" not in subdict[sub_key][ses_key]:
-                    subdict[sub_key][ses_key]["anatomical_scan"] = {anat_key: task_info}
-                else:
-                    if anat_key in subdict[sub_key][ses_key]["anatomical_scan"]:
-                        print("Anatomical file (%s) already found, replacing" %
-                              (subdict[sub_key][ses_key]["anatomical_scan"]) +
-                              " for (%s:%s) discarding %s" % (f_dict["sub"],
-                                                              ses_key,
-                                                              p))
-                    subdict[sub_key][ses_key]["anatomical_scan"][anat_key]=task_info
-
-
-            if "bold" in f_dict["scantype"]:
-                task_key = "-".join(["task", f_dict["task"]])
-                if "run" in f_dict:
-                    task_key = "_".join([task_key,
-                                         "-".join(["run", f_dict["run"]])])
-                if "acq" in f_dict:
-                    task_key = "_".join([task_key,
-                                         "-".join(["acq", f_dict["acq"]])])
-                if "functional_scan" not in subdict[sub_key][ses_key]:
-                    subdict[sub_key][ses_key]["functional_scan"] = {}
-
-                if task_key not in \
-                        subdict[sub_key][ses_key]["functional_scan"]:
-                    subdict[sub_key][ses_key]["functional_scan"][task_key] = \
-                        task_info
-                else:
-                    print( "Func file (%s)" %
-                        subdict[sub_key][ses_key]["functional_scan"][task_key] +
-                        " already found for ( % s: %s: % s) discarding % s" % (
-                               sub_key,
-                               ses_key,
-                               task_key,
-                               p))
-
-
-    return subdict
 
 def collect_bids_files_configs(bids_dir, aws_input_creds=''):
     """
@@ -598,16 +618,14 @@ def collect_bids_files_configs(bids_dir, aws_input_creds=''):
                                 e.message))
                         raise
                 elif 'nii' in str(s3_obj.key):
-                    file_paths.append(str(s3_obj.key)
-                                      .replace(prefix,'').lstrip('/'))
+                    # file_paths.append(str(s3_obj.key)
+                    #                   .replace(prefix,'').lstrip('/'))
+                    file_paths.append(os.path.join(s3_prefix,str(s3_obj.key)))
 
     else:
         for root, dirs, files in os.walk(bids_dir, topdown=False):
             if files:
-                file_paths += [os.path.join(root, f).replace(bids_dir,'')
-                                   .lstrip('/')
-                               for f in files
-                               if 'nii' in f and ('T1w' in f or 'bold' in f)]
+                file_paths += [os.path.join(root, f) for f in files if 'nii' in f and ('T1w' in f or 'bold' in f)]
 
                 for f in files:
                     if f.endswith('json') and ('T1w' in f or 'bold' in f):
@@ -623,6 +641,16 @@ def collect_bids_files_configs(bids_dir, aws_input_creds=''):
             " directory, and that it is not empty.".format(bids_dir))
 
     return file_paths, config_dict
+
+
+def write_data_configuration(data_configuration_filename, data_configuration_dictionary):
+
+    if not data_configuration_filename.endswith('yml'):
+        data_configuration_filename += '.yml'
+
+    with open(data_configuration_filename, 'w') as ofd:
+        yaml.dump(data_configuration_dictionary, ofd, encoding='utf-8')
+
 
 def test_gen_bids_sublist(bids_dir, test_yml, creds_path, dbg=False):
 
@@ -644,19 +672,24 @@ def test_gen_bids_sublist(bids_dir, test_yml, creds_path, dbg=False):
 
     assert sublist
 
-def test_gen_bids_sublist_qap(bids_dir, test_yml, creds_path, dbg=False):
+def test_gen_bids_sublist_qap(bids_dir, test_yml, creds_path, dbg=False, cfg=False):
 
     (img_files, config) = collect_bids_files_configs(bids_dir, creds_path)
     if dbg:
         print("Found %d config files for %d image files" % (len(config),
                                                             len(img_files)))
 
-    subdict = bids_gen_cpac_sublist_qap(bids_dir, img_files, creds_path=creds_path, dbg=dbg)
+    if cfg:
+        data_configuration = bids_generate_qap_data_configuration(bids_dir, img_files, config,
+                                                       credentials_path=creds_path, dbg=dbg)
+    else:
+        data_configuration = bids_generate_qap_data_configuration(bids_dir, img_files,
+                                                       credentials_path=creds_path, dbg=dbg)
 
     with open(test_yml, "w") as ofd:
-        yaml.dump(subdict, ofd, encoding='utf-8')
+        yaml.dump(data_configuration, ofd, encoding='utf-8')
 
-    assert subdict
+    assert data_configuration
 
 if __name__ == '__main__':
 
@@ -665,8 +698,14 @@ if __name__ == '__main__':
         "/Users/cameron.craddock/workspace/git_temp/quality-assessment-protocol/test/"
         "rs_subject_list_corr_bmb3_s3_qap.yml",
         "/Users/cameron.craddock/AWS/ccraddock-fcp-indi-keys2.csv",
-        dbg=False)
+        dbg=True, cfg=True)
 
+    test_gen_bids_sublist_qap(
+        "s3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1",
+        "/Users/cameron.craddock/workspace/git_temp/quality-assessment-protocol/test/"
+        "rs_subject_list_corr_bmb3_s3_qap_noconfig.yml",
+        "/Users/cameron.craddock/AWS/ccraddock-fcp-indi-keys2.csv",
+        dbg=False, cfg=False)
 
     # test_gen_bids_sublist(
     #     "/Users/cameron.craddock/workspace/git_temp/CPAC"

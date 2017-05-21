@@ -1,13 +1,13 @@
-
-default_cfg = {
-    'template_head_for_anat': '${FSLDIR}/data/standard/MNI152_T1_2mm.nii.gz',
+default_pipeline_configuration = {
+    'anatomical_template': '/opt/afni/MNI_avg152T1+tlrc',
     'exclude_zeros': 'False',
-    'start_idx': '0',
-    'stop_idx': 'End',
+    'functional_start_index': '0',
+    'functional_stop_index': 'End',
     'write_report': 'False',
     'output_directory': '',
-    's3_output_creds_path': '',
-    'working_directory': '',
+    'workflow_log_dir': '',
+    's3_write_credentials': '',
+    'working_directory': '/tmp',
     'save_working_dir': 'False',
     'bundle_size': 1,
     'num_processors': 1,
@@ -18,19 +18,19 @@ default_cfg = {
     'write_graph': 'False'
 }
 
-config_output_str = """
+configuration_output_string = """
     Pipeline Configuration
     ----------------------
 
     Working directory:      {working_directory}
     Save working directory: {save_working_dir}
     Output directory:       {output_directory}
-    S3 output credentials:  {s3_output_creds_path}
+    S3 output credentials:  {s3_write_credentials}
     ---
-    MNI template:           {template_head_for_anat}
+    MNI template:           {anatomical_template}
     Exclude zeros:          {exclude_zeros}
-    Start index:            {start_idx}
-    Stop index:             {stop_idx}
+    Start index:            {functional_start_index}
+    Stop index:             {functional_stop_index}
     Write report:           {write_report}
     ---
     Bundle size:            {bundle_size}
@@ -45,22 +45,22 @@ config_output_str = """
 """
 
 
-def write_config(config_file_name, config_dict):
+def write_pipeline_configuration(configuration_output_filename, configuration_dictionary):
     """ Write out a config file with the parameters in config_dict.
 
         This would be a lot easier to just use yaml.dump, but we want the
         configuration file to be human readable and to include comments. The
         latter is not currently supported by pyYaml. Maybe in the future?
 
-    :type config_file_name: str
-    :param config_file_name: Filename, including path, of the file to be written
-    :type confid_dict: dict
-    :param config_dict: configuration dictionary (see config_dict defined above)
+    :type configuration_output_filename: str
+    :param configuration_output_filename: Filename, including path, of the file to be written
+    :type configuration_dictionary: dict
+    :param configuration_dictionary: configuration dictionary (see config_dict defined above)
                         that contains the parameters to be written to the config file
     :return: nothing
     """
 
-    config_file_str = '''
+    configuration_file_string = '''
 # Preprocessed Connectomes Project Quality Assessment Protocol (QAP)
 # Configuration file
 #
@@ -68,58 +68,49 @@ def write_config(config_file_name, config_dict):
 # QAP Parameters
 # --------------
 #
-# Path to a whole head template in MNI space. This is only required if you
-# are processing sMRI data. We prefer to use the MNI2mm template distributed
-# with FSL, but you are free to use any that you choose.
-template_head_for_anat: {template_head_for_anat}
+# Path to a whole head template. This is only required if you are processing sMRI data. The default
+# is the MNI2mm template distributed with AFNI, but you are free to use any that you choose.
+anatomical_template: {anatomical_template}
 
-# Many of the QAP measures use background voxels to calculate surrogate
-# measures of noise. If some of those voxels have been arbitrarily set to
-# zero, by defacing for anonymization or other reasons, it will bias these
-# measures. These voxels can be ignored by setting the following flag to
-# `True'
+# Many of the QAP measures use background voxels to calculate surrogate measures of noise. If some
+# of those voxels have been arbitrarily set to zero, by defacing for anonymization or other reasons,
+# it will bias these measures. These voxels can be ignored by setting the following flag to `True'
 exclude_zeros: {exclude_zeros}
 
-# The first few volumes of an fMRI scan may have different signal properties
-# due to T1 equilibrium effects. Set this parameter to discard volumes from
-# the beginning of the scan.
-start_idx: {start_idx}
+# The first few volumes of an fMRI scan may have different signal properties due to T1 equilibrium
+# effects. Set this parameter to discard volumes from the beginning of the scan.
+functional_start_index: {functional_start_index}
 
-# Similarly it may be desirable to exclude volumes at the end of the scan
-# from the calculation. Set this parameter to the index of the last volume
-# to include in calculations, or 'End' for the last volume.
-stop_idx: {stop_idx}
+# Similarly it may be desirable to exclude volumes at the end of the scan from the calculation. Set
+# this parameter to the index of the last volume to include in calculations, or 'End' for the last volume.
+functional_stop_index: {functional_stop_index}
 
-# Set the write_report parameter to True if you would like QAP to produce
-# PDF reports visualizing the results of the QAP metrics.
+# Set the write_report parameter to True if you would like QAP to produce PDF reports visualizing the
+# results of the QAP metrics.
 write_report: False
 
 
 # Output Paths:
 # -------------
 #
-# Directory for outputs generated by QAP. This includes a single JSON
-# for each sMRI scan and a JSON for each fMRI scan. Outputs can be
-# written directly to the AWS S3 cloud service by prepending the output
-# path with "s3://bucket_name/".
+# Directory for outputs generated by QAP. This includes a single JSON for each sMRI scan and a JSON for
+# each fMRI scan. To write outputs directly to the AWS S3 cloud service prepend the output path with
+# s3://bucket_name/". This may require setting s3_write_credentials
 output_directory: {output_directory}
 
-# AWS credentials will probably be needed if writing to S3, if so
-# edit the path to point to the credential file downloaded from AWS.
-s3_output_creds_path: {s3_output_creds_path}
+# AWS credentials will probably be needed if writing to S3, if so edit the path to point to the credential
+# file downloaded from AWS.
+s3_write_credentials: {s3_write_credentials}
 
-# Calculating the QAP measures requires  a variety of intermediary files
-# that are derived from the input data (e.g., brain mask, white matter mask).
-# These files are written to a working directory that can be automatically
-# deleted when QAP completes. Since a lot of files will be written and read
-# from this directory, it should ideally be locally connected to the workstation
-# (i.e. not a network share) - this is especially important for cluster and
-# cloud based calculation.
+# Calculating the QAP measures requires  a variety of intermediary files that are derived from the input
+# data (e.g., brain mask, white matter mask). These files are written to a working directory that can be
+# automatically deleted when QAP completes. Since a lot of files will be written and read from this directory,
+# it should ideally be locally connected to the workstation (i.e. not a network share) - this is especially
+# important for cluster and cloud based calculation.
 working_directory: {working_directory}
 
-# If you do not want to automatically delete the working directory at the
-# end of QAP, change the following flag to `True'. This is primarily useful
-# for debugging.
+# If you do not want to automatically delete the working directory at the end of QAP, change the following
+# flag to `True'. This is primarily useful for debugging.
 save_working_dir: {save_working_dir}
 
 # Multicore Parallelization and Bundles
@@ -137,8 +128,8 @@ save_working_dir: {save_working_dir}
 # amount of parallelization that can be achieved is limited by the dependencies pipeline
 # steps. For example, several nodes of the pipeline can be blocked until a node produces
 # an intermediary file that they all need. QAP mitigates this problem by combining
-# pipelines into a 'bundle' so that pipeline steps for different datasets can execute
-# in parallel. We bundle datasets by session to simplify balancing the number of sMRI
+# pipelines into a 'bundle' so that pipeline steps for different data can execute
+# in parallel. We bundle data by session to simplify balancing the number of sMRI
 # and fMRI data but into each bundle. So the bundle size is in units of sessions. In
 # other words, if in your dataset you have two sessions per participant and each session
 # contains two fMRI and one sMRI scans, and you specify a bundle size of 10, each bundle
@@ -163,54 +154,67 @@ bundle_size: {bundle_size}
 num_processors: {num_processors}
 memory: {memory}
 
-# Cluster parallelization
-# -----------------------
-#
-# QAP can also make use of cluster computing to increase throughput by running bundles on
-# separate nodes of a cluster. QAP will still perform multicore parallelization on each
-# cluster node, meaning that the multicore configuration must still be specified if using
-# cluster computing. QAP can work with SGE, PBS, or SLURM management system and automatically
-# generates all of the cluster configuration files and submits them to the job queue.
-#
-# To turn on cluster processing, set 'run_on_cluster' to True
-run_on_cluster: {run_on_cluster}
-
-# Specify the clustering system ('SGE','PBS','SLURM')
-cluster_system: {cluster_system}
-
-# SGE uses 'parallel' environments to determine how jobs should be mapped to nodes.
-# Since QAP will be running in multicore, it will request several processors from the
-# cluster managements system. Some parallel environments will allow a single job (QAP bundle)
-# to be mapped to processors on several different nodes, which is not suitable. QAP requires
-# that all of the processors allocated for a bundle be on the same cluster node. This is
-# accomplished by setting the 'allocation_rule' of the pe environment to '$pe_slots'.
-#
-# Specify the name of the parallel environment to use on your cluster. See the QAP web page
-# for more information.
-parallel_env: {parallel_env}
-
 # Debugging
 # -------------------------------
+
+# Directory where log files will be written
+workflow_log_dir: {workflow_log_dir}
 
 # Produce a graph for visualizing the workflow
 write_graph: {write_graph}
     '''
 
-    with open(config_file_name,'w') as ofd:
-        ofd.write( config_file_str.format(**config_dict) )
+    with open(configuration_output_filename, 'w') as ofd:
+        ofd.write(configuration_file_string.format(**configuration_dictionary))
 
     return 1
 
 
+def validate_pipeline_configuration(pipeline_configuration):
+    """
+    Validate the pipeline configuration dictionary to ensure the
+    parameters are properly set.
+    :param pipeline_configuration:
+    :return:
+    """
+
+    required_configuration_parameters = ['anatomical_template',
+                                         'exclude_zeros',
+                                         'functional_start_index',
+                                         'functional_stop_index',
+                                         'write_report',
+                                         'output_directory',
+                                         's3_write_credentials',
+                                         'working_directory',
+                                         'save_working_dir',
+                                         'bundle_size',
+                                         'num_processors',
+                                         'memory',
+                                         'write_graph',
+                                         'workflow_log_dir'
+                                         ]
+
+    missing_parameters = []
+    for parameter in required_configuration_parameters:
+        if parameter not in pipeline_configuration:
+            missing_parameters.append(parameter)
+
+    if len(missing_parameters) > 0:
+        error_string = '\n[!] The following rquired parameters are missing from the pipeline configuration:'
+        error_string += ",".join([parameter for parameter in missing_parameters]) + '\n'
+        raise Exception(error_string)
 
 if __name__ == "__main__":
+    write_pipeline_configuration("test_config.yml", default_pipeline_configuration)
 
-    write_config("test_config.yml", default_cfg)
-
-    print(config_output_str.format(**default_cfg))
+    print(configuration_output_string.format(**default_pipeline_configuration))
 
     import yaml
-    test_cfg = yaml.load(open("test_config.yml","r"))
-    print(config_output_str.format(**test_cfg))
 
-    assert(test_cfg != default_cfg)
+    test_configuration = yaml.load(open("test_config.yml", "r"))
+    print(configuration_output_string.format(**test_configuration))
+
+    validate_pipeline_configuration(test_configuration)
+    validate_pipeline_configuration(default_pipeline_configuration)
+
+    assert(test_configuration != default_pipeline_configuration)
