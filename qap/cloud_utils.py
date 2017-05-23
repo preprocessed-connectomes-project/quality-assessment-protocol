@@ -49,6 +49,40 @@ def download_single_s3_path(s3_path, cfg_dict):
     return local_dl
 
 
+def copy_directory_to_s3(from_path, to_path, cfg):
+    """
+    Copy the contents of a directory to S3
+
+    :param from_path: the local path to copy data from
+    :param to_path: the S3 path to copy data to
+    :param cfg: pipeline configuration dictionary containing AWS credentials, if any
+    :return:
+    """
+
+    # Import packages
+    from indi_aws import aws_utils, fetch_creds
+    import os
+    import yaml
+
+    if "s3://" not in to_path.lower():
+        raise ValueError( "Destination path {0} does not appear to be a correctly formatted S3 path.".format(to_path))
+
+    bucket_name = to_path.replace('s3://','').split('/')[0]
+
+    bucket = fetch_creds.return_bucket(cfg["s3_write_credentials"], bucket_name)
+
+    # And upload data
+    upl_files = []
+    for root, dirs, files in os.walk(from_path):
+        if files:
+            upl_files.extend([os.path.join(root, fil) for fil in files])
+
+    # Using INDI AWS utils
+    s3_upl_files = [ufile.replace(from_path, to_path) for ufile in upl_files]
+
+    aws_utils.s3_upload(bucket, (upl_files, s3_upl_files))
+
+
 def upl_qap_output(cfg_file):
     """Upload a pipeline output file to an AWS S3 bucket.
 
