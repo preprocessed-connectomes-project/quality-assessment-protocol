@@ -472,7 +472,7 @@ def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, 
     mask_affine = mask.affine
     mask = mask.get_data()
     out_clusters_img = np.zeros(np.prod(mask.shape)) 
-    out_clusters_img[mask.ravel()==1] = color_matrix 
+    out_clusters_img[mask.ravel()==1] = cluster_gs 
     out_clusters_img = out_clusters_img.reshape(mask.shape)
     clust_img = nb.Nifti1Image(out_clusters_img, mask_affine)
     
