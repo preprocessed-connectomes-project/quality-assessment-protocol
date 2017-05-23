@@ -14,6 +14,7 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.backends.backend_pdf import FigureCanvasPdf as FigureCanvas
 import seaborn as sns
 
+
 def calculate_gray_plot(func_file, mask_file):
     import numpy as np
     from matplotlib import pyplot as plt
@@ -401,8 +402,15 @@ def _get_values_inside_a_mask(main_file, mask_file):
     return data
 
 def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, figsize=(11.7, 8.3), title='Timeseries Plot'):
+    from sklearn import preprocessing
     fd_power = _calc_fd(meanfd_file)
     gray_matrix, color_matrix, cluster_gs = calculate_gray_plot(func_file, mask_file)
+
+    #zscore data
+    fd_power = preprocessing.scale(fd_power)
+    dvars = preprocessing.scale(dvars)
+    global_signal = preprocessing.scale(global_signal)
+
 
     #create grid with 2 rows
     figsize=(11, 8)
@@ -468,4 +476,7 @@ def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, 
     out_clusters_img = out_clusters_img.reshape(mask.shape)
     clust_img = nb.Nifti1Image(out_clusters_img, mask_affine)
     
+    #grid.update(hspace=1.0, right=0.95, left=0.1, bottom=0.2)
+    #ax = fig.add_subplot(grid[0, :-1])
+
     return fig, clust_img
