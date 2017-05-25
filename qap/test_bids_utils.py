@@ -3,6 +3,24 @@ import pytest
 import unittest
 
 
+class TestCollectBidsFilesConfigs(unittest.TestCase):
+
+    def test_function(self):
+        # just make sure it runs
+        from qap.bids_utils import collect_bids_files_configs
+        s3_bids_dir = "s3://fcp-indi/data/Projects/CORR/RawDataBIDS"
+        file_paths, config_dict = collect_bids_files_configs(s3_bids_dir)
+
+
+@pytest.mark.skip()
+class TestBidsGenerateQapDataConfiguration(unittest.TestCase):
+
+    def test_function(self):
+        from qap.bids_utils import bids_generate_qap_data_configuration
+        self.s3_bids_dir = "s3://fcp-indi/data/Projects/CORR/RawDataBIDS"
+
+
+@pytest.mark.skip()
 class TestExtractBidsData(unittest.TestCase):
 
     def setUp(self):

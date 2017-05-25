@@ -1,8 +1,20 @@
 
+import os
 import pytest
 import unittest
 
 
+@pytest.mark.long()
+class TestFullPipelines(unittest.TestCase):
+
+    def test_qap_s3(self):
+        from qap.cli import process_args
+        # just making sure it runs on the most basic input
+        bids_dir="s3://fcp-indi/data/Projects/CORR/RawDataBIDS"
+        process_args(bids_dir, os.getcwd(), "participant")
+
+
+"""
 # un-skip this once the CLI is un-classed
 @pytest.mark.skip()
 class TestValidateConfigDict(unittest.TestCase):
@@ -89,16 +101,28 @@ class TestCLI(unittest.TestCase):
         out_dir = os.path.join(os.getcwd(), "unit_tests_cli", "out")
         work_dir = os.path.join(os.getcwd(), "unit_tests_cli", "work")
 
-        self.cli = cli.QAProtocolCLI(parse_args=False)
-        self.cli._config = {}
-        self.cli._config["output_directory"] = out_dir
-        self.cli._config["working_directory"] = work_dir
-        self.cli._config["qap_type"] = "anatomical_spatial"
-        self.cli._config["template_head_for_anat"] = "/Library/Python/2.7/site-packages/qap-1.0.8-py2.7.egg/qap/test_data/MNI152_T1_3MM.nii.gz"
-        self.cli._num_processors = 1
-        self.cli._run_log_dir = "/custom/log/dir"
-        self.cli.runargs = {'plugin': 'MultiProc'}
-        self.cli._run_name = "qap_unit_test"
+        self.conf = {"output_directory": out_dir}
+        self.conf["working_directory"] = work_dir
+        self.conf["qap_type"] = "anatomical_spatial"
+        self.conf["template_head_for_anat"] = "/Library/Python/2.7/site-packages/qap-1.0.8-py2.7.egg/qap/test_data/MNI152_T1_3MM.nii.gz"
+        self.run_log_dir = "/custom/log/dir"
+        self.runargs = {'plugin': 'MultiProc'}
+        self.run_name = "qap_unit_test"
+
+    def tearDown(self):
+        import shutil
+        try:
+            shutil.rmtree(self.conf["output_directory"])
+        except OSError:
+            pass
+        try:
+            shutil.rmtree(self.conf["working_directory"])
+        except OSError:
+            pass
+
+
+
+    def test_create_bundles_one_ses_each(self):
 
         # inputs/outputs
         self.input_subdict = {
@@ -189,18 +213,6 @@ class TestCLI(unittest.TestCase):
                 ('sub_001', 'session_02', 'anat_1'): {
                     'anatomical_scan': '/file/path/sub_001/session_02/anatomical_scan/anat_1/file.nii.gz'}}]
 
-    def tearDown(self):
-        import shutil
-        try:
-            shutil.rmtree(self.cli._config["output_directory"])
-        except OSError:
-            pass
-        try:
-            shutil.rmtree(self.cli._config["working_directory"])
-        except OSError:
-            pass
-
-    def test_create_bundles_one_ses_each(self):
         self.cli._config["num_sessions_at_once"] = 1
         self.cli._sub_dict = self.session_dict
         bundles = self.cli.create_bundles()
@@ -585,3 +597,4 @@ def test_run_workflow_build_only():
 
     for node in terminal_nodes:
         assert node in node_names
+"""

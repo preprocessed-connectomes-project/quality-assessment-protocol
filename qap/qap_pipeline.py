@@ -43,7 +43,7 @@ def build_and_run_qap_pipeline(args, run=True):
     import nipype.interfaces.utility as niu
 
     import qap
-    from qap.qap_workflows_utils import read_json
+    from qap.qap_utils import read_json
 
     import glob
 
@@ -52,7 +52,8 @@ def build_and_run_qap_pipeline(args, run=True):
     from nipype import config as nyconfig
 
     # unpack args
-    resource_pool_dict, sub_info_list, config, run_name, runargs, bundle_idx, num_bundles = args
+    resource_pool_dict, sub_info_list, config, run_name, bundle_idx, \
+    num_bundles = args
 
     # Read and apply general settings in config
     keep_outputs = config.get('write_all_outputs', False)
@@ -60,6 +61,24 @@ def build_and_run_qap_pipeline(args, run=True):
     # take date+time stamp for run identification purposes
     pipeline_start_stamp = strftime("%Y-%m-%d_%H:%M:%S")
     pipeline_start_time = time.time()
+
+    # set up callback logging
+    import logging
+    from nipype.pipeline.plugins.callback_log import log_nodes_cb
+
+    callback_log_filename = os.path.join(config["workflow_log_dir"],
+                                         "callback.log")
+
+    # Add handler to callback log file
+    callback_logger = logging.getLogger('callback')
+    callback_logger.setLevel(logging.DEBUG)
+    handler = logging.FileHandler(callback_log_filename)
+    callback_logger.addHandler(handler)
+
+    runargs = {'plugin': 'MultiProc',
+               'plugin_args': {'memory_gb': config['memory'],
+                               'n_procs': config['num_processors'],
+                               'status_callback': log_nodes_cb}}
 
     bundle_log_dir = op.join(config["workflow_log_dir"],
                              '_'.join(["bundle", str(bundle_idx)]))

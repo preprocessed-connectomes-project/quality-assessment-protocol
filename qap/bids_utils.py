@@ -5,10 +5,10 @@ import copy
 
 
 def bids_decode_fname(file_path, dbg=False):
+
     import re
 
     f_dict = {}
-
     fname = os.path.basename(file_path)
 
     # first lets make sure that we know how to handle the file
@@ -239,7 +239,6 @@ def bids_parse_sidecar(config_dict, dbg=False):
 
 
 def gen_bids_outputs_sublist(base_path, paths_list, key_list, creds_path):
-    import copy
 
     func_keys = ["functional_to_anat_linear_xfm", "motion_params",
                  "movement_parameters", "motion_correct"]
@@ -516,7 +515,7 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
                 file_params = bids_retrieve_params(bids_configuration_dictionary, file_parts)
                 if not file_params:
                     print file_parts
-                    raise IOError("Did not receive any parameters for {}, is this a problem?".format(file_path))
+                    #raise IOError("Did not receive any parameters for {}, is this a problem?".format(file_path))
 
             # add in the scan name and path, how this is done depends on whether the scan is an
             # anatomical or functional
