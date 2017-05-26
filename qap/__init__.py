@@ -1,4 +1,3 @@
-from cli import QAProtocolCLI
 from .version import __version__
 
 # pcp_qap package
@@ -7,8 +6,7 @@ from .version import __version__
 #       workflows
 
 #__all__ = ['qclib', 'workflows']
-'''
-from cli import QAProtocolCLI
+''' 
 from anatomical_preproc import run_anatomical_reorient, \
                                run_anatomical_skullstrip, \
                                run_segmentation_workflow
