@@ -3,1060 +3,490 @@
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 
-import os
-import os.path as op
 import argparse
+import bids_utils
 
-from nipype import config
-log_dir=os.path.join("tmp","nipype","logs")
-config.update_config({'logging': {'log_directory': log_dir,
-                                  'log_to_file': True}})
+from qap_pipeline import build_and_run_qap_pipeline
 
-from nipype import logging
-logger = logging.getLogger('workflow')
+# from nipype import config
+# log_dir=os.path.join("tmp","nipype","logs")
+# config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
+#
+# from nipype import logging
+# logger = logging.getLogger('workflow')
 
 
-class QAProtocolCLI:
+def create_bundles(data_configuration_dict, bundle_size):
+    """Create a list of participant "bundles".
+
+    :param data_configuration_dict: A nested dictionary session->participant->session->scan->{resource pool}
+    :param bundle_size: the number of sub-session-session combos (tranches) in a bundle
+
+    :return: A list of bundles - each bundle being a dictionary that is a starting resource pool for N
+    sub-session-session combos with bundle_size being set by the user
     """
-    This class and the associated run_workflow function implement what
-    the former scripts (qap_anatomical_spatial.py, etc.) contained
+
+    tranche_count = 0
+    bundles = []
+    new_bundle = {}
+
+    for site in data_configuration_dict.keys():
+        for participant in data_configuration_dict[site].keys():
+            for session in data_configuration_dict[site][participant].keys():
+
+                if tranche_count % bundle_size == 0:
+                    if new_bundle:
+                        bundles.append(new_bundle)
+                    new_bundle = {}
+
+                tranche_identifier = (site, participant, session)
+
+                if tranche_identifier in new_bundle:
+                    print("WARNING: tranche {0},{1},{2} already found in bundle, overwriting".format(
+                        tranche_identifier[0], tranche_identifier[1], tranche_identifier[2]))
+
+                new_bundle[tranche_identifier] = data_configuration_dict[site][participant][session]
+                tranche_count += 1
+
+    # if there is a bundle still hanging around, add it to the list
+    if new_bundle:
+        bundles.append(new_bundle)
+
+    return bundles
+
+
+def write_bundles(bundles, bundle_filename):
+
+    import yaml
+    if not bundle_filename.endswith('yml'):
+        bundle_filename += '.yml'
+
+    with open(bundle_filename, 'w') as ofd:
+        yaml.dump(bundles, ofd, encoding='utf-8')
+
+
+def run_qap(pipeline_configuration, data_bundles, bundle_index=''):
     """
 
-    def __init__(self, parse_args=True):
-
-        if parse_args:
-            self._parse_args()
-        else:
-            self._cloudify = False
-            self._bundle_idx = None
-
-    def _parse_args(self):
-
-        parser = argparse.ArgumentParser()
-
-        group = parser.add_argument_group(
-            "Regular Use Inputs (non-cloud runs)")
-        cloudgroup = parser.add_argument_group(
-            "AWS Cloud Inputs (only required for AWS Cloud runs)")
-        req = parser.add_argument_group("Required Inputs")
-
-        cloudgroup.add_argument('--bundle_idx', type=int,
-                                help='Bundle index to run')
-        cloudgroup.add_argument('--log_dir', type=str,
-                                help='Directory for workflow logging')
-
-        # Subject list (YAML file)
-        group.add_argument(
-            "data_config_file", type=str,
-            help="filepath to participant list YAML")
-        req.add_argument(
-            "pipeline_config_file", type=str,
-            help="filepath to pipeline configuration YAML")
-
-        # Write PDF reports
-        group.add_argument(
-            "--with-reports", action='store_true', default=False,
-            help="Write a summary report in PDF format.")
-
-        args = parser.parse_args()
-
-        # Load config
-        from qap.script_utils import read_yml_file
-        self._config = read_yml_file(args.pipeline_config_file)
-        self.validate_config_dict()
-
-        self._config['pipeline_config_yaml'] = \
-            os.path.realpath(args.pipeline_config_file)
-        self._run_name = self._config['pipeline_name']
-
-        if args.with_reports:
-            self._config['write_report'] = True
-
-        if "num_sessions_at_once" not in self._config.keys():
-            self._config["num_sessions_at_once"] = 1
-
-        if "num_bundles_at_once" not in self._config.keys():
-            self._config["num_bundles_at_once"] = 1
-
-        self._config["subject_list"] = os.path.realpath(args.data_config_file)
-
-        if args.bundle_idx:
-            self._bundle_idx = args.bundle_idx
-        else:
-            self._bundle_idx = None
-
-        if args.log_dir:
-            self._run_log_dir = args.log_dir
-        else:
-            self._run_log_dir = self._config["output_directory"]
-
-    def submit_cluster_batch_file(self, num_bundles):
-        """Write the cluster batch file for the appropriate scheduler.
-
-        - Batch file setup code borrowed from dclark87's CPAC cluster setup
-          code:
-              - https://github.com/FCP-INDI/C-PAC/blob/0.4.0_development/CPAC/pipeline/cpac_runner.py
-              - https://github.com/dclark87
-        - This function will write the batch file appropriate for the
-          scheduler being used, and then this CLI will be run again on each
-          node/slot through the run_one_bundle function.
-
-        :type num_bundles: int
-        :param num_bundles: The number of bundles total being run.
-        """
-
-        import os
-        import re
-        import getpass
-        import commands
-        from time import strftime
-        from indi_schedulers import cluster_templates
-
-        print "Submitting cluster job to %s.." % self._platform
-
-        # Create cluster log dir
-        cluster_files_dir = \
-            os.path.join(self._config["output_directory"], "cluster_files")
-        if not os.path.exists(cluster_files_dir):
-            os.makedirs(cluster_files_dir)
-
-        # Batch file variables
-        timestamp = str(strftime("%Y_%m_%d_%H_%M_%S"))
-        shell = commands.getoutput('echo $SHELL')
-        user_account = getpass.getuser()
-
-        # Set up config dictionary
-        config_dict = {'timestamp': timestamp,
-                       'shell': shell,
-                       'job_name': self._run_name,
-                       'num_tasks': num_bundles,
-                       'queue': "all.q",
-                       'par_env': "mpi_smp",
-                       'cores_per_task': self._config["num_processors"],
-                       'user': user_account,
-                       'work_dir': cluster_files_dir}
-
-        # Get string template for job scheduler
-        if self._platform == "PBS":
-            env_arr_idx = '$PBS_ARRAYID'
-            batch_file_contents = cluster_templates.pbs_template
-            confirm_str = '(?<=Your job-array )\d+'
-            exec_cmd = 'qsub'
-        elif self._platform == "SGE":
-            env_arr_idx = '$SGE_TASK_ID'
-            batch_file_contents = cluster_templates.sge_template
-            confirm_str = '(?<=Your job-array )\d+'
-            exec_cmd = 'qsub'
-        elif self._platform == "SLURM":
-            hrs_limit = 8 * num_bundles
-            time_limit = '%d:00:00' % hrs_limit
-            config_dict["time_limit"] = time_limit
-            env_arr_idx = '$SLURM_ARRAY_TASK_ID'
-            batch_file_contents = cluster_templates.slurm_template
-            confirm_str = '(?<=Submitted batch job )\d+'
-            exec_cmd = 'sbatch'
-
-        config_dict['env_arr_idx'] = env_arr_idx
-        config_dict['run_cmd'] = 'echo "Running task: %s"' % env_arr_idx
-
-        # Populate string from config dict values
-        batch_file_contents = batch_file_contents % config_dict
-
-        run_str = "qap_measures_pipeline.py --bundle_idx %s --log_dir %s %s "\
-                  "%s" % (env_arr_idx, self._run_log_dir,
-                          self._config["subject_list"],
-                          self._config["pipeline_config_yaml"])
-
-        batch_file_contents = "\n".join([batch_file_contents, run_str])
-
-        batch_filepath = os.path.join(cluster_files_dir, 'cpac_submit_%s.%s'
-                                      % (timestamp, self._platform))
-
-        with open(batch_filepath, 'w') as f:
-            f.write(batch_file_contents)
-
-        print "Batch file written to %s.." % batch_filepath
-
-        # Get output response from job submission
-        out = commands.getoutput('%s %s' % (exec_cmd, batch_filepath))
-
-        # Check for successful qsub submission
-        if re.search(confirm_str, out) == None:
-            err_msg = 'Error submitting QAP pipeline run to %s queue' \
-                      % self._platform
-            raise Exception(err_msg)
-
-        print "Batch job submitted to %s queue." % self._platform
-
-        # Get pid and send to pid file
-        pid = re.search(confirm_str, out).group(0)
-        pid_file = os.path.join(cluster_files_dir, 'pid.txt')
-        with open(pid_file, 'w') as f:
-            f.write(pid)
-
-    def validate_config_dict(self):
-        """Validate the pipeline configuration dictionary to ensure the
-        parameters are properly set.
-        """
-        config_options = ["pipeline_name",
-                          "num_processors",
-                          "num_sessions_at_once",
-                          "available_memory",
-                          "cluster_system",
-                          "output_directory",
-                          "working_directory",
-                          "template_head_for_anat",
-                          "exclude_zeros",
-                          "start_idx",
-                          "stop_idx",
-                          "write_report",
-                          "write_graph",
-                          "write_all_outputs",
-                          "upload_to_s3",
-                          "bucket_prefix",
-                          "bucket_out_prefix",
-                          "local_prefix",
-                          "bucket_name",
-                          "creds_path"]
-        invalid = []
-        for param in self._config.keys():
-            if param not in config_options:
-                invalid.append(param)
-        if len(invalid) > 0:
-            err = "\n[!] The following parameters in your configuration " \
-                  "file are not recognized. Double-check the pipeline " \
-                  "configuration template.\n"
-            err += "\n".join([x for x in invalid])
-            raise Exception(err)
-        else:
-            return 0
-
-    def create_session_dict(self, subdict):
-        """Collapse the participant resource pools so that each participant-
-        session combination has its own entry.
-
-        - input subdict format:
-              {'sub_01': {'session_01':
-                             {'anatomical_scan': {'scan_01': <filepath>,
-                                                  'scan_02': <filepath>},
-                              'site_name': 'Site_1'} },
-               'sub_02': {..} }
-
-        - output dict format:
-              { (sub01,session01): {"scan_01": {
-                                            "anatomical_scan": <filepath>},
-                                   {"scan_02": {
-                                            "anatomical_scan": <filepath>} } }
-
-        :type subdict: dict
-        :param subdict: A dictionary containing the filepaths of input files
-                        for each participant, sorted by session and scan.
-        :rtype: dict
-        :return: A dictionary of dictionaries where each participant-session
-                 combination has its own entry, and input file filepaths are
-                 defined.
-        """
-
-        from qap.qap_utils import raise_smart_exception
-
-        flat_sub_dict_dict = {}
-        sites_dict = {}
-
-        for subid in subdict.keys():
-            subid = str(subid)
-            # sessions
-            for session in subdict[subid].keys():
-                # resource files
-                for resource in subdict[subid][session].keys():
-                    if type(subdict[subid][session][resource]) is dict:
-                        # then this has sub-scans defined
-                        for scan in subdict[subid][session][resource].keys():
-                            filepath = subdict[subid][session][resource][scan]
-                            resource_dict = {}
-                            resource_dict[resource] = filepath
-                            sub_info_tuple = (subid, session)
-                            if sub_info_tuple not in flat_sub_dict_dict.keys():
-                                flat_sub_dict_dict[sub_info_tuple] = {}
-                            if scan not in flat_sub_dict_dict[sub_info_tuple].keys():
-                                flat_sub_dict_dict[sub_info_tuple][scan] = {}
-
-                            flat_sub_dict_dict[sub_info_tuple][scan].update(
-                                resource_dict)
-
-                    elif resource == "site_name":
-                        sites_dict[subid] = subdict[subid][session][resource]
-
-                    else:
-                        filepath = subdict[subid][session][resource]
-                        resource_dict = {}
-                        resource_dict[resource] = filepath
-                        sub_info_tuple = (subid, session)
-
-                        if sub_info_tuple not in flat_sub_dict_dict.keys():
-                            flat_sub_dict_dict[sub_info_tuple] = {}
-
-                        flat_sub_dict_dict[sub_info_tuple].update(
-                            resource_dict)
-
-        if len(flat_sub_dict_dict) == 0:
-            # this error message meant more for devs than user
-            msg = "The participant dictionary is empty."
-            raise_smart_exception(locals(), msg)
-
-        # in case some subjects have site names and others don't
-        if len(sites_dict.keys()) > 0:
-            for subid in subdict.keys():
-                subid = str(subid)
-                if subid not in sites_dict.keys():
-                    sites_dict[subid] = None
-
-            # integrate site information into flat_sub_dict_dict
-            #     it was separate in the first place to circumvent the fact
-            #     that even though site_name doesn't get keyed with scan names
-            #     names, that doesn't necessarily mean scan names haven't been
-            #     specified for that participant
-            for sub_info_tuple in flat_sub_dict_dict.keys():
-                site_info = {}
-                site_info["site_name"] = sites_dict[sub_info_tuple[0]]
-                flat_sub_dict_dict[sub_info_tuple].update(site_info)
-
-        return flat_sub_dict_dict
-
-    def load_sublist(self):
-        """Load the participant list YAML file into a dictionary and check.
-
-        - subdict format:
-              {'sub_01': {'session_01':
-                            {'anatomical_scan': {'scan_01': <filepath>,
-                                                 'scan_02': <filepath>},
-                             'site_name': 'Site_1'} },
-              'sub_02': {..} }
-
-        :rtype: dictionary
-        :return: The participant list in a dictionary.
-        """
-
-        import yaml
-        from qap.qap_utils import raise_smart_exception
-
-        if "subject_list" in self._config.keys():
-            with open(self._config["subject_list"], "r") as f:
-                subdict = yaml.load(f)
-        else:
-            msg = "\n\n[!] There is no participant list YML to read.\n\n"
-            raise_smart_exception(locals(),msg)
-
-        if len(subdict) == 0:
-            msg = "The participant list provided is either empty or could " \
-                  "not be read properly!"
-            raise_smart_exception(locals(),msg)
-
-        return subdict
-
-    def create_bundles(self):
-        """Create a list of participant "bundles".
-
-        :rtype: list
-        :return: A list of bundles - each bundle being a dictionary that is a
-                 starting resource pool for N sub-session-scan combos with N
-                 being the number of participants per bundle (set by the user)
-        """
-
-        from qap.qap_utils import raise_smart_exception
-
-        i = 0
-        bundles = []
-
-        for session_tuple in self._sub_dict.keys():
-            if i == 0:
-                new_bundle = {}
-            sub = session_tuple[0]
-            ses = session_tuple[1]
-            site_name = None
-            if "site_name" in self._sub_dict[session_tuple].keys():
-                site_name = self._sub_dict[session_tuple]["site_name"]
-            for scan in self._sub_dict[session_tuple].keys():
-                if type(self._sub_dict[session_tuple][scan]) is dict:
-                    # to avoid fields in sub_dict[session_tuple] that are
-                    # strings (such as site_name or creds_path)
-                    sub_info_tuple = (sub, ses, scan)
-                    new_bundle[sub_info_tuple] = \
-                        self._sub_dict[session_tuple][scan]
-                    if site_name:
-                        new_bundle[sub_info_tuple].update({"site_name": site_name})
-            i += 1
-            if i == self._config["num_sessions_at_once"]:
-                bundles.append(new_bundle)
-                i = 0
-
-        if i > 0:
-            bundles.append(new_bundle)
-
-        if len(bundles) == 0:
-            msg = "No bundles created."
-            raise_smart_exception(locals(),msg)
-
-        return bundles
-
-    def run_one_bundle(self, bundle_idx, run=True):
-        """Execute one bundle's workflow on one node/slot of a cluster/grid.
-
-        - Compatible with Amazon AWS cluster runs, and S3 buckets.
-
-        :type bundle_idx: int
-        :param bundle_idx: The bundle ID number - used to calculate which
-                           entries in the participant list to pull into the
-                           current bundle, based on the number of participants
-                           per bundle (participants at once).
-        :type run: bool
-        :param run: Run flag, set to False for testing.
-        :rtype: dictionary
-        :return: A dictionary with information about the workflow run, its
-                  status, and results.
-        """
-
-        import os
-        from qap_utils import write_json
-        from cloud_utils import download_single_s3_path
-
-        self._config["workflow_log_dir"] = self._run_log_dir
-
-        bundle_dict = self._bundles_list[bundle_idx-1]
-        num_bundles = len(self._bundles_list)
-
-        # check for s3 paths
-        for sub in bundle_dict.keys():
-            # in case we're dealing with string entries in the data dict
-            try:
-                bundle_dict[sub].keys()
-            except AttributeError:
-                continue
-            for resource in bundle_dict[sub].keys():
-                value = bundle_dict[sub][resource]
-                if "s3://" in value:
-                    bundle_dict[sub][resource] = \
-                        download_single_s3_path(value, self._config)
-
-        wfargs = (bundle_dict, bundle_dict.keys(),
-                  self._config, self._run_name, self.runargs,
-                  bundle_idx, num_bundles)
-
-        if run:
-            # let's go!
-            rt = run_workflow(wfargs)
-
-            # write bundle results to JSON file
-            write_json(rt, os.path.join(rt["bundle_log_dir"],
-                                        "workflow_results.json"))
-
-            # make not uploading results to S3 bucket the default if not
-            # specified
-            if "upload_to_s3" not in self._config.keys():
-                self._config["upload_to_s3"] = False
-
-            # upload results
-            if self._config["upload_to_s3"]:
-                from cloud_utils import upl_qap_output
-                upl_qap_output(self._config)
-
-            return rt
-        else:
-            return wfargs
-
-    def run(self, config_file=None, partic_list=None):
-        """Establish where and how we're running the pipeline and set up the
-        run. (Entry point)
-
-        - This is the entry point for pipeline building and connecting.
-          Depending on the inputs, the appropriate workflow runner will
-          be selected and executed.
-
-        :type config_file: str
-        :param config_file: Filepath to the pipeline configuration file in
-                            YAML format.
-        :type partic_list: str
-        :param partic_list: Filepath to the participant list file in YAML
-                            format.
-        """
-
-        from time import strftime
-        from qap_utils import raise_smart_exception, \
-                              check_config_settings
-
-        # in case we are overloading
-        if config_file:
-            from qap.script_utils import read_yml_file
-            self._config = read_yml_file(config_file)
-            self.validate_config_dict()
-            self._config["pipeline_config_yaml"] = config_file
-      
-        if not self._config:
-             raise Exception("config not found!")
-
-        if partic_list:
-            self._config["subject_list"] = partic_list
-
-        # Get configurations and settings
-        check_config_settings(self._config, "num_processors")
-        check_config_settings(self._config, "num_sessions_at_once")
-        check_config_settings(self._config, "available_memory")
-        check_config_settings(self._config, "output_directory")
-        check_config_settings(self._config, "working_directory")
-
-        self._num_bundles_at_once = 1
-        write_report = self._config.get('write_report', False)
-
-        if "cluster_system" in self._config.keys() and not self._bundle_idx:
-            res_mngr = self._config["cluster_system"]
-            if (res_mngr == None) or ("None" in res_mngr) or \
-                ("none" in res_mngr):
-                self._platform = None
-            else:
-                platforms = ["SGE", "PBS", "SLURM"]
-                self._platform = str(res_mngr).upper()
-                if self._platform not in platforms:
-                    msg = "The resource manager %s provided in the pipeline "\
-                          "configuration file is not one of the valid " \
-                          "choices. It must be one of the following:\n%s" \
-                          % (self._platform, str(platforms))
-                    raise_smart_exception(locals(), msg)
-        else:
-            self._platform = None
-
-        # Create output directory
-        try:
-            os.makedirs(self._config["output_directory"])
-        except:
-            if not op.isdir(self._config["output_directory"]):
-                err = "[!] Output directory unable to be created.\n" \
-                      "Path: %s\n\n" % self._config["output_directory"]
-                raise Exception(err)
-            else:
-                pass
-
-        # Create working directory
-        try:
-            os.makedirs(self._config["working_directory"])
-        except:
-            if not op.isdir(self._config["working_directory"]):
-                err = "[!] Output directory unable to be created.\n" \
-                      "Path: %s\n\n" % self._config["working_directory"]
-                raise Exception(err)
-            else:
-                pass
-
-        results = []
-
-        # set up callback logging
-        import logging
-        from nipype.pipeline.plugins.callback_log import log_nodes_cb
-
-        cb_log_filename = os.path.join(self._config["output_directory"],
-                                       "callback.log")
-        # Add handler to callback log file
-        cb_logger = logging.getLogger('callback')
-        cb_logger.setLevel(logging.DEBUG)
-        handler = logging.FileHandler(cb_log_filename)
-        cb_logger.addHandler(handler)
-
-        # settle run arguments (plugins)
-        self.runargs = {}
-        self.runargs['plugin'] = 'MultiProc'
-        self.runargs['plugin_args'] = \
-            {'memory_gb': int(self._config["available_memory"]),
-             'status_callback': log_nodes_cb}
-        n_procs = {'n_procs': self._config["num_processors"]}
-        self.runargs['plugin_args'].update(n_procs)
-
-        # load the participant list file into dictionary
-        subdict = self.load_sublist()
-
-        # flatten the participant dictionary
-        self._sub_dict = self.create_session_dict(subdict)
-
-        # create the list of bundles
-        self._bundles_list = self.create_bundles()
-        num_bundles = len(self._bundles_list)
-
-        if not self._bundle_idx:
-            # want to initialize the run-level log directory (not the bundle-
-            # level) only the first time we run the script, due to the
-            # timestamp. if sub-nodes are being kicked off by a batch file on
-            # a cluster, we don't want a new timestamp for every new node run
-            self._run_log_dir = op.join(self._config['output_directory'],
-                                        '_'.join([self._run_name, "logs"]),
-                                        '_'.join([strftime("%Y%m%d_%H_%M_%S"),
-                                                 "%dbundles" % num_bundles]))
-
-        if self._run_log_dir:
-            if not os.path.isdir(self._run_log_dir):
-                try:
-                    os.makedirs(self._run_log_dir)
-                except:
-                    if not op.isdir(self._run_log_dir):
-                        err = "[!] Log directory unable to be created.\n" \
-                              "Path: %s\n\n" % self._run_log_dir
-                        raise Exception(err)
-                    else:
-                        pass
-
-        if num_bundles == 1:
-            self._config["num_sessions_at_once"] = \
-                len(self._bundles_list[0])
-
-        # Start the magic
-        if not self._platform and not self._bundle_idx:
-            # not a cluster/grid run
-            for idx in range(1, num_bundles+1):
-                results.append(self.run_one_bundle(idx))
-
-        elif not self._bundle_idx:
-            # there is a self._bundle_idx only if the pipeline runner is run
-            # with bundle_idx as a parameter - only happening either manually,
-            # or when running on a cluster
-            self.submit_cluster_batch_file(num_bundles)
-
-        else:
-            # if there is a bundle_idx supplied to the runner
-            results = self.run_one_bundle(self._bundle_idx)
-
-
-def starter_node_func(starter):
-    """Pass a dummy string through to provide a basic function for the first
-    Nipype workflow node.
-
-    - This is used for a Nipype utility function node to serve as a starting
-      node to connect to multiple unrelated Nipype workflows. Each of these
-      workflows runs QAP for one participant in the current bundle being run.
-    - Connecting the multiple non-interdependent participant workflows as one
-      workflow allows the Nipype resource scheduler to maximize performance.
-
-    :type starter: str
-    :param starter: A dummy string.
-    :rtype: str
-    :return: The same string.
-    """
-    return starter
-
-
-def run_workflow(args, run=True):
-    """Connect and execute the QAP Nipype workflow for one bundle of data.
-
-    - This function will update the resource pool with what is found in the
-      output directory (if it already exists). If the final expected output
-      of the pipeline is already found, the pipeline will not run and it
-      will move onto the next bundle. If the final expected output is not
-      present, the pipeline begins to build itself backwards.
-
-    :type args: tuple
-    :param args: A 7-element tuple of information comprising of the bundle's
-                 resource pool, a list of participant info, the configuration
-                 options, the pipeline ID run name and miscellaneous run args.
-    :rtype: dictionary
-    :return: A dictionary with information about the workflow run, its status,
-             and results.
+    Build and execute the qap pipeline based on the configuration parameters.
+
+    :param pipeline_configuration: dictionary containing execution parameters
+    :param data_bundles: list of data dictionaries that specify data to be processed
+    :param bundle_index: index of a particular bundle to run
+    :return: A list of dictionaries with information about the workflow runs, their
+              status, and results.
     """
 
     import os
-    import os.path as op
+    from qap.qap_utils import write_json
+    from cloud_utils import download_single_s3_path, copy_directory_to_s3
 
-    import nipype.interfaces.io as nio
-    import nipype.pipeline.engine as pe
-    import nipype.interfaces.utility as niu
+    # first deal with logging, if the plan is to write the log files to S3, we first write
+    # them locally to the working directory and then move them to S3
+    s3_log_path = ''
+    if "s3://" in pipeline_configuration["workflow_log_dir"]:
+        s3_log_path = pipeline_configuration["workflow_log_dir"]
+        pipeline_configuration["workflow_log_dir"] = os.path.join(pipeline_configuration["working_directory"], "logs")
 
-    import qap
-    from qap_utils import read_json
+    if not os.path.isdir(pipeline_configuration["workflow_log_dir"]):
+        os.makedirs(pipeline_configuration["workflow_log_dir"])
 
-    import glob
+    write_report = pipeline_configuration['write_report']
 
-    import time
-    from time import strftime
-    from nipype import config as nyconfig
+    num_bundles = len(data_bundles)
 
-    # unpack args
-    resource_pool_dict, sub_info_list, config, run_name, runargs, \
-        bundle_idx, num_bundles = args
+    if bundle_index:
+        if bundle_index < 0 or bundle_index >= num_bundles:
+            raise ValueError("Invalid bundle_index {0}, should be in the range 0 < x < {1}".format(
+                bundle_index, num_bundles))
 
-    # Read and apply general settings in config
-    keep_outputs = config.get('write_all_outputs', False)
+        data_bundles = [data_bundles[int(bundle_index)]]
 
-    # take date+time stamp for run identification purposes
-    pipeline_start_stamp = strftime("%Y-%m-%d_%H:%M:%S")
-    pipeline_start_time = time.time()
+    results = []
+    for index, bundle_dict in enumerate(data_bundles):
 
-    if "workflow_log_dir" not in config.keys():
-        config["workflow_log_dir"] = config["output_directory"]
+        # the QAP pipeline uses the bundle index in the names of various files and directories, we want to
+        # preserve the actual bundle index to make sure that values in these names correctly map back out to
+        # the actual data, so, if we were passed a bundle index, use it, otherwise use our internally calculated
+        # index
+        if not bundle_index:
+            bundle_index = index
 
-    bundle_log_dir = op.join(config["workflow_log_dir"],
-                             '_'.join(["bundle", str(bundle_idx)]))
+        # if input values are in s3, go get 'em
+        for tranche_key, tranche_dict in bundle_dict.iteritems():
+            for scan_key, scan_dict in tranche_dict.iteritems():
+                for resource_key, resource_path in scan_dict.iteritems():
+                    if "s3://" in resource_path.lower():
+                        bundle_dict[tranche_key][scan_key][resource_key] = \
+                            download_single_s3_path(resource_path, pipeline_configuration)
 
-    try:
-        os.makedirs(bundle_log_dir)
-    except:
-        if not op.isdir(bundle_log_dir):
-            err = "[!] Bundle log directory unable to be created.\n" \
-                    "Path: %s\n\n" % bundle_log_dir
-            raise Exception(err)
+        qap_pipeline_arguments = (bundle_dict, bundle_dict.keys(),
+                                  pipeline_configuration, "qap_run",
+                                  bundle_index, num_bundles)
+
+        pipeline_execution_output = build_and_run_qap_pipeline(qap_pipeline_arguments)
+
+        # save the output to a json file in the log directory
+        write_json(pipeline_execution_output, os.path.join(pipeline_execution_output["bundle_log_dir"],
+                                                           "workflow_results.json"))
+
+        if s3_log_path:
+
+            s3_path = pipeline_execution_output["bundle_log_dir"].replace(pipeline_configuration["workflow_log_dir"],
+                                                                          s3_log_path)
+
+            print("Copying log files from {0} to {1}".format(pipeline_execution_output["bundle_log_dir"], s3_path))
+            copy_directory_to_s3(pipeline_execution_output["bundle_log_dir"], s3_path, pipeline_configuration)
+
+        results.append(pipeline_execution_output)
+
+    return results
+
+
+def process_args(bids_dir, output_dir, analysis_level, data_config_file=None,
+                 anatomical_str=None, functional_str=None,
+                 s3_read_credentials=None, pipeline_config_file=None,
+                 working_dir=None, save_working_dir=False, mni_template=None,
+                 functional_discard_volumes=None, exclude_zeros=None,
+                 s3_write_credentials=None, log_dir=None, report=False,
+                 n_cpus=None, mem_mb=None, mem_gb=None, bundle_size=None,
+                 bundle_index=None):
+
+    import sys
+    import yaml
+    import os
+    from qap_cfg import default_pipeline_configuration, \
+        write_pipeline_configuration, configuration_output_string, \
+        validate_pipeline_configuration
+
+    # First lets deal with the pipeline configuration details, if a
+    # configuration file is provided read it in, other wise use the
+    # default
+    pipeline_configuration = default_pipeline_configuration
+
+    if pipeline_config_file:
+
+        if "s3://" in pipeline_config_file.lower():
+            from indi_aws import fetch_creds
+
+            s3_bucket_name = pipeline_config_file.split('/')[2]
+            s3_prefix = '/'.join(pipeline_config_file.split('/')[:3])
+            pipeline_config_key = pipeline_config_file.replace(s3_prefix, '').lstrip('/')
+
+            bucket = fetch_creds.return_bucket(s3_read_credentials, s3_bucket_name)
+            pipeline_configuration.update(yaml.load(bucket.Object(pipeline_config_key).get()["Body"].read()))
         else:
-            pass
+            pipeline_configuration.update(yaml.load(open(pipeline_config_file, 'r')))
 
-    # set up logging
-    nyconfig.update_config(
-        {'logging': {'log_directory': bundle_log_dir, 'log_to_file': True}})
-    logging.update_logging(nyconfig)
+    # get the output directory, make sure its accessible, and if on AWS look for the credentials
+    if not output_dir and not pipeline_configuration["output_directory"]:
+        raise ValueError("Output directory must be specified either in pipeline config file or on the command line.")
+    elif output_dir:
+        pipeline_configuration["output_directory"] = output_dir
 
-    logger.info("QAP version %s" % qap.__version__)
-    logger.info("Pipeline start time: %s" % pipeline_start_stamp)
+    if "s3://" in pipeline_configuration["output_directory"].lower():
 
-    workflow = pe.Workflow(name=run_name)
-    workflow.base_dir = op.join(config["working_directory"])
-
-    # set up crash directory
-    workflow.config['execution'] = \
-        {'crashdump_dir': config["output_directory"]}
-
-    # create the one node all participants will start from
-    starter_node = pe.Node(niu.Function(input_names=['starter'], 
-                                        output_names=['starter'], 
-                                        function=starter_node_func),
-                           name='starter_node')
-
-    # set a dummy variable
-    starter_node.inputs.starter = ""
-
-    # set output directory
-    output_dir = op.join(config["output_directory"], "derivatives", run_name)
-    new_outputs = 0
-
-    # iterate over each subject in the bundle
-    logger.info("Starting bundle %s out of %s.." % (str(bundle_idx),
-                                                    str(num_bundles)))
-    # results dict
-    rt = {'status': 'Started', 'bundle_log_dir': bundle_log_dir}
-
-    for sub_info in sub_info_list:
-
-        resource_pool = resource_pool_dict[sub_info]
-
-        # in case we're dealing with string entries in the data dict
-        try:
-            resource_pool.keys()
-        except AttributeError:
-            continue
-
-        # resource pool check
-        invalid_paths = []
-
-        for resource in resource_pool.keys():
-            try:
-                if not op.isfile(resource_pool[resource]) and \
-                                resource != "site_name":
-                    invalid_paths.append((resource, resource_pool[resource]))
-            except:
-                err = "\n\n[!]"
-                raise Exception(err)
-
-        if len(invalid_paths) > 0:
-            err = "\n\n[!] The paths provided in the subject list to the " \
-                  "following resources are not valid:\n"
-
-            for path_tuple in invalid_paths:
-                err = "%s%s: %s\n" % (err, path_tuple[0], path_tuple[1])
-
-            err = "%s\n\n" % err
-            raise Exception(err)
-
-        # process subject info
-        sub_id = str(sub_info[0])
-        # for nipype
-        #if "-" in sub_id:
-        #    sub_id = sub_id.replace("-","_")
-        if "." in sub_id:
-            sub_id = sub_id.replace(".","_")
-
-        if sub_info[1]:
-            session_id = str(sub_info[1])
-            # for nipype
-            #if "-" in session_id:
-            #    session_id = session_id.replace("-","_")
-            if "." in session_id:
-                session_id = session_id.replace(".","_")
+        if pipeline_configuration["s3_write_credentials"]:
+            if not os.path.isfile(pipeline_configuration["s3_write_credentials"]):
+                raise ValueError("S3 output credentials ({0}) could not be found.".format(
+                    pipeline_configuration["s3_write_credentials"]))
         else:
-            session_id = "ses-1"
+            print('Output directory is on S3, but no write credentials were provided. '
+                  'Will try write to the bucket anonymously.')
 
-        if sub_info[2]:
-            scan_id = str(sub_info[2])
-            # for nipype
-            #if "-" in scan_id:
-            #    scan_id = scan_id.replace("-","_")
-            if "." in scan_id:
-                scan_id = scan_id.replace(".","_")
-        else:
-            scan_id = "scan-1"
+    elif not os.path.exists(pipeline_configuration["output_directory"]):
+            raise ValueError('Output directory ({0}) could not be '
+                             'found'.format(pipeline_configuration["output_directory"]))
 
-        # we need the sub_id, session_id, scan_id variables to have the -'s
-        # for BIDS format, but need the node names to have only _'s, otherwise
-        # dot will crash if we generate workflow graphs
-        name = "_".join(["", sub_id, session_id, scan_id])
-        name = name.replace("-", "_")
+    # get the logging directory, this can go to S3, but will have to be handled differently than outputs which are
+    # written to S3 by the datasink
+    if not log_dir and not pipeline_configuration["workflow_log_dir"]:
+        pipeline_configuration["workflow_log_dir"] = pipeline_configuration["output_directory"]+"/logs"
+    elif log_dir:
+        pipeline_configuration["workflow_log_dir"] = log_dir
 
-        config["session_output_dir"] = os.path.join(output_dir, sub_id,
-                                                    session_id)
+    # get the working directory, make sure its accessible, and that it is not on S3
+    if not working_dir and not pipeline_configuration["working_directory"]:
+        raise ValueError("Working directory must be specified either in pipeline config file or on the command line.")
+    elif working_dir:
+        pipeline_configuration["working_directory"] = working_dir
 
-        rt[name] = {'id': sub_id, 'session': session_id, 'scan': scan_id,
-                    'resource_pool': str(resource_pool)}
+    if "s3://" in pipeline_configuration["working_directory"].lower():
+        raise ValueError("QAP does not support writing the working directory to S3 ({0})".format(
+            pipeline_configuration["working_directory"]))
 
-        logger.info("Participant info: %s" % name)
+    elif not os.path.exists(pipeline_configuration["working_directory"]):
+            raise ValueError('Working directory ({0}) could not be '
+                             'found'.format(pipeline_configuration["working_directory"]))
 
-        # for QAP spreadsheet generation only
-        config.update({"subject_id": sub_id, "session_id": session_id,
-                       "scan_id": scan_id, "run_name": run_name})
+    # now lets add in the other parameters
+    if bundle_size:
+        pipeline_configuration["bundle_size"] = int(bundle_size)
 
-        if "site_name" in resource_pool:
-            config.update({"site_name": resource_pool["site_name"]})
+    if n_cpus:
+        pipeline_configuration["num_processors"] = int(n_cpus)
 
-        logger.info("Configuration settings:\n%s" % str(config))
+    if mem_gb:
+        pipeline_configuration["memory"] = float(mem_gb)
+    elif mem_mb:
+        pipeline_configuration["memory"] = float(mem_mb)/1024.0
 
-        qap_types = ["anatomical_spatial", "functional"]
+    if functional_discard_volumes:
+        pipeline_configuration["functional_start_index"] = int(functional_discard_volumes)
+        if pipeline_configuration["functional_start_index"] < 0:
+            raise ValueError("functional_start_index cannot be a negative number {}".format(
+                pipeline_configuration["functional_start_index"]))
 
-        qa_outputs = ["anatomical_reorient", "fav_artifacts_background",
-                      "func_reorient", "estimated_nuisance", "SFS", "qap_fd",
-                      "qap_mosaic"]
+    if exclude_zeros:
+        pipeline_configuration["exclude_zeros"] = True
 
-        # update that resource pool with what's already in the output
-        # directory
-        if op.exists(op.join(output_dir, sub_id, session_id)):
-            for resource in os.listdir(op.join(output_dir, sub_id,
-                                               session_id)):
-                if resource not in resource_pool.keys():
-                    try:
-                        resource_pool[resource] = \
-                            glob.glob(op.join(output_dir, sub_id, session_id,
-                                              "%s_%s_%s_%s.nii.gz"
-                                              % (sub_id, session_id, scan_id,
-                                                 resource)))[0]
-                    except IndexError:
-                        # a stray file in the sub-sess-scan output directory
-                        pass
-        else:
-            try:
-                os.makedirs(op.join(output_dir, sub_id, session_id))
-            except:
-                if not op.isdir(op.join(output_dir, sub_id, session_id)):
-                    err = "[!] Output directory unable to be created.\n" \
-                          "Path: %s\n\n" % op.join(output_dir, sub_id,
-                                                   session_id)
-                    raise Exception(err)
-                else:
-                    pass
-
-        anat_json = op.join(output_dir, sub_id, session_id,
-                            "%s_%s_%s_qap-anatomical.json"
-                            % (sub_id, session_id, scan_id))
-        if op.exists(anat_json):
-            json_dict = read_json(anat_json)
-            sub_json_dict = json_dict["%s %s %s" % (sub_id,
-                                                    session_id,
-                                                    scan_id)]
-
-            if "anatomical_header_info" in sub_json_dict.keys():
-                resource_pool["anatomical_header_info"] = \
-                    sub_json_dict["anatomical_header_info"]
-
-            if "anatomical_spatial" in sub_json_dict.keys():
-                resource_pool["qap_anatomical_spatial"] = \
-                    sub_json_dict["anatomical_spatial"]
-
-        func_json = op.join(output_dir, sub_id, session_id,
-                                 "%s_%s_%s_qap-functional.json"
-                                 % (sub_id, session_id, scan_id))
-        if op.exists(func_json):
-            json_dict = read_json(func_json)
-            sub_json_dict = json_dict["%s %s %s" % (sub_id,
-                                                    session_id,
-                                                    scan_id)]
-
-            if "functional_header_info" in sub_json_dict.keys():
-                resource_pool["functional_header_info"] = \
-                    sub_json_dict["functional_header_info"]
-
-            if "functional_spatial" in sub_json_dict.keys():
-                resource_pool["qap_functional_spatial"] = \
-                    sub_json_dict["functional_spatial"]
-
-            if "functional_temporal" in sub_json_dict.keys():
-                resource_pool["qap_functional_temporal"] = \
-                    sub_json_dict["functional_temporal"]
-
-        # create starter node which links all of the parallel workflows within
-        # the bundle together as a Nipype pipeline
-        resource_pool["starter"] = (starter_node, 'starter')
-
-        # individual workflow and logger setup
-        logger.info("Contents of resource pool for this participant:\n%s"
-                    % str(resource_pool))
-
-        # start connecting the pipeline
-        qw = None
-        for qap_type in qap_types:
-            if "_".join(["qap", qap_type]) not in resource_pool.keys():
-                if qw is None:
-                    from qap import qap_workflows as qw
-                wf_builder = \
-                    getattr(qw, "_".join(["qap", qap_type, "workflow"]))
-                workflow, resource_pool = wf_builder(workflow, resource_pool,
-                                                     config, name)
-
-        if ("anatomical_scan" in resource_pool.keys()) and \
-            ("anatomical_header_info" not in resource_pool.keys()):
-            if qw is None:
-                from qap import qap_workflows as qw
-            workflow, resource_pool = \
-                qw.qap_gather_header_info(workflow, resource_pool, config,
-                    name, "anatomical")
-
-        if ("functional_scan" in resource_pool.keys()) and \
-            ("functional_header_info" not in resource_pool.keys()):
-            if qw is None:
-                from qap import qap_workflows as qw
-            workflow, resource_pool = \
-                qw.qap_gather_header_info(workflow, resource_pool, config,
-                                          name, "functional")
-
-        # set up the datasinks
-        out_list = []
-        for output in resource_pool.keys():
-            for qap_type in qap_types:
-                if qap_type in output:
-                    out_list.append("_".join(["qap", qap_type]))
-
-        # write_all_outputs (writes everything to the output directory, not
-        # just the final JSON files)
-        if keep_outputs:
-            out_list = resource_pool.keys()
-        logger.info("Outputs we're keeping: %s" % str(out_list))
-        logger.info('Resource pool keys after workflow connection: '
-                    '{}'.format(str(resource_pool.keys())))
-
-        if ("qa" in resource_pool.keys()) and ("qa" not in out_list):
-            out_list += ['qa']
-
-        # write these outputs to the datasink even with "keep_outputs" off,
-        # because they are used in the visualization plots/overlays
-        for output in qa_outputs:
-            if (output in resource_pool.keys()) and (output not in out_list):
-                out_list += [output]
-
-        # Save reports to out_dir if necessary
-        if config['write_report']:
-
-            if ("qap_mosaic" in resource_pool.keys()) and  \
-                    ("qap_mosaic" not in out_list):
-                out_list += ['qap_mosaic']
-
-            # The functional temporal also has an FD plot
-            if 'qap_functional_temporal' in resource_pool.keys():
-                if ("qap_fd" in resource_pool.keys()) and \
-                        ("qap_fd" not in out_list):
-                    out_list += ['qap_fd']
-
-        for output in out_list:
-            # resource pool items which are in the tuple format are the
-            # outputs that have been created in this workflow because they
-            # were not present in the subject list YML (the starting resource
-            # pool) and had to be generated
-            if isinstance(resource_pool[output], tuple) and \
-                    (output != "starter"):
-
-                node, out_file = resource_pool[output]
-                # create the datasink
-                ds = pe.Node(nio.DataSink(), name='datasink_%s%s'
-                                                  % (output, name))
-
-                ds.inputs.base_directory = os.path.join(output_dir, sub_id)
-
-                # rename file to BIDS format
-                rename = pe.Node(niu.Rename(), name='rename_%s%s'
-                                                    % (output, name))
-                rename.inputs.keep_ext = True
-                # replace the underscores in 'output' (which are the keys of
-                # the resource pool) with dashes - need to be underscores for
-                # the workflow names, but need to be dashes for BIDS output
-                # file naming format
-                rename.inputs.format_string = "%s_%s_%s_%s" \
-                                              % (sub_id, session_id,
-                                                 scan_id,
-                                                 output.replace("_", "-"))
-                workflow.connect(node, out_file, rename, 'in_file')
-                workflow.connect(rename, 'out_file', ds,
-                                 '%s.@%s' % (session_id, output))
-                new_outputs += 1
-            elif ".json" in resource_pool[output]:
-                new_outputs += 1
-
-    logger.info("New outputs: %s" % str(new_outputs))
-
-    # run the pipeline (if there is anything to do)
-    if new_outputs > 0:
-        if config['write_graph']:
-            workflow.write_graph(
-                dotfilename=op.join(config["output_directory"],
-                                    "".join([run_name, ".dot"])),
-                simple_form=False)
-            workflow.write_graph(
-                graph2use="orig",
-                dotfilename=op.join(config["output_directory"],
-                                    "".join([run_name, ".dot"])),
-                simple_form=False)
-            workflow.write_graph(
-                graph2use="hierarchical",
-                dotfilename=op.join(config["output_directory"],
-                                    "".join([run_name, ".dot"])),
-                simple_form=False)
-        if run:
-            try:
-
-                logger.info("Running with plugin %s" % runargs["plugin"])
-                logger.info("Using plugin args %s" % runargs["plugin_args"])
-                workflow.run(plugin=runargs["plugin"],
-                             plugin_args=runargs["plugin_args"])
-                rt['status'] = 'finished'
-                logger.info("Workflow run finished for bundle %s."
-                            % str(bundle_idx))
-            except Exception as e:  # TODO We should be more specific here ...
-                errmsg = e
-                rt.update({'status': 'failed'})
-                logger.info("Workflow run failed for bundle %s."
-                            % str(bundle_idx))
-                # ... however this is run inside a pool.map: do not raise
-                # Exception
-        else:
-            return workflow
-
+    if mni_template:
+        pipeline_configuration["anatomical_template"] = mni_template
     else:
-        rt['status'] = 'cached'
-        logger.info("\nEverything is already done for bundle %s."
-                    % str(bundle_idx))
+        # if the user does not provide a anatomical template, search the path environment variable
+        # to see if we can find the default AFNI template MNI_avg152T1
+        pipeline_configuration['anatomical_template'] = ''
+        for path in os.environ['PATH'].split(':'):
+            if os.path.isfile(os.path.join(path, 'MNI_avg152T1+tlrc.HEAD')):
+                pipeline_configuration['anatomical_template'] = os.path.join(path, 'MNI_avg152T1+tlrc')
+                break
+        if not pipeline_configuration['anatomical_template']:
+            raise ValueError('No MNI template specified and could not find MNI_avg152T1+tlrc on the system PATH.')
 
-    # Remove working directory when done
-    if not keep_outputs:
-        try:
-            work_dir = op.join(workflow.base_dir, scan_id)
+    if not os.path.isfile(pipeline_configuration["anatomical_template"]) and \
+            not os.path.isfile(pipeline_configuration["anatomical_template"]+".HEAD"):
+        raise ValueError("Could not find MNI template ({0})".format(pipeline_configuration["anatomical_template"]))
 
-            if op.exists(work_dir):
-                import shutil
-                shutil.rmtree(work_dir)
-        except:
-            logger.warn("Couldn\'t remove the working directory!")
-            pass
+    if report:
+        pipeline_configuration["write_report"] = True
 
-    if rt["status"] == "failed":
-        logger.error(errmsg)
-    else:
-        pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
-        pipeline_end_time = time.time()
-        logger.info("Elapsed time (minutes) since last start: %s"
-                    % ((pipeline_end_time - pipeline_start_time) / 60))
-        logger.info("Pipeline end time: %s" % pipeline_end_stamp)
+    if save_working_dir:
+        pipeline_configuration["save_working_dir"] = True
 
-    return rt
+    validate_pipeline_configuration(pipeline_configuration)
+
+    print(configuration_output_string.format(**pipeline_configuration))
+
+    # write out the pipeline configuration file, nice for debugging and other stuff
+    from datetime import datetime
+
+    timestamp_string = datetime.now().strftime("%Y%m%d%H%M")
+
+    pipeline_configuration_filename = "qap-pipe-config-{}.yml".format(timestamp_string)
+    write_pipeline_configuration(pipeline_configuration_filename, pipeline_configuration)
+
+    # the easiest case is when a data configuration file is passed in
+    data_configuration_dict = {}
+    if data_config_file:
+        data_configuration_dict = yaml.load(open(data_config_file, 'r'))
+
+    elif bids_dir:
+
+        (bids_image_files, bids_parameters_dictionary) = \
+            bids_utils.collect_bids_files_configs(bids_dir, s3_read_credentials)
+        print("Found %d parameter dictionaries and %d image files" % (len(bids_parameters_dictionary),
+                                                                      len(bids_image_files)))
+        data_configuration_dict = \
+            bids_utils.bids_generate_qap_data_configuration(bids_dir, bids_image_files,
+                                                            credentials_path=s3_read_credentials, dbg=True)
+
+    data_configuration_filename = "qap-data-config-{}.yml".format(timestamp_string)
+    bids_utils.write_data_configuration(data_configuration_filename, data_configuration_dict)
+
+    if "test_config" in analysis_level:
+        print("Configuration has been tested and appears to be OK. Pipeline configuration and data configuration"
+              " can be found in {0} and {1} respectively.".format(pipeline_configuration_filename,
+                                                                  data_configuration_filename))
+        sys.exit(0)
+    elif "participant" in analysis_level:
+        print("Configuration has been tested and appears to be OK. Executing pipeline with pipeline configuration {0}"
+              " and data configuration {1}".format(pipeline_configuration_filename, data_configuration_filename))
+
+        # prepare the bundles
+        data_bundles = create_bundles(data_configuration_dict, pipeline_configuration["bundle_size"])
+        # data_bundle_filename = "qap-data-bundles-{}.yml".format(timestamp_string)
+        # write_bundles(data_bundles, data_bundle_filename)
+
+        num_bundles = len(data_bundles)
+        print("Created {} bundle(s)".format(num_bundles))
+
+        # --- Now Execute
+        bundle_index = ''
+        if bundle_index:
+            bundle_index = int(bundle_index)
+
+        run_qap(pipeline_configuration, data_bundles, bundle_index)
+
+
+def main():
+    """
+
+    Function to parse the command line arguments and locally execute QAP using the 'multiproc' plugin. This command
+    line interface can be executed on cluster systems (SGE, SLURM, etc), but this CLI does not explicitly handle
+    creating the job submission files or submitting them. This file is made consistent with the BIDS-App specification
+    so that it is the entry point of the QAP BIDS-App container (woo-hoo!).
+
+    """
+
+    parser = argparse.ArgumentParser()
+
+    in_data_config_group = parser.add_argument_group('Input Data Configuration')
+
+    # Subject list (YAML file)
+    in_data_config_group.add_argument('--data_config_file', type=str,
+                                      help='Path to a data configuration YAML file. This file can be automatically'
+                                           ' generated using the --bids_dir, --anat_str, or --func_str options. This'
+                                           ' option will take precedence over any of those options and enables multiple'
+                                           ' scripts to operate on the same dataset without having to regenerate the'
+                                           ' data configuration file for each one. This reduces overhead for cluster'
+                                           ' runs.',
+                                      default=None)
+
+    in_data_config_group.add_argument('bids_dir', type=str,
+                                      help='The directory with the input dataset formatted according to the BIDS'
+                                           ' standard. Use the format s3://bucket/path/to/bidsdir to read data'
+                                           ' directly from an S3 bucket. This may require AWS S3 credentials'
+                                           ' to be specified using the --aws_input_credentials option.',
+                                      default=None)
+
+    in_data_config_group.add_argument('--anatomical_str', type=str,
+                                      help='Template string for generating paths to anatomical images. This builds '
+                                           'a data configuration file for data that is not in the BIDS format. '
+                                           'Incorporates the keywords {site}, {participant}, {session} and {run}. Of '
+                                           'these only {participant} is required. For example: '
+                                           '/data/{site}/{participant}/{session}/anat/anat_{run}.nii.gz. Similar to '
+                                           '--bids_dir, to specify cloud data prepend s3:\\\\<bucket_name>\ to '
+                                           'the path',
+                                      default=None)
+
+    in_data_config_group.add_argument('--functional_str', type=str,
+                                      help='Template string for generating paths to functional images. This builds '
+                                           'a data configuration file for data that is not \in the BIDS format. '
+                                           'Incorporates the keywords {site}, {participant}, {session} and {run}. Of '
+                                           'these only {participant} is required. For example: '
+                                           '/data/{site}/{participant}/{session}/rest/rest_{run}.nii.gz.'
+                                           'Similar to --bids_dir, to specify cloud data prepend s3:\\\\<bucket_name>\ '
+                                           'to the path',
+                                      default=None)
+
+    in_data_config_group.add_argument('--s3_read_credentials', type=str,
+                                      help='Path to file containing credentials for reading from S3. If not provided '
+                                           'and s3 paths are specified in the data config we will try to access the '
+                                           'bucket anonymously',
+                                      default=None)
+
+    pipeline_config_group = parser.add_argument_group('Pipeline Configuration')
+    pipeline_config_group.add_argument('--pipeline_config_file', type=str,
+                                       help='Path to YAML file specifying QAP configuration (i.e. the arguments '
+                                            'to this command). Command line arguments will overload file values. To '
+                                            'specify a file in s3, prepend s3:\\\\<bucket_name>\ to the path.',
+                                       default=None)
+
+    pipeline_config_group.add_argument('--working_dir', type=str,
+                                       help='The directory to be used for intermediary files. Can be specified by a '
+                                            'pipeline configuration file or using this argument. Default = /tmp',
+                                       default=None)
+
+    pipeline_config_group.add_argument('--save_working_dir', action='store_true',
+                                       help='Save the contents of the working directory.',
+                                       default=False)
+
+    pipeline_config_group.add_argument('--mni_template', type=str,
+                                       help='MNI template that will be registered to anatomical images to exclude neck '
+                                            'and lower jaw from image metric calculations. Default will search the '
+                                            '$PATH for the MNI_avg152T1+tlrc template distributed with AFNI.',
+                                       default=None)
+
+    pipeline_config_group.add_argument('--functional_discard_volumes', type=str,
+                                       help='Number of volumes that should be discarded from the beginning'
+                                            'of a fMRI scan to account for T1 equilibrium effects. default = 0',
+                                       default=None)
+
+    pipeline_config_group.add_argument('--exclude_zeros', action='store_true',
+                                       help='Exclude zero-value voxels from the background of the anatomical scan. '
+                                            'This is meant for images that have been manually altered (ex. faces '
+                                            'removed for privacy considerations), where the artificial inclusion of '
+                                            'zeros into the image would skew the QAP metric results. '
+                                            'Disabled by default.',
+                                       default=False)
+
+    output_config_group = parser.add_argument_group('Output Configuration')
+
+    output_config_group.add_argument('output_dir', type=str,
+                                     help='The directory where the output files should be stored. There is no default '
+                                          'output directory, one must be specified by a pipeline configuration '
+                                          'file or using this argument.',
+                                     default=None)
+
+    output_config_group.add_argument('--s3_write_credentials', type=str,
+                                     help='Path to file containing credentials for writing to S3. If not provided and '
+                                          's3 paths are specified in the output directory we will try to access the '
+                                          'bucket anonymously',
+                                     default=None)
+
+    output_config_group.add_argument('--log_dir', type=str,
+                                     help='The directory where log files should be stored. If not specified, log files '
+                                          'will be written to [output_dir]/logs.',
+                                     default=None)
+
+    output_config_group.add_argument('--report', action='store_true',
+                                     help='Generates pdf for graphically assessing data quality.',
+                                     default=False)
+
+    output_config_group.add_argument('analysis_level',
+                                     help='Level of the analysis that will be performed. Multiple participant level '
+                                          'analyses can be run independently (in parallel) using the same output_dir. '
+                                          'Group level analysis compiles multiple participant level quality metrics '
+                                          'into group-level csv files. test_config will check all of the specified '
+                                          'parameters for consistency and write out participant and qap configuration '
+                                          'files but will not execute the pipeline.',
+                                     choices=['participant', 'group', 'test_config'])
+
+    exec_config_group = parser.add_argument_group('Execution Configuration')
+    exec_config_group.add_argument('--n_cpus', type=str,
+                                   help='Number of execution resources available for the pipeline. If not specified in '
+                                        'the pipeline configuration file, the default will be 1.',
+                                   default=None)
+
+    exec_config_group.add_argument('--mem_mb', type=str,
+                                   help='Amount of RAM available to the pipeline in MB. If not specified in the '
+                                        'pipeline configuration file the default will be 4096. This is '
+                                        'included to be consistent with the BIDS-APP specification, but mem_gb '
+                                        'is preferred. This flag is ignored if mem_gb is also specified.',
+                                   default=None)
+
+    exec_config_group.add_argument('--mem_gb', type=str,
+                                   help='Amount of RAM available to the pipeline in GB. If not specified in the '
+                                        'pipeline configuration file the default will be 4. This argument '
+                                        'takes precedence over --mem_mb.',
+                                   default=None)
+
+    exec_config_group.add_argument('--bundle_size', type=str,
+                                   help='QAP separates the work to be performed into bundles each of which are '
+                                        'executed in parallel on a workstation or cluster node. This allows the '
+                                        'user to balance parallelization on a single node with parallelizing across '
+                                        'nodes to maximize resource utilization. Most users will set this to 1.'
+                                        'If this is not specified in the pipeline configuration file the default will '
+                                        'be 1',
+                                   default=None)
+
+    exec_config_group.add_argument('--bundle_index', type=int,
+                                   help='Index of bundle to run. This option is primarily for cluster support and '
+                                        'restricts QAP calculation to a subset of the data in the data_config file.',
+                                   default=None)
+
+    args = parser.parse_args()
+
+    process_args(args.bids_dir, args.output_dir, args.analysis_level,
+                 args.data_config_file, args.anatomical_str,
+                 args.functional_str, args.s3_read_credentials,
+                 args.pipeline_config_file, args.working_dir,
+                 args.save_working_dir, args.mni_template,
+                 args.functional_discard_volumes, args.exclude_zeros,
+                 args.s3_write_credentials, args.log_dir, args.report,
+                 args.n_cpus, args.mem_mb, args.mem_gb, args.bundle_size,
+                 args.bundle_index)
+
+
+if __name__ == '__main__':
+    main()

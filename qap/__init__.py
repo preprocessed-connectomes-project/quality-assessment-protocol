@@ -1,3 +1,6 @@
+
+# from cli import QAProtocolCLI
+
 from .version import __version__
 
 # pcp_qap package

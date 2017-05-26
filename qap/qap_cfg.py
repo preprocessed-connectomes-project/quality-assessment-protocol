@@ -1,4 +1,5 @@
 default_pipeline_configuration = {
+
     'log_directory': '',
     'output_directory': '',
     'working_directory': '/tmp',
@@ -20,6 +21,7 @@ default_pipeline_configuration = {
 configuration_output_string = """
     Pipeline Configuration
     ----------------------
+
     Log directory:          {log_directory}
     Output directory:       {output_directory}
     Working directory:      {working_directory}
@@ -40,6 +42,7 @@ configuration_output_string = """
     Memory (GB):            {available_memory}
     ---
     Write report:           {write_report}
+
     Write execution graph:  {write_graph}
 """
 
@@ -88,6 +91,7 @@ functional_stop_index: {functional_stop_index}
 # results of the QAP metrics.
 write_report: {write_report}
 
+
 # Output Paths:
 # -------------
 #
@@ -99,6 +103,7 @@ output_directory: {output_directory}
 # Directory for log files. To upload log files to the AWS S3 cloud service prepend the output path with
 # s3://bucket_name/". This may require setting s3_write_credentials (next section)
 log_directory: {log_directory}
+
 
 # Calculating the QAP measures requires  a variety of intermediary files that are derived from the input
 # data (e.g., brain mask, white matter mask). These files are written to a working directory that can be
@@ -122,6 +127,7 @@ s3_read_credentials: {s3_read_credentials}
 # AWS credentials will probably be needed if writing to S3, if so edit the path to point to the credential
 # file downloaded from AWS. If unset, and s3 paths are encountered, QAP will try to upload the data anonymously.
 s3_write_credentials: {s3_write_credentials}
+
 
 # Multicore Parallelization and Bundles
 # -------------------------------
@@ -164,12 +170,13 @@ bundle_size: {bundle_size}
 num_processors: {num_processors}
 available_memory: {available_memory}
 
+
 # Debugging
 # -------------------------------
-
 # If you do not want to automatically delete the working directory at the end of QAP, change the following
 # flag to `True'.
 save_working_dir: {save_working_dir}
+
 
 # Produce a graph for visualizing the workflow
 write_graph: {write_graph}
@@ -205,6 +212,7 @@ def validate_pipeline_configuration(pipeline_configuration):
                                          'recompute_all_derivatives',
                                          'write_report',
                                          'write_graph'
+
                                          ]
 
     missing_parameters = []

@@ -2,6 +2,7 @@ import os
 import yaml
 import json
 import copy
+
 import re
 
 
@@ -39,6 +40,7 @@ def bids_decode_filename(file_path, dbg=False):
                 "sub-" in file_path_values[site_index + 3]:
             # go ahead and include the pipeline
             bids_dict["pipeline"] = file_path_values[site_index + 2]
+
         else:
             raise ValueError("Could not find pipeline level for derivative {0}. Does the path conform to the "
                              "BIDS standard?".format(file_path))
@@ -434,6 +436,7 @@ def collect_bids_files_configs(bids_dir, aws_input_credentials=None):
                     except Exception as e:
                         print("Error retrieving {0} ({1})".format(s3_obj.key.replace(prefix, ""), e.message))
                         raise
+                        
                 elif str(s3_obj.key).endswith("json") or str(s3_obj.key).endswith("nii") or \
                         str(s3_obj.key).endswith("nii.gz"):
 
@@ -443,6 +446,7 @@ def collect_bids_files_configs(bids_dir, aws_input_credentials=None):
                         derivative_file_paths.append(file_path)
                     else:
                         raw_file_paths.append(file_path)
+
 
     else:
         for root, dirs, files in os.walk(bids_dir, topdown=False):
@@ -483,7 +487,7 @@ def write_data_configuration(data_configuration_filename, data_configuration_dic
 
 
 def test_bids_decode(bids_dir, dbg=True):
-
+  
     (bids_files, derivative_files, config) = collect_bids_files_configs(bids_dir, [])
     if dbg:
         print("Found %d config files for %d image files and %d derivatives" % (len(config), len(bids_files),
@@ -494,7 +498,6 @@ def test_bids_decode(bids_dir, dbg=True):
         print("{0} :: {1}".format(bids_file, bids_decode_filename(bids_file)))
 
     return
-
 
 def test_gen_bids_sublist_qap(bids_dir, test_yml, aws_input_credentials=None, debug=False, cfg=False):
 

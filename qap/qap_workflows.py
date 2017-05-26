@@ -1258,7 +1258,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         workflow.connect(temporal, ('qa', pick_dvars, dict_id), grayplot, 'dvars')    
         workflow.connect(gs_ts, 'output', grayplot, 'global_signal')
         resource_pool['timeseries_measures'] = (grayplot, 'out_file')
-        resource_pool['grayplot_cluster'] = (grayplot, 'out_cluster')
+        resource_pool['grayplot-cluster'] = (grayplot, 'out_cluster')
 
         if len(resource_pool['func_reorient']) == 2:
             node, out_file = resource_pool['func_reorient']
