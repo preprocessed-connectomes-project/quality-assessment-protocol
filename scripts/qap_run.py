@@ -469,7 +469,7 @@ def main():
             out_derivative_files = []
             if args.bids_dir != args.output_dir:
                 (out_image_files, out_derivative_files, out_parameters_dictionary) = \
-                    bids_utils.collect_bids_files_configs(args.bids_dir, args.s3_read_credentials)
+                    bids_utils.collect_bids_files_configs(args.output_dir, args.s3_write_credentials)
 
             print("Found {0} parameter dictionaries, {1} image files, and {2} derivatives".format(
                 len(bids_parameters_dictionary), len(bids_image_files), len(bids_derivative_files) +
