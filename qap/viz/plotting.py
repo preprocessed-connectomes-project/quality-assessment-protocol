@@ -42,11 +42,9 @@ def calculate_gray_plot(func_file, mask_file):
     reordered_func=func[np.argsort(model.row_labels_)]
 
     #create a matrix with cluster ids, 
-    #make sure cluster ids > func values so we can display both easily. 
     out_clusters=np.zeros(np.shape(func[:,0]))
-    func_max = func.max()+1
     for i in range(0,5):
-        out_clusters[model.get_indices(i)[0]]=int(i*2+func_max)
+        out_clusters[model.get_indices(i)[0]]=int(i*2+7)
     reordered_clusters=out_clusters[np.argsort(model.row_labels_)]
 
     #calculte each cluster global signal
@@ -62,7 +60,7 @@ def calculate_gray_plot(func_file, mask_file):
         cluster_gs.append(output)
 
 
-    return reordered_func, reordered_clusters, cluster_gs
+    return reordered_func, reordered_clusters, cluster_gs, out_clusters
 
 def plot_measures(df, measures, ncols=4, title='Group level report',
                   subject=None, figsize=(8.27, 11.69)):
@@ -404,7 +402,7 @@ def _get_values_inside_a_mask(main_file, mask_file):
 def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, figsize=(11.7, 8.3), title='Timeseries Plot'):
     from sklearn import preprocessing
     fd_power = _calc_fd(meanfd_file)
-    gray_matrix, color_matrix, cluster_gs = calculate_gray_plot(func_file, mask_file)
+    gray_matrix, color_matrix, cluster_gs, cluster_img = calculate_gray_plot(func_file, mask_file)
 
     #zscore data
     fd_power = preprocessing.scale(fd_power)
@@ -472,11 +470,10 @@ def grayplot(func_file, mask_file, meanfd_file, dvars, global_signal, metadata, 
     mask_affine = mask.affine
     mask = mask.get_data()
     out_clusters_img = np.zeros(np.prod(mask.shape)) 
-    out_clusters_img[mask.ravel()==1] = cluster_gs 
+    out_clusters_img[mask.ravel()==1] = cluster_img 
     out_clusters_img = out_clusters_img.reshape(mask.shape)
     clust_img = nb.Nifti1Image(out_clusters_img, mask_affine)
     
-    #grid.update(hspace=1.0, right=0.95, left=0.1, bottom=0.2)
-    #ax = fig.add_subplot(grid[0, :-1])
+    grid.update(hspace=1.0, right=0.95, left=0.1, bottom=0.2)
 
     return fig, clust_img
