@@ -194,6 +194,9 @@ def process_args(bids_dir, output_dir, analysis_level, data_config_file=None,
             print('Output directory is on S3, but no write credentials were provided. '
                   'Will try write to the bucket anonymously.')
 
+
+    #TODO: check if we want to create the out dir first?
+
     elif not os.path.exists(pipeline_configuration["output_directory"]):
             raise ValueError('Output directory ({0}) could not be '
                              'found'.format(pipeline_configuration["output_directory"]))
@@ -204,6 +207,7 @@ def process_args(bids_dir, output_dir, analysis_level, data_config_file=None,
         pipeline_configuration["workflow_log_dir"] = pipeline_configuration["output_directory"]+"/logs"
     elif log_dir:
         pipeline_configuration["workflow_log_dir"] = log_dir
+        #hey steve
 
     # get the working directory, make sure its accessible, and that it is not on S3
     if not working_dir and not pipeline_configuration["working_directory"]:

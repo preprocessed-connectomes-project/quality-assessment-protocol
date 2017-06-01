@@ -513,6 +513,9 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
             # populate the file_parameters with information from bids sidecar files, if they exist
             if bids_configuration_dictionary:
                 file_params = bids_retrieve_params(bids_configuration_dictionary, file_parts)
+
+                #TODO: check- should this always raise an error??
+
                 if not file_params:
                     print file_parts
                     #raise IOError("Did not receive any parameters for {}, is this a problem?".format(file_path))

@@ -563,7 +563,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     from qap.viz.interfaces import PlotMosaic
     from qap_utils import check_config_settings, write_json
 
-    check_config_settings(config, "template_head_for_anat")
+    check_config_settings(config, "anatomical_template")
 
     if "exclude_zeros" not in config.keys():
         config["exclude_zeros"] = False
@@ -903,7 +903,7 @@ def run_everything_qap_anatomical_spatial(
         'session_id': session_id,
         'scan_id': scan_id,
         'output_directory': workflow_dir,
-        'template_head_for_anat': template_head
+        'anatomical_template': template_head
     }
 
     if site_name:

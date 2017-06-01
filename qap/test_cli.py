@@ -2,16 +2,40 @@
 import os
 import pytest
 import unittest
+import shutil
 
 
 @pytest.mark.long()
 class TestFullPipelines(unittest.TestCase):
 
+    def setUp(self):
+        self.outdir = os.path.join(os.getcwd(), "test_data", "test_out_dir")
+        if os.path.isdir(self.outdir):
+            try:
+                shutil.rmtree(self.outdir)
+            except OSError:
+                pass
+        os.makedirs(self.outdir)
+
+    def tearDown(self):
+        pass
+        '''
+        try:
+            shutil.rmtree(self.outdir)
+        except OSError:
+            pass
+        try:
+            shutil.rmtree(self.outdir)
+        except OSError:
+            pass
+        '''
+
     def test_qap_s3(self):
         from qap.cli import process_args
         # just making sure it runs on the most basic input
         bids_dir="s3://fcp-indi/data/Projects/CORR/RawDataBIDS"
-        process_args(bids_dir, os.getcwd(), "participant")
+        process_args(bids_dir, self.outdir, "participant",
+                     working_dir=self.outdir)
 
 
 """

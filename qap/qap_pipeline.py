@@ -51,6 +51,10 @@ def build_and_run_qap_pipeline(args, run=True):
     from time import strftime
     from nipype import config as nyconfig
 
+    # set up Nipype Logger
+    from nipype import logging as np_logging
+    logger = np_logging.getLogger("workflow")
+
     # unpack args
     resource_pool_dict, sub_info_list, config, run_name, bundle_idx, \
     num_bundles = args
@@ -86,17 +90,17 @@ def build_and_run_qap_pipeline(args, run=True):
     try:
         os.makedirs(bundle_log_dir)
     except:
-        if not op.isdir(log_dir):
+        if not op.isdir(bundle_log_dir):
             err = "[!] Bundle log directory unable to be created.\n" \
                     "Path: %s\n\n" % bundle_log_dir
             raise Exception(err)
         else:
             pass
 
-    # set up logging
+    # update Nipype logging (not callback)
     nyconfig.update_config(
         {'logging': {'log_directory': bundle_log_dir, 'log_to_file': True}})
-    logging.update_logging(nyconfig)
+    np_logging.update_logging(nyconfig)
 
     logger.info("QAP version %s" % qap.__version__)
     logger.info("Pipeline start time: %s" % pipeline_start_stamp)
@@ -131,13 +135,16 @@ def build_and_run_qap_pipeline(args, run=True):
         # resource pool check
         invalid_paths = []
 
-        for resource in resource_pool.keys():
-            try:
-                if not op.isfile(resource_pool[resource]) and resource != "site_name":
-                    invalid_paths.append((resource, resource_pool[resource]))
-            except:
-                err = "\n\n[!]"
-                raise Exception(err)
+        for data_type in resource_pool.keys():
+            for resource in resource_pool[data_type].keys():
+                try:
+                    if not op.isfile(resource_pool[data_type][resource]) and \
+                                    resource != "site_name":
+                        invalid_paths.append((resource,
+                                              resource_pool[data_type][resource]))
+                except:
+                    err = "\n\n[!]"
+                    raise Exception(err)
 
         if len(invalid_paths) > 0:
             err = "\n\n[!] The paths provided in the subject list to the " \
@@ -207,9 +214,7 @@ def build_and_run_qap_pipeline(args, run=True):
 
         logger.info("Configuration settings:\n%s" % str(config))
 
-        qap_types = ["anatomical_spatial",
-                     "functional_spatial",
-                     "functional_temporal"]
+        qap_types = ["anatomical_spatial", "functional"]
 
         # update that resource pool with what's already in the output
         # directory
@@ -328,17 +333,17 @@ def build_and_run_qap_pipeline(args, run=True):
     if new_outputs > 0:
         if config.get('write_graph', False):
             workflow.write_graph(
-                dotfilename=op.join(config["output_directory"], \
+                dotfilename=op.join(config["output_directory"],
                                     "".join([run_name, ".dot"])),
                 simple_form=False)
             workflow.write_graph(
                 graph2use="orig",
-                dotfilename=op.join(config["output_directory"], \
+                dotfilename=op.join(config["output_directory"],
                                     "".join([run_name, ".dot"])),
                 simple_form=False)
             workflow.write_graph(
                 graph2use="hierarchical",
-                dotfilename=op.join(config["output_directory"], \
+                dotfilename=op.join(config["output_directory"],
                                     "".join([run_name, ".dot"])),
                 simple_form=False)
         if run:
