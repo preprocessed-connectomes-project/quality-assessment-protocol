@@ -107,6 +107,8 @@ def write_json(output_dict, json_file):
                     current_dict[key].update(output_dict[key])
                 except KeyError:
                     current_dict[key] = output_dict[key]
+                except AttributeError:
+                    current_dict[key] = output_dict[key]
     else:
         current_dict = output_dict
 

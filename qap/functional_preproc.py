@@ -94,6 +94,10 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
 
     if "functional_scan" not in resource_pool.keys():
         return workflow, resource_pool
+    elif "s3://" in resource_pool["functional_scan"]:
+        from qap.cloud_utils import download_single_s3_path
+        resource_pool["functional_scan"] = \
+            download_single_s3_path(resource_pool["functional_scan"], config)
 
     if "start_idx" not in config.keys():
         config["start_idx"] = 0

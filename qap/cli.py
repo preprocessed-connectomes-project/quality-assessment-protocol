@@ -113,12 +113,12 @@ def run_qap(pipeline_configuration, data_bundles, bundle_index=''):
             bundle_index = index
 
         # if input values are in s3, go get 'em
-        for tranche_key, tranche_dict in bundle_dict.iteritems():
-            for scan_key, scan_dict in tranche_dict.iteritems():
-                for resource_key, resource_path in scan_dict.iteritems():
-                    if "s3://" in resource_path.lower():
-                        bundle_dict[tranche_key][scan_key][resource_key] = \
-                            download_single_s3_path(resource_path, pipeline_configuration)
+        #for tranche_key, tranche_dict in bundle_dict.iteritems():
+        #    for scan_key, scan_dict in tranche_dict.iteritems():
+        #        for resource_key, resource_path in scan_dict.iteritems():
+        #            if "s3://" in resource_path.lower():
+        #                bundle_dict[tranche_key][scan_key][resource_key] = \
+        #                    download_single_s3_path(resource_path, pipeline_configuration)
 
         qap_pipeline_arguments = (bundle_dict, bundle_dict.keys(),
                                   pipeline_configuration, "qap_run",
@@ -194,16 +194,15 @@ def process_args(bids_dir, output_dir, analysis_level, data_config_file=None,
             print('Output directory is on S3, but no write credentials were provided. '
                   'Will try write to the bucket anonymously.')
 
-
     #TODO: check if we want to create the out dir first?
 
     elif not os.path.exists(pipeline_configuration["output_directory"]):
-            raise ValueError('Output directory ({0}) could not be '
-                             'found'.format(pipeline_configuration["output_directory"]))
+        raise ValueError('Output directory ({0}) could not be '
+                         'found'.format(pipeline_configuration["output_directory"]))
 
     # get the logging directory, this can go to S3, but will have to be handled differently than outputs which are
     # written to S3 by the datasink
-    if not log_dir and not pipeline_configuration["workflow_log_dir"]:
+    if not log_dir and "workflow_log_dir" not in pipeline_configuration.keys():
         pipeline_configuration["workflow_log_dir"] = pipeline_configuration["output_directory"]+"/logs"
     elif log_dir:
         pipeline_configuration["workflow_log_dir"] = log_dir
@@ -234,6 +233,9 @@ def process_args(bids_dir, output_dir, analysis_level, data_config_file=None,
         pipeline_configuration["memory"] = float(mem_gb)
     elif mem_mb:
         pipeline_configuration["memory"] = float(mem_mb)/1024.0
+    else:
+        # default as per BIDS spec
+        pipeline_configuration["memory"] = float(4)
 
     if functional_discard_volumes:
         pipeline_configuration["functional_start_index"] = int(functional_discard_volumes)
@@ -286,13 +288,13 @@ def process_args(bids_dir, output_dir, analysis_level, data_config_file=None,
 
     elif bids_dir:
 
-        (bids_image_files, bids_parameters_dictionary) = \
+        (bids_image_files, deriv_image_files, bids_parameters_dictionary) = \
             bids_utils.collect_bids_files_configs(bids_dir, s3_read_credentials)
         print("Found %d parameter dictionaries and %d image files" % (len(bids_parameters_dictionary),
                                                                       len(bids_image_files)))
         data_configuration_dict = \
             bids_utils.bids_generate_qap_data_configuration(bids_dir, bids_image_files,
-                                                            credentials_path=s3_read_credentials, dbg=True)
+                                                            credentials_path=s3_read_credentials, debug=True)
 
     data_configuration_filename = "qap-data-config-{}.yml".format(timestamp_string)
     bids_utils.write_data_configuration(data_configuration_filename, data_configuration_dict)

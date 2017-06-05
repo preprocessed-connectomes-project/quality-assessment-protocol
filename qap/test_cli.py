@@ -9,6 +9,7 @@ import shutil
 class TestFullPipelines(unittest.TestCase):
 
     def setUp(self):
+        # outdir stuff
         self.outdir = os.path.join(os.getcwd(), "test_data", "test_out_dir")
         if os.path.isdir(self.outdir):
             try:
@@ -16,6 +17,12 @@ class TestFullPipelines(unittest.TestCase):
             except OSError:
                 pass
         os.makedirs(self.outdir)
+
+        # anat template
+        import pkg_resources as p
+        self.anat_template = p.resource_filename("qap",
+                                                 os.path.join("test_data",
+                                                              "MNI152_T1_3mm.nii.gz"))
 
     def tearDown(self):
         pass
@@ -35,7 +42,7 @@ class TestFullPipelines(unittest.TestCase):
         # just making sure it runs on the most basic input
         bids_dir="s3://fcp-indi/data/Projects/CORR/RawDataBIDS"
         process_args(bids_dir, self.outdir, "participant",
-                     working_dir=self.outdir)
+                     working_dir=self.outdir, mni_template=self.anat_template)
 
 
 """

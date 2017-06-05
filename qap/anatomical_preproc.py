@@ -54,6 +54,10 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
 
     if "anatomical_scan" not in resource_pool.keys():
         return workflow, resource_pool
+    elif "s3://" in resource_pool["anatomical_scan"]:
+        from qap.cloud_utils import download_single_s3_path
+        resource_pool["anatomical_scan"] = \
+            download_single_s3_path(resource_pool["anatomical_scan"], config)
 
     try:
         anat_deoblique = pe.Node(interface=preprocess.Refit(),
@@ -314,7 +318,7 @@ def run_anatomical_skullstrip(anatomical_reorient, out_dir=None, run=True):
 def afni_anatomical_linear_registration(workflow, resource_pool,
                                         config, name="_",
                                         in_file="anatomical_reorient",
-                                        ref="template_head_for_anat"):
+                                        ref="anatomical_template"):
     """Build Nipype workflow to calculate the linear registration (participant
     to template) of an anatomical image using AFNI's 3dAllineate.
 
@@ -392,7 +396,7 @@ def afni_anatomical_linear_registration(workflow, resource_pool,
     else:
         calc_allineate_warp.inputs.in_file = resource_pool[in_file]
 
-    if ref == "template_head_for_anat":
+    if ref == "anatomical_template":
         calc_allineate_warp.inputs.reference = config[ref]
     else:
         calc_allineate_warp.inputs.reference = resource_pool[ref]
