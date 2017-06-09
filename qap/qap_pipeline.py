@@ -60,7 +60,7 @@ def build_and_run_qap_pipeline(args, run=True):
     num_bundles = args
 
     # Read and apply general settings in config
-    keep_outputs = config.get('write_all_outputs', False)
+    keep_outputs = config["save_working_dir"]
 
     # take date+time stamp for run identification purposes
     pipeline_start_stamp = strftime("%Y-%m-%d_%H:%M:%S")
@@ -124,7 +124,8 @@ def build_and_run_qap_pipeline(args, run=True):
     new_outputs = 0
 
     # iterate over each subject in the bundle
-    logger.info("Starting bundle %s out of %s.." % (str(bundle_idx), str(num_bundles)))
+    logger.info("Starting bundle %s out of %s.." % (str(bundle_idx),
+                                                    str(num_bundles)))
     # results dict
     rt = {'status': 'Started', 'bundle_log_dir': bundle_log_dir}
 
@@ -157,8 +158,8 @@ def build_and_run_qap_pipeline(args, run=True):
                     raise Exception(err)
 
             if len(invalid_paths) > 0:
-                err = "\n\n[!] The paths provided in the subject list to the " \
-                      "following resources are not valid:\n"
+                err = "\n\n[!] The paths provided in the subject list to " \
+                      "the following resources are not valid:\n"
 
                 for path_tuple in invalid_paths:
                     err = "%s%s: %s\n" % (err, path_tuple[0], path_tuple[1])
@@ -200,7 +201,6 @@ def build_and_run_qap_pipeline(args, run=True):
                 scan_id = scan_id.replace("-", "_")
             if "." in scan_id:
                 scan_id = scan_id.replace(".", "_")
-
 
             name = "_".join(["", site_id, sub_id, session_id, scan_id])
 
@@ -249,7 +249,9 @@ def build_and_run_qap_pipeline(args, run=True):
                             # load relevant json info into resource pool
                             json_file = op.join(output_dir, resource)
                             json_dict = read_json(json_file)
-                            sub_json_dict = json_dict["%s %s %s" % (sub_id, session_id, scan_id)]
+                            sub_json_dict = json_dict["%s %s %s" % (sub_id,
+                                                                    session_id,
+                                                                    scan_id)]
 
                             if "anatomical_header_info" in sub_json_dict.keys():
                                 resource_pool["anatomical_header_info"] = \
@@ -282,7 +284,8 @@ def build_and_run_qap_pipeline(args, run=True):
                         from qap import qap_workflows as qw
                     wf_builder = \
                         getattr(qw, "_".join(["qap", qap_type, "workflow"]))
-                    workflow, resource_pool = wf_builder(workflow, resource_pool,\
+                    workflow, resource_pool = wf_builder(workflow,
+                                                         resource_pool,
                                                          config, name)
 
             if ("anat_scan" in resource_pool.keys()) and \
@@ -312,6 +315,7 @@ def build_and_run_qap_pipeline(args, run=True):
             # not just the final JSON files)
             if keep_outputs:
                 out_list = resource_pool.keys()
+
             logger.info("Outputs we're keeping: %s" % str(out_list))
             logger.info('Resource pool keys after workflow connection: {}'.format(str(resource_pool.keys())))
 
@@ -329,14 +333,14 @@ def build_and_run_qap_pipeline(args, run=True):
                         out_list += ['qap_fd']
 
             for output in out_list:
-                # we use a check for len()==2 here to select those items in the
-                # resource pool which are tuples of (node, node_output), instead
-                # of the items which are straight paths to files
+                # we use a check for len()==2 here to select those items in
+                # the resource pool which are tuples of (node, node_output),
+                # instead of the items which are straight paths to files
 
                 # resource pool items which are in the tuple format are the
                 # outputs that have been created in this workflow because they
-                # were not present in the subject list YML (the starting resource
-                # pool) and had to be generated
+                # were not present in the subject list YML (the starting
+                # resource pool) and had to be generated
                 if (len(resource_pool[output]) == 2) and (output != "starter"):
 
                     node, out_file = resource_pool[output]
@@ -344,19 +348,16 @@ def build_and_run_qap_pipeline(args, run=True):
                     # create the datasink
                     ds = pe.Node(nio.DataSink(), name='datasink_%s%s'
                                                       % (output, name))
-
-                    ds.inputs.base_directory = os.path.join(output_dir,
-                                                            sub_id,
-                                                            session_id)
+                    ds.inputs.base_directory = output_dir
 
                     # rename file to BIDS format
                     rename = pe.Node(niu.Rename(), name='rename_%s%s'
                                                         % (output, name))
                     rename.inputs.keep_ext = True
-                    # replace the underscores in 'output' (which are the keys of
-                    # the resource pool) with dashes - need to be underscores for
-                    # the workflow names, but need to be dashes for BIDS output
-                    # file naming format
+                    # replace the underscores in 'output' (which are the keys
+                    # of the resource pool) with dashes - need to be
+                    # underscores for the workflow names, but need to be
+                    # dashes for BIDS output file naming format
                     rename.inputs.format_string = "%s_%s_%s_%s" \
                                                   % (sub_id, session_id,
                                                      scan_id,
@@ -399,7 +400,8 @@ def build_and_run_qap_pipeline(args, run=True):
             except Exception as e:  # TODO We should be more specific here ...
                 rt.update({'status': 'failed', 'msg': e})
                 logger.info("Workflow run failed for bundle %s." % str(bundle_idx))
-                # ... however this is run inside a pool.map: do not raise Exception
+                # ... however this is run inside a pool.map: do not raise
+                # Exception
         else:
             return workflow
 

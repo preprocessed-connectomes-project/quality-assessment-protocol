@@ -697,31 +697,25 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
         qap[id_string]["anatomical_spatial"][key] = \
             str(qap[id_string]["anatomical_spatial"][key])
 
-    qa = {
-        id_string: {
-            "QAP_Version": "QAP version %s" % qap_version,
-            "QAP_pipeline_id": run_name,
-            "sub": subject_id,
-            "ses": session_id,
-            "metrics": {}
-        }
-    }
-
     # prospective filepaths
     if session_output_dir:
-        anat_file = os.path.join(session_output_dir,
+        anat_file = os.path.join(session_output_dir, run_name, site_name,
+                                 subject_id, session_id, "anat",
                                  "_".join([subject_id, session_id, scan_id,
-                                           "anatomical-reorient.nii.gz"]))
+                                           "anat-reorient.nii.gz"]))
+
         if os.path.exists(anat_file):
-            qa[id_string]["metrics"]["scan filepath"] = anat_file
+            qap[id_string]["scan filepath"] = anat_file
 
-        qi_file = os.path.join(session_output_dir,
+        qi_file = os.path.join(session_output_dir, run_name, site_name,
+                               subject_id, session_id, "anat",
                                "_".join([subject_id, session_id, scan_id,
-                                         "Qi1-background.nii.gz"]))
+                                         "anat-fav-artifacts-background"
+                                         ".nii.gz"]))
         if os.path.exists(qi_file):
-            qa[id_string]["metrics"]["Qi1 background"] = qi_file
+            qap[id_string]["FAV artifacts background"] = qi_file
 
-    return qap, qa
+    return qap
 
 
 def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
@@ -981,41 +975,27 @@ def qap_functional_temporal(
         qap[id_string]["functional_temporal"][key] = \
             str(qap[id_string]["functional_temporal"][key])
 
-    qa = {
-        id_string: {
-            "QAP_Version": "QAP version %s" % qap_version,
-            "QAP_pipeline_id": run_name,
-            "sub": subject_id,
-            "ses": session_id,
-            "metrics": {
-                "Standardized DVARS": [float(x) for x in list(dvars)],
-                "RMSD": list(fd),
-                "Outliers": outliers,
-                "OOB Outliers": oob_outliers,
-                "Quality": quality,
-                "Signal Fluctuation Sensitivity": sfs_data.tolist()
-            }
-        }
-    }
-
     # prospective filepaths
     if session_output_dir:
-        func_file = os.path.join(session_output_dir,
+        func_file = os.path.join(session_output_dir, run_name, site_name,
+                                 subject_id, session_id, "func",
                                  "_".join([subject_id, session_id, scan_id,
-                                           "func_reorient.nii.gz"]))
+                                           "func-mean.nii.gz"]))
         if os.path.exists(func_file):
-            qa[id_string]["metrics"]["scan filepath"] = func_file
+            qap[id_string]["scan filepath"] = func_file
 
-        estn_file = os.path.join(session_output_dir,
+        estn_file = os.path.join(session_output_dir, run_name, site_name,
+                                 subject_id, session_id, "func",
                                  "_".join([subject_id, session_id, scan_id,
-                                           "estimated-nuisance.nii.gz"]))
+                                           "func-estimated-nuisance.nii.gz"]))
         if os.path.exists(estn_file):
-            qa[id_string]["metrics"]["estimated nuisance"] = estn_file
+            qap[id_string]["estimated nuisance"] = estn_file
 
-        sfs_file = os.path.join(session_output_dir,
+        sfs_file = os.path.join(session_output_dir, run_name, site_name,
+                                subject_id, session_id, "func",
                                 "_".join([subject_id, session_id, scan_id,
-                                          "SFS.nii.gz"]))
+                                          "func-SFS.nii.gz"]))
         if os.path.exists(sfs_file):
-            qa[id_string]["metrics"]["SFS filepath"] = sfs_file
+            qap[id_string]["SFS filepath"] = sfs_file
 
-    return qap, qa
+    return qap

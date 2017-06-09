@@ -180,7 +180,7 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
         (slice_head_mask, combine_masks, [('outfile_path', 'in_file_b')])
     ])
 
-    workflow.connect(fill, 'out_file', subtract_mask, 'in_file_a')
+    workflow.connect(combine_masks, 'out_file', subtract_mask, 'in_file_a')
     workflow.connect(slice_head_mask, 'outfile_path',
                          subtract_mask, 'in_file_b')
 
@@ -648,7 +648,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         if resource_pool == old_rp:
             return workflow, resource_pool
 
-    if ('ana_gm_mask' not in resource_pool.keys()) or \
+    if ('anat_gm_mask' not in resource_pool.keys()) or \
             ('anat_wm_mask' not in resource_pool.keys()) or \
             ('anat_csf_mask' not in resource_pool.keys()):
 
@@ -668,7 +668,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
                      'fav_artifacts', 'subject_id', 'session_id', 'scan_id',
                      'run_name', 'site_name', 'exclude_zeroes', 'out_vox',
                      'session_output_dir', 'starter'],
-        output_names=['qap', 'qa'], function=qap_anatomical_spatial),
+        output_names=['qap'], function=qap_anatomical_spatial),
         name='qap_anatomical_spatial%s' % name)
 
     # Subject infos
@@ -685,6 +685,8 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
 
     if 'site_name' in resource_pool.keys():
         spatial.inputs.site_name = resource_pool['site_name']
+    elif 'site_name' in config.keys():
+        spatial.inputs.site_name = config['site_name']
 
     if isinstance(resource_pool['anat_reorient'], tuple):
         node, out_file = resource_pool['anat_reorient']
@@ -739,7 +741,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         workflow.connect(node, out_file, spatial, 'anatomical_csf_mask')
     else:
         spatial.inputs.anatomical_csf_mask = \
-            resource_pool['anatomical_csf_mask']
+            resource_pool['anat_csf_mask']
 
     if isinstance(resource_pool['anat_fav_artifacts_background'], tuple):
         node, out_file = resource_pool['anat_fav_artifacts_background']
@@ -771,7 +773,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     out_dir = os.path.join(config['output_directory'], config["run_name"],
                            config["site_name"], config["subject_id"],
                            config["session_id"])
-    out_json = os.path.join(out_dir, "%s_%s_%s_qap-anatomical.json"
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap-anat.json"
                             % (config["subject_id"], config["session_id"],
                                config["scan_id"]))
 
@@ -785,24 +787,6 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
 
     workflow.connect(spatial, 'qap', spatial_to_json, 'output_dict')
     resource_pool['qap_anatomical_spatial'] = out_json
-
-    qa_out_dir = os.path.join(config['output_directory'], config["run_name"],
-                              config["site_name"], config["subject_id"],
-                              config["session_id"])
-    qa_out_json = os.path.join(qa_out_dir, "%s_%s_%s_QA-anat.json"
-                          % (config["subject_id"], config["session_id"],
-                             config["scan_id"]))
-
-    qa_to_json = pe.Node(niu.Function(
-                                  input_names=["output_dict",
-                                               "json_file"],
-                                  output_names=["json_file"],
-                                  function=write_json),
-                         name="qap_qa_anat_to_json%s" % name)
-    qa_to_json.inputs.json_file = qa_out_json
-
-    workflow.connect(spatial, 'qa', qa_to_json, 'output_dict')
-    resource_pool['QA_anat'] = qa_out_json
 
     return workflow, resource_pool
 
@@ -987,7 +971,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
                      'bg_func_brain_mask', 'fd_file', 'sfs', 'subject_id',
                      'session_id', 'scan_id', 'run_name', 'site_name',
                      'session_output_dir', 'starter'],
-        output_names=['qap', 'qa'],
+        output_names=['qap'],
         function=qap_functional_temporal),
         name='qap_functional_temporal%s' % name)
     temporal.inputs.subject_id = config['subject_id']
@@ -1054,7 +1038,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     out_dir = os.path.join(config['output_directory'], config["run_name"],
                            config["site_name"], config["subject_id"],
                            config["session_id"])
-    out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional.json"
+    out_json = os.path.join(out_dir, "%s_%s_%s_qap-func.json"
                             % (config["subject_id"], config["session_id"],
                                config["scan_id"]))
 
@@ -1077,24 +1061,6 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     workflow.connect(spatial_epi, 'qap', spatial_epi_to_json, 'output_dict')
     workflow.connect(temporal, 'qap', temporal_to_json, 'output_dict')
     resource_pool['qap_functional'] = out_json
-
-    qa_out_dir = os.path.join(config['output_directory'], config["run_name"],
-                              config["site_name"], config["subject_id"],
-                              config["session_id"])
-    qa_out_json = os.path.join(qa_out_dir, "%s_%s_%s_QA-func.json"
-                               % (config["subject_id"], config["session_id"],
-                                  config["scan_id"]))
-
-    qa_to_json = pe.Node(niu.Function(
-                                  input_names=["output_dict",
-                                               "json_file"],
-                                  output_names=["json_file"],
-                                  function=write_json),
-                         name="qap_qa_to_json%s" % name)
-    qa_to_json.inputs.json_file = qa_out_json
-
-    workflow.connect(temporal, 'qa', qa_to_json, 'output_dict')
-    resource_pool['QA_func'] = qa_out_json
 
     id_string = "%s %s %s" % (config["subject_id"], config["session_id"],
                               config["scan_id"])
