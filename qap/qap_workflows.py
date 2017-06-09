@@ -61,11 +61,10 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     import nipype.interfaces.utility as niu
     from nipype.interfaces.afni import preprocess
 
-    from qap_workflows_utils import slice_head_mask
-    from qap_utils import create_expr_string
+    from qap.qap_workflows_utils import slice_head_mask, scipy_fill
+    from qap.qap_utils import create_expr_string
 
-    if 'allineate_linear_xfm' not in resource_pool.keys():
-
+    if 'anat_linear_xfm' not in resource_pool.keys():
         from anatomical_preproc import afni_anatomical_linear_registration
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
@@ -75,8 +74,7 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
         if resource_pool == old_rp:
             return workflow, resource_pool
 
-    if 'anatomical_reorient' not in resource_pool.keys():
-
+    if 'anat_reorient' not in resource_pool.keys():
         from anatomical_preproc import anatomical_reorient_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
@@ -123,6 +121,14 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
 
     workflow.connect(mask_skull, 'out_file', dilate_erode, 'in_file')
 
+    # create Scipy hole-filling function node
+    fill = pe.Node(niu.Function(input_names=['in_file'],
+                                output_names=['out_file'],
+                                function=scipy_fill),
+                   name='qap_headmask_scipy_fill%s' % name)
+
+    workflow.connect(dilate_erode, 'out_file', fill, 'in_file')
+
     slice_head_mask = pe.Node(niu.Function(
         input_names=['infile', 'transform', 'standard'],
         output_names=['outfile_path'], function=slice_head_mask),
@@ -150,39 +156,102 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     subtract_mask.inputs.expr = "a-b"
     subtract_mask.inputs.outputtype = "NIFTI_GZ"
 
-    if len(resource_pool['anatomical_reorient']) == 2:
-        node, out_file = resource_pool['anatomical_reorient']
+    if isinstance(resource_pool['anat_reorient'], tuple):
+        node, out_file = resource_pool['anat_reorient']
         workflow.connect([
             (node, clip_level,      [(out_file, 'in_file')]),
             (node, mask_skull,      [(out_file, 'in_file_a')]),
             (node, slice_head_mask, [(out_file, 'infile')])
         ])
     else:
-        clip_level.inputs.in_file = resource_pool['anatomical_reorient']
-        mask_skull.inputs.in_file_a = resource_pool['anatomical_reorient']
-        slice_head_mask.inputs.infile = resource_pool['anatomical_reorient']
+        clip_level.inputs.in_file = resource_pool['anat_reorient']
+        mask_skull.inputs.in_file_a = resource_pool['anat_reorient']
+        slice_head_mask.inputs.infile = resource_pool['anat_reorient']
 
-    if len(resource_pool['allineate_linear_xfm']) == 2:
-        node, out_file = resource_pool['allineate_linear_xfm']
+    if isinstance(resource_pool['anat_linear_xfm'], tuple):
+        node, out_file = resource_pool['anat_linear_xfm']
         workflow.connect(node, out_file, slice_head_mask, 'transform')
     else:
         slice_head_mask.inputs.transform = \
-            resource_pool['allineate_linear_xfm']
+            resource_pool['anat_linear_xfm']
 
     workflow.connect([
-        (dilate_erode, combine_masks, [('out_file', 'in_file_a')]),
+        (fill, combine_masks, [('out_file', 'in_file_a')]),
         (slice_head_mask, combine_masks, [('outfile_path', 'in_file_b')])
     ])
 
-    workflow.connect(dilate_erode, 'out_file', subtract_mask, 'in_file_a')
-    workflow.connect(slice_head_mask, 'outfile_path', \
+    workflow.connect(fill, 'out_file', subtract_mask, 'in_file_a')
+    workflow.connect(slice_head_mask, 'outfile_path',
                          subtract_mask, 'in_file_b')
 
-    resource_pool['qap_head_mask'] = (combine_masks, 'out_file')
-    resource_pool['whole_head_mask'] = (dilate_erode, 'out_file')
-    resource_pool['skull_only_mask'] = (subtract_mask, 'out_file')
+    resource_pool['anat_qap_head_mask'] = (combine_masks, 'out_file')
+    resource_pool['anat_whole_head_mask'] = (fill, 'out_file')
+    resource_pool['anat_skull_only_mask'] = (subtract_mask, 'out_file')
 
     return workflow, resource_pool
+
+
+def run_nipype_workflow(workflow, resource_pool, config_dict=None, run=True):
+
+    import os
+    import glob
+    import nipype.interfaces.io as nio
+    import nipype.pipeline.engine as pe
+
+    if not config_dict:
+        config_dict = {}
+
+    base_dir = os.path.join(os.getcwd(), workflow.func_name)
+
+    wf = pe.Workflow(name='nipype_workflow')
+    wf.base_dir = os.path.join(base_dir, "working_dir")
+
+    wf, resource_pool = workflow(wf, resource_pool, config_dict)
+
+    for key in resource_pool.keys():
+        ds = pe.Node(nio.DataSink(), name='datasink_%s' % key)
+        ds.inputs.base_directory = os.path.join(base_dir, "output")
+        if isinstance(resource_pool[key], tuple):
+            node, out_file = resource_pool[key]
+            wf.connect(node, out_file, ds, key)
+
+    if run:
+        if "num_processors" not in config_dict.keys():
+            config_dict["num_processors"] = 1
+        wf.run(plugin='MultiProc',
+               plugin_args={'n_procs': config_dict["num_processors"]})
+        return glob.glob(os.path.join(base_dir, "output", "*"))
+    else:
+        return wf, wf.base_dir
+
+
+def run_qap_mask_wf(anatomical_reorient=None, allineate_linear_xfm=None):
+
+    import os
+    import pkg_resources as p
+
+    if not anatomical_reorient:
+        anatomical_reorient = p.resource_filename("qap",
+                                            os.path.join("test_data",
+                                                         "bids_data",
+                                                         "site-1_sub-1_ses-1",
+                                                         "anat",
+                                                         "site-1_sub-1_ses-1_run-1_anatomical-reorient.nii.gz"))
+
+    if not allineate_linear_xfm:
+        allineate_linear_xfm = p.resource_filename("qap",
+                                            os.path.join("test_data",
+                                                         "bids_data",
+                                                         "site-1_sub-1_ses-1",
+                                                         "anat",
+                                                         "site-1_sub-1_ses-1_run-1_allineate-linear-xfm.aff12.1D"))
+
+    resource_pool = {"anatomical_reorient": anatomical_reorient,
+                     "allineate_linear_xfm": allineate_linear_xfm}
+
+    out_paths = run_nipype_workflow(qap_mask_workflow, resource_pool)
+
+    print out_paths
 
 
 def run_qap_mask(anatomical_reorient, allineate_out_xfm,
@@ -250,10 +319,10 @@ def run_qap_mask(anatomical_reorient, allineate_out_xfm,
 
     if run:
         workflow.run(
-            plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
+            plugin='MultiProc',
+            plugin_args={'n_procs': num_cores_per_subject})
         outpath = glob.glob(os.path.join(workflow_dir, output, '*'))[0]
         return outpath
-
     else:
         return workflow, workflow.base_dir
 
@@ -323,22 +392,22 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
     gather_header.inputs.session = config["session_id"]
     gather_header.inputs.scan = config["scan_id"]
 
-    if data_type == "anatomical":
-        if "anatomical_scan" in resource_pool.keys():
-            gather_header.inputs.in_file = resource_pool["anatomical_scan"]
+    if data_type == "anat":
+        if "anat_scan" in resource_pool.keys():
+            gather_header.inputs.in_file = resource_pool["anat_scan"]
             gather_header.inputs.type = data_type
-    elif "functional" in data_type:
-        if "functional_scan" in resource_pool.keys():
-            gather_header.inputs.in_file = resource_pool["functional_scan"]
+    elif "func" in data_type:
+        if "func_scan" in resource_pool.keys():
+            gather_header.inputs.in_file = resource_pool["func_scan"]
             gather_header.inputs.type = data_type
 
-    out_dir = os.path.join(config['output_directory'], "derivatives",
-                           config["run_name"], config["subject_id"],
+    out_dir = os.path.join(config['output_directory'], config["run_name"],
+                           config["site_name"], config["subject_id"],
                            config["session_id"])
     out_json = os.path.join(out_dir, "%s_%s_%s_qap-%s.json"
                             % (config["subject_id"], config["session_id"],
                                config["scan_id"],
-                               data_type.replace("_", "-")))
+                               data_type))
     header_to_json = pe.Node(niu.Function(
                                  input_names=["output_dict",
                                               "json_file"],
@@ -361,7 +430,7 @@ def calculate_artifacts_background(workflow, resource_pool, config, name="_"):
     import nipype.interfaces.utility as niu
     from qap.spatial_qc import artifacts
 
-    if 'qap_head_mask' not in resource_pool.keys():
+    if 'anat_qap_head_mask' not in resource_pool.keys():
         from qap_workflows import qap_mask_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
@@ -369,7 +438,7 @@ def calculate_artifacts_background(workflow, resource_pool, config, name="_"):
         if resource_pool == old_rp:
             return workflow, resource_pool
 
-    if 'anatomical_reorient' not in resource_pool.keys():
+    if 'anat_reorient' not in resource_pool.keys():
         from anatomical_preproc import anatomical_reorient_workflow
         old_rp = copy.copy(resource_pool)
         workflow, new_resource_pool = \
@@ -388,25 +457,26 @@ def calculate_artifacts_background(workflow, resource_pool, config, name="_"):
 
     calculate_artifacts.inputs.exclude_zeroes = config["exclude_zeros"]
 
-    if isinstance(resource_pool["anatomical_reorient"], tuple):
-        node, out_file = resource_pool["anatomical_reorient"]
+    if isinstance(resource_pool["anat_reorient"], tuple):
+        node, out_file = resource_pool["anat_reorient"]
         workflow.connect(node, out_file,
                          calculate_artifacts, 'anatomical_reorient')
     else:
         calculate_artifacts.inputs.anatomical_reorient = \
-            resource_pool["anatomical_reorient"]
+            resource_pool["anat_reorient"]
 
-    if isinstance(resource_pool["qap_head_mask"], tuple):
-        node, out_file = resource_pool["qap_head_mask"]
+    if isinstance(resource_pool["anat_qap_head_mask"], tuple):
+        node, out_file = resource_pool["anat_qap_head_mask"]
         workflow.connect(node, out_file,
                          calculate_artifacts, 'qap_head_mask_path')
     else:
         calculate_artifacts.inputs.qap_head_mask_path = \
-            resource_pool["qap_head_mask"]
+            resource_pool["anat_qap_head_mask"]
 
-    resource_pool["fav_artifacts_background"] = \
+    resource_pool["anat_fav_artifacts_background"] = \
         (calculate_artifacts, 'fav_bg_file')
-    resource_pool["qap_bg_head_mask"] = (calculate_artifacts, 'bg_mask_file')
+    resource_pool["anat_qap_bg_head_mask"] = \
+        (calculate_artifacts, 'bg_mask_file')
 
     return workflow, resource_pool
 
@@ -423,22 +493,22 @@ def calculate_temporal_std(workflow, resource_pool, config, name="_"):
                                               function=get_temporal_std_map),
                                  name="calculate_temporal_std%s" % name)
 
-    if len(resource_pool["func_reorient"]) == 2:
+    if isinstance(resource_pool["func_reorient"], tuple):
         node, out_file = resource_pool["func_reorient"]
         workflow.connect(node, out_file, calculate_tstd_map, 'func_reorient')
     else:
         calculate_tstd_map.inputs.func_reorient = \
             resource_pool["func_reorient"]
 
-    if len(resource_pool["functional_brain_mask"]) == 2:
-        node, out_file = resource_pool["functional_brain_mask"]
+    if isinstance(resource_pool["func_brain_mask"], tuple):
+        node, out_file = resource_pool["func_brain_mask"]
         workflow.connect(node, out_file, calculate_tstd_map, 'func_mask')
     else:
         calculate_tstd_map.inputs.func_mask = \
-            resource_pool["functional_brain_mask"]
+            resource_pool["func_brain_mask"]
 
-    resource_pool['temporal_std_map'] = (calculate_tstd_map,
-                                         'temporal_std_map_file')
+    resource_pool['func_temporal_std_map'] = (calculate_tstd_map,
+                                              'temporal_std_map_file')
 
     return workflow, resource_pool
 
@@ -450,7 +520,7 @@ def calculate_sfs_workflow(workflow, resource_pool, config, name="_"):
     import nipype.interfaces.utility as niu
     from qap.qap_workflows_utils import sfs_timeseries
 
-    if 'mean_functional' not in resource_pool.keys():
+    if 'func_mean' not in resource_pool.keys():
         from functional_preproc import mean_functional_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
@@ -458,7 +528,7 @@ def calculate_sfs_workflow(workflow, resource_pool, config, name="_"):
         if resource_pool == old_rp:
             return workflow, resource_pool
 
-    if 'temporal_std_map' not in resource_pool.keys():
+    if 'func_temporal_std_map' not in resource_pool.keys():
         from qap_workflows import calculate_temporal_std
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
@@ -474,28 +544,29 @@ def calculate_sfs_workflow(workflow, resource_pool, config, name="_"):
                                          function=sfs_timeseries),
                             name="calculate_sfs%s" % name)
 
-    if isinstance(resource_pool["mean_functional"], tuple):
-        node, out_file = resource_pool["mean_functional"]
+    if isinstance(resource_pool["func_mean"], tuple):
+        node, out_file = resource_pool["func_mean"]
         workflow.connect(node, out_file, calculate_sfs, 'func_mean')
     else:
-        calculate_sfs.inputs.func_mean = resource_pool["mean_functional"]
+        calculate_sfs.inputs.func_mean = resource_pool["func_mean"]
 
-    if isinstance(resource_pool["functional_brain_mask"], tuple):
-        node, out_file = resource_pool["functional_brain_mask"]
+    if isinstance(resource_pool["func_brain_mask"], tuple):
+        node, out_file = resource_pool["func_brain_mask"]
         workflow.connect(node, out_file, calculate_sfs, 'func_mask')
     else:
         calculate_sfs.inputs.func_mask = \
-            resource_pool["functional_brain_mask"]
+            resource_pool["func_brain_mask"]
 
-    if isinstance(resource_pool["temporal_std_map"], tuple):
-        node, out_file = resource_pool["temporal_std_map"]
+    if isinstance(resource_pool["func_temporal_std_map"], tuple):
+        node, out_file = resource_pool["func_temporal_std_map"]
         workflow.connect(node, out_file, calculate_sfs, 'temporal_std_file')
     else:
         calculate_sfs.inputs.temporal_std_file = \
-            resource_pool["temporal_std_map"]
+            resource_pool["func_temporal_std_map"]
 
-    resource_pool['SFS'] = (calculate_sfs, 'sfs_file')
-    resource_pool['estimated_nuisance'] = (calculate_sfs, 'est_nuisance_file')
+    resource_pool['func_SFS'] = (calculate_sfs, 'sfs_file')
+    resource_pool['func_estimated_nuisance'] = \
+        (calculate_sfs, 'est_nuisance_file')
 
     return workflow, resource_pool
 
@@ -568,7 +639,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     if "exclude_zeros" not in config.keys():
         config["exclude_zeros"] = False
 
-    if 'fav-artifacts-background' not in resource_pool.keys():
+    if 'anat_fav_artifacts_background' not in resource_pool.keys():
         from qap.qap_workflows import calculate_artifacts_background
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
@@ -577,9 +648,9 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         if resource_pool == old_rp:
             return workflow, resource_pool
 
-    if ('anatomical_gm_mask' not in resource_pool.keys()) or \
-            ('anatomical_wm_mask' not in resource_pool.keys()) or \
-            ('anatomical_csf_mask' not in resource_pool.keys()):
+    if ('ana_gm_mask' not in resource_pool.keys()) or \
+            ('anat_wm_mask' not in resource_pool.keys()) or \
+            ('anat_csf_mask' not in resource_pool.keys()):
 
         from anatomical_preproc import afni_segmentation_workflow
         old_rp = copy.copy(resource_pool)
@@ -615,65 +686,67 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     if 'site_name' in resource_pool.keys():
         spatial.inputs.site_name = resource_pool['site_name']
 
-    if len(resource_pool['anatomical_reorient']) == 2:
-        node, out_file = resource_pool['anatomical_reorient']
+    if isinstance(resource_pool['anat_reorient'], tuple):
+        node, out_file = resource_pool['anat_reorient']
         workflow.connect(node, out_file, spatial, 'anatomical_reorient')
     else:
         spatial.inputs.anatomical_reorient = \
-            resource_pool['anatomical_reorient']
+            resource_pool['anat_reorient']
 
-    if len(resource_pool['qap_head_mask']) == 2:
-        node, out_file = resource_pool['qap_head_mask']
+    if isinstance(resource_pool['anat_qap_head_mask'], tuple):
+        node, out_file = resource_pool['anat_qap_head_mask']
         workflow.connect(node, out_file, spatial, 'qap_head_mask_path')
     else:
-        spatial.inputs.qap_head_mask_path = resource_pool['qap_head_mask']
+        spatial.inputs.qap_head_mask_path = \
+            resource_pool['anat_qap_head_mask']
 
-    if isinstance(resource_pool['qap_bg_head_mask'], tuple):
-        node, out_file = resource_pool['qap_bg_head_mask']
+    if isinstance(resource_pool['anat_qap_bg_head_mask'], tuple):
+        node, out_file = resource_pool['anat_qap_bg_head_mask']
         workflow.connect(node, out_file, spatial, 'qap_bg_head_mask_path')
     else:
         spatial.inputs.qap_bg_head_mask_path = \
-            resource_pool['qap_bg_head_mask']
+            resource_pool['anat_qap_bg_head_mask']
 
-    if len(resource_pool['whole_head_mask']) == 2:
-        node, out_file = resource_pool['whole_head_mask']
+    if isinstance(resource_pool['anat_whole_head_mask'], tuple):
+        node, out_file = resource_pool['anat_whole_head_mask']
         workflow.connect(node, out_file, spatial, 'whole_head_mask_path')
     else:
-        spatial.inputs.whole_head_mask_path = resource_pool['whole_head_mask']
+        spatial.inputs.whole_head_mask_path = \
+            resource_pool['anat_whole_head_mask']
 
-    if len(resource_pool['skull_only_mask']) == 2:
-        node, out_file = resource_pool['skull_only_mask']
+    if isinstance(resource_pool['anat_skull_only_mask'], tuple):
+        node, out_file = resource_pool['anat_skull_only_mask']
         workflow.connect(node, out_file, spatial, 'skull_mask_path')
     else:
-        spatial.inputs.skull_mask_path = resource_pool['skull_only_mask']
+        spatial.inputs.skull_mask_path = resource_pool['anat_skull_only_mask']
 
-    if len(resource_pool['anatomical_gm_mask']) == 2:
-        node, out_file = resource_pool['anatomical_gm_mask']
+    if isinstance(resource_pool['anat_gm_mask'], tuple):
+        node, out_file = resource_pool['anat_gm_mask']
         workflow.connect(node, out_file, spatial, 'anatomical_gm_mask')
     else:
         spatial.inputs.anatomical_gm_mask = \
-            resource_pool['anatomical_gm_mask']
+            resource_pool['anat_gm_mask']
 
-    if len(resource_pool['anatomical_wm_mask']) == 2:
-        node, out_file = resource_pool['anatomical_wm_mask']
+    if len(resource_pool['anat_wm_mask']) == 2:
+        node, out_file = resource_pool['anat_wm_mask']
         workflow.connect(node, out_file, spatial, 'anatomical_wm_mask')
     else:
         spatial.inputs.anatomical_wm_mask = \
-            resource_pool['anatomical_wm_mask']
+            resource_pool['anat_wm_mask']
 
-    if len(resource_pool['anatomical_csf_mask']) == 2:
-        node, out_file = resource_pool['anatomical_csf_mask']
+    if len(resource_pool['anat_csf_mask']) == 2:
+        node, out_file = resource_pool['anat_csf_mask']
         workflow.connect(node, out_file, spatial, 'anatomical_csf_mask')
     else:
         spatial.inputs.anatomical_csf_mask = \
             resource_pool['anatomical_csf_mask']
 
-    if isinstance(resource_pool['fav_artifacts_background'], tuple):
-        node, out_file = resource_pool['fav_artifacts_background']
+    if isinstance(resource_pool['anat_fav_artifacts_background'], tuple):
+        node, out_file = resource_pool['anat_fav_artifacts_background']
         workflow.connect(node, out_file, spatial, 'fav_artifacts')
     else:
         spatial.inputs.fav_artifacts = \
-            resource_pool['fav_artifacts_background']
+            resource_pool['anat_fav_artifacts_background']
 
     if config.get('write_report', False):
         plot = pe.Node(PlotMosaic(), name='plot_mosaic%s' % name)
@@ -686,17 +759,17 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
         plot.inputs.metadata = metadata
         plot.inputs.title = 'Anatomical reoriented'
 
-        if len(resource_pool['anatomical_reorient']) == 2:
-            node, out_file = resource_pool['anatomical_reorient']
+        if len(resource_pool['anat_reorient']) == 2:
+            node, out_file = resource_pool['anat_reorient']
             workflow.connect(node, out_file, plot, 'in_file')
         else:
-            plot.inputs.in_file = resource_pool['anatomical_reorient']
+            plot.inputs.in_file = resource_pool['anat_reorient']
 
         resource_pool['mean_epi_mosaic'] = (plot, 'out_file')
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
-    out_dir = os.path.join(config['output_directory'], "derivatives",
-                           config["run_name"], config["subject_id"],
+    out_dir = os.path.join(config['output_directory'], config["run_name"],
+                           config["site_name"], config["subject_id"],
                            config["session_id"])
     out_json = os.path.join(out_dir, "%s_%s_%s_qap-anatomical.json"
                             % (config["subject_id"], config["session_id"],
@@ -713,8 +786,8 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     workflow.connect(spatial, 'qap', spatial_to_json, 'output_dict')
     resource_pool['qap_anatomical_spatial'] = out_json
 
-    qa_out_dir = os.path.join(config['output_directory'], "derivatives",
-                              config["run_name"], config["subject_id"],
+    qa_out_dir = os.path.join(config['output_directory'], config["run_name"],
+                              config["site_name"], config["subject_id"],
                               config["session_id"])
     qa_out_json = os.path.join(qa_out_dir, "%s_%s_%s_QA-anat.json"
                           % (config["subject_id"], config["session_id"],
@@ -807,7 +880,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         return inlist
 
     # ensures functional_brain_mask is created as well
-    if 'inverted_functional_brain_mask' not in resource_pool.keys():
+    if 'func_inverted_brain_mask' not in resource_pool.keys():
         from functional_preproc import invert_functional_brain_mask_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
@@ -817,7 +890,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
             return workflow, resource_pool
 
     if ('func_motion_correct' not in resource_pool.keys()) or \
-        ('coordinate_transformation' not in resource_pool.keys() and
+        ('func_coordinate_transformation' not in resource_pool.keys() and
             'mcflirt_rel_rms' not in resource_pool.keys()):
         from functional_preproc import func_motion_correct_workflow
         old_rp = copy.copy(resource_pool)
@@ -827,7 +900,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         if resource_pool == old_rp:
             return workflow, resource_pool
 
-    if 'mean_functional' not in resource_pool.keys():
+    if 'func_mean' not in resource_pool.keys():
         from functional_preproc import mean_functional_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
@@ -835,7 +908,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         if resource_pool == old_rp:
             return workflow, resource_pool
 
-    if 'SFS' not in resource_pool.keys():
+    if 'func_SFS' not in resource_pool.keys():
         from qap_workflows import calculate_sfs_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
@@ -850,11 +923,12 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     if 'mcflirt_rel_rms' in resource_pool.keys():
         fd.inputs.in_file = resource_pool['mcflirt_rel_rms']
     else:
-        if len(resource_pool['coordinate_transformation']) == 2:
-            node, out_file = resource_pool['coordinate_transformation']
+        if len(resource_pool['func_coordinate_transformation']) == 2:
+            node, out_file = resource_pool['func_coordinate_transformation']
             workflow.connect(node, out_file, fd, 'in_file')
         else:
-            fd.inputs.in_file = resource_pool['coordinate_transformation']
+            fd.inputs.in_file = \
+                resource_pool['func_coordinate_transformation']
 
     spatial_epi = pe.Node(niu.Function(
         input_names=['mean_epi', 'func_brain_mask', 'direction', 'subject_id',
@@ -876,18 +950,18 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     if 'site_name' in config.keys():
         spatial_epi.inputs.site_name = config['site_name']
 
-    if len(resource_pool['mean_functional']) == 2:
-        node, out_file = resource_pool['mean_functional']
+    if len(resource_pool['func_mean']) == 2:
+        node, out_file = resource_pool['func_mean']
         workflow.connect(node, out_file, spatial_epi, 'mean_epi')
     else:
-        spatial_epi.inputs.mean_epi = resource_pool['mean_functional']
+        spatial_epi.inputs.mean_epi = resource_pool['func_mean']
 
-    if len(resource_pool['functional_brain_mask']) == 2:
-        node, out_file = resource_pool['functional_brain_mask']
+    if len(resource_pool['func_brain_mask']) == 2:
+        node, out_file = resource_pool['func_brain_mask']
         workflow.connect(node, out_file, spatial_epi, 'func_brain_mask')
     else:
         spatial_epi.inputs.func_brain_mask = \
-            resource_pool['functional_brain_mask']
+            resource_pool['func_brain_mask']
 
     if config.get('write_report', False):
         plot = pe.Node(PlotMosaic(), name='plot_mosaic%s' % name)
@@ -900,11 +974,11 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         plot.inputs.metadata = metadata
         plot.inputs.title = 'Mean EPI'
 
-        if len(resource_pool['mean_functional']) == 2:
-            node, out_file = resource_pool['mean_functional']
+        if len(resource_pool['func_mean']) == 2:
+            node, out_file = resource_pool['func_mean']
             workflow.connect(node, out_file, plot, 'in_file')
         else:
-            plot.inputs.in_file = resource_pool['mean_functional']
+            plot.inputs.in_file = resource_pool['func_mean']
 
         resource_pool['qap_mosaic'] = (plot, 'out_file')
 
@@ -943,42 +1017,42 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         gs_ts.inputs.functional_file = input_file
 
     # func mean (one volume) -> QAP func temp
-    if len(resource_pool['mean_functional']) == 2:
-        node, out_file = resource_pool['mean_functional']
+    if len(resource_pool['func_mean']) == 2:
+        node, out_file = resource_pool['func_mean']
         workflow.connect(node, out_file, temporal, 'func_mean')
     else:
         from qap_utils import check_input_resources
-        check_input_resources(resource_pool, 'mean_functional')
-        input_file = resource_pool['mean_functional']
+        check_input_resources(resource_pool, 'func_mean')
+        input_file = resource_pool['func_mean']
         temporal.inputs.func_mean = input_file
 
     # functional brain mask -> QAP func temp
-    if len(resource_pool['functional_brain_mask']) == 2:
-        node, out_file = resource_pool['functional_brain_mask']
+    if len(resource_pool['func_brain_mask']) == 2:
+        node, out_file = resource_pool['func_brain_mask']
         workflow.connect(node, out_file, temporal, 'func_brain_mask')
     else:
         temporal.inputs.func_brain_mask = \
-            resource_pool['functional_brain_mask']
+            resource_pool['func_brain_mask']
 
     # inverted functional brain mask -> QAP func temp
-    if len(resource_pool['inverted_functional_brain_mask']) == 2:
-        node, out_file = resource_pool['inverted_functional_brain_mask']
+    if len(resource_pool['func_inverted_brain_mask']) == 2:
+        node, out_file = resource_pool['func_inverted_brain_mask']
         workflow.connect(node, out_file, temporal, 'bg_func_brain_mask')
     else:
         temporal.inputs.bg_func_brain_mask = \
-            resource_pool['inverted_functional_brain_mask']
+            resource_pool['func_inverted_brain_mask']
 
     # temporal STD -> QAP func temp
-    if isinstance(resource_pool['SFS'], tuple):
-        node, out_file = resource_pool['SFS']
+    if isinstance(resource_pool['func_SFS'], tuple):
+        node, out_file = resource_pool['func_SFS']
         workflow.connect(node, out_file, temporal, 'sfs')
     else:
-        temporal.inputs.sfs = resource_pool['SFS']
+        temporal.inputs.sfs = resource_pool['func_SFS']
 
     # Write mosaic and FD plot
 
-    out_dir = os.path.join(config['output_directory'], "derivatives",
-                           config["run_name"], config["subject_id"],
+    out_dir = os.path.join(config['output_directory'], config["run_name"],
+                           config["site_name"], config["subject_id"],
                            config["session_id"])
     out_json = os.path.join(out_dir, "%s_%s_%s_qap-functional.json"
                             % (config["subject_id"], config["session_id"],
@@ -1004,8 +1078,8 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     workflow.connect(temporal, 'qap', temporal_to_json, 'output_dict')
     resource_pool['qap_functional'] = out_json
 
-    qa_out_dir = os.path.join(config['output_directory'], "derivatives",
-                              config["run_name"], config["subject_id"],
+    qa_out_dir = os.path.join(config['output_directory'], config["run_name"],
+                              config["site_name"], config["subject_id"],
                               config["session_id"])
     qa_out_json = os.path.join(qa_out_dir, "%s_%s_%s_QA-func.json"
                                % (config["subject_id"], config["session_id"],
@@ -1064,12 +1138,12 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
             input_file = resource_pool['func_reorient']
             grayplot.inputs.func_file = input_file
 
-        if len(resource_pool['functional_brain_mask']) == 2:
-            node, out_file = resource_pool['functional_brain_mask']
+        if len(resource_pool['func_brain_mask']) == 2:
+            node, out_file = resource_pool['func_brain_mask']
             workflow.connect(node, out_file, grayplot, 'mask_file')
 
         else:   
-            grayplot.inputs.mask_file = resource_pool['functional_brain_mask']
+            grayplot.inputs.mask_file = resource_pool['func_brain_mask']
 
     return workflow, resource_pool
 

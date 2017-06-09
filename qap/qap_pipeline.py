@@ -136,6 +136,12 @@ def build_and_run_qap_pipeline(args, run=True):
 
             resource_pool = partic_resource_pool[scan]
 
+            # TODO: TEMP
+            if "anatomical_scan" in resource_pool.keys():
+                resource_pool["anat_scan"] = resource_pool["anatomical_scan"]
+            if "functional_scan" in resource_pool.keys():
+                resource_pool["func_scan"] = resource_pool["functional_scan"]
+
             # resource pool check
             invalid_paths = []
 
@@ -161,15 +167,25 @@ def build_and_run_qap_pipeline(args, run=True):
                 raise Exception(err)
 
             # process subject info
-            sub_id = str(sub_info[0])
+            site_id = str(sub_info[0])
             # for nipype
-            if "-" in sub_id:
-                sub_id = sub_id.replace("-", "_")
-            if "." in sub_id:
-                sub_id = sub_id.replace(".", "_")
+            if "-" in site_id:
+                site_id = site_id.replace("-", "_")
+            if "." in site_id:
+                site_id = site_id.replace(".", "_")
 
             if sub_info[1]:
-                session_id = str(sub_info[1])
+                sub_id = str(sub_info[1])
+                # for nipype
+                if "-" in sub_id:
+                    sub_id = sub_id.replace("-", "_")
+                if "." in sub_id:
+                    sub_id = sub_id.replace(".", "_")
+            else:
+                scan_id = "scan_0"
+
+            if sub_info[2]:
+                session_id = str(sub_info[2])
                 # for nipype
                 if "-" in session_id:
                     session_id = session_id.replace("-", "_")
@@ -178,26 +194,24 @@ def build_and_run_qap_pipeline(args, run=True):
             else:
                 session_id = "session_0"
 
-            if sub_info[2]:
-                scan_id = str(sub_info[2])
-                # for nipype
-                if "-" in scan_id:
-                    scan_id = scan_id.replace("-", "_")
-                if "." in scan_id:
-                    scan_id = scan_id.replace(".", "_")
-            else:
-                scan_id = "scan_0"
+            scan_id = str(scan)
+            # for nipype
+            if "-" in scan_id:
+                scan_id = scan_id.replace("-", "_")
+            if "." in scan_id:
+                scan_id = scan_id.replace(".", "_")
 
-            name = "_".join(["", sub_id, session_id, scan_id])
+
+            name = "_".join(["", site_id, sub_id, session_id, scan_id])
 
             rt[name] = {'id': sub_id, 'session': session_id, 'scan': scan_id,
-                        'resource_pool': str(resource_pool)}
+                        'resource_pool': str(resource_pool), 'site': site_id}
 
             logger.info("Participant info: %s" % name)
 
             # set output directory
             output_dir = op.join(config["output_directory"], run_name,
-                                 sub_id, session_id, scan_id)
+                                 site_id, sub_id, session_id)
 
             try:
                 os.makedirs(output_dir)
@@ -215,6 +229,8 @@ def build_and_run_qap_pipeline(args, run=True):
 
             if "site_name" in resource_pool:
                 config.update({"site_name": resource_pool["site_name"]})
+            else:
+                config.update({"site_name": site_id})
 
             logger.info("Configuration settings:\n%s" % str(config))
 
@@ -251,8 +267,8 @@ def build_and_run_qap_pipeline(args, run=True):
                         # a stray file in the sub-sess-scan output directory
                         pass
 
-            # create starter node which links all of the parallel workflows within
-            # the bundle together as a Nipype pipeline
+            # create starter node which links all of the parallel workflows
+            # within the bundle together as a Nipype pipeline
             resource_pool["starter"] = (starter_node, 'starter')
 
             # individual workflow and logger setup
@@ -269,21 +285,21 @@ def build_and_run_qap_pipeline(args, run=True):
                     workflow, resource_pool = wf_builder(workflow, resource_pool,\
                                                          config, name)
 
-            if ("anatomical_scan" in resource_pool.keys()) and \
-                ("anatomical_header_info" not in resource_pool.keys()):
+            if ("anat_scan" in resource_pool.keys()) and \
+                ("anat_header_info" not in resource_pool.keys()):
                 if qw is None:
                     from qap import qap_workflows as qw
                 workflow, resource_pool = \
                     qw.qap_gather_header_info(workflow, resource_pool, config,
-                        name, "anatomical")
+                                              name, "anat")
 
-            if ("functional_scan" in resource_pool.keys()) and \
-                ("functional_header_info" not in resource_pool.keys()):
+            if ("func_scan" in resource_pool.keys()) and \
+                ("func_header_info" not in resource_pool.keys()):
                 if qw is None:
                     from qap import qap_workflows as qw
                 workflow, resource_pool = \
                     qw.qap_gather_header_info(workflow, resource_pool, config,
-                        name, "functional")
+                                              name, "func")
 
             # set up the datasinks
             out_list = []
@@ -292,8 +308,8 @@ def build_and_run_qap_pipeline(args, run=True):
                     if qap_type in output:
                         out_list.append("_".join(["qap", qap_type]))
 
-            # write_all_outputs (writes everything to the output directory, not
-            # just the final JSON files)
+            # write_all_outputs (writes everything to the output directory,
+            # not just the final JSON files)
             if keep_outputs:
                 out_list = resource_pool.keys()
             logger.info("Outputs we're keeping: %s" % str(out_list))
@@ -303,13 +319,13 @@ def build_and_run_qap_pipeline(args, run=True):
             if config.get('write_report', False):
 
                 if ("qap_mosaic" in resource_pool.keys()) and \
-                    ("qap_mosaic" not in out_list):
+                        ("qap_mosaic" not in out_list):
                     out_list += ['qap_mosaic']
 
                 # The functional temporal also has an FD plot
                 if 'qap_functional' in resource_pool.keys():
                     if ("qap_fd" in resource_pool.keys()) and \
-                        ("qap_fd" not in out_list):
+                            ("qap_fd" not in out_list):
                         out_list += ['qap_fd']
 
             for output in out_list:
@@ -322,11 +338,33 @@ def build_and_run_qap_pipeline(args, run=True):
                 # were not present in the subject list YML (the starting resource
                 # pool) and had to be generated
                 if (len(resource_pool[output]) == 2) and (output != "starter"):
+
+                    node, out_file = resource_pool[output]
+
+                    # create the datasink
                     ds = pe.Node(nio.DataSink(), name='datasink_%s%s'
                                                       % (output, name))
-                    ds.inputs.base_directory = output_dir
-                    node, out_file = resource_pool[output]
-                    workflow.connect(node, out_file, ds, output)
+
+                    ds.inputs.base_directory = os.path.join(output_dir,
+                                                            sub_id,
+                                                            session_id)
+
+                    # rename file to BIDS format
+                    rename = pe.Node(niu.Rename(), name='rename_%s%s'
+                                                        % (output, name))
+                    rename.inputs.keep_ext = True
+                    # replace the underscores in 'output' (which are the keys of
+                    # the resource pool) with dashes - need to be underscores for
+                    # the workflow names, but need to be dashes for BIDS output
+                    # file naming format
+                    rename.inputs.format_string = "%s_%s_%s_%s" \
+                                                  % (sub_id, session_id,
+                                                     scan_id,
+                                                     output.replace("_", "-"))
+                    workflow.connect(node, out_file, rename, 'in_file')
+                    workflow.connect(rename, 'out_file', ds,
+                                     '%s.@%s' % (output.split("_")[0],
+                                                 output))
                     new_outputs += 1
                 elif ".json" in resource_pool[output]:
                     new_outputs += 1

@@ -178,7 +178,8 @@ def process_args(bids_dir, output_dir, analysis_level, data_config_file=None,
         else:
             pipeline_configuration.update(yaml.load(open(pipeline_config_file, 'r')))
 
-    # get the output directory, make sure its accessible, and if on AWS look for the credentials
+    # get the output directory, make sure its accessible, and if on AWS look
+    # for the credentials
     if not output_dir and not pipeline_configuration["output_directory"]:
         raise ValueError("Output directory must be specified either in pipeline config file or on the command line.")
     elif output_dir:
@@ -200,15 +201,16 @@ def process_args(bids_dir, output_dir, analysis_level, data_config_file=None,
         raise ValueError('Output directory ({0}) could not be '
                          'found'.format(pipeline_configuration["output_directory"]))
 
-    # get the logging directory, this can go to S3, but will have to be handled differently than outputs which are
-    # written to S3 by the datasink
+    # get the logging directory, this can go to S3, but will have to be
+    # handled differently than outputs which are written to S3 by the datasink
     if not log_dir and "workflow_log_dir" not in pipeline_configuration.keys():
         pipeline_configuration["workflow_log_dir"] = pipeline_configuration["output_directory"]+"/logs"
     elif log_dir:
         pipeline_configuration["workflow_log_dir"] = log_dir
         #hey steve
 
-    # get the working directory, make sure its accessible, and that it is not on S3
+    # get the working directory, make sure its accessible, and that it is not
+    # on S3
     if not working_dir and not pipeline_configuration["working_directory"]:
         raise ValueError("Working directory must be specified either in pipeline config file or on the command line.")
     elif working_dir:
@@ -249,8 +251,9 @@ def process_args(bids_dir, output_dir, analysis_level, data_config_file=None,
     if mni_template:
         pipeline_configuration["anatomical_template"] = mni_template
     else:
-        # if the user does not provide a anatomical template, search the path environment variable
-        # to see if we can find the default AFNI template MNI_avg152T1
+        # if the user does not provide a anatomical template, search the path
+        # environment variable to see if we can find the default AFNI template
+        # MNI_avg152T1
         pipeline_configuration['anatomical_template'] = ''
         for path in os.environ['PATH'].split(':'):
             if os.path.isfile(os.path.join(path, 'MNI_avg152T1+tlrc.HEAD')):
@@ -273,7 +276,8 @@ def process_args(bids_dir, output_dir, analysis_level, data_config_file=None,
 
     print(configuration_output_string.format(**pipeline_configuration))
 
-    # write out the pipeline configuration file, nice for debugging and other stuff
+    # write out the pipeline configuration file, nice for debugging and other
+    # stuff
     from datetime import datetime
 
     timestamp_string = datetime.now().strftime("%Y%m%d%H%M")

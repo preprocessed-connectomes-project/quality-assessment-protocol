@@ -157,6 +157,25 @@ def calculate_plane_coords(coords_list, infile_dims):
     return plane_dict
 
 
+def scipy_fill(in_file):
+
+    import os
+    import nibabel as nb
+    from scipy.ndimage.morphology import binary_fill_holes
+
+    mask_img = nb.load(in_file)
+    mask_data = mask_img.get_data()
+
+    new_mask_data = binary_fill_holes(mask_data).astype('int8')
+
+    new_mask_img = nb.Nifti1Image(new_mask_data, mask_img.affine)
+
+    out_file = os.path.join(os.getcwd(), "qap_headmask_filled.nii.gz")
+    new_mask_img.to_filename(out_file)
+
+    return out_file
+
+
 def create_slice_mask(plane_dict, infile_dims):
     """Create a binary array defining a mask covering the area below a given
     plane in the 3D image.

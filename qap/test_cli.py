@@ -11,12 +11,14 @@ class TestFullPipelines(unittest.TestCase):
     def setUp(self):
         # outdir stuff
         self.outdir = os.path.join(os.getcwd(), "test_data", "test_out_dir")
+        self.workdir = os.path.join(self.outdir, "work_dir")
         if os.path.isdir(self.outdir):
             try:
                 shutil.rmtree(self.outdir)
             except OSError:
                 pass
         os.makedirs(self.outdir)
+        os.makedirs(self.workdir)
 
         # anat template
         import pkg_resources as p
@@ -40,9 +42,10 @@ class TestFullPipelines(unittest.TestCase):
     def test_qap_s3(self):
         from qap.cli import process_args
         # just making sure it runs on the most basic input
-        bids_dir="s3://fcp-indi/data/Projects/CORR/RawDataBIDS"
+        bids_dir = "s3://fcp-indi/data/Projects/CORR/RawDataBIDS"
         process_args(bids_dir, self.outdir, "participant",
-                     working_dir=self.outdir, mni_template=self.anat_template)
+                     working_dir=self.workdir,
+                     mni_template=self.anat_template)
 
 
 """
