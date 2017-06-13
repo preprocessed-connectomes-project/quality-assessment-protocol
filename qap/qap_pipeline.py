@@ -106,7 +106,7 @@ def build_and_run_qap_pipeline(args, run=True):
     logger.info("Pipeline start time: %s" % pipeline_start_stamp)
 
     workflow = pe.Workflow(name=run_name)
-    workflow.base_dir = op.join(config["working_directory"])
+    workflow.base_dir = config["working_directory"]
 
     # set up crash directory
     workflow.config['execution'] = \
@@ -311,10 +311,18 @@ def build_and_run_qap_pipeline(args, run=True):
                     if qap_type in output:
                         out_list.append("_".join(["qap", qap_type]))
 
-            # write_all_outputs (writes everything to the output directory,
-            # not just the final JSON files)
+            filepath_keep = ["anat_reorient", "anat_fav_artifacts_background",
+                             "func_mean", "func_estimated_nuisance",
+                             "func_temporal_std_map", "func_SFS"]
+
             if keep_outputs:
+                # write_all_outputs (writes everything to the output
+                # directory, not just the final JSON files)
                 out_list = resource_pool.keys()
+            else:
+                for resource in filepath_keep:
+                    if resource in resource_pool.keys():
+                        out_list.append(resource)
 
             logger.info("Outputs we're keeping: %s" % str(out_list))
             logger.info('Resource pool keys after workflow connection: {}'.format(str(resource_pool.keys())))
@@ -412,11 +420,9 @@ def build_and_run_qap_pipeline(args, run=True):
     # Remove working directory when done
     if not keep_outputs:
         try:
-            work_dir = op.join(workflow.base_dir, scan_id)
-
-            if op.exists(work_dir):
+            if op.exists(config["working_directory"]):
                 import shutil
-                shutil.rmtree(work_dir)
+                shutil.rmtree(config["working_directory"])
         except:
             logger.warn("Couldn\'t remove the working directory!")
             pass

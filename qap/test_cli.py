@@ -46,7 +46,7 @@ class TestFullPipelines(unittest.TestCase):
         from qap.cli import process_args
         # just making sure it runs on the most basic input
         process_args(self.local_bids, self.outdir, "participant",
-                     working_dir=self.workdir, save_working_dir=True,
+                     working_dir=self.workdir, save_working_dir=False,
                      mni_template=self.anat_template)
 
     @pytest.mark.skip()

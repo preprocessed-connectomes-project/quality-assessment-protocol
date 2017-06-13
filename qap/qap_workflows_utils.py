@@ -494,9 +494,9 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
     info_labels = ["descrip", "db_name", "bitpix", "slice_start",
                    "scl_slope", "scl_inter", "slice_end", "slice_duration",
                    "toffset", "quatern_b", "quatern_c", "quatern_d",
-                   "qoffset_x", "qoffset_y", "qoffset_z", "srow_x", "srow_y",
-                   "srow_z", "aux_file", "intent_name", "slice_code",
-                   "data_type", "qform_code", "sform_code"]
+                   "qoffset_x", "qoffset_y", "qoffset_z", "aux_file",
+                   "intent_name", "slice_code", "data_type", "qform_code",
+                   "srow_x", "srow_y", "srow_z", "sform_code"]
 
     for info_label in info_labels:
         try:
@@ -699,13 +699,16 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
 
     # prospective filepaths
     if session_output_dir:
+
+        qap[id_string]["filepaths"] = {}
+
         anat_file = os.path.join(session_output_dir, run_name, site_name,
                                  subject_id, session_id, "anat",
                                  "_".join([subject_id, session_id, scan_id,
                                            "anat-reorient.nii.gz"]))
 
         if os.path.exists(anat_file):
-            qap[id_string]["scan filepath"] = anat_file
+            qap[id_string]["filepaths"]["scan filepath"] = anat_file
 
         qi_file = os.path.join(session_output_dir, run_name, site_name,
                                subject_id, session_id, "anat",
@@ -713,7 +716,7 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
                                          "anat-fav-artifacts-background"
                                          ".nii.gz"]))
         if os.path.exists(qi_file):
-            qap[id_string]["FAV artifacts background"] = qi_file
+            qap[id_string]["filepaths"]["FAV artifacts background"] = qi_file
 
     return qap
 
@@ -977,25 +980,35 @@ def qap_functional_temporal(
 
     # prospective filepaths
     if session_output_dir:
+
+        qap[id_string]["filepaths"] = {}
+
         func_file = os.path.join(session_output_dir, run_name, site_name,
                                  subject_id, session_id, "func",
                                  "_".join([subject_id, session_id, scan_id,
                                            "func-mean.nii.gz"]))
         if os.path.exists(func_file):
-            qap[id_string]["scan filepath"] = func_file
+            qap[id_string]["filepaths"]["scan filepath"] = func_file
+
+        tstd_file = os.path.join(session_output_dir, run_name, site_name,
+                                 subject_id, session_id, "func",
+                                 "_".join([subject_id, session_id, scan_id,
+                                           "func-temporal-std-map.nii.gz"]))
+        if os.path.exists(tstd_file):
+            qap[id_string]["filepaths"]["temporal STD"] = tstd_file
 
         estn_file = os.path.join(session_output_dir, run_name, site_name,
                                  subject_id, session_id, "func",
                                  "_".join([subject_id, session_id, scan_id,
                                            "func-estimated-nuisance.nii.gz"]))
         if os.path.exists(estn_file):
-            qap[id_string]["estimated nuisance"] = estn_file
+            qap[id_string]["filepaths"]["estimated nuisance"] = estn_file
 
         sfs_file = os.path.join(session_output_dir, run_name, site_name,
                                 subject_id, session_id, "func",
                                 "_".join([subject_id, session_id, scan_id,
                                           "func-SFS.nii.gz"]))
         if os.path.exists(sfs_file):
-            qap[id_string]["SFS filepath"] = sfs_file
+            qap[id_string]["filepaths"]["SFS filepath"] = sfs_file
 
     return qap
