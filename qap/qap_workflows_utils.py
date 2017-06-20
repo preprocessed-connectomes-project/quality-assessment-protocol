@@ -77,14 +77,14 @@ def warp_coordinates(inpoint, allineate_mat, infile_affine, infile_dims):
     # using the transform, calculate what the three coordinates are in
     # native space, as it corresponds to the anatomical scan
     coord_out = \
-        list(np.dot(np.linalg.inv(allineate_mat),inpoint))
+        list(np.dot(np.linalg.inv(allineate_mat), inpoint))
 
     # remove the one resulting zero at the end
     coord_out = coord_out[:-1]
 
     # convert the coordinates from mm to voxels
     coord_out = \
-        nb.affines.apply_affine(npl.inv(infile_affine),coord_out)
+        nb.affines.apply_affine(npl.inv(infile_affine), coord_out)
 
     # make sure converted coordinates are not "out of bounds"
     co_nums_newlist = []

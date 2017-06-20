@@ -245,13 +245,22 @@ def build_and_run_qap_pipeline(args, run=True):
                         resource_pool[resource] = \
                             glob.glob(op.join(output_dir, resource, "*"))[0]
                     except IndexError:
-                        if ".json" in resource:
+                        if (".json" in resource) and (scan_id in resource):
                             # load relevant json info into resource pool
                             json_file = op.join(output_dir, resource)
                             json_dict = read_json(json_file)
-                            sub_json_dict = json_dict["%s %s %s" % (sub_id,
-                                                                    session_id,
-                                                                    scan_id)]
+                            try:
+                                sub_json_dict = \
+                                    json_dict["%s %s %s" % (sub_id,
+                                                            session_id,
+                                                            scan_id)]
+                            except KeyError:
+                                err = "Reading wrong JSON file?" \
+                                      "\n{0}\nResource: {1}" \
+                                      "\nScan: {2}".format(json_file,
+                                                           resource,
+                                                           scan_id)
+                                raise Exception(err)
 
                             if "anatomical_header_info" in sub_json_dict.keys():
                                 resource_pool["anatomical_header_info"] = \
@@ -274,7 +283,8 @@ def build_and_run_qap_pipeline(args, run=True):
             resource_pool["starter"] = (starter_node, 'starter')
 
             # individual workflow and logger setup
-            logger.info("Contents of resource pool for this participant:\n%s" % str(resource_pool))
+            logger.info("Contents of resource pool for this participant:\n%s"
+                        % str(resource_pool))
 
             # start connecting the pipeline
             qw = None
@@ -325,7 +335,8 @@ def build_and_run_qap_pipeline(args, run=True):
                         out_list.append(resource)
 
             logger.info("Outputs we're keeping: %s" % str(out_list))
-            logger.info('Resource pool keys after workflow connection: {}'.format(str(resource_pool.keys())))
+            logger.info('Resource pool keys after workflow connection: '
+                        '{}'.format(str(resource_pool.keys())))
 
             # Save reports to out_dir if necessary
             if config.get('write_report', False):
