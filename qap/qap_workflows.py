@@ -381,13 +381,17 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
     from qap_workflows_utils import create_header_dict_entry
     from qap_utils import write_json
 
+    gather_imports = ['import os',
+                      'import nibabel as nb']
+
     gather_header = pe.Node(niu.Function(
                              input_names=['in_file', 'subject', 'session',
                                           'scan', 'type'],
                              output_names=['qap_dict'],
-                             function=create_header_dict_entry),
-                             name="gather_header_info_%s%s"
-                                  % (data_type, name))
+                             function=create_header_dict_entry,
+                             imports=gather_imports),
+                            name="gather_header_info_%s%s" % (data_type,
+                                                              name))
     gather_header.inputs.subject = config["subject_id"]
     gather_header.inputs.session = config["session_id"]
     gather_header.inputs.scan = config["scan_id"]

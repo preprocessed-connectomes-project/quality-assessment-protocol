@@ -70,10 +70,14 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     anat_deoblique.inputs.in_file = resource_pool["anat_scan"]
     anat_deoblique.inputs.deoblique = True
 
+    workflow.add_nodes([anat_deoblique])
+
     try:
         anat_reorient = pe.Node(interface=preprocess.Resample(),
                                 name='anat_reorient%s' % name)
     except AttributeError:
+        if not afni_utils:
+            from nipype.interfaces.afni import utils as afni_utils
         anat_reorient = pe.Node(interface=afni_utils.Resample(),
                                 name='anat_reorient%s' % name)
 
@@ -373,10 +377,10 @@ def afni_anatomical_linear_registration(workflow, resource_pool,
 
     import copy
     import nipype.pipeline.engine as pe
-    import nipype.interfaces.afni as afni
+    from nipype.interfaces.afni import preprocess
 
-    calc_allineate_warp = pe.Node(interface=afni.Allineate(),
-                                    name='calc_3dAllineate_warp%s' % name)
+    calc_allineate_warp = pe.Node(interface=preprocess.Allineate(),
+                                  name='calc_3dAllineate_warp%s' % name)
     calc_allineate_warp.inputs.outputtype = "NIFTI_GZ"
 
     if in_file == "anat_reorient":
