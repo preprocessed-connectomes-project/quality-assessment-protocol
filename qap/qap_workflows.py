@@ -3,6 +3,7 @@
 # vi: set ft=python sts=4 ts=4 sw=4 et:
 
 
+
 def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to create the QAP anatomical head mask.
 
@@ -100,23 +101,22 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
 
     # let's create a binary mask of the skull image with that threshold
     try:
-        mask_skull = pe.Node(interface=preprocess.Calc(),
-                             name='qap_headmask_mask_skull%s' % name)
-    except AttributeError:
         from nipype.interfaces.afni import utils as afni_utils
         mask_skull = pe.Node(interface=afni_utils.Calc(),
                              name='qap_headmask_mask_skull%s' % name)
+    except ImportError:
+        mask_skull = pe.Node(interface=preprocess.Calc(),
+                             name='qap_headmask_mask_skull%s' % name)
 
     mask_skull.inputs.outputtype = "NIFTI_GZ"
-
     workflow.connect(create_expr_string, 'expr_string', mask_skull, 'expr')
 
     try:
-        dilate_erode = pe.Node(interface=preprocess.MaskTool(),
-                               name='qap_headmask_mask_tool%s' % name)
-    except AttributeError:
         dilate_erode = pe.Node(interface=afni_utils.MaskTool(),
-                               name='qap_headmask_mask_tool%s' % name)
+                                 name='qap_headmask_mask_tool%s' % name)
+    except AttributeError:
+        dilate_erode = pe.Node(interface=preprocess.MaskTool(),
+                                 name='qap_headmask_mask_tool%s' % name)
 
     dilate_erode.inputs.dilate_inputs = "6 -6"
     dilate_erode.inputs.outputtype = "NIFTI_GZ"
@@ -129,10 +129,10 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
         name='qap_headmask_slice_head_mask%s' % name)
 
     try:
-        combine_masks = pe.Node(interface=preprocess.Calc(),
+        combine_masks = pe.Node(interface=afni_utils.Calc(),
                                 name='qap_headmask_combine_masks%s' % name)
     except AttributeError:
-        combine_masks = pe.Node(interface=afni_utils.Calc(),
+        combine_masks = pe.Node(interface=preprocess.Calc(),
                                 name='qap_headmask_combine_masks%s' % name)
 
     combine_masks.inputs.expr = "(a+b)-(a*b)"
@@ -141,10 +141,10 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     # subtract the slice mask from the original head mask to create a
     # skull-only mask for FG calculations
     try:
-        subtract_mask = pe.Node(interface=preprocess.Calc(),
+        subtract_mask = pe.Node(interface=afni_utils.Calc(),
                                 name='qap_headmask_subtract_masks%s' % name)
     except AttributeError:
-        subtract_mask = pe.Node(interface=afni_utils.Calc(),
+        subtract_mask = pe.Node(interface=preprocess.Calc(),
                                 name='qap_headmask_subtract_masks%s' % name)
 
     subtract_mask.inputs.expr = "a-b"
@@ -312,6 +312,9 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
     from qap_workflows_utils import create_header_dict_entry
     from qap_utils import write_json
 
+    header_imports = ["import os", "import nibabel as nb",
+                      "from qap.qap_utils import raise_smart_exception"]
+
     gather_header = pe.Node(niu.Function(
                              input_names=['in_file', 'subject', 'session',
                                           'scan', 'type'],
@@ -319,6 +322,7 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
                              function=create_header_dict_entry),
                              name="gather_header_info_%s%s"
                                   % (data_type, name))
+
     gather_header.inputs.subject = config["subject_id"]
     gather_header.inputs.session = config["session_id"]
     gather_header.inputs.scan = config["scan_id"]
