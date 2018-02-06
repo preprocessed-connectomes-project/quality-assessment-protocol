@@ -42,7 +42,7 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
     :rtype: dict
     :return: A dictionary with information about the report generation.
     """
-
+    print "workflow_report"
     if out_dir is None:
         out_dir = os.getcwd()
 
@@ -169,6 +169,7 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
 
 
 def get_documentation(doc_type, out_file):
+    print "get_documentation"
     import codecs
     from xhtml2pdf import pisa
     # open output file for writing (truncated binary)
@@ -189,6 +190,7 @@ def get_documentation(doc_type, out_file):
 
 
 def summary_cover(data, is_group=False, out_file=None):
+    print "summary_cover"
     import codecs
     from xhtml2pdf import pisa
 
@@ -215,6 +217,7 @@ def concat_pdf(in_files, out_file='concatenated.pdf'):
     """
     Concatenate PDF list (http://stackoverflow.com/a/3444735)
     """
+    print "concat_pdf"
     from PyPDF2 import PdfFileWriter, PdfFileReader
     outpdf = PdfFileWriter()
 
@@ -228,7 +231,7 @@ def concat_pdf(in_files, out_file='concatenated.pdf'):
 
 def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
                   out_file='report.pdf'):
-
+    print "_write_report"
     columns = df.columns.ravel()
     headers = []
     for g in groups:
@@ -249,11 +252,13 @@ def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
         if sc_split:
             for sc in scans:
                 subset = sesdf.loc[sesdf['Series'] == sc]
+                print "subset len: ", len(subset.index)
                 if len(subset.index) > 1:
                     if sub_id is None:
                         subtitle = '(%s_%s)' % (ss, sc)
                     else:
                         subtitle = '(Participant %s_%s_%s)' % (sub_id, ss, sc)
+                    print "sc split condensed: ", condensed
                     if condensed:
                         fig = plot_all(sesdf, groups, subject=sub_id,
                                        title='QC measures ' + subtitle)
@@ -268,11 +273,13 @@ def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
                     report.savefig(fig, dpi=300)
                     fig.clf()
         else:
+            print "len: ", len(sesdf.index)
             if len(sesdf.index) > 1:
                 if sub_id is None:
                     subtitle = '(%s)' % (ss)
                 else:
                     subtitle = '(Participant %s_%s)' % (sub_id, ss)
+                print "condensed: ", condensed
                 if condensed:
                     fig = plot_all(sesdf, groups, subject=sub_id,
                                    title='QC measures ' + subtitle)
@@ -295,7 +302,7 @@ def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
 
 def _write_all_reports(df, groups, sc_split=False, condensed=True,
                        out_file='report.pdf'):
-
+    print "_write_all_reports"
     outlist = []
     _write_report(
         df, groups, sc_split=sc_split, condensed=condensed, out_file=out_file)
@@ -312,6 +319,7 @@ def _write_all_reports(df, groups, sc_split=False, condensed=True,
 
 def all_anatomical(df, sc_split=False, condensed=True,
                    out_file='anatomical.pdf'):
+    print "all_anatomical"
     groups = [['CNR'],
               ['Cortical Contrast'],
               ['EFC'],
@@ -326,6 +334,7 @@ def all_anatomical(df, sc_split=False, condensed=True,
 
 def all_func_temporal(df, sc_split=False, condensed=True,
                       out_file='func_temporal.pdf'):
+    print "all_func_temporal"
     groups = [['Fraction of Outliers (Mean)', 'Fraction of Outliers (Median)',
                'Fraction of Outliers (Std Dev)', 'Fraction of Outliers IQR'],
               ['GCOR'],
@@ -341,6 +350,7 @@ def all_func_temporal(df, sc_split=False, condensed=True,
 
 def all_func_spatial(df, sc_split=False, condensed=False,
                      out_file='func_spatial.pdf'):
+    print "all_func_spatial"
     groups = [['EFC'],
               ['FBER'],
               ['FWHM', 'FWHM_x', 'FWHM_y', 'FWHM_z'],
@@ -354,6 +364,7 @@ def all_func_spatial(df, sc_split=False, condensed=False,
 def qap_anatomical_spatial(
         df, subject=None, sc_split=False, condensed=True,
         out_file='anatomical.pdf'):
+    print "qap_anatomical_spatial"
     groups = [['CNR'],
               ['Cortical Contrast'],
               ['EFC'],
@@ -369,6 +380,7 @@ def qap_anatomical_spatial(
 def qap_functional_temporal(
         df, subject=None, sc_split=False, condensed=True,
         out_file='func_temporal.pdf'):
+    print "qap_functional_temporal"
     groups = [['Fraction of Outliers (Mean)', 'Fraction of Outliers (Median)',
                'Fraction of Outliers (Std Dev)', 'Fraction of Outliers IQR'],
               ['GCOR'],
@@ -385,6 +397,7 @@ def qap_functional_temporal(
 def qap_functional_spatial(
         df, subject=None, sc_split=False, condensed=True,
         out_file='func_spatial.pdf'):
+    print "qap_functional_spatial"
     groups = [['EFC'],
               ['FBER'],
               ['FWHM', 'FWHM_x', 'FWHM_y', 'FWHM_z'],

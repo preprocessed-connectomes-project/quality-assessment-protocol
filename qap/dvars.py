@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def remove_zero_variance_voxels(func_timeseries, mask):
+def create_zero_variance_mask(func_timeseries, mask):
     """Modify a head mask to exclude timeseries voxels which have zero 
     variance.
 
@@ -42,8 +42,9 @@ def load(func_file, mask_file, check4d=True):
              variance excluded.
     """
 
+    import numpy as np
     import nibabel as nib
-    from qap_utils import raise_smart_exception
+    from qap.qap_utils import raise_smart_exception
 
     try:
         func_img = nib.load(func_file)
@@ -58,11 +59,53 @@ def load(func_file, mask_file, check4d=True):
         err = "Input functional %s should be 4-dimensional" % func_file
         raise_smart_exception(locals(),err)
 
-    mask_var_filtered = remove_zero_variance_voxels(func, mask)
+    mask_var_filtered = create_zero_variance_mask(func, mask)
 
     func = func[mask_var_filtered.nonzero()].T # will have ntpts x nvoxs
     
     return func
+
+
+def load_timeseries(func_file, mask_file, check4d=True):
+    """Load the functional timeseries data from a NIFTI file into Nibabel data
+    format, check/validate the data, and remove voxels with zero variance.
+
+    :type func_file: str
+    :param func_file: Filepath to the NIFTI file containing the 4D functional
+                      timeseries.
+    :type mask_file: str
+    :param mask_file: Filepath to the NIFTI file containing the binary
+                      functional brain mask.
+    :type check4d: bool
+    :param check4d: (default: True) Check the timeseries data to ensure it is
+                    four dimensional.
+    :rtype: Nibabel data
+    :return: The validated functional timeseries data with voxels of zero
+             variance excluded.
+    """
+
+    import numpy as np
+    import nibabel as nb
+    from qap.qap_utils import get_masked_data, raise_smart_exception
+
+    try:
+        func_img = nb.load(func_file)
+        mask_img = nb.load(mask_file)
+    except:
+        raise_smart_exception(locals())
+
+    mask = mask_img.get_data()
+    func = func_img.get_data().astype(np.float)
+
+    if check4d and len(func.shape) != 4:
+        err = "Input functional %s should be 4-dimensional" % func_file
+        raise_smart_exception(locals(), err)
+
+    mask_var_filtered = create_zero_variance_mask(func, mask)
+
+    func_masked = get_masked_data(func, mask_var_filtered)
+
+    return func, func_masked
 
 
 def robust_stdev(func):
@@ -74,8 +117,10 @@ def robust_stdev(func):
     :return: The standard deviation value.
     """
 
-    lower_qs = np.percentile(func, 25, axis=0)
-    upper_qs = np.percentile(func, 75, axis=0)
+    import numpy as np
+
+    lower_qs = np.percentile(func, 25, axis=3)
+    upper_qs = np.percentile(func, 75, axis=3)
     stdev = (upper_qs - lower_qs)/1.349
     return stdev
 
@@ -111,7 +156,7 @@ def ar_nitime(x, order=1, center=False):
     return ak[0]
 
 
-def ar1(func, method=ar_nitime):
+def calc_ar1(func, method=ar_nitime):
     """Apply the 'ar_nitime' function across the centered functional 
     timeseries.
 
@@ -122,9 +167,20 @@ def ar1(func, method=ar_nitime):
     :rtype: NumPy array
     :return: The vector of AR1 values.
     """
-    func_centered = func - func.mean(0)
-    ar_vals = np.apply_along_axis(method, 0, func_centered)
-    return ar_vals
+
+    import numpy as np
+
+    ar1 = np.zeros(func.shape[0:3])
+
+    for x in range(0, len(func)):
+        for y in range(0, len(func[x])):
+            for z in range(0, len(func[x][y])):
+                try:
+                    ar1[x][y][z] = method(func[x][y][z], center=True)
+                except:
+                    continue
+
+    return ar1
 
 
 def calc_dvars(func_file, mask_file, output_all=False):
@@ -144,42 +200,62 @@ def calc_dvars(func_file, mask_file, output_all=False):
     :return: The output DVARS values vector.
     """
 
-    from qap_utils import raise_smart_exception
+    import numpy as np
+    from qap.qap_utils import get_masked_data, read_nifti_image, \
+        raise_smart_exception
 
     # load data
-    func = load(func_file, mask_file)
+    # func is shape (x, y, z, t)
+    # func_masked is shape (t, all voxels flattened)
+    func, func_masked = load_timeseries(func_file, mask_file)
+
+    # get binary mask of functional brain
+    binary_mask_data = read_nifti_image(mask_file).get_data()
 
     # Robust standard deviation
     func_sd = robust_stdev(func)
     
     # AR1
-    func_ar1 = ar1(func)
+    func_ar1 = calc_ar1(func)
 
     # Predicted standard deviation of temporal derivative
     func_sd_pd = np.sqrt(2 * (1 - func_ar1)) * func_sd
-    diff_sd_mean= func_sd_pd.mean()
 
-    # Compute temporal difference time series 
-    func_deriv = np.diff(func, axis=0)
+    # Compute temporal difference squared time series
+    func_deriv = np.diff(func, axis=3)
+    func_deriv_sq = func_deriv**2
 
-    # DVARS
-    # (no standardization)
-    dvars_plain = func_deriv.std(1, ddof=1) # TODO: Why are we not ^2 this & getting the sqrt?
-    # standardization
-    dvars_stdz  = dvars_plain/diff_sd_mean
-    # voxelwise standardization
-    diff_vx_stdz = func_deriv/func_sd_pd
-    dvars_vx_stdz = diff_vx_stdz.std(1, ddof=1)
-    
+    # Flip func_deriv_sq from (x, y, z, t) to (t, x, y, z)
+    flipped_deriv = []
+    for x in range(0, len(func_deriv_sq.T)):
+        flipped_deriv.append(func_deriv_sq.T[x].T)
+    flipped_deriv = np.asarray(flipped_deriv)
+
+    # in (t, x, y, z), find the mean of nonzero voxels for all (x, y, z)
+    # voxels within each "t" (each volume)
+    diff_var = []
+    for ts in flipped_deriv:
+        diff_var.append(ts[ts.nonzero()].mean())
+    diff_var = np.asarray(diff_var)
+
+    diff_sd = get_masked_data(func_sd_pd, binary_mask_data)
+    diff_sd_mean = diff_sd[diff_sd.nonzero()].mean()
+
+    # calculate standardized DVARS
+    dvars_stdz = np.sqrt(diff_var)/diff_sd_mean
+
     if output_all:
+        # voxelwise standardization
+        diff_vx_stdz = func_deriv / func_sd_pd
+        dvars_vx_stdz = diff_vx_stdz.std(1, ddof=1)
         try:
-            out = np.vstack((dvars_stdz, dvars_plain, dvars_vx_stdz))
-        except:
-            raise_smart_exception(locals())
+            out = np.vstack((dvars_stdz, diff_var, dvars_vx_stdz))
+        except Exception as e:
+            raise_smart_exception(locals(), e)
     else:
         try:
             out = dvars_stdz.reshape(len(dvars_stdz), 1)
-        except:
-            raise_smart_exception(locals())
+        except Exception as e:
+            raise_smart_exception(locals(), e)
     
     return out

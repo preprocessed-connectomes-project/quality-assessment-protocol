@@ -71,7 +71,7 @@ def read_json(json_filename):
     if not os.path.exists(json_filename):
         err = "\n\n[!] The JSON file provided does not exist.\nFilepath: " \
               "%s\n\n" % json_filename
-        raise_smart_exception(locals(),err)
+        raise_smart_exception(locals(), err)
 
     with open(json_filename, "r") as f:
         json_dict = json.load(f)
@@ -92,8 +92,6 @@ def write_json(output_dict, json_file):
 
     import os
     import json
-    #from lockfile import FileLock
-
     from qap.qap_utils import read_json
 
     write = True
@@ -109,21 +107,20 @@ def write_json(output_dict, json_file):
                     current_dict[key].update(output_dict[key])
                 except KeyError:
                     current_dict[key] = output_dict[key]
+                except AttributeError:
+                    current_dict[key] = output_dict[key]
     else:
         current_dict = output_dict
 
     if write:
-        #lock = FileLock(json_file)
-        #lock.acquire()
         with open(json_file, "wt") as f:
             json.dump(current_dict, f, indent=2, sort_keys=True)
-        #lock.release()
 
     if os.path.exists(json_file):
         return json_file
 
 
-def load_image(image_file):
+def load_image(image_file, return_affine=False):
     """Load a raw scan image from a NIFTI file and check it.
 
     :type image_file: str
@@ -163,7 +160,10 @@ def load_image(image_file):
         msg = "Error: Unknown datatype %s" % dat.dtype
         raise_smart_exception(locals(),msg)
 
-    return dat
+    if return_affine:
+        return dat, img.affine, img.header
+    else:
+        return dat
 
 
 def load_mask(mask_file, ref_file):
@@ -213,7 +213,7 @@ def load_mask(mask_file, ref_file):
     return mask_dat
 
 
-def get_masked_data(data, mask, files=False):
+def get_masked_data(data, mask):
     """Extract data from a NIFTI file and apply a mask to it.
 
     :type data: NumPy array or str
@@ -228,15 +228,23 @@ def get_masked_data(data, mask, files=False):
     """
 
     import numpy as np
+    import nibabel as nb
 
-    if files:
-        import nibabel as nb
+    if isinstance(data, basestring):
         img = nb.load(data)
         data = img.get_data()
+    if isinstance(mask, basestring):
         mask_img = nb.load(mask)
         mask = mask_img.get_data()
 
-    masked_data = np.asarray([volume * mask.T for volume in data.T]).T
+    data = np.asarray(data, dtype=float)
+    mask = np.asarray(mask, dtype=float)
+
+    if len(data.shape) > 3:
+        # if timeseries
+        masked_data = np.asarray([volume * mask.T for volume in data.T]).T
+    else:
+        masked_data = np.asarray(data * mask)
 
     return masked_data
 

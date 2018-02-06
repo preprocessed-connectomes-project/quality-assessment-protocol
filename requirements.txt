@@ -34,3 +34,4 @@ six>=1.10.0
 traits>=4.5.0
 wsgiref>=0.1.2
 xhtml2pdf>=0.1a4
+yaml

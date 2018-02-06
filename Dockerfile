@@ -20,7 +20,9 @@ RUN wget http://repo.continuum.io/miniconda/Miniconda-3.8.3-Linux-x86_64.sh && \
 
 # install python requirements
 RUN conda install -y pip scipy
-RUN pip install nipype nibabel nitime pyyaml pandas seaborn pyPdf2 xhtml2pdf indi-tools
+
+RUN pip install nipype==0.12.1 nibabel nitime pyyaml pandas seaborn pyPdf2 xhtml2pdf indi-tools configparser
+
 
 RUN wget http://afni.nimh.nih.gov/pub/dist/tgz/linux_openmp_64.tgz && \
     tar xzvf linux_openmp_64.tgz && mkdir -p /opt/afni && \
