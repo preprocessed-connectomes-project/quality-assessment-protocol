@@ -52,8 +52,9 @@ def main():
         sub_dict = parse_raw_data_list(filepath_list, data_dir,
                                        inclusion_list=inclusion_list)
     else:
-        from qap.bids_utils import bids_gen_qap_sublist
-        sub_dict = bids_gen_qap_sublist(data_dir, filepath_list)
+        from qap.bids_utils import bids_generate_qap_data_configuration
+        sub_dict = bids_generate_qap_data_configuration(data_dir,
+                                                        filepath_list)
 
     write_inputs_dict_to_yaml_file(sub_dict, args.outfile_path)
 

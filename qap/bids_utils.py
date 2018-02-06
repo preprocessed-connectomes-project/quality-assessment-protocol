@@ -398,7 +398,8 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
     return data_configuration
 
 
-def collect_bids_files_configs(bids_dir, aws_input_credentials=None):
+def collect_bids_files_configs(bids_dir, aws_input_credentials=None,
+                               raise_error=True):
     """
 
     :param bids_dir:
@@ -447,7 +448,6 @@ def collect_bids_files_configs(bids_dir, aws_input_credentials=None):
                     else:
                         raw_file_paths.append(file_path)
 
-
     else:
         for root, dirs, files in os.walk(bids_dir, topdown=False):
             if files:
@@ -471,8 +471,11 @@ def collect_bids_files_configs(bids_dir, aws_input_credentials=None):
                         # don't know what other files are, so just drop then
 
     if not raw_file_paths and not parameter_dict and not derivative_file_paths:
-        raise IOError("Didn't find any files in {}. Please verify that the path is typed correctly, that you have read "
-                      "access to the directory, and that it is not empty.".format(bids_dir))
+        if raise_error:
+            raise IOError("Didn't find any files in {}. Please verify that "
+                          "the path is typed correctly, that you have read "
+                          "access to the directory, and that it is not "
+                          "empty.".format(bids_dir))
 
     return raw_file_paths, derivative_file_paths, parameter_dict
 
