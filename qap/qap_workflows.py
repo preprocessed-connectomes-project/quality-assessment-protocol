@@ -4,6 +4,7 @@
 
 import os.path as op
 
+
 def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to create the QAP anatomical head mask.
 
@@ -100,15 +101,25 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
                          create_expr_string, 'clip_level_value')
 
     # let's create a binary mask of the skull image with that threshold
-    mask_skull = pe.Node(interface=preprocess.Calc(),
-                         name='qap_headmask_mask_skull%s' % name)
+    try:
+        from nipype.interfaces.afni import utils as afni_utils
+        mask_skull = pe.Node(interface=afni_utils.Calc(),
+                                 name='qap_headmask_mask_skull%s' % name)
+    except ImportError:
+        mask_skull = pe.Node(interface=preprocess.Calc(),
+                                 name='qap_headmask_mask_skull%s' % name)
+
     mask_skull.inputs.outputtype = "NIFTI_GZ"
 
     workflow.connect(create_expr_string, 'expr_string', mask_skull, 'expr')
 
-
-    dilate_erode = pe.Node(interface=preprocess.MaskTool(),
-                           name='qap_headmask_mask_tool%s' % name)
+    try:
+        from nipype.interfaces.afni import utils as afni_utils
+        dilate_erode = pe.Node(interface=afni_utils.MaskTool(),
+                                 name='qap_headmask_mask_tool%s' % name)
+    except ImportError:
+        dilate_erode = pe.Node(interface=preprocess.MaskTool(),
+                                 name='qap_headmask_mask_tool%s' % name)
 
     dilate_erode.inputs.dilate_inputs = "6 -6"
     dilate_erode.inputs.outputtype = "NIFTI_GZ"
@@ -120,16 +131,26 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
         output_names=['outfile_path'], function=slice_head_mask),
         name='qap_headmask_slice_head_mask%s' % name)
 
-    combine_masks = pe.Node(interface=preprocess.Calc(),
-                            name='qap_headmask_combine_masks%s' % name)
+    try:
+        from nipype.interfaces.afni import utils as afni_utils
+        combine_masks = pe.Node(interface=afni_utils.Calc(),
+                                name='qap_headmask_combine_masks%s' % name)
+    except ImportError:
+        combine_masks = pe.Node(interface=preprocess.Calc(),
+                                name='qap_headmask_combine_masks%s' % name)
 
     combine_masks.inputs.expr = "(a+b)-(a*b)"
     combine_masks.inputs.outputtype = "NIFTI_GZ"
 
     # subtract the slice mask from the original head mask to create a
     # skull-only mask for FG calculations
-    subtract_mask = pe.Node(interface=preprocess.Calc(),
-                            name='qap_headmask_subtract_masks%s' % name)
+    try:
+        from nipype.interfaces.afni import utils as afni_utils
+        subtract_mask = pe.Node(interface=afni_utils.Calc(),
+                                name='qap_headmask_subtract_masks%s' % name)
+    except ImportError:
+        subtract_mask = pe.Node(interface=preprocess.Calc(),
+                                name='qap_headmask_subtract_masks%s' % name)
 
     subtract_mask.inputs.expr = "a-b"
     subtract_mask.inputs.outputtype = "NIFTI_GZ"
@@ -295,12 +316,16 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
     from qap_workflows_utils import create_header_dict_entry
     from qap_utils import write_json
 
+    header_imports = ["import os", "import nibabel as nb",
+                      "from qap.qap_utils import raise_smart_exception"]
+
     gather_header = pe.Node(niu.Function(
                              input_names=['in_file', 'subject', 'session',
                                           'scan', 'type'],
                              output_names=['qap_dict'],
                              function=create_header_dict_entry),
-                             name="gather_header_info%s" % name)
+                             name="gather_header_info%s" % name,
+                             imports=header_imports)
     gather_header.inputs.subject = config["subject_id"]
     gather_header.inputs.session = config["session_id"]
     gather_header.inputs.scan = config["scan_id"]

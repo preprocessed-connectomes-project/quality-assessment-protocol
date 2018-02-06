@@ -55,14 +55,24 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     if "anatomical_scan" not in resource_pool.keys():
         return workflow, resource_pool
 
-    anat_deoblique = pe.Node(interface=preprocess.Refit(),
-                                name='anat_deoblique%s' % name)
+    try:
+        from nipype.interfaces.afni import utils as afni_utils
+        anat_deoblique = pe.Node(interface=afni_utils.Refit(),
+                                 name='anat_deoblique%s' % name)
+    except ImportError:
+        anat_deoblique = pe.Node(interface=preprocess.Refit(),
+                                 name='anat_deoblique%s' % name)
 
     anat_deoblique.inputs.in_file = resource_pool["anatomical_scan"]
     anat_deoblique.inputs.deoblique = True
 
-    anat_reorient = pe.Node(interface=preprocess.Resample(),
-                            name='anat_reorient%s' % name)
+    try:
+        from nipype.interfaces.afni import utils as afni_utils
+        anat_reorient = pe.Node(interface=afni_utils.Resample(),
+                                 name='anat_reorient%s' % name)
+    except ImportError:
+        anat_reorient = pe.Node(interface=preprocess.Resample(),
+                                 name='anat_reorient%s' % name)
 
     anat_reorient.inputs.orientation = 'RPI'
     anat_reorient.inputs.outputtype = 'NIFTI_GZ'
@@ -200,8 +210,14 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
                               name='anat_skullstrip%s' % name)
     anat_skullstrip.inputs.outputtype = 'NIFTI_GZ'
 
-    anat_skullstrip_orig_vol = pe.Node(interface=preprocess.Calc(),
-                                       name='anat_skullstrip_orig_vol%s' % name)
+    try:
+        from nipype.interfaces.afni import utils as afni_utils
+        anat_skullstrip_orig_vol = pe.Node(interface=afni_utils.Calc(),
+                                 name='anat_skullstrip_orig_vol%s' % name)
+    except ImportError:
+        anat_skullstrip_orig_vol = pe.Node(interface=preprocess.Calc(),
+                                 name='anat_skullstrip_orig_vol%s' % name)
+
     anat_skullstrip_orig_vol.inputs.expr = 'a*step(b)'
     anat_skullstrip_orig_vol.inputs.outputtype = 'NIFTI_GZ'
 
@@ -509,7 +525,6 @@ def run_afni_anatomical_linear_registration(input_image, reference_image,
         return workflow, workflow.base_dir
 
 
-
 def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
     """Build a Nipype workflow to generate anatomical tissue segmentation maps
     using AFNI's 3dSeg.
@@ -583,8 +598,13 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
         segment.inputs.in_file = resource_pool["anatomical_brain"]
 
     # output processing
-    AFNItoNIFTI = pe.Node(interface=preprocess.AFNItoNIFTI(),
-                          name="segment_AFNItoNIFTI%s" % name)
+    try:
+        from nipype.interfaces.afni import utils as afni_utils
+        AFNItoNIFTI = pe.Node(interface=afni_utils.AFNItoNIFTI(),
+                              name='segment_AFNItoNIFTI%s' % name)
+    except ImportError:
+        AFNItoNIFTI = pe.Node(interface=preprocess.AFNItoNIFTI(),
+                              name='segment_AFNItoNIFTI%s' % name)
 
     AFNItoNIFTI.inputs.out_file = "classes.nii.gz"
 
@@ -592,18 +612,36 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
 
     # break out each of the three tissue types into
     # three separate NIFTI files
-    extract_CSF = pe.Node(interface=preprocess.Calc(),
-                          name='extract_CSF_mask%s' % name)
+    try:
+        from nipype.interfaces.afni import utils as afni_utils
+        extract_CSF = pe.Node(interface=afni_utils.Calc(),
+                              name='extract_CSF_mask%s' % name)
+    except ImportError:
+        extract_CSF = pe.Node(interface=preprocess.Calc(),
+                              name='extract_CSF_mask%s' % name)
+
     extract_CSF.inputs.expr = "within(a,1,1)"
     extract_CSF.inputs.out_file = "anatomical_csf_mask.nii.gz"
 
-    extract_GM = pe.Node(interface=preprocess.Calc(),
-                          name='extract_GM_mask%s' % name)
+    try:
+        from nipype.interfaces.afni import utils as afni_utils
+        extract_GM = pe.Node(interface=afni_utils.Calc(),
+                                name='extract_GM_mask%s' % name)
+    except ImportError:
+        extract_GM = pe.Node(interface=preprocess.Calc(),
+                                name='extract_GM_mask%s' % name)
+
     extract_GM.inputs.expr = "within(a,2,2)"
     extract_GM.inputs.out_file = "anatomical_gm_mask.nii.gz"
 
-    extract_WM = pe.Node(interface=preprocess.Calc(),
-                          name='extract_WM_mask%s' % name)
+    try:
+        from nipype.interfaces.afni import utils as afni_utils
+        extract_WM = pe.Node(interface=afni_utils.Calc(),
+                                name='extract_WM_mask%s' % name)
+    except ImportError:
+        extract_WM = pe.Node(interface=preprocess.Calc(),
+                                name='extract_WM_mask%s' % name)
+
     extract_WM.inputs.expr = "within(a,3,3)"
     extract_WM.inputs.out_file = "anatomical_wm_mask.nii.gz"
 

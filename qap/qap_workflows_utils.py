@@ -253,25 +253,21 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
              the participant's ID data.
     """
 
-    import os
-    import nibabel as nb
-    from qap.qap_utils import raise_smart_exception
-
     if not os.path.isfile(in_file):
-        err = "Filepath doesn't exist!\nFilepath: %s" % in_file
-        raise_smart_exception(locals(),err)
+        err = "Filepath doesn't exist!\nFilepath: {0}".format(in_file)
+        raise_smart_exception(locals(), err)
 
     try:
         img = nb.load(in_file)
         img_header = img.header
     except:
         err = "You may not have an up-to-date installation of the Python " \
-              "Nibabel package.\nYour Nibabel version: %s" % \
-              str(nb.__version__)
-        raise_smart_exception(locals(),err)
+              "Nibabel package.\nYour Nibabel version: " \
+              "{0}".format(str(nb.__version__))
+        raise_smart_exception(locals(), err)
 
-    subkey = "%s_header_info" % type
-    id_string = "%s %s %s" % (subject, session, scan)
+    subkey = "{0}_header_info".format(type)
+    id_string = "{0} {1} {2}".format(subject, session, scan)
     qap_dict = {id_string: {subkey: {}}}
 
     info_labels = ["descrip", "db_name", "bitpix", "slice_start",
@@ -286,8 +282,8 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
             qap_dict[id_string][subkey][info_label] = \
                 str(img_header[info_label])
         except:
-            print "\n\n%s field not in NIFTI header of %s\n\n" % \
-                  (info_label, in_file)
+            print "\n\n{0} field not in NIFTI header of {1}" \
+                  "\n\n".format(info_label, in_file)
             qap_dict[id_string][subkey][info_label] = ""
             pass
 
@@ -298,14 +294,16 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
         qap_dict[id_string][subkey]["pix_dimz"] = str(pixdim[3])
         qap_dict[id_string][subkey]["tr"] = str(pixdim[4])
     except:
-        print "\n\npix_dim/TR fields not in NIFTI header of %s\n\n" % in_file
+        print "\n\npix_dim/TR fields not in NIFTI header of {0}" \
+              "\n\n".format(in_file)
         pass
 
     try:
         qap_dict[id_string][subkey]["extensions"] = \
             len(img.header.extensions.get_codes())
     except:
-        print "\n\nExtensions not in NIFTI header of %s\n\n" % in_file
+        print "\n\nExtensions not in NIFTI header of {0}" \
+              "\n\n".format(in_file)
         pass
 
     return qap_dict
