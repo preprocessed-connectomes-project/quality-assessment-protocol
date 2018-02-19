@@ -196,11 +196,11 @@ def bids_parse_sidecar(bids_dict, dbg=False):
         print(bids_parameters_dict)
 
     # get the paths to the json yaml files in config_dict, the paths contain
-    # the information needed to map the parameters from the json files (the values
-    # of the config_dict) to corresponding nifti files. We sort the list
-    # by the number of path components, so that we can iterate from the outer
-    # most path to inner-most, which will help us address the BIDS inheritance
-    # principle
+    # the information needed to map the parameters from the json files (the
+    # values of the config_dict) to corresponding nifti files. We sort the
+    # list by the number of path components, so that we can iterate from the
+    # outer most path to inner-most, which will help us address the BIDS
+    # inheritance principle
     parameter_file_path_list = sorted(bids_dict.keys(), key=lambda p: len(p.split('/')))
 
     if dbg:
@@ -302,6 +302,10 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
     data_configuration = {}
 
     for file_path in paths_list:
+
+        # add the BIDS dir (first half) of path
+        file_path = os.path.join(bids_dir, file_path)
+
         file_path = file_path.rstrip()
         file_name = os.path.basename(file_path)
 
@@ -314,7 +318,8 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
                 file_bids_dict["ses"] = "1"
 
             if "sub" not in file_bids_dict:
-                raise IOError('"sub" not found in {}, perhaps it is not in BIDS format?'.format(file_path))
+                raise IOError('"sub" not found in {}, perhaps it is not '
+                              'in BIDS format?'.format(file_path))
 
             # 2. construct site, participant, and session keys
             participant = "-".join(["sub", file_bids_dict["sub"]])
@@ -372,11 +377,13 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
             # 5. create a temp resource pool with the info for this file
             resource_dict = {resource_name: file_path}
 
-            # if not a derivative, populate the resource pool with information from bids sidecar files, if they exist
+            # if not a derivative, populate the resource pool with information
+            # from bids sidecar files, if they exist
             if "derivative" not in file_bids_dict and bids_configuration_dictionary:
                 file_params = bids_retrieve_parameters(bids_configuration_dictionary, file_bids_dict)
                 if not file_params:
-                    print("Did not receive any parameters for {0}, is this a problem?".format(file_path))
+                    print("Did not receive any parameters for {0}, is "
+                          "this a problem?".format(file_path))
                 else:
                     resource_dict.update(file_params)
 

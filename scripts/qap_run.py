@@ -7,7 +7,7 @@ import argparse
 from qap import bids_utils
 from qap import qap_cfg
 
-# from qap_pipeline import build_and_run_qap_pipeline
+from qap.qap_pipeline import build_and_run_qap_pipeline
 
 # from nipype import config
 # log_dir=os.path.join("tmp","nipype","logs")
@@ -90,25 +90,25 @@ def run_qap(pipeline_configuration, data_bundles, bundle_index=''):
     """
 
     import os
-    from qap.qap_workflows_utils import write_json
-    from cloud_utils import download_single_s3_path, copy_directory_to_s3
+    from qap.qap_utils import write_json
+    from qap.cloud_utils import download_single_s3_path, copy_directory_to_s3
 
     # first deal with logging, if the plan is to write the log files to S3, we
     # first write them locally to the working directory and then move them to
     # S3
     s3_log_path = ''
-    if "s3://" in pipeline_configuration["workflow_log_dir"]:
-        s3_log_path = pipeline_configuration["workflow_log_dir"]
-        pipeline_configuration["workflow_log_dir"] = os.path.join(pipeline_configuration["working_directory"], "logs")
+    if "s3://" in pipeline_configuration["log_directory"]:
+        s3_log_path = pipeline_configuration["log_directory"]
+        pipeline_configuration["log_directory"] = os.path.join(pipeline_configuration["working_directory"], "logs")
 
-    if not os.path.isdir(pipeline_configuration["workflow_log_dir"]):
-        os.makedirs(pipeline_configuration["workflow_log_dir"])
+    if not os.path.isdir(pipeline_configuration["log_directory"]):
+        os.makedirs(pipeline_configuration["log_directory"])
 
     # set up callback logging
     import logging
     from nipype.pipeline.plugins.callback_log import log_nodes_cb
 
-    callback_log_filename = os.path.join(pipeline_configuration["workflow_log_dir"], "callback.log")
+    callback_log_filename = os.path.join(pipeline_configuration["log_directory"], "callback.log")
 
     # Add handler to callback log file
     callback_logger = logging.getLogger('callback')
@@ -117,7 +117,7 @@ def run_qap(pipeline_configuration, data_bundles, bundle_index=''):
     callback_logger.addHandler(handler)
 
     plugin_execution_arguments = {'plugin': 'MultiProc',
-                                  'plugin_args': {'memory_gb': pipeline_configuration['memory'],
+                                  'plugin_args': {'memory_gb': pipeline_configuration['available_memory'],
                                                   'n_procs': pipeline_configuration['num_processors'],
                                                   'status_callback': log_nodes_cb}}
 
@@ -144,17 +144,16 @@ def run_qap(pipeline_configuration, data_bundles, bundle_index=''):
 
         # if input values are in s3, go get 'em
         for tranche_key, tranche_dict in bundle_dict.iteritems():
-            for scan_key, scan_dict in tranche_dict.iteritems():
-                for resource_key, resource_path in scan_dict.iteritems():
-                    if "s3://" in resource_path.lower():
-                        bundle_dict[tranche_key][scan_key][resource_key] = \
-                            download_single_s3_path(resource_path,
-                                                    pipeline_configuration)
+            #for scan_key, scan_dict in tranche_dict.iteritems():
+            for resource_key, resource_path in tranche_dict.iteritems(): #scan_dict.iteritems():
+                if "s3://" in resource_path.lower():
+                    bundle_dict[tranche_key][resource_key] = \
+                        download_single_s3_path(resource_path,
+                                                pipeline_configuration)
 
         qap_pipeline_arguments = (bundle_dict, bundle_dict.keys(),
                                   pipeline_configuration, "qap_run",
-                                  plugin_execution_arguments, bundle_index,
-                                  num_bundles)
+                                  bundle_index, num_bundles)
 
         pipeline_execution_output = build_and_run_qap_pipeline(qap_pipeline_arguments)
 
@@ -164,7 +163,7 @@ def run_qap(pipeline_configuration, data_bundles, bundle_index=''):
 
         if s3_log_path:
 
-            s3_path = pipeline_execution_output["bundle_log_dir"].replace(pipeline_configuration["workflow_log_dir"],
+            s3_path = pipeline_execution_output["bundle_log_dir"].replace(pipeline_configuration["log_directory"],
                                                                           s3_log_path)
 
             print("Copying log files from {0} to {1}".format(pipeline_execution_output["bundle_log_dir"], s3_path))
