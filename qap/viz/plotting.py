@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft=python sts=4 ts=4 sw=4 et:
+
 import math
 import os.path as op
 import numpy as np
@@ -61,6 +62,7 @@ def calculate_gray_plot(func_file, mask_file):
 
 
     return reordered_func, reordered_clusters, cluster_gs, out_clusters
+
 
 def plot_measures(df, measures, ncols=4, title='Group level report',
                   subject=None, figsize=(8.27, 11.69)):

@@ -204,7 +204,7 @@ def main():
 
     in_data_config_group.add_argument('bids_dir', type=str,
                                       help='The directory with the input dataset formatted according to the BIDS'
-                                           ' standard. Use the format s3://bucket/path/to/bidsdir to read data'
+                                           ' standard. Use the format s3://bucket_name/path/to/bidsdir to read data'
                                            ' directly from an S3 bucket. This may require AWS S3 credentials'
                                            ' to be specified using the --aws_input_credentials option.',
                                       default=None)
@@ -215,7 +215,7 @@ def main():
                                            'Incorporates the keywords {site}, {participant}, {session} and {run}. Of '
                                            'these only {participant} is required. For example: '
                                            '/data/{site}/{participant}/{session}/anat/anat_{run}.nii.gz. Similar to '
-                                           '--bids_dir, to specify cloud data prepend s3:\\\\<bucket_name>\ to '
+                                           '--bids_dir, to specify cloud data prepend s3://<bucket_name>/ to '
                                            'the path',
                                       default=None)
 
@@ -225,7 +225,7 @@ def main():
                                            'Incorporates the keywords {site}, {participant}, {session} and {run}. Of '
                                            'these only {participant} is required. For example: '
                                            '/data/{site}/{participant}/{session}/rest/rest_{run}.nii.gz.'
-                                           'Similar to --bids_dir, to specify cloud data prepend s3:\\\\<bucket_name>\ '
+                                           'Similar to --bids_dir, to specify cloud data prepend s3://<bucket_name>/ '
                                            'to the path',
                                       default=None)
 
@@ -239,7 +239,7 @@ def main():
     pipeline_config_group.add_argument('--pipeline_config_file', type=str,
                                        help='Path to YAML file specifying QAP configuration (i.e. the arguments '
                                             'to this command). Command line arguments will overload file values. To '
-                                            'specify a file in s3, prepend s3:\\\\<bucket_name>\ to the path.',
+                                            'specify a file in s3, prepend s3://<bucket_name>/ to the path.',
                                        default=None)
 
     pipeline_config_group.add_argument('--working_dir', type=str,
@@ -436,10 +436,12 @@ def main():
         # environment variable to see if we can find the default AFNI template
         # MNI_avg152T1
         pipeline_configuration['anatomical_template'] = ''
+
         for path in os.environ['PATH'].split(':'):
             if os.path.isfile(os.path.join(path, 'MNI_avg152T1+tlrc.HEAD')):
                 pipeline_configuration['anatomical_template'] = os.path.join(path, 'MNI_avg152T1+tlrc')
                 break
+                
         if not pipeline_configuration['anatomical_template']:
             raise ValueError('No MNI template specified and could not '
                              'find MNI_avg152T1+tlrc on the system PATH.')
@@ -520,6 +522,7 @@ def main():
               "{1} respectively.".format(pipeline_configuration_filename,
                                          data_configuration_filename))
         sys.exit(0)
+
     elif "participant" in args.analysis_level:
         print("Configuration has been tested and appears to be OK. Executing "
               "pipeline with pipeline configuration {0} and data "

@@ -1,6 +1,3 @@
-base_test_dir = "/tdata/QAP/qc_test"
-
-
 def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     """Build a Nipype workflow to deoblique and reorient an anatomical scan
     from a NIFTI file.
@@ -55,7 +52,7 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     if "anatomical_scan" not in resource_pool.keys():
         return workflow, resource_pool
     elif "s3://" in resource_pool["anatomical_scan"]:
-        from qap.cloud_utils import download_single_s3_path
+        from .cloud_utils import download_single_s3_path
         resource_pool["anatomical_scan"] = \
             download_single_s3_path(resource_pool["anatomical_scan"], config)
 

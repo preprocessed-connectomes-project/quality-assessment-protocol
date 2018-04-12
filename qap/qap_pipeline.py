@@ -132,23 +132,15 @@ def build_and_run_qap_pipeline(args, run=True):
 
         resource_pool = resource_pool_dict[sub_info]
 
-        # for scan in partic_resource_pool.keys():
-        #
-        #     resource_pool = partic_resource_pool[scan]
-
         # resource pool check
         invalid_paths = []
 
         for resource in resource_pool.keys():
-            try:
-                if not op.isfile(resource_pool[resource]) and \
-                                resource != "site_name" and \
-                                "s3://" not in resource_pool[resource]:
-                    invalid_paths.append((resource,
-                                          resource_pool[resource]))
-            except:
-                err = "\n\n[!]"
-                raise Exception(err)
+            if not op.isfile(resource_pool[resource]) and \
+                            resource != "site_name" and \
+                            "s3://" not in resource_pool[resource]:
+                invalid_paths.append((resource,
+                                        resource_pool[resource]))
 
         if len(invalid_paths) > 0:
             err = "\n\n[!] The paths provided in the subject list to the " \

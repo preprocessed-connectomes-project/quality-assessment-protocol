@@ -268,7 +268,7 @@ def global_correlation(func_reorient, func_mask):
 
     import scipy
     import numpy as np
-    from dvars import load
+    from .dvars import load
 
     zero_variance_func = load(func_reorient, func_mask)
 

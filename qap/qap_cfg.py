@@ -1,5 +1,4 @@
 default_pipeline_configuration = {
-
     'log_directory': '',
     'output_directory': '',
     'working_directory': '/tmp',

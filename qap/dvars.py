@@ -119,8 +119,8 @@ def robust_stdev(func):
 
     import numpy as np
 
-    lower_qs = np.percentile(func, 25, axis=3)
-    upper_qs = np.percentile(func, 75, axis=3)
+    lower_qs = np.percentile(func, 25, axis=len(func.shape) - 1)
+    upper_qs = np.percentile(func, 75, axis=len(func.shape) - 1)
     stdev = (upper_qs - lower_qs)/1.349
     return stdev
 
@@ -170,16 +170,8 @@ def calc_ar1(func, method=ar_nitime):
 
     import numpy as np
 
-    ar1 = np.zeros(func.shape[0:3])
-
-    for x in range(0, len(func)):
-        for y in range(0, len(func[x])):
-            for z in range(0, len(func[x][y])):
-                try:
-                    ar1[x][y][z] = method(func[x][y][z], center=True)
-                except:
-                    continue
-
+    ar1 = np.zeros(func.shape[0:-1])
+    ar1 = np.apply_along_axis(lambda x: method(x, center=True), len(func.shape) - 1, func)
     return ar1
 
 

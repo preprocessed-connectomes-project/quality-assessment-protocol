@@ -33,7 +33,7 @@ def bids_decode_filename(file_path, dbg=False):
     file_path_values = os.path.dirname(file_path).split('/')
 
     # if this is a derivative, then the site directory is just above the "derivative" directory
-    if "derivatives" in file_path:
+    if "derivatives" in file_path_values:
         site_index = file_path_values.index(b"derivatives") - 1
 
         if site_index + 2 > 0 and file_path_values[site_index + 2] and \
