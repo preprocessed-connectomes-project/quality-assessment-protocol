@@ -265,7 +265,7 @@ def bids_parse_sidecar(bids_dict, dbg=False):
 
 
 def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dictionary=None, credentials_path="",
-                                         debug=False):
+                                         inclusion_list=None, debug=False):
     """
     Generates a QAP formatted subject list from information contained in a
     BIDS formatted set of data.
@@ -313,6 +313,9 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
 
             # 1. decode file path
             file_bids_dict = bids_decode_filename(file_path)
+
+            if inclusion_list and file_bids_dict["sub"] not in inclusion_list:
+                continue
 
             if "ses" not in file_bids_dict:
                 file_bids_dict["ses"] = "1"
