@@ -67,7 +67,6 @@ def calculate_gray_plot(func_file, mask_file):
 def plot_measures(df, measures, ncols=4, title='Group level report',
                   subject=None, figsize=(8.27, 11.69)):
     import matplotlib.gridspec as gridspec
-    print "plot measures"
     nmeasures = len(measures)
     nrows = nmeasures // ncols
     if nmeasures % ncols > 0:
@@ -113,11 +112,9 @@ def plot_measures(df, measures, ncols=4, title='Group level report',
 def plot_all(df, groups, subject=None, figsize=(11.69, 5),
              strip_nsubj=10, title='Summary report'):
     import matplotlib.gridspec as gridspec
-    print "plot_all"
-    colnames = [v for gnames in groups for v in gnames]
-    lengs = [len(el) for el in groups]
-    ncols = np.sum(lengs)
 
+    groups = [g for g in groups if len(g) > 0]
+    lengs = [len(el) for el in groups]
     fig = plt.figure(figsize=figsize)
     gs = gridspec.GridSpec(1, len(groups), width_ratios=lengs)
 
@@ -193,7 +190,6 @@ def plot_mosaic(nifti_file, title=None, overlay_mask=None,
                 figsize=(11.7, 8.3)):
     from six import string_types
     from pylab import cm
-    print "plot_mosaic"
     if isinstance(nifti_file, string_types):
         nii = nb.load(nifti_file)
         mean_data = nii.get_data()
@@ -304,7 +300,6 @@ def plot_fd(meanfd_file, dvars, global_signal, metadata, figsize=(11.7, 8.3), me
 def plot_dist(
         main_file, mask_file, xlabel, distribution=None, xlabel2=None,
         figsize=(11.7, 8.3)):
-    print "plot_dist"
     data = _get_values_inside_a_mask(main_file, mask_file)
 
     fig = plt.Figure(figsize=figsize)
@@ -326,7 +321,6 @@ def plot_dist(
 
 
 def plot_vline(cur_val, label, ax):
-    print "plot_vline"
     ax.axvline(cur_val)
     ylim = ax.get_ylim()
     vloc = (ylim[0] + ylim[1]) / 2.0
@@ -337,7 +331,6 @@ def plot_vline(cur_val, label, ax):
 
 
 def _calc_rows_columns(ratio, n_images):
-    print "_calc_rows_columns"
     rows = 1
     for _ in range(100):
         columns = math.floor(ratio * rows)
@@ -362,7 +355,6 @@ def _calc_fd(fd_file):
     :rtype: NumPy array
     :return: The frame-wise displacement (FD) array.
     """
-    print "_calc_fd"
     lines = open(fd_file, 'r').readlines()
     rows = [[float(x) for x in line.split()] for line in lines]
     cols = np.array([list(col) for col in zip(*rows)])
@@ -380,7 +372,6 @@ def _calc_fd(fd_file):
 
 
 def _get_mean_fd_distribution(fd_files):
-    print "_get_mean_fd_distribution"
     mean_FDs = []
     max_FDs = []
     for fd_file in fd_files:
@@ -392,7 +383,6 @@ def _get_mean_fd_distribution(fd_files):
 
 
 def _get_values_inside_a_mask(main_file, mask_file):
-    print "_get_values_inside_a_mask"
     main_nii = nb.load(main_file)
     main_data = main_nii.get_data()
     nan_mask = np.logical_not(np.isnan(main_data))

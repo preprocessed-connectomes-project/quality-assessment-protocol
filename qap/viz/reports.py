@@ -19,7 +19,7 @@ from .plotting import (plot_measures, plot_mosaic, plot_all,
                        plot_fd, plot_dist)
 
 
-def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
+def workflow_report(in_csv, qap_type, out_dir=None, out_file=None,
                     full_reports=False):
     """Generate a PDF report of a QAP run.
 
@@ -29,9 +29,6 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
     :type qap_type: str
     :param qap_type: The type of QAP set of measures ("anatomical spatial",
                      etc.).
-    :type run_name: str
-    :param run_name: The name of the pipeline run.
-    :param res_dict:
     :type out_dir: str
     :param out_dir: The output directory for the reports.
     :type out_file: str
@@ -42,7 +39,6 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
     :rtype: dict
     :return: A dictionary with information about the report generation.
     """
-    print "workflow_report"
     if out_dir is None:
         out_dir = os.getcwd()
 
@@ -51,8 +47,8 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
             out_dir, qap_type + '_%s.pdf')
 
     # Read csv file, sort and drop duplicates
-    df = pd.read_csv(in_csv, dtype={'Participant': str}).sort(
-        columns=['Participant', 'Session', 'Series'])
+    df = pd.read_csv(in_csv, dtype={'Participant': str}).sort_values(
+        ['Participant', 'Session', 'Series'])
 
     try:
         df.drop_duplicates(['Participant', 'Session', 'Series'], keep='last',
@@ -66,26 +62,18 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
     df["Series"] = df["Series"].astype(str)
 
     subject_list = sorted(pd.unique(df.Participant.ravel()))
+    func = {
+        "qap_anatomical_spatial": qap_anatomical_spatial,
+        "qap_functional_temporal": qap_functional_temporal,
+        "qap_functional_spatial": qap_functional_spatial,
+    }[qap_type]
+
     result = {}
-    func = getattr(sys.modules[__name__], qap_type)
-
-    # Identify failed subjects
-    #failed = ['%s (%s_%s)' % (s['id'], s['session'], s['scan'])
-    #          for s in res_dict if 'failed' in s['status']]
-
     pdf_group = []
-
-    # Generate summary page
-    #out_sum = op.join(out_dir, run_name, 'summary_group.pdf')
-    #summary_cover(
-    #    (qap_type,
-    #     datetime.datetime.now().strftime("%Y-%m-%d, %H:%M"),
-    #     ", ".join(failed) if len(failed) > 0 else "none"),
-    #    is_group=True, out_file=out_sum)
-    #pdf_group.append(out_sum)
 
     # Generate group report
     qc_group = op.join(os.getcwd(), 'qc_measures_group.pdf')
+
     # Generate violinplots. If successful, add documentation.
     func(df, out_file=qc_group)
     pdf_group.append(qc_group)
@@ -105,16 +93,19 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
         result['group'] = {'success': True, 'path': out_group_file}
 
     if full_reports:
-        idx = 1
         # Generate individual reports for subjects
-        for subid in [str(sub) for sub in subject_list]:
+        for idx, subid in enumerate([str(sub) for sub in subject_list]):
+
             print "Generating report for %s.. (%d/%d)" \
-                  % (subid, idx, len(subject_list))
+                  % (subid, idx + 1, len(subject_list))
+
             # Get subject-specific info
             subdf = df.loc[df['Participant'] == subid]
             sessions = sorted(pd.unique(subdf.Session.ravel()))
+
             plots = []
             sess_scans = []
+
             # Re-build mosaic location
             for sesid in [str(sess) for sess in sessions]:
                 sesdf = subdf.loc[subdf['Session'] == sesid]
@@ -123,7 +114,7 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
                 # Each scan has a volume and (optional) fd plot
                 for scanid in [str(scan) for scan in scans]:
                     sub_info = [subid, sesid, scanid]
-                    sub_path = op.join(out_dir, run_name, '/'.join(sub_info))
+                    sub_path = op.join(out_dir, *sub_info)
                     m = op.join(sub_path, 'qap_mosaic', 'mosaic.pdf')
 
                     if op.isfile(m):
@@ -134,20 +125,6 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
                         plots.append(fd)
 
                 sess_scans.append('%s (%s)' % (sesid, ', '.join(scans)))
-
-            #failed = ['%s (%s)' % (s['Session'], s['Series'])
-            #          for s in res_dict if 'failed' in s['status'] and
-            #          subid in s['id']]
-
-            # Summary cover
-            #out_sum = op.join(out_dir, run_name, 'summary_%s.pdf' % subid)
-            #summary_cover(
-            #    (subid, subid, qap_type,
-            #     datetime.datetime.now().strftime("%Y-%m-%d, %H:%M"),
-            #     ", ".join(sess_scans),
-            #     ",".join(failed) if len(failed) > 0 else "none"),
-            #    out_file=out_sum)
-            #plots.insert(0, out_sum)
 
             # Summary (violinplots) of QC measures
             qc_ms = op.join(os.getcwd(), '%s_measures.pdf' % qap_type)
@@ -163,13 +140,10 @@ def workflow_report(in_csv, qap_type, run_name, out_dir=None, out_file=None,
                 concat_pdf(plots, sub_path)
                 result[subid] = {'success': True, 'path': sub_path}
 
-            idx += 1
-
     return result
 
 
 def get_documentation(doc_type, out_file):
-    print "get_documentation"
     import codecs
     from xhtml2pdf import pisa
     # open output file for writing (truncated binary)
@@ -190,7 +164,6 @@ def get_documentation(doc_type, out_file):
 
 
 def summary_cover(data, is_group=False, out_file=None):
-    print "summary_cover"
     import codecs
     from xhtml2pdf import pisa
 
@@ -217,7 +190,6 @@ def concat_pdf(in_files, out_file='concatenated.pdf'):
     """
     Concatenate PDF list (http://stackoverflow.com/a/3444735)
     """
-    print "concat_pdf"
     from PyPDF2 import PdfFileWriter, PdfFileReader
     outpdf = PdfFileWriter()
 
@@ -231,7 +203,6 @@ def concat_pdf(in_files, out_file='concatenated.pdf'):
 
 def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
                   out_file='report.pdf'):
-    print "_write_report"
     columns = df.columns.ravel()
     headers = []
     for g in groups:
@@ -252,13 +223,11 @@ def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
         if sc_split:
             for sc in scans:
                 subset = sesdf.loc[sesdf['Series'] == sc]
-                print "subset len: ", len(subset.index)
                 if len(subset.index) > 1:
                     if sub_id is None:
                         subtitle = '(%s_%s)' % (ss, sc)
                     else:
                         subtitle = '(Participant %s_%s_%s)' % (sub_id, ss, sc)
-                    print "sc split condensed: ", condensed
                     if condensed:
                         fig = plot_all(sesdf, groups, subject=sub_id,
                                        title='QC measures ' + subtitle)
@@ -273,13 +242,11 @@ def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
                     report.savefig(fig, dpi=300)
                     fig.clf()
         else:
-            print "len: ", len(sesdf.index)
             if len(sesdf.index) > 1:
                 if sub_id is None:
                     subtitle = '(%s)' % (ss)
                 else:
                     subtitle = '(Participant %s_%s)' % (sub_id, ss)
-                print "condensed: ", condensed
                 if condensed:
                     fig = plot_all(sesdf, groups, subject=sub_id,
                                    title='QC measures ' + subtitle)
@@ -302,7 +269,6 @@ def _write_report(df, groups, sub_id=None, sc_split=False, condensed=True,
 
 def _write_all_reports(df, groups, sc_split=False, condensed=True,
                        out_file='report.pdf'):
-    print "_write_all_reports"
     outlist = []
     _write_report(
         df, groups, sc_split=sc_split, condensed=condensed, out_file=out_file)
@@ -319,7 +285,6 @@ def _write_all_reports(df, groups, sc_split=False, condensed=True,
 
 def all_anatomical(df, sc_split=False, condensed=True,
                    out_file='anatomical.pdf'):
-    print "all_anatomical"
     groups = [['CNR'],
               ['Cortical Contrast'],
               ['EFC'],
@@ -334,7 +299,6 @@ def all_anatomical(df, sc_split=False, condensed=True,
 
 def all_func_temporal(df, sc_split=False, condensed=True,
                       out_file='func_temporal.pdf'):
-    print "all_func_temporal"
     groups = [['Fraction of Outliers (Mean)', 'Fraction of Outliers (Median)',
                'Fraction of Outliers (Std Dev)', 'Fraction of Outliers IQR'],
               ['GCOR'],
@@ -350,7 +314,6 @@ def all_func_temporal(df, sc_split=False, condensed=True,
 
 def all_func_spatial(df, sc_split=False, condensed=False,
                      out_file='func_spatial.pdf'):
-    print "all_func_spatial"
     groups = [['EFC'],
               ['FBER'],
               ['FWHM', 'FWHM_x', 'FWHM_y', 'FWHM_z'],
@@ -364,7 +327,6 @@ def all_func_spatial(df, sc_split=False, condensed=False,
 def qap_anatomical_spatial(
         df, subject=None, sc_split=False, condensed=True,
         out_file='anatomical.pdf'):
-    print "qap_anatomical_spatial"
     groups = [['CNR'],
               ['Cortical Contrast'],
               ['EFC'],
@@ -380,7 +342,6 @@ def qap_anatomical_spatial(
 def qap_functional_temporal(
         df, subject=None, sc_split=False, condensed=True,
         out_file='func_temporal.pdf'):
-    print "qap_functional_temporal"
     groups = [['Fraction of Outliers (Mean)', 'Fraction of Outliers (Median)',
                'Fraction of Outliers (Std Dev)', 'Fraction of Outliers IQR'],
               ['GCOR'],
@@ -397,7 +358,6 @@ def qap_functional_temporal(
 def qap_functional_spatial(
         df, subject=None, sc_split=False, condensed=True,
         out_file='func_spatial.pdf'):
-    print "qap_functional_spatial"
     groups = [['EFC'],
               ['FBER'],
               ['FWHM', 'FWHM_x', 'FWHM_y', 'FWHM_z'],

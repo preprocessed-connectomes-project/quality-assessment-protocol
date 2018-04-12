@@ -8,9 +8,12 @@
 # @Last Modified time: 2015-10-08 14:53:20
 
 if __name__ == "__main__":
+    import logging
     import argparse
     import os.path as op
     from qap.viz.reports import workflow_report
+
+    logger = logging.getLogger('report')
 
     parser = argparse.ArgumentParser()
     req = parser.add_argument_group("Required Inputs")
@@ -23,13 +26,12 @@ if __name__ == "__main__":
                  'qap_functional_spatial'], required=True)
 
     args = parser.parse_args()
-
     in_csv = args.input_csv
-    out_dir = op.dirname(in_csv)
     qap_type = args.qap_mode
+    out_dir = op.dirname(in_csv)
 
-    reports = workflow_report(in_csv, qap_type, run_name,
-                              out_dir=out_dir)
+    reports = workflow_report(in_csv, qap_type,
+                              out_dir=out_dir, full_reports=True)
 
     for k, v in reports.iteritems():
         if v['success']:
