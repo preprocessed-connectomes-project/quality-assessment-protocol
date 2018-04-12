@@ -1,4 +1,7 @@
 
+import json
+
+
 def create_expr_string(clip_level_value):
     """Create the expression arg string to run AFNI 3dcalc via Nipype.
 
@@ -78,6 +81,12 @@ def read_json(json_filename):
 
     return json_dict
 
+class ExceptionEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Exception):
+            return str(obj)
+        return super(ExceptionEncoder, self).default(obj)
+        
 
 def write_json(output_dict, json_file):
     """Either update or write a dictionary to a JSON file.
@@ -92,7 +101,7 @@ def write_json(output_dict, json_file):
 
     import os
     import json
-    from qap.qap_utils import read_json
+    from qap.qap_utils import read_json, ExceptionEncoder
 
     write = True
 
@@ -114,7 +123,7 @@ def write_json(output_dict, json_file):
 
     if write:
         with open(json_file, "wt") as f:
-            json.dump(current_dict, f, indent=2, sort_keys=True)
+            json.dump(current_dict, f, indent=2, sort_keys=True, cls=ExceptionEncoder)
 
     if os.path.exists(json_file):
         return json_file
