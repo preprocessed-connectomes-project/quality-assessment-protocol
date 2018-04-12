@@ -28,11 +28,5 @@ COPY . /code
 
 RUN cd /code && \
     pip install -e .
-    # python setup.py build && python setup.py install
 
 ENTRYPOINT [ "qap_run.py" ]
-
-# docker run -ti --rm \
-#     -v /tmp/workdir_ms \
-#     -v /home/anibalsolon/examples:/dataset \
-#     cmi/qap --data_config_file /dataset/bids_list.yml --pipeline_config_file /tmp/qap/configs/qap_config_ds003_ms.yml /dataset/ds003_downsampled /dataset/output participant
