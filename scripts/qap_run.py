@@ -187,6 +187,7 @@ def main():
     import sys
     import yaml
     import os
+    from datetime import datetime
 
     parser = argparse.ArgumentParser()
 
@@ -439,7 +440,7 @@ def main():
 
         for path in os.environ['PATH'].split(':'):
             if os.path.isfile(os.path.join(path, 'MNI_avg152T1+tlrc.HEAD')):
-                pipeline_configuration['anatomical_template'] = os.path.join(path, 'MNI_avg152T1+tlrc')
+                pipeline_configuration['anatomical_template'] = os.path.join(path, 'MNI_avg152T1+tlrc.BRIK.gz')
                 break
                 
         if not pipeline_configuration['anatomical_template']:
@@ -465,7 +466,6 @@ def main():
 
     # write out the pipeline configuration file, nice for debugging and other
     # stuff
-    from datetime import datetime
 
     timestamp_string = datetime.now().strftime("%Y%m%d%H%M")
 

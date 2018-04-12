@@ -128,270 +128,237 @@ def build_and_run_qap_pipeline(args, run=True):
                                                     str(num_bundles)))
     # results dict
     rt = {'status': 'Started', 'bundle_log_dir': bundle_log_dir}
-
-    print(sub_info_list)
-
+    
     for sub_info in sub_info_list:
+        resource_pool = resource_pool_dict[sub_info]
 
-        partic_resource_pool = resource_pool_dict[sub_info]
-        print(partic_resource_pool)
+        # resource pool check
+        invalid_paths = []
 
-        for scan in partic_resource_pool.keys():
-
-            resource_pool = partic_resource_pool[scan]
-
-            # TODO: TEMP
-            if "anatomical_scan" in resource_pool.keys():
-                resource_pool["anat_scan"] = resource_pool["anatomical_scan"]
-            if "functional_scan" in resource_pool.keys():
-                resource_pool["func_scan"] = resource_pool["functional_scan"]
-
-            # resource pool check
-            invalid_paths = []
-
-            for resource in resource_pool.keys():
-                try:
-                    if not op.isfile(resource_pool[resource]) and \
-                                    resource != "site_name" and \
-                                    "s3://" not in resource_pool[resource]:
-                        invalid_paths.append((resource,
-                                              resource_pool[resource]))
-                except:
-                    err = "\n\n[!]"
-                    raise Exception(err)
-
-            if len(invalid_paths) > 0:
-                err = "\n\n[!] The paths provided in the subject list to " \
-                      "the following resources are not valid:\n"
-
-                for path_tuple in invalid_paths:
-                    err = "%s%s: %s\n" % (err, path_tuple[0], path_tuple[1])
-
-                err = "%s\n\n" % err
+        for resource in resource_pool.keys():
+            try:
+                if not op.isfile(resource_pool[resource]) and \
+                                resource != "site_name" and \
+                                "s3://" not in resource_pool[resource]:
+                    invalid_paths.append((resource,
+                                            resource_pool[resource]))
+            except:
+                err = "\n\n[!]"
                 raise Exception(err)
 
-            # process subject info
-            site_id = str(sub_info[0])
-            # for nipype
-            if "-" in site_id:
-                site_id = site_id.replace("-", "_")
-            if "." in site_id:
-                site_id = site_id.replace(".", "_")
+        if len(invalid_paths) > 0:
+            err = "\n\n[!] The paths provided in the subject list to " \
+                    "the following resources are not valid:\n"
 
-            if sub_info[1]:
-                sub_id = str(sub_info[1])
-                # for nipype
-                if "-" in sub_id:
-                    sub_id = sub_id.replace("-", "_")
-                if "." in sub_id:
-                    sub_id = sub_id.replace(".", "_")
+            for path_tuple in invalid_paths:
+                err = "%s%s: %s\n" % (err, path_tuple[0], path_tuple[1])
+
+            err = "%s\n\n" % err
+            raise Exception(err)
+
+        def clean_piece(s):
+            return str(s).replace("-", "_").replace(".", "_")
+
+        # process subject info
+        site_id = clean_piece(sub_info[0])
+        sub_id = clean_piece(sub_info[1])
+
+        if sub_info[2]:
+            session_id = clean_piece(sub_info[2])
+        else:
+            session_id = "session_0"
+
+        if sub_info[3]:
+            scan_id = clean_piece(sub_info[3])
+        else:
+            scan_id = "scan_0"
+
+        name = "_".join(["", site_id, sub_id, session_id, scan_id])
+
+        rt[name] = {'id': sub_id, 'session': session_id, 'scan': scan_id,
+                    'resource_pool': str(resource_pool), 'site': site_id}
+
+        logger.info("Participant info: %s" % name)
+
+        # set output directory
+        output_dir = op.join(config["output_directory"], run_name,
+                                site_id, sub_id, session_id)
+
+        try:
+            os.makedirs(output_dir)
+        except:
+            if not op.isdir(output_dir):
+                err = "[!] Output directory unable to be created.\n" \
+                        "Path: %s\n\n" % output_dir
+                raise Exception(err)
             else:
-                scan_id = "scan_0"
+                pass
 
-            if sub_info[2]:
-                session_id = str(sub_info[2])
-                # for nipype
-                if "-" in session_id:
-                    session_id = session_id.replace("-", "_")
-                if "." in session_id:
-                    session_id = session_id.replace(".", "_")
-            else:
-                session_id = "session_0"
+        # for QAP spreadsheet generation only
+        config.update({"subject_id": sub_id, "session_id": session_id,
+                        "scan_id": scan_id, "run_name": run_name})
 
-            scan_id = str(scan)
-            # for nipype
-            if "-" in scan_id:
-                scan_id = scan_id.replace("-", "_")
-            if "." in scan_id:
-                scan_id = scan_id.replace(".", "_")
+        if "site_name" in resource_pool:
+            config.update({"site_name": resource_pool["site_name"]})
+        else:
+            config.update({"site_name": site_id})
 
-            name = "_".join(["", site_id, sub_id, session_id, scan_id])
+        logger.info("Configuration settings:\n%s" % str(config))
 
-            rt[name] = {'id': sub_id, 'session': session_id, 'scan': scan_id,
-                        'resource_pool': str(resource_pool), 'site': site_id}
+        qap_types = ["anatomical_spatial", "functional"]
 
-            logger.info("Participant info: %s" % name)
+        # update that resource pool with what's already in the output
+        # directory
+        for resource in os.listdir(output_dir):
+            if (op.exists(op.join(output_dir, resource)) and
+                    resource not in resource_pool.keys()):
+                try:
+                    resource_pool[resource] = \
+                        glob.glob(op.join(output_dir, resource, "*"))[0]
+                except IndexError:
+                    if (".json" in resource) and (scan_id in resource):
+                        # load relevant json info into resource pool
+                        json_file = op.join(output_dir, resource)
+                        json_dict = read_json(json_file)
+                        try:
+                            sub_json_dict = \
+                                json_dict["%s %s %s" % (sub_id,
+                                                        session_id,
+                                                        scan_id)]
+                        except KeyError:
+                            err = "Reading wrong JSON file?" \
+                                    "\n{0}\nResource: {1}" \
+                                    "\nScan: {2}".format(json_file,
+                                                        resource,
+                                                        scan_id)
+                            raise Exception(err)
 
-            # set output directory
-            output_dir = op.join(config["output_directory"], run_name,
-                                 site_id, sub_id, session_id)
+                        if "anatomical_header_info" in sub_json_dict.keys():
+                            resource_pool["anatomical_header_info"] = \
+                                sub_json_dict["anatomical_header_info"]
 
-            try:
-                os.makedirs(output_dir)
-            except:
-                if not op.isdir(output_dir):
-                    err = "[!] Output directory unable to be created.\n" \
-                          "Path: %s\n\n" % output_dir
-                    raise Exception(err)
-                else:
+                        if "functional_header_info" in sub_json_dict.keys():
+                            resource_pool["functional_header_info"] = \
+                                sub_json_dict["functional_header_info"]
+
+                        for qap_type in qap_types:
+                            if qap_type in sub_json_dict.keys():
+                                resource_pool["_".join(["qap",qap_type])] = \
+                                    sub_json_dict[qap_type]
+                except:
+                    # a stray file in the sub-sess-scan output directory
                     pass
 
-            # for QAP spreadsheet generation only
-            config.update({"subject_id": sub_id, "session_id": session_id,
-                           "scan_id": scan_id, "run_name": run_name})
+        # create starter node which links all of the parallel workflows
+        # within the bundle together as a Nipype pipeline
+        resource_pool["starter"] = (starter_node, 'starter')
 
-            if "site_name" in resource_pool:
-                config.update({"site_name": resource_pool["site_name"]})
-            else:
-                config.update({"site_name": site_id})
+        # individual workflow and logger setup
+        logger.info("Contents of resource pool for this participant:\n%s"
+                    % str(resource_pool))
 
-            logger.info("Configuration settings:\n%s" % str(config))
+        # start connecting the pipeline
+        qw = None
+        for qap_type in qap_types:
+            if "_".join(["qap", qap_type]) not in resource_pool.keys():
+                if qw is None:
+                    from qap import qap_workflows as qw
+                wf_builder = \
+                    getattr(qw, "_".join(["qap", qap_type, "workflow"]))
+                workflow, resource_pool = wf_builder(workflow,
+                                                        resource_pool,
+                                                        config, name)
 
-            qap_types = ["anatomical_spatial", "functional"]
+        if ("anat_scan" in resource_pool.keys()) and \
+            ("anat_header_info" not in resource_pool.keys()):
+            if qw is None:
+                from qap import qap_workflows as qw
+            workflow, resource_pool = \
+                qw.qap_gather_header_info(workflow, resource_pool, config,
+                                            name, "anat")
 
-            # update that resource pool with what's already in the output
-            # directory
-            for resource in os.listdir(output_dir):
-                if (op.exists(op.join(output_dir, resource)) and
-                        resource not in resource_pool.keys()):
-                    try:
-                        resource_pool[resource] = \
-                            glob.glob(op.join(output_dir, resource, "*"))[0]
-                    except IndexError:
-                        if (".json" in resource) and (scan_id in resource):
-                            # load relevant json info into resource pool
-                            json_file = op.join(output_dir, resource)
-                            json_dict = read_json(json_file)
-                            try:
-                                sub_json_dict = \
-                                    json_dict["%s %s %s" % (sub_id,
-                                                            session_id,
-                                                            scan_id)]
-                            except KeyError:
-                                err = "Reading wrong JSON file?" \
-                                      "\n{0}\nResource: {1}" \
-                                      "\nScan: {2}".format(json_file,
-                                                           resource,
-                                                           scan_id)
-                                raise Exception(err)
+        if ("func_scan" in resource_pool.keys()) and \
+            ("func_header_info" not in resource_pool.keys()):
+            if qw is None:
+                from qap import qap_workflows as qw
+            workflow, resource_pool = \
+                qw.qap_gather_header_info(workflow, resource_pool, config,
+                                            name, "func")
 
-                            if "anatomical_header_info" in sub_json_dict.keys():
-                                resource_pool["anatomical_header_info"] = \
-                                    sub_json_dict["anatomical_header_info"]
-
-                            if "functional_header_info" in sub_json_dict.keys():
-                                resource_pool["functional_header_info"] = \
-                                    sub_json_dict["functional_header_info"]
-
-                            for qap_type in qap_types:
-                                if qap_type in sub_json_dict.keys():
-                                    resource_pool["_".join(["qap",qap_type])] = \
-                                        sub_json_dict[qap_type]
-                    except:
-                        # a stray file in the sub-sess-scan output directory
-                        pass
-
-            # create starter node which links all of the parallel workflows
-            # within the bundle together as a Nipype pipeline
-            resource_pool["starter"] = (starter_node, 'starter')
-
-            # individual workflow and logger setup
-            logger.info("Contents of resource pool for this participant:\n%s"
-                        % str(resource_pool))
-
-            # start connecting the pipeline
-            qw = None
+        # set up the datasinks
+        out_list = []
+        for output in resource_pool.keys():
             for qap_type in qap_types:
-                if "_".join(["qap", qap_type]) not in resource_pool.keys():
-                    if qw is None:
-                        from qap import qap_workflows as qw
-                    wf_builder = \
-                        getattr(qw, "_".join(["qap", qap_type, "workflow"]))
-                    workflow, resource_pool = wf_builder(workflow,
-                                                         resource_pool,
-                                                         config, name)
+                if qap_type in output:
+                    out_list.append("_".join(["qap", qap_type]))
 
-            if ("anat_scan" in resource_pool.keys()) and \
-                ("anat_header_info" not in resource_pool.keys()):
-                if qw is None:
-                    from qap import qap_workflows as qw
-                workflow, resource_pool = \
-                    qw.qap_gather_header_info(workflow, resource_pool, config,
-                                              name, "anat")
+        filepath_keep = ["anat_reorient", "anat_fav_artifacts_background",
+                            "func_mean", "func_estimated_nuisance",
+                            "func_temporal_std_map", "func_SFS"]
 
-            if ("func_scan" in resource_pool.keys()) and \
-                ("func_header_info" not in resource_pool.keys()):
-                if qw is None:
-                    from qap import qap_workflows as qw
-                workflow, resource_pool = \
-                    qw.qap_gather_header_info(workflow, resource_pool, config,
-                                              name, "func")
+        if keep_outputs:
+            # write_all_outputs (writes everything to the output
+            # directory, not just the final JSON files)
+            out_list = resource_pool.keys()
+        else:
+            for resource in filepath_keep:
+                if resource in resource_pool.keys():
+                    out_list.append(resource)
 
-            # set up the datasinks
-            out_list = []
-            for output in resource_pool.keys():
-                for qap_type in qap_types:
-                    if qap_type in output:
-                        out_list.append("_".join(["qap", qap_type]))
+        logger.info("Outputs we're keeping: %s" % str(out_list))
+        logger.info('Resource pool keys after workflow connection: '
+                    '{}'.format(str(resource_pool.keys())))
 
-            filepath_keep = ["anat_reorient", "anat_fav_artifacts_background",
-                             "func_mean", "func_estimated_nuisance",
-                             "func_temporal_std_map", "func_SFS"]
+        # Save reports to out_dir if necessary
+        if config.get('write_report', False):
 
-            if keep_outputs:
-                # write_all_outputs (writes everything to the output
-                # directory, not just the final JSON files)
-                out_list = resource_pool.keys()
-            else:
-                for resource in filepath_keep:
-                    if resource in resource_pool.keys():
-                        out_list.append(resource)
+            if ("qap_mosaic" in resource_pool.keys()) and \
+                    ("qap_mosaic" not in out_list):
+                out_list += ['qap_mosaic']
 
-            logger.info("Outputs we're keeping: %s" % str(out_list))
-            logger.info('Resource pool keys after workflow connection: '
-                        '{}'.format(str(resource_pool.keys())))
+            # The functional temporal also has an FD plot
+            if 'qap_functional' in resource_pool.keys():
+                if ("qap_fd" in resource_pool.keys()) and \
+                        ("qap_fd" not in out_list):
+                    out_list += ['qap_fd']
 
-            # Save reports to out_dir if necessary
-            if config.get('write_report', False):
+        for output in out_list:
+            # we use a check for len()==2 here to select those items in
+            # the resource pool which are tuples of (node, node_output),
+            # instead of the items which are straight paths to files
 
-                if ("qap_mosaic" in resource_pool.keys()) and \
-                        ("qap_mosaic" not in out_list):
-                    out_list += ['qap_mosaic']
+            # resource pool items which are in the tuple format are the
+            # outputs that have been created in this workflow because they
+            # were not present in the subject list YML (the starting
+            # resource pool) and had to be generated
+            if (len(resource_pool[output]) == 2) and (output != "starter"):
 
-                # The functional temporal also has an FD plot
-                if 'qap_functional' in resource_pool.keys():
-                    if ("qap_fd" in resource_pool.keys()) and \
-                            ("qap_fd" not in out_list):
-                        out_list += ['qap_fd']
+                node, out_file = resource_pool[output]
 
-            for output in out_list:
-                # we use a check for len()==2 here to select those items in
-                # the resource pool which are tuples of (node, node_output),
-                # instead of the items which are straight paths to files
+                # create the datasink
+                ds = pe.Node(nio.DataSink(), name='datasink_%s%s'
+                                                    % (output, name))
+                ds.inputs.base_directory = output_dir
 
-                # resource pool items which are in the tuple format are the
-                # outputs that have been created in this workflow because they
-                # were not present in the subject list YML (the starting
-                # resource pool) and had to be generated
-                if (len(resource_pool[output]) == 2) and (output != "starter"):
-
-                    node, out_file = resource_pool[output]
-
-                    # create the datasink
-                    ds = pe.Node(nio.DataSink(), name='datasink_%s%s'
-                                                      % (output, name))
-                    ds.inputs.base_directory = output_dir
-
-                    # rename file to BIDS format
-                    rename = pe.Node(niu.Rename(), name='rename_%s%s'
-                                                        % (output, name))
-                    rename.inputs.keep_ext = True
-                    # replace the underscores in 'output' (which are the keys
-                    # of the resource pool) with dashes - need to be
-                    # underscores for the workflow names, but need to be
-                    # dashes for BIDS output file naming format
-                    rename.inputs.format_string = "%s_%s_%s_%s" \
-                                                  % (sub_id, session_id,
-                                                     scan_id,
-                                                     output.replace("_", "-"))
-                    workflow.connect(node, out_file, rename, 'in_file')
-                    workflow.connect(rename, 'out_file', ds,
-                                     '%s.@%s' % (output.split("_")[0],
-                                                 output))
-                    new_outputs += 1
-                elif ".json" in resource_pool[output]:
-                    new_outputs += 1
-
+                # rename file to BIDS format
+                rename = pe.Node(niu.Rename(), name='rename_%s%s'
+                                                    % (output, name))
+                rename.inputs.keep_ext = True
+                # replace the underscores in 'output' (which are the keys
+                # of the resource pool) with dashes - need to be
+                # underscores for the workflow names, but need to be
+                # dashes for BIDS output file naming format
+                rename.inputs.format_string = "%s_%s_%s_%s" \
+                                                % (sub_id, session_id,
+                                                    scan_id,
+                                                    output.replace("_", "-"))
+                workflow.connect(node, out_file, rename, 'in_file')
+                workflow.connect(rename, 'out_file', ds,
+                                    '%s.@%s' % (output.split("_")[0],
+                                                output))
+                new_outputs += 1
+            elif ".json" in resource_pool[output]:
+                new_outputs += 1
 
     logger.info("New outputs: %s" % str(new_outputs))
 

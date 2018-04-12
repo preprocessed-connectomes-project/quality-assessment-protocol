@@ -483,8 +483,8 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
               str(nb.__version__)
         raise Exception(err)
 
-    subkey = "{0}_header_info".format(type)
-    id_string = "{0} {1} {2}".format(subject, session, scan)
+    subkey = "%s_header_info" % type
+    id_string = "%s %s %s" % (subject, session, scan)
     qap_dict = {id_string: {subkey: {}}}
 
     info_labels = ["descrip", "db_name", "bitpix", "slice_start",

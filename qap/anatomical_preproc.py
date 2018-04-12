@@ -49,12 +49,13 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     import nipype.pipeline.engine as pe
     from nipype.interfaces.afni import preprocess
 
-    if "anat_scan" not in resource_pool.keys():
+    if "anatomical_scan" not in resource_pool.keys():
         return workflow, resource_pool
-    elif "s3://" in resource_pool["anat_scan"]:
+
+    elif "s3://" in resource_pool["anatomical_scan"]:
         from qap.cloud_utils import download_single_s3_path
-        resource_pool["anat_scan"] = \
-            download_single_s3_path(resource_pool["anat_scan"], config)
+        resource_pool["anatomical_scan"] = \
+            download_single_s3_path(resource_pool["anatomical_scan"], config)
 
     try:
         anat_deoblique = pe.Node(interface=preprocess.Refit(),
@@ -64,7 +65,7 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
         anat_deoblique = pe.Node(interface=afni_utils.Refit(),
                                  name='anat_deoblique%s' % name)
 
-    anat_deoblique.inputs.in_file = resource_pool["anat_scan"]
+    anat_deoblique.inputs.in_file = resource_pool["anatomical_scan"]
     anat_deoblique.inputs.deoblique = True
 
     workflow.add_nodes([anat_deoblique])
@@ -76,7 +77,7 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
         if not afni_utils:
             from nipype.interfaces.afni import utils as afni_utils
         anat_reorient = pe.Node(interface=afni_utils.Resample(),
-                                name='anat_reorient%s' % name)
+                                 name='anat_reorient%s' % name)
 
     anat_reorient.inputs.orientation = 'RPI'
     anat_reorient.inputs.outputtype = 'NIFTI_GZ'

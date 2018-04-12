@@ -853,3 +853,4 @@ def run_mean_functional(func_reorient, out_dir=None, run=True):
         return outpath
     else:
         return workflow, workflow.base_dir
+        
