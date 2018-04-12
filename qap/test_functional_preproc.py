@@ -28,7 +28,6 @@ def test_get_idx_partial_timeseries():
 
     from qap.functional_preproc import get_idx
     
-    
     func_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                     "functional_scan.nii.gz"))    
     

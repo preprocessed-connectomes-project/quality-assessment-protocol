@@ -319,7 +319,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
     get_func_volume.inputs.single_idx = 0
     get_func_volume.inputs.outputtype = 'NIFTI_GZ'
 
-    if len(resource_pool["func_reorient"]) == 2:
+    if isinstance(resource_pool["func_reorient"], tuple):
         node, out_file = resource_pool["func_reorient"]
         workflow.connect(node, out_file, get_func_volume, 'in_file_a')
     else:
@@ -333,7 +333,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
     func_motion_correct.inputs.zpad = 4
     func_motion_correct.inputs.outputtype = 'NIFTI_GZ'
     
-    if len(resource_pool["func_reorient"]) == 2:
+    if isinstance(resource_pool["func_reorient"], tuple):
         node, out_file = resource_pool["func_reorient"]
         workflow.connect(node, out_file, func_motion_correct, 'in_file')
     else:
@@ -343,7 +343,7 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
                      func_motion_correct, 'basefile')
 
     resource_pool["func_motion_correct"] = (func_motion_correct, 'out_file')
-    resource_pool["coordinate_transformation"] = \
+    resource_pool["func_coordinate_transformation"] = \
         (func_motion_correct, 'oned_matrix_save')
 
     return workflow, resource_pool
@@ -471,7 +471,6 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
     from nipype.interfaces.afni import preprocess
 
     if "func_reorient" not in resource_pool.keys():
-
         from functional_preproc import func_preproc_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
@@ -483,14 +482,14 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
                                   name='func_get_brain_mask%s' % name)
     func_get_brain_mask.inputs.outputtype = 'NIFTI_GZ'
 
-    if len(resource_pool["func_reorient"]) == 2:
+    if isinstance(resource_pool["func_reorient"], tuple):
         node, out_file = resource_pool["func_reorient"]
         workflow.connect(node, out_file, func_get_brain_mask, 'in_file')
     else:
         func_get_brain_mask.inputs.in_file = \
             resource_pool["func_reorient"]
 
-    resource_pool["functional_brain_mask"] = (func_get_brain_mask, 'out_file')
+    resource_pool["func_brain_mask"] = (func_get_brain_mask, 'out_file')
 
     return workflow, resource_pool
 
@@ -612,8 +611,7 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
     import nipype.pipeline.engine as pe
     from nipype.interfaces.afni import preprocess
 
-    if "functional_brain_mask" not in resource_pool.keys():
-
+    if "func_brain_mask" not in resource_pool.keys():
         from functional_preproc import functional_brain_mask_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
@@ -634,13 +632,13 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
     invert_mask.inputs.outputtype = "NIFTI_GZ"
 
     # functional_brain_mask -> 3dcalc        
-    if len(resource_pool["functional_brain_mask"]) == 2:
-        node, out_file = resource_pool["functional_brain_mask"]
+    if isinstance(resource_pool["func_brain_mask"], tuple):
+        node, out_file = resource_pool["func_brain_mask"]
         workflow.connect(node, out_file, invert_mask, 'in_file_a')
     else:
-        invert_mask.inputs.in_file_a = resource_pool["functional_brain_mask"]
+        invert_mask.inputs.in_file_a = resource_pool["func_brain_mask"]
 
-    resource_pool["inverted_functional_brain_mask"] = (invert_mask, 'out_file')
+    resource_pool["func_inverted_brain_mask"] = (invert_mask, 'out_file')
 
     return workflow, resource_pool
 
@@ -760,7 +758,6 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
     from nipype.interfaces.afni import preprocess
 
     if "func_reorient" not in resource_pool.keys():
-
         from functional_preproc import func_preproc_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
@@ -786,7 +783,7 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
         func_mean_tstat.inputs.in_file = \
             resource_pool["func_reorient"]
 
-    resource_pool["mean_functional"] = (func_mean_tstat, 'out_file')
+    resource_pool["func_mean"] = (func_mean_tstat, 'out_file')
 
     return workflow, resource_pool
 

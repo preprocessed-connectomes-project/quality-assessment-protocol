@@ -77,14 +77,14 @@ def warp_coordinates(inpoint, allineate_mat, infile_affine, infile_dims):
     # using the transform, calculate what the three coordinates are in
     # native space, as it corresponds to the anatomical scan
     coord_out = \
-        list(np.dot(np.linalg.inv(allineate_mat),inpoint))
+        list(np.dot(np.linalg.inv(allineate_mat), inpoint))
 
     # remove the one resulting zero at the end
     coord_out = coord_out[:-1]
 
     # convert the coordinates from mm to voxels
     coord_out = \
-        nb.affines.apply_affine(npl.inv(infile_affine),coord_out)
+        nb.affines.apply_affine(npl.inv(infile_affine), coord_out)
 
     # make sure converted coordinates are not "out of bounds"
     co_nums_newlist = []
@@ -155,6 +155,25 @@ def calculate_plane_coords(coords_list, infile_dims):
             plane_dict[(xvox, yvox)] = zvox
 
     return plane_dict
+
+
+def scipy_fill(in_file):
+
+    import os
+    import nibabel as nb
+    from scipy.ndimage.morphology import binary_fill_holes
+
+    mask_img = nb.load(in_file)
+    mask_data = mask_img.get_data()
+
+    new_mask_data = binary_fill_holes(mask_data).astype('int8')
+
+    new_mask_img = nb.Nifti1Image(new_mask_data, mask_img.affine)
+
+    out_file = os.path.join(os.getcwd(), "qap_headmask_filled.nii.gz")
+    new_mask_img.to_filename(out_file)
+
+    return out_file
 
 
 def create_slice_mask(plane_dict, infile_dims):
@@ -452,17 +471,17 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
     """
 
     if not os.path.isfile(in_file):
-        err = "Filepath doesn't exist!\nFilepath: {0}".format(in_file)
-        raise_smart_exception(locals(), err)
+        err = "Filepath doesn't exist!\nFilepath: %s" % in_file
+        raise Exception(err)
 
     try:
         img = nb.load(in_file)
         img_header = img.header
     except:
         err = "You may not have an up-to-date installation of the Python " \
-              "Nibabel package.\nYour Nibabel version: " \
-              "{0}".format(str(nb.__version__))
-        raise_smart_exception(locals(), err)
+              "Nibabel package.\nYour Nibabel version: %s" % \
+              str(nb.__version__)
+        raise Exception(err)
 
     subkey = "{0}_header_info".format(type)
     id_string = "{0} {1} {2}".format(subject, session, scan)
@@ -471,17 +490,17 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
     info_labels = ["descrip", "db_name", "bitpix", "slice_start",
                    "scl_slope", "scl_inter", "slice_end", "slice_duration",
                    "toffset", "quatern_b", "quatern_c", "quatern_d",
-                   "qoffset_x", "qoffset_y", "qoffset_z", "srow_x", "srow_y",
-                   "srow_z", "aux_file", "intent_name", "slice_code",
-                   "data_type", "qform_code", "sform_code"]
+                   "qoffset_x", "qoffset_y", "qoffset_z", "aux_file",
+                   "intent_name", "slice_code", "data_type", "qform_code",
+                   "srow_x", "srow_y", "srow_z", "sform_code"]
 
     for info_label in info_labels:
         try:
             qap_dict[id_string][subkey][info_label] = \
                 str(img_header[info_label])
-        except:
-            print "\n\n{0} field not in NIFTI header of {1}" \
-                  "\n\n".format(info_label, in_file)
+        except KeyError:
+            print ("\n\n{0} field not in NIFTI header of {1}"
+                   "\n\n".format(info_label, in_file))
             qap_dict[id_string][subkey][info_label] = ""
             pass
 
@@ -491,17 +510,16 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
         qap_dict[id_string][subkey]["pix_dimy"] = str(pixdim[2])
         qap_dict[id_string][subkey]["pix_dimz"] = str(pixdim[3])
         qap_dict[id_string][subkey]["tr"] = str(pixdim[4])
-    except:
-        print "\n\npix_dim/TR fields not in NIFTI header of {0}" \
-              "\n\n".format(in_file)
+    except KeyError:
+        print("\n\npix_dim/TR fields not in NIFTI header of {0}"
+              "\n\n".format(in_file))
         pass
 
     try:
         qap_dict[id_string][subkey]["extensions"] = \
             len(img.header.extensions.get_codes())
     except:
-        print "\n\nExtensions not in NIFTI header of {0}" \
-              "\n\n".format(in_file)
+        print("\n\nExtensions not in NIFTI header of {0}\n\n".format(in_file))
         pass
 
     return qap_dict
@@ -676,31 +694,28 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
         qap[id_string]["anatomical_spatial"][key] = \
             str(qap[id_string]["anatomical_spatial"][key])
 
-    qa = {
-        id_string: {
-            "QAP_Version": "QAP version %s" % qap_version,
-            "QAP_pipeline_id": run_name,
-            "sub": subject_id,
-            "ses": session_id,
-            "metrics": {}
-        }
-    }
-
     # prospective filepaths
     if session_output_dir:
-        anat_file = os.path.join(session_output_dir,
+
+        qap[id_string]["filepaths"] = {}
+
+        anat_file = os.path.join(session_output_dir, run_name, site_name,
+                                 subject_id, session_id, "anat",
                                  "_".join([subject_id, session_id, scan_id,
-                                           "anatomical-reorient.nii.gz"]))
+                                           "anat-reorient.nii.gz"]))
+
         if os.path.exists(anat_file):
-            qa[id_string]["metrics"]["scan filepath"] = anat_file
+            qap[id_string]["filepaths"]["scan filepath"] = anat_file
 
-        qi_file = os.path.join(session_output_dir,
+        qi_file = os.path.join(session_output_dir, run_name, site_name,
+                               subject_id, session_id, "anat",
                                "_".join([subject_id, session_id, scan_id,
-                                         "Qi1-background.nii.gz"]))
+                                         "anat-fav-artifacts-background"
+                                         ".nii.gz"]))
         if os.path.exists(qi_file):
-            qa[id_string]["metrics"]["Qi1 background"] = qi_file
+            qap[id_string]["filepaths"]["FAV artifacts background"] = qi_file
 
-    return qap, qa
+    return qap
 
 
 def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
@@ -960,41 +975,37 @@ def qap_functional_temporal(
         qap[id_string]["functional_temporal"][key] = \
             str(qap[id_string]["functional_temporal"][key])
 
-    qa = {
-        id_string: {
-            "QAP_Version": "QAP version %s" % qap_version,
-            "QAP_pipeline_id": run_name,
-            "sub": subject_id,
-            "ses": session_id,
-            "metrics": {
-                "Standardized DVARS": [float(x) for x in list(dvars)],
-                "RMSD": list(fd),
-                "Outliers": outliers,
-                "OOB Outliers": oob_outliers,
-                "Quality": quality,
-                "Signal Fluctuation Sensitivity": sfs_data.tolist()
-            }
-        }
-    }
-
     # prospective filepaths
     if session_output_dir:
-        func_file = os.path.join(session_output_dir,
+
+        qap[id_string]["filepaths"] = {}
+
+        func_file = os.path.join(session_output_dir, run_name, site_name,
+                                 subject_id, session_id, "func",
                                  "_".join([subject_id, session_id, scan_id,
-                                           "func_reorient.nii.gz"]))
+                                           "func-mean.nii.gz"]))
         if os.path.exists(func_file):
-            qa[id_string]["metrics"]["scan filepath"] = func_file
+            qap[id_string]["filepaths"]["scan filepath"] = func_file
 
-        estn_file = os.path.join(session_output_dir,
+        tstd_file = os.path.join(session_output_dir, run_name, site_name,
+                                 subject_id, session_id, "func",
                                  "_".join([subject_id, session_id, scan_id,
-                                           "estimated-nuisance.nii.gz"]))
+                                           "func-temporal-std-map.nii.gz"]))
+        if os.path.exists(tstd_file):
+            qap[id_string]["filepaths"]["temporal STD"] = tstd_file
+
+        estn_file = os.path.join(session_output_dir, run_name, site_name,
+                                 subject_id, session_id, "func",
+                                 "_".join([subject_id, session_id, scan_id,
+                                           "func-estimated-nuisance.nii.gz"]))
         if os.path.exists(estn_file):
-            qa[id_string]["metrics"]["estimated nuisance"] = estn_file
+            qap[id_string]["filepaths"]["estimated nuisance"] = estn_file
 
-        sfs_file = os.path.join(session_output_dir,
+        sfs_file = os.path.join(session_output_dir, run_name, site_name,
+                                subject_id, session_id, "func",
                                 "_".join([subject_id, session_id, scan_id,
-                                          "SFS.nii.gz"]))
+                                          "func-SFS.nii.gz"]))
         if os.path.exists(sfs_file):
-            qa[id_string]["metrics"]["SFS filepath"] = sfs_file
+            qap[id_string]["filepaths"]["SFS filepath"] = sfs_file
 
-    return qap, qa
+    return qap
