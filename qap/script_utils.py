@@ -410,7 +410,7 @@ def gather_json_info(output_dir):
     for root, dirs, files in os.walk(os.path.abspath(output_dir)):
         for filename in files:
             if ".json" in filename:
-                filepath = os.path.join(root,filename)
+                filepath = os.path.join(root, filename)
                 temp_dict = read_json(filepath)
                 json_dict.update(temp_dict)
 
