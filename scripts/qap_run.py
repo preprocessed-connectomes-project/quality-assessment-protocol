@@ -9,14 +9,6 @@ from qap import qap_cfg
 
 from qap.qap_pipeline import build_and_run_qap_pipeline
 
-# from nipype import config
-# log_dir=os.path.join("tmp","nipype","logs")
-# config.update_config({'logging': {'log_directory': log_dir, 'log_to_file': True}})
-#
-# from nipype import logging
-# logger = logging.getLogger('workflow')
-
-
 def create_bundles(data_configuration_dict, bundle_size):
     """
 
