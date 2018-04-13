@@ -384,7 +384,7 @@ def fwhm(anat_file, mask_file, out_vox=False):
         raise Exception(err)
 
     # extract output
-    vals = np.array(retcode.split()[4:], dtype=np.float)
+    vals = np.array(retcode.split()[-4:], dtype=np.float)
     
     if out_vox:
         # get pixel dimensions
