@@ -32,13 +32,14 @@ def main():
         qap_types = ["anatomical_spatial",
                      "functional_spatial",
                      "functional_temporal"]
+                     
         for qap_type in qap_types:
             qap_type = "_".join(["qap", qap_type])
-            run_name = args.output_dir.split("/")[-1]
             in_csv = os.path.join(os.getcwd(), '%s.csv' % qap_type)
             if not os.path.isfile(in_csv):
                 continue
-            reports = workflow_report(in_csv, qap_type, run_name,
+
+            reports = workflow_report(in_csv, qap_type, 
                                       out_dir=args.output_dir,
                                       full_reports=args.with_full_reports)
 
