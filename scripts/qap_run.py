@@ -108,11 +108,6 @@ def run_qap(pipeline_configuration, data_bundles, bundle_index=''):
     handler = logging.FileHandler(callback_log_filename)
     callback_logger.addHandler(handler)
 
-    plugin_execution_arguments = {'plugin': 'MultiProc',
-                                  'plugin_args': {'memory_gb': pipeline_configuration['available_memory'],
-                                                  'n_procs': pipeline_configuration['num_processors'],
-                                                  'status_callback': log_nodes_cb}}
-
     num_bundles = len(data_bundles)
 
     if bundle_index:
