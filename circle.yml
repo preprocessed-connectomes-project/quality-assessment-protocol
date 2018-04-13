@@ -15,10 +15,10 @@ test:
   override:
     # First test only on one subject
     - echo "sub-01" > inclusion_file && python scripts/qap_sublist_generator.py --include inclusion_file --BIDS ~/examples/ds003_downsampled/ ~/bids_sub-01.yml
-    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_measures_pipeline.py ~/bids_sub-01.yml configs/qap_config_ds003.yml
+    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_measures_pipeline.py ~/bids_sub-01.yml qap/configs/qap_config_ds003.yml
     # Second test on multiple subjects, two subjects at once (qap_config_ds003_ms.yml)
     - python scripts/qap_sublist_generator.py --BIDS ~/examples/ds003_downsampled/ ~/bids_list.yml
-    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_measures_pipeline.py ~/bids_list.yml configs/qap_config_ds003_ms.yml
+    - FSLDIR=~/fsl/ PATH=~/afni:~/fsl/bin:$PATH LD_LIBRARY_PATH=~/fsl/lib FSLOUTPUTTYPE="NIFTI_GZ" python scripts/qap_measures_pipeline.py ~/bids_list.yml qap/configs/qap_config_ds003_ms.yml
 general:
   artifacts:
     - "/tmp/output"

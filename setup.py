@@ -18,7 +18,7 @@ def main():
                        'quality-assessment-protocol/archive/v1.0.8b.zip',
           license='',
           packages=['qap', 'qap.viz'],
-          package_data={'qap': ['viz/html/*.html']},
+          package_data={'qap': ['viz/html/*.html', 'configs/*.yml']},
           scripts=glob("scripts/*"),
           requires=['INDI_Tools (>=0.0.6)', 'Pillow (>=3.2.0)',
                     'PyPDF2 (>=1.26.0)', 'PyYAML (>=3.11)',
