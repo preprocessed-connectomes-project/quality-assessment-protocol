@@ -170,9 +170,7 @@ def calc_ar1(func, method=ar_nitime):
 
     import numpy as np
 
-    ar1 = np.zeros(func.shape[0:-1])
-    ar1 = np.apply_along_axis(lambda x: method(x, center=True), len(func.shape) - 1, func)
-    return ar1
+    return np.apply_along_axis(lambda x: method(x, center=True), len(func.shape) - 1, func)
 
 
 def calc_dvars(func_file, mask_file, output_all=False):
