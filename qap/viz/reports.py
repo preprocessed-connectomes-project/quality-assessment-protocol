@@ -82,8 +82,8 @@ def workflow_report(in_csv, qap_type, out_dir=None, out_file=None,
     doc = op.join(os.getcwd(), 'documentation.pdf')
 
     # Let documentation page fail
-    get_documentation(qap_type, doc)
-    if doc is not None:
+    documentation_result = get_documentation(qap_type, doc)
+    if documentation_result:
         pdf_group.append(doc)
 
     if len(pdf_group) > 0:
@@ -146,21 +146,21 @@ def workflow_report(in_csv, qap_type, out_dir=None, out_file=None,
 def get_documentation(doc_type, out_file):
     import codecs
     from xhtml2pdf import pisa
+
     # open output file for writing (truncated binary)
-    result = open(out_file, "w+b")
+    with open(out_file, "w+b") as result:
 
-    html_dir = op.abspath(
-        op.join(op.dirname(__file__), 'html', '%s.html' % doc_type))
+        html_dir = op.abspath(
+            op.join(op.dirname(__file__), 'html', '%s.html' % doc_type))
 
-    with codecs.open(html_dir, mode='r', encoding='utf-8') as f:
-        html = f.read()
+        with codecs.open(html_dir, mode='r', encoding='utf-8') as f:
+            html = f.read()
 
-    # convert HTML to PDF
-    status = pisa.pisaDocument(html, result, encoding='UTF-8')
-    result.close()
+        # convert HTML to PDF
+        status = pisa.pisaDocument(html, result, encoding='UTF-8')
 
-    # return True on success and False on errors
-    return status.err
+        # return True on success and False on errors
+        return not status.err
 
 
 def summary_cover(data, is_group=False, out_file=None):
