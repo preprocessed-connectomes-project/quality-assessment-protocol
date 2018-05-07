@@ -814,7 +814,7 @@ def write_inputs_dict_to_yaml_file(input_dict, yaml_outpath):
     # write yaml file
     try:
         with open(yaml_outpath,"wt") as f:
-            f.write(yaml.dump(input_dict, default_flow_style=True))
+            f.write(yaml.dump(input_dict))
     except:
         err = "\n\n[!] Error writing YAML file output.\n1. Do you have " \
               "write permissions for the output path provided?\n2. Did you " \
