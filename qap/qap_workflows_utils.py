@@ -330,17 +330,8 @@ def create_threshold_mask(data, threshold):
     """
 
     import numpy as np
-
     mask = np.zeros(data.shape)
-
-    for i in range(0, len(data)):
-        for j in range(0, len(data[0])):
-            for k in range(0, len(data[0][0])):
-                if data[i][j][k] > threshold:
-                    mask[i][j][k] = 1
-                else:
-                    mask[i][j][k] = 0
-
+    mask[data > threshold] = 1
     return mask
 
 
@@ -370,7 +361,7 @@ def calc_estimated_csf_nuisance(temporal_std_map):
     return nuisance_stds
 
 
-def sfs_voxel(arg_tuple):
+def sfs_voxel(voxel_ts, total_func_mean, voxel_ts_std, nuisance_mean_std):
     """Calculate the Signal Fluctuation Intensity (SFS) of one voxel's
     functional time series.
 
@@ -388,8 +379,6 @@ def sfs_voxel(arg_tuple):
     :return: Numpy array of the signal fluctuation intensity timecourse for
              the voxel timeseries provided.
     """
-
-    voxel_ts, total_func_mean, voxel_ts_std, nuisance_mean_std = arg_tuple
 
     sfs_vox = \
         (voxel_ts/total_func_mean) * (voxel_ts_std/nuisance_mean_std)
@@ -415,26 +404,17 @@ def sfs_timeseries(func_mean, func_mask, temporal_std_file):
 
     func_mean_img = nb.load(func_mean)
     func_mean_data = func_mean_img.get_data()
-    func_mask_img = nb.load(func_mask)
-    func_mask_data = func_mask_img.get_data()
     tstd_img = nb.load(temporal_std_file)
     temporal_std_map = tstd_img.get_data()
 
-    masked_func_mean = func_mean_data#[func_mask_data.nonzero()]
-    total_func_mean = np.mean(masked_func_mean)
-
-    masked_tstd = temporal_std_map#[func_mask_data.nonzero()]
-
+    total_func_mean = np.mean(func_mean_data)
     nuisance_stds = calc_estimated_csf_nuisance(temporal_std_map)
-
     nuisance_mean_std = np.mean(np.asarray(nuisance_stds.nonzero()).flatten())
 
-    arg_tuples = []
-    for voxel_ts, voxel_std in zip(masked_func_mean, masked_tstd):
-        arg_tuples.append((voxel_ts, total_func_mean, voxel_std,
-                          nuisance_mean_std))
-
-    sfs_voxels = np.asarray(map(sfs_voxel, arg_tuples))
+    sfs_voxels = np.asarray([   
+        sfs_voxel(voxel_ts, total_func_mean, voxel_std, nuisance_mean_std)
+        for voxel_ts, voxel_std in zip(func_mean_data, temporal_std_map)
+    ])
 
     # write the images
     mask_img = nb.load(func_mask)
