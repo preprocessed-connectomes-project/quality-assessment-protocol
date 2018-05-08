@@ -280,10 +280,7 @@ def calc_temporal_std(voxel_ts):
     optimize it
     '''
     import numpy as np
-
-    voxel_std = np.std(voxel_ts)
-
-    return voxel_std
+    return np.std(voxel_ts)
 
 
 def get_temporal_std_map(func_reorient, func_mask):
@@ -302,17 +299,12 @@ def get_temporal_std_map(func_reorient, func_mask):
     from qap.qap_utils import get_masked_data
 
     func_data = get_masked_data(func_reorient, func_mask)
-    temporal_std_map = np.zeros(func_data.shape[0:3])
-
-    for i in range(0, len(func_data)):
-        for j in range(0, len(func_data[0])):
-            for k in range(0, len(func_data[0][0])):
-                std = np.std(func_data[i][j][k])
-                temporal_std_map[i][j][k] = std
+    temporal_std_map = np.std(func_data, axis=-1)
 
     # write the image
     mask_img = nb.load(func_mask)
     tstd_img = nb.Nifti1Image(temporal_std_map, mask_img.affine)
+
     # this writes it into the node's folder in the working directory
     temporal_std_map_file = os.path.join(os.getcwd(), "tstd.nii.gz")
     tstd_img.to_filename(temporal_std_map_file)
