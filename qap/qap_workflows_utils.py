@@ -363,24 +363,21 @@ def calc_compcor_nuisance(func_mean):
     """
 
     import numpy as np
-    from qap.qap_utils import get_masked_data
 
-    datashape = func_mean.shape
-    timepoints = datashape[-1]
+    timepoints = func_mean.shape[-1]
 
     data = func_mean.reshape((-1, timepoints))
     X = np.ones((timepoints, 1))
     betas = np.linalg.pinv(X).dot(data.T)
-    datahat = X.dot(betas).T
-    regressed_data = (data - datahat).reshape(datashape)
+    data_hat = X.dot(betas).T
     
-    M = regressed_data.T
-    stdM = np.std(M, axis=0)
-    stdM[stdM == 0] = 1.
-    stdM[np.isnan(stdM)] = 1.
+    data = (data - data_hat).reshape(func_mean.shape).T
+    std = np.std(data, axis=0)
+    std[std == 0] = 1.
+    std[np.isnan(std)] = 1.
 
-    M = M / stdM
-    u, _, _ = np.linalg.svd(M, full_matrices=False)
+    data = data / std
+    u, _, _ = np.linalg.svd(data, full_matrices=False)
     
     return u
 
