@@ -378,8 +378,8 @@ def calc_compcor_nuisance(func_mean):
 
     data = data / std
     u, _, _ = np.linalg.svd(data, full_matrices=False)
-    
-    return u
+
+    return u.T
 
 
 def sfs_voxel(voxel_ts, total_func_mean, voxel_ts_std, nuisance_mean_std):
