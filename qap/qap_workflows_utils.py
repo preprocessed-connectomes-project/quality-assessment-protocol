@@ -361,6 +361,38 @@ def calc_estimated_csf_nuisance(temporal_std_map):
     return nuisance_stds
 
 
+def calc_compcor_nuisance(func_mean):
+    """Calculate the estimated Compcor nuisance using the tSTD based
+    determination of noise ROI.
+
+    :param temporal_std_map: Numpy array of a map of the standard deviations
+                             of each voxel's timeseries.
+    :return: Numpy array of the map of estimated CSF nuisance for each voxel.
+    """
+
+    import numpy as np
+    from qap.qap_utils import get_masked_data
+
+    datashape = func_mean.shape
+    timepoints = datashape[-1]
+
+    data = func_mean.reshape((-1, timepoints))
+    X = np.ones((timepoints, 1))
+    betas = np.linalg.pinv(X).dot(data.T)
+    datahat = X.dot(betas).T
+    regressed_data = (data - datahat).reshape(datashape)
+    
+    M = regressed_data.T
+    stdM = np.std(M, axis=0)
+    stdM[stdM == 0] = 1.
+    stdM[np.isnan(stdM)] = 1.
+
+    M = M / stdM
+    u, _, _ = np.linalg.svd(M, full_matrices=False)
+    
+    return u
+
+
 def sfs_voxel(voxel_ts, total_func_mean, voxel_ts_std, nuisance_mean_std):
     """Calculate the Signal Fluctuation Intensity (SFS) of one voxel's
     functional time series.
@@ -393,14 +425,14 @@ def sfs_timeseries(func_mean, func_mask, temporal_std_file):
     :param func_mask: String filepath to the functional brain mask NIFTI file.
     :param temporal_std_file: String filepath to the temporal standard
                               deviation map NIFTI file.
-    :return: The string filepaths of the SFS map file, and the estimated CSF
+    :return: The string filepaths of the SFS map file, and the estimated
              nuisance map file.
     """
 
     import os
     import numpy as np
     import nibabel as nb
-    from qap.qap_workflows_utils import calc_estimated_csf_nuisance, sfs_voxel
+    from qap.qap_workflows_utils import calc_compcor_nuisance, sfs_voxel
 
     func_mean_img = nb.load(func_mean)
     func_mean_data = func_mean_img.get_data()
@@ -408,7 +440,7 @@ def sfs_timeseries(func_mean, func_mask, temporal_std_file):
     temporal_std_map = tstd_img.get_data()
 
     total_func_mean = np.mean(func_mean_data)
-    nuisance_stds = calc_estimated_csf_nuisance(temporal_std_map)
+    nuisance_stds = calc_compcor_nuisance(func_mean_data)
     nuisance_mean_std = np.mean(np.asarray(nuisance_stds.nonzero()).flatten())
 
     sfs_voxels = np.asarray([   
