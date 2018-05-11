@@ -327,10 +327,9 @@ def create_threshold_mask(data, threshold):
     return mask
 
 
-def calc_estimated_csf_nuisance(temporal_std_map):
-    """Calculate the estimated CSF nuisance using a map of the temporal
+def calc_estimated_tstd_nuisance_mask(temporal_std_map):
+    """Calculate the estimated nuisance using a map of the temporal
     standard deviation.
-
     :param temporal_std_map: Numpy array of a map of the standard deviations
                              of each voxel's timeseries.
     :return: Numpy array of the map of estimated CSF nuisance for each voxel.
@@ -346,45 +345,12 @@ def calc_estimated_csf_nuisance(temporal_std_map):
     top_2_std = all_tstd_sorted[int(top_2):]
     cutoff = top_2_std[0]
 
-    estimated_nuisance_mask = create_threshold_mask(temporal_std_map, cutoff)
-
-    nuisance_stds = get_masked_data(temporal_std_map, estimated_nuisance_mask)
-
-    return nuisance_stds
+    return create_threshold_mask(temporal_std_map, cutoff)
 
 
-def calc_compcor_nuisance(func_mean):
-    """Calculate the estimated Compcor nuisance using the tSTD based
-    determination of noise ROI.
-
-    :param temporal_std_map: Numpy array of a map of the standard deviations
-                             of each voxel's timeseries.
-    :return: Numpy array of the map of estimated CSF nuisance for each voxel.
-    """
-
-    import numpy as np
-
-    timepoints = func_mean.shape[-1]
-
-    data = func_mean.reshape((-1, timepoints))
-    X = np.ones((timepoints, 1))
-    betas = np.linalg.pinv(X).dot(data.T)
-    data_hat = X.dot(betas).T
-    
-    data = (data - data_hat).reshape(func_mean.shape).T
-    std = np.std(data, axis=0)
-    std[std == 0] = 1.
-    std[np.isnan(std)] = 1.
-
-    data = data / std
-    u, _, _ = np.linalg.svd(data, full_matrices=False)
-
-    return u.T
-
-
-def sfs_voxel(voxel_ts, total_func_mean, voxel_ts_std, nuisance_mean_std):
-    """Calculate the Signal Fluctuation Intensity (SFS) of one voxel's
-    functional time series.
+def sfs_voxel(voxel_ts, noise_components):
+    """Regress out the nuisance and calculate the Signal Fluctuation
+    Intensity (SFS) of one voxel's functional time series.
 
     - From "Signal Fluctuation Sensitivity: An Improved Metric for Optimizing
       Detection of Resting-State fMRI Networks", Daniel J. DeDora1,
@@ -393,23 +359,30 @@ def sfs_voxel(voxel_ts, total_func_mean, voxel_ts_std, nuisance_mean_std):
       Lilianne R. Mujica-Parodi. More info here:
         http://journal.frontiersin.org/article/10.3389/fnins.2016.00180/full
 
-    :param: Tuple of arguments, containing 1.) the timeseries of the current
-            voxel, 2.) the mean value of all of the voxel timeseries, 3.) the
-            standard deviation of the current voxel timeseries, and 4.) the
-            mean standard deviation of the estimated CSF nuisance.
+    :param voxel_ts: The timeseries of the current voxel
+    :param noise_components: The eigenvectors of nuisance
+    
     :return: Numpy array of the signal fluctuation intensity timecourse for
              the voxel timeseries provided.
     """
+    import numpy as np
 
-    sfs_vox = \
-        (voxel_ts/total_func_mean) * (voxel_ts_std/nuisance_mean_std)
+    B = np.linalg.inv(
+            noise_components.T.dot(noise_components)
+        ) \
+        .dot(noise_components.T) \
+        .dot(voxel_ts)
+    noise = noise_components.dot(B)
+    residual = voxel_ts - noise
 
-    return sfs_vox
+    return residual.var() / noise_components.var()
 
 
-def sfs_timeseries(func_mean, func_mask, temporal_std_file):
+
+def sfs_timeseries(func, func_mask, temporal_std_file):
     """Average the SFS timecourses of each voxel into one SFS timeseries.
 
+    :param func: String filepath to the functional NIFTI file.
     :param func_mean: String filepath to the mean functional NIFTI file.
     :param func_mask: String filepath to the functional brain mask NIFTI file.
     :param temporal_std_file: String filepath to the temporal standard
@@ -421,31 +394,26 @@ def sfs_timeseries(func_mean, func_mask, temporal_std_file):
     import os
     import numpy as np
     import nibabel as nb
-    from qap.qap_workflows_utils import calc_compcor_nuisance, sfs_voxel
+    from qap.qap_workflows_utils import calc_estimated_tstd_mask, sfs_voxel
 
-    func_mean_img = nb.load(func_mean)
-    func_mean_data = func_mean_img.get_data()
-    tstd_img = nb.load(temporal_std_file)
-    temporal_std_map = tstd_img.get_data()
+    func_img = nb.load(func)
+    func_data = func_img.get_data()
+    temporal_std_img = nb.load(temporal_std_file)
+    temporal_std_data = temporal_std_img.get_data()
 
-    total_func_mean = np.mean(func_mean_data)
-    nuisance_stds = calc_compcor_nuisance(func_mean_data)
-    nuisance_mean_std = np.mean(np.asarray(nuisance_stds.nonzero()).flatten())
+    nuisance_mask = calc_estimated_tstd_nuisance_mask(temporal_std_data)
+    nuisance_voxels = func_data[nuisance_mask == 1]
+    noise_components, _, _ = np.linalg.svd(nuisance_voxels.T)
+    noise_components = noise_components[:, :5]
 
-    sfs_voxels = np.asarray([   
-        sfs_voxel(voxel_ts, total_func_mean, voxel_std, nuisance_mean_std)
-        for voxel_ts, voxel_std in zip(func_mean_data, temporal_std_map)
-    ])
+    sfs_voxels = np.apply_along_axis(lambda ts: sfs_voxel(ts, noise_components), -1, func_data)
 
-    # write the images
     mask_img = nb.load(func_mask)
-    est_n_img = nb.Nifti1Image(nuisance_stds, mask_img.affine)
-    # this writes it into the node's folder in the working directory
+    est_n_img = nb.Nifti1Image(nuisance_voxels.std(axis=-1), mask_img.affine)
     est_nuisance_file = os.path.join(os.getcwd(), "estimated_nuisance.nii.gz")
     est_n_img.to_filename(est_nuisance_file)
 
     sfs_img = nb.Nifti1Image(sfs_voxels, mask_img.affine)
-    # this writes it into the node's folder in the working directory
     sfs_file = os.path.join(os.getcwd(), "SFS.nii.gz")
     sfs_img.to_filename(sfs_file)
 
