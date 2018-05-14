@@ -338,17 +338,11 @@ def calc_estimated_tstd_nuisance_mask(temporal_std_map):
     import numpy as np
     from qap.qap_utils import get_masked_data
 
-    all_tstd = np.asarray(temporal_std_map.nonzero()).flatten()
-    all_tstd_sorted = sorted(all_tstd)
-    top_2 = 0.98 * len(all_tstd)
-
-    top_2_std = all_tstd_sorted[int(top_2):]
-    cutoff = top_2_std[0]
-
+    cutoff = np.percentile(temporal_std_map, 98)
     return create_threshold_mask(temporal_std_map, cutoff)
 
 
-def sfs_voxel(voxel_ts, noise_components):
+def sfs_voxel(voxel_ts, noise_components, betas):
     """Regress out the nuisance and calculate the Signal Fluctuation
     Intensity (SFS) of one voxel's functional time series.
 
@@ -365,18 +359,9 @@ def sfs_voxel(voxel_ts, noise_components):
     :return: Numpy array of the signal fluctuation intensity timecourse for
              the voxel timeseries provided.
     """
-    import numpy as np
-
-    B = np.linalg.inv(
-            noise_components.T.dot(noise_components)
-        ) \
-        .dot(noise_components.T) \
-        .dot(voxel_ts)
-    noise = noise_components.dot(B)
+    noise = noise_components.dot(betas.dot(voxel_ts))
     residual = voxel_ts - noise
-
     return residual.var() / noise_components.var()
-
 
 
 def sfs_timeseries(func, func_mask, temporal_std_file):
@@ -394,22 +379,30 @@ def sfs_timeseries(func, func_mask, temporal_std_file):
     import os
     import numpy as np
     import nibabel as nb
-    from qap.qap_workflows_utils import calc_estimated_tstd_mask, sfs_voxel
+    from qap.qap_workflows_utils import calc_estimated_tstd_nuisance_mask, sfs_voxel
 
     func_img = nb.load(func)
     func_data = func_img.get_data()
     temporal_std_img = nb.load(temporal_std_file)
     temporal_std_data = temporal_std_img.get_data()
 
+    # Extract components from nuisance
     nuisance_mask = calc_estimated_tstd_nuisance_mask(temporal_std_data)
     nuisance_voxels = func_data[nuisance_mask == 1]
     noise_components, _, _ = np.linalg.svd(nuisance_voxels.T)
     noise_components = noise_components[:, :5]
 
-    sfs_voxels = np.apply_along_axis(lambda ts: sfs_voxel(ts, noise_components), -1, func_data)
+    # Precompute nuisance regressor betas
+    betas = np.linalg.inv(
+                noise_components.T.dot(noise_components)
+            ) \
+            .dot(noise_components.T)
+
+    # Regress out noise from each voxel
+    sfs_voxels = np.apply_along_axis(lambda ts: sfs_voxel(ts, noise_components, betas), -1, func_data)
 
     mask_img = nb.load(func_mask)
-    est_n_img = nb.Nifti1Image(nuisance_voxels.std(axis=-1), mask_img.affine)
+    est_n_img = nb.Nifti1Image(nuisance_mask, mask_img.affine)
     est_nuisance_file = os.path.join(os.getcwd(), "estimated_nuisance.nii.gz")
     est_n_img.to_filename(est_nuisance_file)
 

@@ -542,7 +542,7 @@ def calculate_sfs_workflow(workflow, resource_pool, config, name="_"):
                                          function=sfs_timeseries),
                             name="calculate_sfs%s" % name)
 
-    if len(resource_pool["func_reorient"]) == 2:
+    if isinstance(resource_pool["func_reorient"], tuple):
         node, out_file = resource_pool["func_reorient"]
         workflow.connect(node, out_file, calculate_sfs, 'func')
     else:
