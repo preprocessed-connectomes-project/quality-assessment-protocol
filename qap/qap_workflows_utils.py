@@ -342,7 +342,7 @@ def calc_estimated_tstd_nuisance_mask(temporal_std_map):
     return create_threshold_mask(temporal_std_map, cutoff)
 
 
-def sfs_voxel(voxel_ts, noise_components, betas, noise_variance):
+def sfs_voxel(voxel_ts, voxel_mean, total_mean, noise_components, betas):
     """Regress out the nuisance and calculate the Signal Fluctuation
     Intensity (SFS) of one voxel's functional time series.
 
@@ -361,10 +361,10 @@ def sfs_voxel(voxel_ts, noise_components, betas, noise_variance):
     """
     noise = noise_components.dot(betas.dot(voxel_ts))
     residual = voxel_ts - noise
-    return residual.var() / noise_variance
+    return (voxel_mean / total_mean) * (residual.var() / noise.var())
 
 
-def sfs_timeseries(func, func_mask, temporal_std_file):
+def sfs_timeseries(func, func_mean, func_mask, temporal_std_file):
     """Average the SFS timecourses of each voxel into one SFS timeseries.
 
     :param func: String filepath to the functional NIFTI file.
@@ -379,19 +379,25 @@ def sfs_timeseries(func, func_mask, temporal_std_file):
     import os
     import numpy as np
     import nibabel as nb
+    from itertools import starmap
     from qap.qap_workflows_utils import calc_estimated_tstd_nuisance_mask, sfs_voxel
 
     func_img = nb.load(func)
     func_data = func_img.get_data()
+    func_mean_img = nb.load(func_mean)
+    func_mean_data = func_mean_img.get_data()
     temporal_std_img = nb.load(temporal_std_file)
     temporal_std_data = temporal_std_img.get_data()
+
+    mask_img = nb.load(func_mask)
+
+    total_func_mean = np.mean(func_mean_data)
 
     # Extract components from nuisance
     nuisance_mask = calc_estimated_tstd_nuisance_mask(temporal_std_data)
     nuisance_voxels = func_data[nuisance_mask == 1]
-    noise_components, noise_eigenvalues, _ = np.linalg.svd(nuisance_voxels.T)
+    noise_components, _, _ = np.linalg.svd(nuisance_voxels.T)
     noise_components = noise_components[:, :5]
-    noise_variance = noise_eigenvalues.var()
 
     # Precompute nuisance regressor betas
     betas = np.linalg.inv(
@@ -399,10 +405,15 @@ def sfs_timeseries(func, func_mask, temporal_std_file):
             ) \
             .dot(noise_components.T)
 
-    # Regress out noise from each voxel
-    sfs_voxels = np.apply_along_axis(lambda ts: sfs_voxel(ts, noise_components, betas, noise_variance), -1, func_data)
+    arg_tuples = [
+        (func_data[idx], func_mean_data[idx],
+         total_func_mean, noise_components, betas)
+        for idx in np.ndindex(func_mean_data.shape)
+    ]
 
-    mask_img = nb.load(func_mask)
+    # Regress out noise from each voxel
+    sfs_voxels = np.fromiter(starmap(sfs_voxel, arg_tuples), func_data.dtype).reshape(mask_img.shape)
+
     est_n_img = nb.Nifti1Image(nuisance_mask, mask_img.affine)
     est_nuisance_file = os.path.join(os.getcwd(), "estimated_nuisance.nii.gz")
     est_n_img.to_filename(est_nuisance_file)

@@ -526,6 +526,14 @@ def calculate_sfs_workflow(workflow, resource_pool, config, name="_"):
     import nipype.interfaces.utility as niu
     from qap.qap_workflows_utils import sfs_timeseries
 
+    if 'func_mean' not in resource_pool.keys():
+        from functional_preproc import mean_functional_workflow
+        old_rp = copy.copy(resource_pool)
+        workflow, resource_pool = \
+            mean_functional_workflow(workflow, resource_pool, config, name)
+        if resource_pool == old_rp:
+            return workflow, resource_pool
+            
     if 'func_temporal_std_map' not in resource_pool.keys():
         from qap_workflows import calculate_temporal_std
         old_rp = copy.copy(resource_pool)
@@ -535,6 +543,7 @@ def calculate_sfs_workflow(workflow, resource_pool, config, name="_"):
             return workflow, resource_pool
 
     calculate_sfs = pe.Node(niu.Function(input_names=['func',
+                                                      'func_mean', 
                                                       'func_mask',
                                                       'temporal_std_file'],
                                          output_names=['sfs_file',
@@ -548,6 +557,12 @@ def calculate_sfs_workflow(workflow, resource_pool, config, name="_"):
     else:
         calculate_sfs.inputs.func = \
             resource_pool["func_reorient"]
+
+    if isinstance(resource_pool["func_mean"], tuple):
+        node, out_file = resource_pool["func_mean"]
+        workflow.connect(node, out_file, calculate_sfs, 'func_mean')
+    else:
+        calculate_sfs.inputs.func_mean = resource_pool["func_mean"]
 
     if isinstance(resource_pool["func_brain_mask"], tuple):
         node, out_file = resource_pool["func_brain_mask"]
@@ -566,8 +581,6 @@ def calculate_sfs_workflow(workflow, resource_pool, config, name="_"):
     resource_pool['func_SFS'] = (calculate_sfs, 'sfs_file')
     resource_pool['func_estimated_nuisance'] = \
         (calculate_sfs, 'est_nuisance_file')
-    resource_pool['func_estimated_nuisance_csf'] = \
-        (calculate_sfs, 'est_nuisance_file_csf')
 
     return workflow, resource_pool
 
