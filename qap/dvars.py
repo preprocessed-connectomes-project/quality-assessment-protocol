@@ -44,7 +44,7 @@ def load(func_file, mask_file, check4d=True):
 
     import numpy as np
     import nibabel as nib
-    from qap.qap_utils import raise_smart_exception
+    from qap.utils import raise_smart_exception
 
     try:
         func_img = nib.load(func_file)
@@ -86,7 +86,7 @@ def load_timeseries(func_file, mask_file, check4d=True):
 
     import numpy as np
     import nibabel as nb
-    from qap.qap_utils import get_masked_data, raise_smart_exception
+    from qap.utils import get_masked_data, raise_smart_exception
 
     try:
         func_img = nb.load(func_file)
@@ -191,7 +191,7 @@ def calc_dvars(func_file, mask_file, output_all=False):
     """
 
     import numpy as np
-    from qap.qap_utils import get_masked_data, read_nifti_image, \
+    from qap.utils import get_masked_data, read_nifti_image, \
         raise_smart_exception
 
     # load data

@@ -9,7 +9,7 @@ default_pipeline_configuration = {
     'anatomical_template': '/opt/afni/MNI_avg152T1+tlrc',
     'exclude_zeros': 'False',
     'functional_start_index': '0',
-    'functional_stop_index': 'End',
+    'functional_stop_index': None,
     'bundle_size': 1,
     'num_processors': 1,
     'available_memory': 4,
@@ -210,9 +210,7 @@ def validate_pipeline_configuration(pipeline_configuration):
                                          'save_working_dir',
                                          'recompute_all_derivatives',
                                          'write_report',
-                                         'write_graph'
-
-                                         ]
+                                         'write_graph']
 
     missing_parameters = []
     for parameter in required_configuration_parameters:
@@ -220,21 +218,6 @@ def validate_pipeline_configuration(pipeline_configuration):
             missing_parameters.append(parameter)
 
     if len(missing_parameters) > 0:
-        error_string = '\n[!] The following rquired parameters are missing from the pipeline configuration:'
-        error_string += ",".join([parameter for parameter in missing_parameters]) + '\n'
+        error_string = '\n[!] The following rquired parameters are missing from the pipeline configuration:\n'
+        error_string += "\n".join([parameter for parameter in missing_parameters]) + '\n'
         raise Exception(error_string)
-
-if __name__ == "__main__":
-    write_pipeline_configuration("test_config.yml", default_pipeline_configuration)
-
-    print(configuration_output_string.format(**default_pipeline_configuration))
-
-    import yaml
-
-    test_configuration = yaml.load(open("test_config.yml", "r"))
-    print(configuration_output_string.format(**test_configuration))
-
-    validate_pipeline_configuration(test_configuration)
-    validate_pipeline_configuration(default_pipeline_configuration)
-
-    assert(test_configuration != default_pipeline_configuration)

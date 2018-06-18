@@ -227,7 +227,7 @@ def slice_head_mask(infile, transform):
                                         warp_coordinates, \
                                         calculate_plane_coords, \
                                         create_slice_mask
-    from qap.qap_utils import read_nifti_image, write_nifti_image
+    from qap.utils import read_nifti_image, write_nifti_image
 
     # get file info
     infile_img = read_nifti_image(infile)
@@ -296,7 +296,7 @@ def get_temporal_std_map(func_reorient, func_mask):
     import os
     import numpy as np
     import nibabel as nb
-    from qap.qap_utils import get_masked_data
+    from qap.utils import get_masked_data
 
     func_data = get_masked_data(func_reorient, func_mask)
     temporal_std_map = np.std(func_data, axis=-1)
@@ -336,7 +336,7 @@ def calc_estimated_tstd_nuisance_mask(temporal_std_map):
     """
 
     import numpy as np
-    from qap.qap_utils import get_masked_data
+    from qap.utils import get_masked_data
 
     cutoff = np.percentile(temporal_std_map, 98)
     return create_threshold_mask(temporal_std_map, cutoff)
@@ -570,7 +570,7 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     import qap
     from qap.spatial_qc import summary_mask, snr, cnr, fber, efc, fav, fwhm, \
         cortical_contrast, skew_and_kurt
-    from qap.qap_utils import load_image, load_mask, \
+    from qap.utils import load_image, load_mask, \
                               create_anatomical_background_mask
 
     # Load the data
@@ -739,7 +739,7 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
     import qap
     from qap.spatial_qc import summary_mask, snr, fber, efc, fwhm, \
         ghost_direction
-    from qap.qap_utils import load_image, load_mask
+    from qap.utils import load_image, load_mask
 
     # Load the data
     anat_data = load_image(mean_epi)

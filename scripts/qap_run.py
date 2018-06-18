@@ -5,7 +5,7 @@
 
 import argparse
 from qap import bids_utils
-from qap import qap_cfg
+from qap import config
 
 from qap.qap_pipeline import build_and_run_qap_pipeline
 
@@ -42,10 +42,7 @@ def create_bundles(data_configuration_dict, bundle_size):
 
                     if tranche_plank_identifier in new_bundle:
                         print("WARNING: tranche {0}, {1}, {2}, {3} already "
-                              "found in bundle, overwriting".format(tranche_plank_identifier[0],
-                                                                    tranche_plank_identifier[1],
-                                                                    tranche_plank_identifier[2],
-                                                                    tranche_plank_identifier[3]))
+                              "found in bundle, overwriting".format(*tranche_plank_identifier))
 
                     new_bundle[tranche_plank_identifier] = data_configuration_dict[site][participant][session][scan]
 
@@ -82,7 +79,9 @@ def run_qap(pipeline_configuration, data_bundles, bundle_index=''):
     """
 
     import os
-    from qap.qap_utils import write_json
+    import logging
+    from nipype.pipeline.plugins.callback_log import log_nodes_cb
+    from qap.utils import write_json
     from qap.cloud_utils import download_single_s3_path, copy_directory_to_s3
 
     # first deal with logging, if the plan is to write the log files to S3, we
@@ -95,10 +94,6 @@ def run_qap(pipeline_configuration, data_bundles, bundle_index=''):
 
     if not os.path.isdir(pipeline_configuration["log_directory"]):
         os.makedirs(pipeline_configuration["log_directory"])
-
-    # set up callback logging
-    import logging
-    from nipype.pipeline.plugins.callback_log import log_nodes_cb
 
     callback_log_filename = os.path.join(pipeline_configuration["log_directory"], "callback.log")
 
@@ -333,7 +328,7 @@ def main():
     # First lets deal with the pipeline configuration details, if a
     # configuration file is provide read it in, other wise use the
     # default
-    pipeline_configuration = qap_cfg.default_pipeline_configuration
+    pipeline_configuration = config.default_pipeline_configuration
 
     if args.pipeline_config_file:
 
@@ -375,7 +370,7 @@ def main():
     # get the logging directory, this can go to S3, but will have to be
     # handled differently than outputs which are written to S3 by the datasink
     if not args.log_dir and not pipeline_configuration["log_directory"]:
-        pipeline_configuration["log_directory"] = pipeline_configuration["output_directory"]+"/logs"
+        pipeline_configuration["log_directory"] = pipeline_configuration["output_directory"] + "/logs"
     elif args.log_dir:
         pipeline_configuration["log_directory"] = args.log_dir
 
@@ -406,7 +401,7 @@ def main():
     if args.mem_gb:
         pipeline_configuration["available_memory"] = float(args.mem_gb)
     elif args.mem_mb:
-        pipeline_configuration["available_memory"] = float(args.mem_mb)/1024.0
+        pipeline_configuration["available_memory"] = float(args.mem_mb) / 1024.0
 
     if args.functional_discard_volumes:
         pipeline_configuration["functional_start_index"] = int(args.functional_discard_volumes)
@@ -448,9 +443,7 @@ def main():
     if args.recompute_all_derivatives:
         pipeline_configuration["recompute_all_derivatives"] = True
 
-    qap_cfg.validate_pipeline_configuration(pipeline_configuration)
-
-    print(qap_cfg.configuration_output_string.format(**pipeline_configuration))
+    config.validate_pipeline_configuration(pipeline_configuration)
 
     # write out the pipeline configuration file, nice for debugging and other
     # stuff
@@ -458,7 +451,7 @@ def main():
     timestamp_string = datetime.now().strftime("%Y%m%d%H%M")
 
     pipeline_configuration_filename = "qap-pipe-config-{}.yml".format(timestamp_string)
-    qap_cfg.write_pipeline_configuration(pipeline_configuration_filename, pipeline_configuration)
+    config.write_pipeline_configuration(pipeline_configuration_filename, pipeline_configuration)
 
     # the easiest case is when a data configuration file is passed in
     data_configuration_dict = {}

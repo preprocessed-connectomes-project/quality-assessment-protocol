@@ -38,7 +38,7 @@ def calculate_percent_outliers(values_list):
     """
 
     import numpy as np
-    from qap.qap_utils import raise_smart_exception
+    from qap.utils import raise_smart_exception
 
     try:
         # calculate the IQR
@@ -104,7 +104,7 @@ def fd_jenkinson(in_file, rmax=80., out_file=None, out_array=False):
     import os.path as op
     from shutil import copyfile
     import math
-    from qap.qap_utils import raise_smart_exception
+    from qap.utils import raise_smart_exception
 
     if out_file is None:
         fname, ext = op.splitext(op.basename(in_file))
@@ -181,7 +181,7 @@ def outlier_timepoints(func_file, mask_file=None, out_fraction=True):
     """
 
     import commands
-    from qap.qap_utils import raise_smart_exception
+    from qap.utils import raise_smart_exception
 
     opts = []
     if out_fraction:
@@ -227,7 +227,7 @@ def quality_timepoints(func_file):
     """
 
     import subprocess
-    from qap.qap_utils import raise_smart_exception
+    from qap.utils import raise_smart_exception
 
     opts = []
     opts.append(func_file)

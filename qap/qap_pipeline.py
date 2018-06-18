@@ -43,7 +43,7 @@ def build_and_run_qap_pipeline(args, run=True):
     import nipype.interfaces.utility as niu
 
     import qap
-    from qap.qap_utils import read_json
+    from qap.utils import read_json
 
     import glob
 

@@ -2,7 +2,7 @@ exclude_zeros: False
 recompute_all_derivatives: False
 
 functional_start_index: 0
-functional_stop_index: End
+functional_stop_index: null
 
 output_directory: /tmp/output
 working_directory: /tmp/workdir

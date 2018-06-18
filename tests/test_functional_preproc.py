@@ -9,7 +9,7 @@ def test_get_idx_whole_timeseries():
     import os
     import pkg_resources as p
 
-    from qap.functional_preproc import get_idx
+    from qap..workflows.functional import get_idx
     
     func_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                     "functional_scan.nii.gz"))    
@@ -26,7 +26,7 @@ def test_get_idx_partial_timeseries():
     import os
     import pkg_resources as p
 
-    from qap.functional_preproc import get_idx
+    from qap..workflows.functional import get_idx
     
     func_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                     "functional_scan.nii.gz"))    
@@ -43,7 +43,7 @@ def test_get_idx_partial_timeseries_overshoot():
     import os
     import pkg_resources as p
 
-    from qap.functional_preproc import get_idx
+    from qap..workflows.functional import get_idx
     
     func_scan = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                     "functional_scan.nii.gz"))     

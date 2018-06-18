@@ -20,8 +20,8 @@ exclude_zeros: False
 functional_start_index: 0
 
 # Similarly it may be desirable to exclude volumes at the end of the scan from the calculation. Set
-# this parameter to the index of the last volume to include in calculations, or 'End' for the last volume.
-functional_stop_index: End
+# this parameter to the index of the last volume to include in calculations, or null for the last volume.
+functional_stop_index: null
 
 # Set the write_report parameter to True if you would like QAP to produce PDF reports visualizing the
 # results of the QAP metrics.

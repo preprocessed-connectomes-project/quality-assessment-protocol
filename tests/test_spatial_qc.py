@@ -19,7 +19,7 @@ def test_summary_mask():
     import pkg_resources as p
 
     from qap.spatial_qc import summary_mask
-    from qap.qap_utils import load_image, load_mask
+    from qap.utils import load_image, load_mask
 
     anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "anat_reorient.nii.gz"))
@@ -123,7 +123,7 @@ def test_fber():
     import numpy.testing as nt
 
     from qap.spatial_qc import fber
-    from qap.qap_utils import load_image, load_mask
+    from qap.utils import load_image, load_mask
 
     anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "anat_reorient.nii.gz"))
@@ -155,7 +155,7 @@ def test_efc():
     import numpy.testing as nt
 
     from qap.spatial_qc import efc
-    from qap.qap_utils import load_image
+    from qap.utils import load_image
 
     anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "anat_reorient.nii.gz"))
@@ -177,7 +177,7 @@ def test_artifacts_no_qi2():
     import numpy.testing as nt
 
     from qap.spatial_qc import artifacts
-    from qap.qap_utils import load_image, load_mask
+    from qap.utils import load_image, load_mask
 
     anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "anat_reorient.nii.gz"))
@@ -208,7 +208,7 @@ def test_artifacts_with_qi2():
     import pkg_resources as p
 
     from qap.spatial_qc import artifacts
-    from qap.qap_utils import load_image, load_mask
+    from qap.utils import load_image, load_mask
 
     anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "anat_1",
@@ -288,7 +288,7 @@ def test_ghost_direction():
     import numpy.testing as nt
 
     from qap.spatial_qc import ghost_direction
-    from qap.qap_utils import load_image, load_mask
+    from qap.utils import load_image, load_mask
 
     mean_epi = p.resource_filename("qap", os.path.join(test_sub_dir, \
                                    "mean_functional.nii.gz"))

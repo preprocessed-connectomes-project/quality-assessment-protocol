@@ -18,7 +18,7 @@ def download_single_s3_path(s3_path, cfg_dict):
 
     import os
     from indi_aws import fetch_creds, aws_utils
-    from qap_utils import raise_smart_exception
+    from utils import raise_smart_exception
 
     # Init variables
     working_dir = cfg_dict["working_directory"]
@@ -81,43 +81,3 @@ def copy_directory_to_s3(from_path, to_path, cfg):
     s3_upl_files = [ufile.replace(from_path, to_path) for ufile in upl_files]
 
     aws_utils.s3_upload(bucket, (upl_files, s3_upl_files))
-
-
-def upl_qap_output(cfg_file):
-    """Upload a pipeline output file to an AWS S3 bucket.
-
-    :type cfg_file: str
-    :param cfg_file: Filepath to the pipeline configuration file containing
-                     S3 bucket and AWS credentials information.
-    """
-
-    # Import packages
-    from indi_aws import aws_utils, fetch_creds
-    import os
-    import yaml
-
-    # Load config file
-    with open(cfg_file["pipeline_config_yaml"],'r') as f:
-        cfg_dict = yaml.load(f)
-
-    # Init variables
-    bucket_name = cfg_dict["bucket_name"]
-    bucket_out_prefix = cfg_dict["bucket_prefix"]
-    creds_path = cfg_dict["creds_path"]
-    
-    bucket = fetch_creds.return_bucket(creds_path, bucket_name)
-        
-    output_dir = cfg_dict['output_directory']
-
-    # And upload data
-    upl_files = []
-    for root, dirs, files in os.walk(output_dir):
-        if files:
-            upl_files.extend([os.path.join(root, fil) for fil in files])
-
-    # Using INDI AWS utils
-    s3_upl_files = [ufile.replace(output_dir, bucket_out_prefix) \
-                   for ufile in upl_files]
-
-    aws_utils.s3_upload(bucket, (upl_files, s3_upl_files))
-

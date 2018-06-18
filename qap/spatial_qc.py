@@ -225,7 +225,7 @@ def artifacts(anatomical_reorient, qap_head_mask_path, exclude_zeroes=False):
     import nibabel as nb
     import scipy.ndimage as nd
     from qap.spatial_qc import check_datatype
-    from qap.qap_utils import load_image, load_mask, \
+    from qap.utils import load_image, load_mask, \
         create_anatomical_background_mask, write_nifti_image
 
     # Load the data
@@ -301,7 +301,7 @@ def fav(fav_artifacts_bg, anatomical_reorient, bg_head_mask,
     """
 
     import numpy as np
-    from qap.qap_utils import read_nifti_image, get_masked_data, load_image, \
+    from qap.utils import read_nifti_image, get_masked_data, load_image, \
         load_mask
 
     # Load the data

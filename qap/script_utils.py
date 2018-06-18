@@ -67,7 +67,7 @@ def csv_to_pandas_df(csv_file):
     """
 
     import pandas as pd
-    from qap.qap_utils import raise_smart_exception
+    from qap.utils import raise_smart_exception
 
     try:
         data = pd.read_csv(csv_file, dtype={"Participant": str})
@@ -407,11 +407,11 @@ def gather_json_info(output_dir):
     """
 
     import os
-    from qap.qap_utils import read_json
+    from qap.utils import read_json
 
     json_dict = {}
 
-    for root, dirs, files in os.walk(os.path.abspath(output_dir)):
+    for root, _, files in os.walk(os.path.abspath(output_dir)):
         for filename in files:
             if ".json" in filename:
                 filepath = os.path.join(root, filename)
@@ -436,7 +436,7 @@ def json_to_csv(json_dict, csv_output_dir=None):
 
     import os
     import pandas as pd
-    from qap.qap_utils import raise_smart_exception
+    from qap.utils import raise_smart_exception
 
     output_dict = {}
 
@@ -476,7 +476,7 @@ def json_to_csv(json_dict, csv_output_dir=None):
     for qap_type in output_dict.keys():
 
         json_df = pd.DataFrame(output_dict[qap_type])
-        json_df.sort_values(by=["Participant","Session","Series"],
+        json_df.sort_values(by=["Participant", "Session", "Series"],
                             inplace=True)
         if not csv_output_dir:
             csv_output_dir = os.getcwd()
@@ -520,7 +520,7 @@ def qap_csv_correlations(data_old, data_new, replacements=None):
 
     import pandas as pd
     import scipy.stats
-    from qap.qap_utils import raise_smart_exception
+    from qap.utils import raise_smart_exception
 
     metric_list = ["EFC","SNR","FBER","CNR","FWHM","Qi1","Cortical Contrast",
         "Ghost_x", "Ghost_y", "Ghost_z", "GCOR", "RMSD (Mean)", 

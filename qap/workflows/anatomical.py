@@ -89,72 +89,6 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     return workflow, resource_pool
 
 
-def run_anatomical_reorient(anatomical_scan, out_dir=None, run=True):
-    """Run the 'anatomical_reorient_workflow' function to execute the modular
-    workflow with the provided inputs.
-
-    :type anatomical_scan: str
-    :param anatomical_scan: The filepath to the raw anatomical image in a
-                            NIFTI file.
-    :type out_dir: str
-    :param out_dir: (default: None) The output directory to write the results
-                    to; if left as None, will write to the current directory.
-    :type run: bool
-    :param run: (default: True) Will run the workflow; if set to False, will
-                connect the Nipype workflow and return the workflow object
-                instead.
-    :rtype: str
-    :return: (if run=True) The filepath of the generated anatomical_reorient
-             file.
-    :rtype: Nipype workflow object
-    :return: (if run=False) The connected Nipype workflow object.
-    :rtype: str
-    :return: (if run=False) The base directory of the workflow if it were to
-             be run.
-    """
-
-    import os
-    import glob
-
-    import nipype.interfaces.io as nio
-    import nipype.pipeline.engine as pe
-
-    output = "anatomical_reorient"
-
-    workflow = pe.Workflow(name='anatomical_reorient_workflow')
-
-    if not out_dir:
-        out_dir = os.getcwd()
-
-    workflow_dir = os.path.join(out_dir, "workflow_output", output)
-    workflow.base_dir = workflow_dir
-
-    resource_pool = {}
-    config = {}
-    num_cores_per_subject = 1
-
-    resource_pool["anatomical_scan"] = anatomical_scan
-
-    workflow, resource_pool = \
-            anatomical_reorient_workflow(workflow, resource_pool, config)
-
-    ds = pe.Node(nio.DataSink(), name='datasink_anatomical_reorient')
-    ds.inputs.base_directory = workflow_dir
-
-    node, out_file = resource_pool["anatomical_reorient"]
-
-    workflow.connect(node, out_file, ds, 'anatomical_reorient')
-
-    if run == True:
-        workflow.run(plugin='MultiProc', plugin_args= \
-                         {'n_procs': num_cores_per_subject})
-        outpath = glob.glob(os.path.join(workflow_dir, "anatomical_reorient",\
-                                         "*"))[0]
-        return outpath
-    else:
-        return workflow, workflow.base_dir
-
-
 def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
     """Build a Nipype workflow to skullstrip an anatomical image using AFNI's
     3dSkullStrip.
@@ -202,7 +136,7 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
     from nipype.interfaces.afni import preprocess
 
     if "anat_reorient" not in resource_pool.keys():
-        from anatomical_preproc import anatomical_reorient_workflow
+        from .workflows.anatomical import anatomical_reorient_workflow
         old_rp = copy.copy(resource_pool)
         workflow, new_resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config,
@@ -248,72 +182,6 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
     resource_pool["anat_brain"] = (anat_skullstrip_orig_vol, 'out_file')
 
     return workflow, resource_pool
-
-
-def run_anatomical_skullstrip(anatomical_reorient, out_dir=None, run=True):
-    """Run the 'anatomical_skullstrip_workflow' function to execute the 
-    modular workflow with the provided inputs.
-
-    :type anatomical_reorient: str
-    :param anatomical_reorient: The filepath of the deobliqued, reoriented
-                                anatomical image NIFTI file.
-    :type out_dir: str
-    :param out_dir: (default: None) The output directory to write the results
-                    to; if left as None, will write to the current directory.
-    :type run: bool
-    :param run: (default: True) Will run the workflow; if set to False, will
-                connect the Nipype workflow and return the workflow object
-                instead.
-    :rtype: str
-    :return: (if run=True) The filepath of the generated anatomical_reorient
-             file.
-    :rtype: Nipype workflow object
-    :return: (if run=False) The connected Nipype workflow object.
-    :rtype: str
-    :return: (if run=False) The base directory of the workflow if it were to
-             be run.
-    """
-
-    import os
-    import glob
-
-    import nipype.interfaces.io as nio
-    import nipype.pipeline.engine as pe
-
-    output = "anatomical_brain"
-
-    workflow = pe.Workflow(name='anatomical_skullstrip_workflow')
-
-    if not out_dir:
-        out_dir = os.getcwd()
-
-    workflow_dir = os.path.join(out_dir, "workflow_output", output)
-    workflow.base_dir = workflow_dir
-
-    resource_pool = {}
-    config = {}
-    num_cores_per_subject = 1
-
-    resource_pool["anatomical_reorient"] = anatomical_reorient
-
-    workflow, resource_pool = \
-            anatomical_skullstrip_workflow(workflow, resource_pool, config)
-
-    ds = pe.Node(nio.DataSink(), name='datasink_anatomical_skullstrip')
-    ds.inputs.base_directory = workflow_dir
-
-    node, out_file = resource_pool["anatomical_brain"]
-
-    workflow.connect(node, out_file, ds, 'anatomical_brain')
-
-    if run == True:
-        workflow.run(plugin='MultiProc', plugin_args= \
-                         {'n_procs': num_cores_per_subject})
-        outpath = glob.glob(os.path.join(workflow_dir, "anatomical_brain", \
-                                         "*"))[0]
-        return outpath
-    else:
-        return workflow, workflow.base_dir
 
 
 def afni_anatomical_linear_registration(workflow, resource_pool,
@@ -383,7 +251,7 @@ def afni_anatomical_linear_registration(workflow, resource_pool,
 
     if in_file == "anat_reorient":
         if "anat_reorient" not in resource_pool.keys():
-            from anatomical_preproc import anatomical_reorient_workflow
+            from .workflows.anatomical import anatomical_reorient_workflow
             old_rp = copy.copy(resource_pool)
             workflow, new_resource_pool = \
                 anatomical_reorient_workflow(workflow, resource_pool,
@@ -415,93 +283,6 @@ def afni_anatomical_linear_registration(workflow, resource_pool,
         (calc_allineate_warp, 'out_file')
 
     return workflow, resource_pool
-
-
-def run_afni_anatomical_linear_registration(input_image, reference_image,
-                                            skull_on=True, out_dir=None,
-                                            run=True):
-    """Run the 'afni_anatomical_linear_registration' function to execute the 
-    modular workflow with the provided inputs.
-
-    :type input_image: str
-    :param input_image: Filepath to either the deobliqued, reoriented
-                        anatomical image with skull, or the skullstripped
-                        brain.
-    :type reference_image: str
-    :param reference_image: Filepath to the template image to calculate the
-                            registration towards.
-    :type skull_on: bool
-    :param skull_on: (default: True) Whether to run the registration using the
-                      whole head or just the brain (use this to mark which
-                     type of input_image you are providing).
-    :type out_dir: str
-    :param out_dir: (default: None) The output directory to write the results
-                    to; if left as None, will write to the current directory.
-    :type run: bool
-    :param run: (default: True) Will run the workflow; if set to False, will
-                connect the Nipype workflow and return the workflow object
-                instead.
-    :rtype: str
-    :return: (if run=True) The filepath of the generated anatomical_reorient
-             file.
-    :rtype: Nipype workflow object
-    :return: (if run=False) The connected Nipype workflow object.
-    :rtype: str
-    :return: (if run=False) The base directory of the workflow if it were to
-             be run.
-    """
-
-    import os
-    import glob
-
-    import nipype.interfaces.io as nio
-    import nipype.pipeline.engine as pe
-
-    output = "afni_linear_warped_image"
-
-    workflow = pe.Workflow(name='3dallineate_workflow')
-
-    if not out_dir:
-        out_dir = os.getcwd()
-
-    workflow_dir = os.path.join(out_dir, "workflow_output", output)
-    workflow.base_dir = workflow_dir
-
-    resource_pool = {}
-    config = {}
-    num_cores_per_subject = 1
-
-    config["skull_on_registration"] = skull_on
-
-    if skull_on:
-        resource_pool["anatomical_reorient"] = input_image
-        config["template_head_for_anat"] = reference_image
-    else:
-        resource_pool["anatomical_brain"] = input_image
-        config["template_brain_for_anat"] = reference_image
-
-    workflow, resource_pool = \
-            afni_anatomical_linear_registration(workflow, resource_pool,
-                                                config)
-
-    ds = pe.Node(nio.DataSink(), name='datasink_3dallineate')
-    ds.inputs.base_directory = workflow_dir
-
-    node, out_file = resource_pool["afni_linear_warped_image"]
-    workflow.connect(node, out_file, ds, 'afni_linear_warped_image')
-
-    node, out_file = resource_pool["allineate_linear_xfm"]
-    workflow.connect(node, out_file, ds, 'allineate_linear_xfm')
-
-    if run:
-        workflow.run(plugin='MultiProc', plugin_args=
-                     {'n_procs': num_cores_per_subject})
-        outpath = glob.glob(os.path.join(workflow_dir,
-                                         "afni_linear_warped_image",
-                                         "*"))[0]
-        return outpath
-    else:
-        return workflow, workflow.base_dir
 
 
 def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
@@ -556,7 +337,7 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
     from nipype.interfaces.afni import preprocess
 
     if "anat_brain" not in resource_pool.keys():
-        from anatomical_preproc import anatomical_skullstrip_workflow
+        from .workflows.anatomical import anatomical_skullstrip_workflow
         old_rp = copy.copy(resource_pool)
         workflow, new_resource_pool = \
             anatomical_skullstrip_workflow(workflow, resource_pool, config,
@@ -623,73 +404,3 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
     resource_pool["anat_wm_mask"] = (extract_WM, 'out_file')
 
     return workflow, resource_pool
-
-
-def run_afni_segmentation(anatomical_brain, out_dir=None, run=True):
-    """Run the 'afni_segmentation_workflow' function to execute the modular
-    workflow with the provided inputs.
-
-    :type anatomical_brain: str
-    :param anatomical_brain: Filepath to the skull-stripped brain image in a
-                             NIFTI file.
-    :type out_dir: str
-    :param out_dir: (default: None) The output directory to write the results
-                    to; if left as None, will write to the current directory.
-    :type run: bool
-    :param run: (default: True) Will run the workflow; if set to False, will
-                connect the Nipype workflow and return the workflow object
-                instead.
-    :rtype: str
-    :return: (if run=True) The filepath of the generated anatomical_reorient
-             file.
-    :rtype: Nipype workflow object
-    :return: (if run=False) The connected Nipype workflow object.
-    :rtype: str
-    :return: (if run=False) The base directory of the workflow if it were to
-             be run.
-    """
-
-    import os
-    import glob
-
-    import nipype.interfaces.io as nio
-    import nipype.pipeline.engine as pe
-
-    output = "anatomical_afni_segmentation_masks"
-
-    workflow = pe.Workflow(name='afni_segmentation_workflow')
-
-    if not out_dir:
-        out_dir = os.getcwd()
-
-    workflow_dir = os.path.join(out_dir, "workflow_output", output)
-    workflow.base_dir = workflow_dir
-
-    resource_pool = {}
-    config = {}
-    num_cores_per_subject = 1
-
-    resource_pool["anatomical_brain"] = anatomical_brain
-
-    workflow, resource_pool = \
-            afni_segmentation_workflow(workflow, resource_pool, config)
-
-    ds = pe.Node(nio.DataSink(), name='datasink_afni_segmentation')
-    ds.inputs.base_directory = workflow_dir
-
-    seg_types = ["gm", "wm", "csf"]
-
-    for seg in seg_types:
-
-        node, out_file = resource_pool["anatomical_%s_mask" % seg]
-
-        workflow.connect(node, out_file, ds, 'anatomical_%s_mask' % seg)
-
-    if run == True:
-        workflow.run(plugin='MultiProc', plugin_args= \
-                         {'n_procs': num_cores_per_subject})
-        outpath = glob.glob(os.path.join(workflow_dir, "anatomical_*_mask", \
-                                         "*"))
-        return outpath
-    else:
-        return workflow, workflow.base_dir

@@ -7,7 +7,7 @@ def main():
     import argparse
     from qap.script_utils import check_csv_missing_subs, csv_to_pandas_df, \
         write_inputs_dict_to_yaml_file, read_yml_file
-    from qap.qap_utils import raise_smart_exception
+    from qap.utils import raise_smart_exception
 
     parser = argparse.ArgumentParser()
     parser.add_argument("output_csv", type=str,

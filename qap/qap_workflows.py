@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-# emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
-# vi: set ft=python sts=4 ts=4 sw=4 et:
 
 
 def qap_mask_workflow(workflow, resource_pool, config, name="_"):
@@ -62,10 +60,10 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     from nipype.interfaces.afni import preprocess
 
     from qap.qap_workflows_utils import slice_head_mask, scipy_fill
-    from qap.qap_utils import create_expr_string
+    from qap.utils import create_expr_string
 
     if 'anat_linear_xfm' not in resource_pool.keys():
-        from anatomical_preproc import afni_anatomical_linear_registration
+        from .workflows.anatomical import afni_anatomical_linear_registration
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
             afni_anatomical_linear_registration(workflow, resource_pool,
@@ -75,7 +73,7 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
             return workflow, resource_pool
 
     if 'anat_reorient' not in resource_pool.keys():
-        from anatomical_preproc import anatomical_reorient_workflow
+        from .workflows.anatomical import anatomical_reorient_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config, name)
@@ -379,7 +377,7 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
     from qap_workflows_utils import create_header_dict_entry
-    from qap_utils import write_json
+    from utils import write_json
 
     gather_imports = ['import os',
                       'import nibabel as nb']
@@ -445,7 +443,7 @@ def calculate_artifacts_background(workflow, resource_pool, config, name="_"):
             return workflow, resource_pool
 
     if 'anat_reorient' not in resource_pool.keys():
-        from anatomical_preproc import anatomical_reorient_workflow
+        from .workflows.anatomical import anatomical_reorient_workflow
         old_rp = copy.copy(resource_pool)
         workflow, new_resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config,
@@ -527,7 +525,7 @@ def calculate_sfs_workflow(workflow, resource_pool, config, name="_"):
     from qap.qap_workflows_utils import sfs_timeseries
 
     if 'func_mean' not in resource_pool.keys():
-        from functional_preproc import mean_functional_workflow
+        from .workflows.functional import mean_functional_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
             mean_functional_workflow(workflow, resource_pool, config, name)
@@ -646,7 +644,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
     import nipype.interfaces.utility as niu
     from qap_workflows_utils import qap_anatomical_spatial
     from qap.viz.interfaces import PlotMosaic
-    from qap_utils import check_config_settings, write_json
+    from utils import check_config_settings, write_json
 
     check_config_settings(config, "anatomical_template")
 
@@ -666,7 +664,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
             ('anat_wm_mask' not in resource_pool.keys()) or \
             ('anat_csf_mask' not in resource_pool.keys()):
 
-        from anatomical_preproc import afni_segmentation_workflow
+        from .workflows.anatomical import afni_segmentation_workflow
         old_rp = copy.copy(resource_pool)
         workflow, new_resource_pool = \
             afni_segmentation_workflow(workflow, resource_pool, config, name)
@@ -868,7 +866,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
 
     from qap_workflows_utils import qap_functional_temporal, \
         qap_functional_spatial, global_signal_time_series
-    from qap_utils import write_json
+    from utils import write_json
     from temporal_qc import fd_jenkinson
     from qap.viz.interfaces import PlotMosaic, GrayPlot
 
@@ -879,7 +877,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
 
     # ensures functional_brain_mask is created as well
     if 'func_inverted_brain_mask' not in resource_pool.keys():
-        from functional_preproc import invert_functional_brain_mask_workflow
+        from .workflows.functional import invert_functional_brain_mask_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
             invert_functional_brain_mask_workflow(workflow, resource_pool,
@@ -890,7 +888,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     if ('func_motion_correct' not in resource_pool.keys()) or \
         ('func_coordinate_transformation' not in resource_pool.keys() and
             'mcflirt_rel_rms' not in resource_pool.keys()):
-        from functional_preproc import func_motion_correct_workflow
+        from .workflows.functional import func_motion_correct_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
             func_motion_correct_workflow(workflow, resource_pool, config,
@@ -899,7 +897,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
             return workflow, resource_pool
 
     if 'func_mean' not in resource_pool.keys():
-        from functional_preproc import mean_functional_workflow
+        from .workflows.functional import mean_functional_workflow
         old_rp = copy.copy(resource_pool)
         workflow, resource_pool = \
             mean_functional_workflow(workflow, resource_pool, config, name)
@@ -1008,7 +1006,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         workflow.connect(node, out_file, temporal, 'func_timeseries')
         workflow.connect(node, out_file, gs_ts, 'functional_file')
     else:
-        from qap_utils import check_input_resources
+        from utils import check_input_resources
         check_input_resources(resource_pool, 'func_reorient')
         input_file = resource_pool['func_reorient']
         temporal.inputs.func_timeseries = input_file
@@ -1019,7 +1017,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         node, out_file = resource_pool['func_mean']
         workflow.connect(node, out_file, temporal, 'func_mean')
     else:
-        from qap_utils import check_input_resources
+        from utils import check_input_resources
         check_input_resources(resource_pool, 'func_mean')
         input_file = resource_pool['func_mean']
         temporal.inputs.func_mean = input_file

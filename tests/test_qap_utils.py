@@ -11,7 +11,7 @@ class TestGetMaskedData(unittest.TestCase):
         import pkg_resources as p
         import nibabel as nb
         import numpy.testing as nt
-        from qap.qap_utils import get_masked_data as gmd
+        from qap.utils import get_masked_data as gmd
         self.gmd = gmd
         self.nt = nt
         self.nb = nb
@@ -76,7 +76,7 @@ class TestGetMaskedData(unittest.TestCase):
 def test_create_anatomical_background_mask():
 
     import numpy as np
-    from qap.qap_utils import create_anatomical_background_mask
+    from qap.utils import create_anatomical_background_mask
 
     # middle two rows are the "head", first and last rows are background,
     # including "noise" in the fourth row
@@ -105,7 +105,7 @@ def test_create_anatomical_background_mask():
 def test_create_anatomical_background_mask_exclude_zeroes():
 
     import numpy as np
-    from qap.qap_utils import create_anatomical_background_mask
+    from qap.utils import create_anatomical_background_mask
 
     # middle two rows are the "head", first and last rows are background,
     # including "noise" in the fourth row
@@ -133,7 +133,7 @@ def test_create_anatomical_background_mask_exclude_zeroes():
 @pytest.mark.quick
 def test_create_anatomical_background_mask_failure():
 
-    from qap.qap_utils import create_anatomical_background_mask
+    from qap.utils import create_anatomical_background_mask
 
     # send them in as lists instead of NumPy arrays, which should error out
     anat_data = [
