@@ -7,6 +7,7 @@
 
 import sys
 import os
+import codecs
 import os.path as op
 import pandas as pd
 import matplotlib
@@ -17,6 +18,41 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 from .plotting import (plot_measures, plot_mosaic, plot_all,
                        plot_fd, plot_dist)
+
+
+def montage_interactive(qap_type, df, out_dir):
+
+    html_dir = op.abspath(
+        op.join(op.dirname(__file__), 'html', 'interactive'))
+
+    df = df.drop(columns=df.columns[df.columns.str.contains('unnamed', case=False)])
+    df = df.drop(columns=['filepaths'])
+    data = df.to_json(orient='records')
+
+    print(list(df.keys()))
+
+    js_comp = ''
+
+    with codecs.open(op.join(html_dir, 'd3.js'), mode='r', encoding='utf-8') as f:
+        js_comp += f.read()
+
+    with codecs.open(op.join(html_dir, 'd3.distcharts.js'), mode='r', encoding='utf-8') as f:
+        js_comp += f.read()
+    
+    css_comp = ''
+
+    with codecs.open(op.join(html_dir, 'chart.css'), mode='r', encoding='utf-8') as f:
+        css_comp += f.read()
+
+    with codecs.open(op.join(html_dir, '%s.html' % qap_type), mode='r', encoding='utf-8') as f:
+        html = f.read()
+
+    html = html.replace('{{data}}', data)
+    html = html.replace('{{script}}', js_comp)
+    html = html.replace('{{style}}', css_comp)
+
+    with codecs.open(op.join(out_dir, '%s.html' % qap_type), mode='w', encoding='utf-8') as f:
+        f.write(html)
 
 
 def workflow_report(in_csv, qap_type, out_dir=None, out_file=None,
@@ -63,23 +99,23 @@ def workflow_report(in_csv, qap_type, out_dir=None, out_file=None,
 
     subject_list = sorted(pd.unique(df.Participant.ravel()))
     func = {
-        "qap_anatomical_spatial": qap_anatomical_spatial,
-        "qap_functional_temporal": qap_functional_temporal,
-        "qap_functional_spatial": qap_functional_spatial,
+        "anatomical_spatial": qap_anatomical_spatial,
+        "functional_temporal": qap_functional_temporal,
+        "functional_spatial": qap_functional_spatial,
     }[qap_type]
 
     result = {}
     pdf_group = []
 
     # Generate group report
-    qc_group = op.join(os.getcwd(), 'qc_measures_group.pdf')
+    qc_group = op.join(out_dir, 'qc_measures_group.pdf')
 
     # Generate violinplots. If successful, add documentation.
     func(df, out_file=qc_group)
     pdf_group.append(qc_group)
 
     # Generate documentation page
-    doc = op.join(os.getcwd(), 'documentation.pdf')
+    doc = op.join(out_dir, 'documentation.pdf')
 
     # Let documentation page fail
     documentation_result = get_documentation(qap_type, doc)
@@ -87,12 +123,15 @@ def workflow_report(in_csv, qap_type, out_dir=None, out_file=None,
         pdf_group.append(doc)
 
     if len(pdf_group) > 0:
-        out_group_file = op.join(os.getcwd(), '%s_group.pdf' % qap_type)
+        out_group_file = op.join(out_dir, '%s_group.pdf' % qap_type)
         # Generate final report with collected pdfs in plots
         concat_pdf(pdf_group, out_group_file)
         result['group'] = {'success': True, 'path': out_group_file}
 
     if full_reports:
+        montage_interactive(qap_type, df, out_dir)
+        return
+        
         # Generate individual reports for subjects
         for idx, subid in enumerate([str(sub) for sub in subject_list]):
 
@@ -127,7 +166,7 @@ def workflow_report(in_csv, qap_type, out_dir=None, out_file=None,
                 sess_scans.append('%s (%s)' % (sesid, ', '.join(scans)))
 
             # Summary (violinplots) of QC measures
-            qc_ms = op.join(os.getcwd(), '%s_measures.pdf' % qap_type)
+            qc_ms = op.join(out_dir, '%s_measures.pdf' % qap_type)
             func(df, subject=subid, out_file=qc_ms)
             plots.append(qc_ms)
 
@@ -144,7 +183,6 @@ def workflow_report(in_csv, qap_type, out_dir=None, out_file=None,
 
 
 def get_documentation(doc_type, out_file):
-    import codecs
     from xhtml2pdf import pisa
 
     # open output file for writing (truncated binary)

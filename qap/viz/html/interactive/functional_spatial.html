@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Functional</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+    {{style}}
+    </style>
+  </head>
+  <body>
+    <h2>QAP Functional Spatial Measures</h2>
+    <p>The metrics computed are as follows:
+      <ul>
+        <li><strong>EFC</strong>: Entropy Focus Criterion</li>
+        <li><strong>FBER</strong>: Foreground to Background Energy Ratio</li>
+        <li><strong>FWHM</strong>: Full-width half maximum smoothness of the voxels averaged across the three coordinate axes, and also for each axis [x,y,x]</li>
+        <li><strong>Ghost</strong>: Ghost to Signal Ratio</li>
+        <li><strong>SNR</strong>: Signal to Noise Ratio</li>
+      </ul>
+    </p>
+    <p>All metrics are described in more detail in the
+      <a href="http://preprocessed-connectomes-project.org/quality-assessment-protocol/#spatial-functional">QAP documentation</a>.</p>
+
+    <div class="chart-wrapper" id="metric-efc"></div>
+    <div class="chart-wrapper" id="metric-fber"></div>
+    <div class="chart-wrapper" id="metric-fwhm"></div>
+    <div class="chart-wrapper" id="metric-ghost_y"></div>
+    <div class="chart-wrapper" id="metric-snr"></div>
+
+    <script>
+        var data = {{data}};
+
+        {{script}}
+
+        var metrics = ['EFC', 'FBER', 'FWHM', 'Ghost_y', 'SNR']
+        var metricsElems = ['efc', 'fber', 'fwhm', 'ghost_y', 'snr']
+
+        for (var i = 0; i < metrics.length; i++) {
+          var metric = metrics[i]
+          var values = []
+          data.forEach(function(v) {
+              values.push({ metric: metric, value: v[metric], mark: v.Participant == 'sub_01' })
+          })
+
+          var elementId =  "#metric-" + metricsElems[i]
+          var chr = makeDistroChart({
+              data: values,
+              xName: 'metric',
+              yName: 'value',
+              selector: elementId,
+              chartSize: { height: 460, width: 500 },
+              margin: {top: 15, right: 60, bottom: 50, left: 50},
+          });
+          chr.renderBoxPlot({ bandwidth: 0.05, clamp: 0 });
+        };
+    </script>
+  </body>
+</html>

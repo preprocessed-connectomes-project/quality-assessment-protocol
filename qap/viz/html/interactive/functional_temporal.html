@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Functional</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+    {{style}}
+    </style>
+  </head>
+  <body>
+    <h2>QAP Functional Temporal Measures</h2>
+    <p>The metrics computed are as follows:
+      <ul>
+        <li><strong>GCOR</strong>: Global Correlation</li>
+        <li><strong>SFS</strong>: Signal Fluctuation Sensitivity</li>
+        <li><strong>DVARS</strong>: TODO</li>
+        <li><strong>RMSD</strong>: TODO</li>
+        <li><strong>Quality</strong>: Median Distance index</li>
+        <li><strong>Fraction of OOB Outliers</strong>: TODO</li>
+      </ul>
+    </p>
+    <p>All metrics are described in more detail in the
+      <a href="http://preprocessed-connectomes-project.org/quality-assessment-protocol/#temporal-functional">QAP documentation</a>.</p>
+
+    <div class="chart-wrapper" id="metric-gcor"></div>
+    <div class="chart-wrapper" id="metric-sfs"></div>
+    <div class="chart-wrapper" id="metric-dvars"></div>
+    <div class="chart-wrapper" id="metric-rmsd"></div>
+    <div class="chart-wrapper" id="metric-quality"></div>
+    <div class="chart-wrapper" id="metric-foo"></div>
+
+    <script>
+        var data = {{data}};
+
+        {{script}}
+
+        var metrics = ['GCOR', 'Signal Fluctuation Sensitivity (Mean)', 'Std DVARS (Mean)', 'RMSD (Mean)', 'Quality (Mean)', 'Fraction of OOB Outliers (Mean)']
+        var metricsElems = ['gcor', 'sfs', 'dvars', 'rmsd', 'quality', 'foo'];
+
+        for (var i = 0; i < metrics.length; i++) {
+          var metric = metrics[i]
+          var values = []
+          data.forEach(function(v) {
+              values.push({ metric: metric, value: v[metric], mark: v.Participant == 'sub_01' })
+          })
+
+          var elementId =  "#metric-" + metricsElems[i]
+          var chr = makeDistroChart({
+              data: values,
+              xName: 'metric',
+              yName: 'value',
+              selector: elementId,
+              chartSize: { height: 460, width: 500 },
+              margin: {top: 15, right: 60, bottom: 50, left: 50},
+          });
+          chr.renderBoxPlot({ bandwidth: 0.05, clamp: 0 });
+        };
+    </script>
+  </body>
+</html>
