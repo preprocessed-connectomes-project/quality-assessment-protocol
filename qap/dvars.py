@@ -13,14 +13,8 @@ def create_zero_variance_mask(func_timeseries, mask):
     :return: The binary head mask, but with voxels of zero variance excluded.
     """
 
-    # this needs optimization/refactoring
-    for i in range(0, len(func_timeseries)):
-        for j in range(0, len(func_timeseries[0])):
-            for k in range(0, len(func_timeseries[0][0])):
-                var = func_timeseries[i][j][k].var()
-                if int(var) == 0:
-                    mask[i][j][k] = mask[i][j][k] * 0
-
+    var = func_timeseries.var(axis=-1)
+    mask[np.isclose(var, 0)] = 0
     return mask
 
 
