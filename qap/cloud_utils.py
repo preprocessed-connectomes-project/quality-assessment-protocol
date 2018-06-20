@@ -1,7 +1,3 @@
-# cloud_utils.py
-#
-# Contributing authors: Daniel Clark, Steve Giavasis, 2015
-
 
 def download_single_s3_path(s3_path, cfg_dict):
     """Download a single file from an AWS s3 bucket.

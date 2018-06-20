@@ -16,7 +16,6 @@ def test_get_idx_whole_timeseries():
     
     idx_tuple = get_idx(func_scan, "End", 0)
     
-    
     assert idx_tuple == (123,0)
     
     
@@ -33,7 +32,6 @@ def test_get_idx_partial_timeseries():
     
     idx_tuple = get_idx(func_scan, 100, 20)
     
-    
     assert idx_tuple == (100,20)
         
 
@@ -49,6 +47,5 @@ def test_get_idx_partial_timeseries_overshoot():
                                     "functional_scan.nii.gz"))     
     
     idx_tuple = get_idx(func_scan, 250, 20)
-    
     
     assert idx_tuple == (123,20)
