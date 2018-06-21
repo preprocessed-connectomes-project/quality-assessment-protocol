@@ -17,7 +17,9 @@ def starter_node_func(starter):
     return starter
 
 
-def build_and_run_qap_pipeline(args, run=True):
+
+def build_and_run_qap_pipeline(resource_pools, config, run_name,
+                               bundle_idx, num_bundles):
     """Connect and execute the QAP Nipype workflow for one bundle of data.
 
     - This function will update the resource pool with what is found in the
@@ -44,6 +46,7 @@ def build_and_run_qap_pipeline(args, run=True):
 
     import qap
     from qap.utils import read_json
+    from qap import qap_workflows as qw
 
     import glob
 
@@ -51,13 +54,12 @@ def build_and_run_qap_pipeline(args, run=True):
     from time import strftime
     from nipype import config as nyconfig
 
+    import logging
+    from nipype.pipeline.plugins.callback_log import log_nodes_cb
+
     # set up Nipype Logger
     from nipype import logging as np_logging
     logger = np_logging.getLogger("workflow")
-
-    # unpack args
-    resource_pool_dict, sub_info_list, config, run_name, bundle_idx, \
-    num_bundles = args
 
     # Read and apply general settings in config
     keep_outputs = config["save_working_dir"]
@@ -67,9 +69,6 @@ def build_and_run_qap_pipeline(args, run=True):
     pipeline_start_time = time.time()
 
     # set up callback logging
-    import logging
-    from nipype.pipeline.plugins.callback_log import log_nodes_cb
-
     callback_log_filename = os.path.join(config["log_directory"],
                                          "callback.log")
 
@@ -127,10 +126,10 @@ def build_and_run_qap_pipeline(args, run=True):
     logger.info("Starting bundle %s out of %s.." % (str(bundle_idx),
                                                     str(num_bundles)))
     # results dict
-    rt = {'status': 'Started', 'bundle_log_dir': bundle_log_dir}
+    run_results = {'status': 'Started', 'bundle_log_dir': bundle_log_dir}
     
-    for sub_info in sub_info_list:
-        resource_pool = resource_pool_dict[sub_info]
+    for sub_info in resource_pools.keys():
+        resource_pool = resource_pools[sub_info]
 
         # resource pool check
         invalid_paths = []
@@ -175,7 +174,7 @@ def build_and_run_qap_pipeline(args, run=True):
 
         name = "_".join(["", site_id, sub_id, session_id, scan_id])
 
-        rt[name] = {'id': sub_id, 'session': session_id, 'scan': scan_id,
+        run_results[name] = {'id': sub_id, 'session': session_id, 'scan': scan_id,
                     'resource_pool': str(resource_pool), 'site': site_id}
 
         logger.info("Participant info: %s" % name)
@@ -205,7 +204,11 @@ def build_and_run_qap_pipeline(args, run=True):
 
         logger.info("Configuration settings:\n%s" % str(config))
 
-        qap_types = ["anatomical_spatial", "functional"]
+
+        qap_types = {
+            "anatomical_spatial": qw.qap_anatomical_spatial_workflow,
+            "functional": qw.qap_functional_workflow,
+        }
 
         # update that resource pool with what's already in the output
         # directory
@@ -241,9 +244,9 @@ def build_and_run_qap_pipeline(args, run=True):
                             resource_pool["functional_header_info"] = \
                                 sub_json_dict["functional_header_info"]
 
-                        for qap_type in qap_types:
+                        for qap_type in qap_types.keys():
                             if qap_type in sub_json_dict.keys():
-                                resource_pool["_".join(["qap",qap_type])] = \
+                                resource_pool["_".join(["qap", qap_type])] = \
                                     sub_json_dict[qap_type]
                 except:
                     # a stray file in the sub-sess-scan output directory
@@ -258,29 +261,18 @@ def build_and_run_qap_pipeline(args, run=True):
                     % str(resource_pool))
 
         # start connecting the pipeline
-        qw = None
-        for qap_type in qap_types:
+        for qap_type, wf_builder in qap_types.items():
             if "_".join(["qap", qap_type]) not in resource_pool.keys():
-                if qw is None:
-                    from qap import qap_workflows as qw
-                wf_builder = \
-                    getattr(qw, "_".join(["qap", qap_type, "workflow"]))
                 workflow, resource_pool = wf_builder(workflow,
                                                         resource_pool,
                                                         config, name)
 
-        if ("anat_scan" in resource_pool.keys()) and \
-            ("anat_header_info" not in resource_pool.keys()):
-            if qw is None:
-                from qap import qap_workflows as qw
+        if ("anat_scan" in resource_pool.keys()) and ("anat_header_info" not in resource_pool.keys()):
             workflow, resource_pool = \
                 qw.qap_gather_header_info(workflow, resource_pool, config,
                                             name, "anat")
 
-        if ("func_scan" in resource_pool.keys()) and \
-            ("func_header_info" not in resource_pool.keys()):
-            if qw is None:
-                from qap import qap_workflows as qw
+        if ("func_scan" in resource_pool.keys()) and ("func_header_info" not in resource_pool.keys()):
             workflow, resource_pool = \
                 qw.qap_gather_header_info(workflow, resource_pool, config,
                                             name, "func")
@@ -288,7 +280,7 @@ def build_and_run_qap_pipeline(args, run=True):
         # set up the datasinks
         out_list = []
         for output in resource_pool.keys():
-            for qap_type in qap_types:
+            for qap_type in qap_types.keys():
                 if qap_type in output:
                     out_list.append("_".join(["qap", qap_type]))
 
@@ -331,7 +323,7 @@ def build_and_run_qap_pipeline(args, run=True):
             # outputs that have been created in this workflow because they
             # were not present in the subject list YML (the starting
             # resource pool) and had to be generated
-            if (len(resource_pool[output]) == 2) and (output != "starter"):
+            if (type(resource_pool[output]) == tuple) and (output != "starter"):
 
                 node, out_file = resource_pool[output]
 
@@ -365,15 +357,18 @@ def build_and_run_qap_pipeline(args, run=True):
     # run the pipeline (if there is anything to do)
     if new_outputs > 0:
         if config.get('write_graph', False):
+            
             workflow.write_graph(
                 dotfilename=op.join(config["output_directory"],
                                     "".join([run_name, ".dot"])),
                 simple_form=False)
+
             workflow.write_graph(
                 graph2use="orig",
                 dotfilename=op.join(config["output_directory"],
                                     "".join([run_name, ".dot"])),
                 simple_form=False)
+
             workflow.write_graph(
                 graph2use="hierarchical",
                 dotfilename=op.join(config["output_directory"],
@@ -385,10 +380,10 @@ def build_and_run_qap_pipeline(args, run=True):
                 logger.info("Using plugin args %s" % runargs["plugin_args"])
                 workflow.run(plugin=runargs["plugin"],
                              plugin_args=runargs["plugin_args"])
-                rt['status'] = 'finished'
+            run_results['status'] = 'finished'
                 logger.info("Workflow run finished for bundle %s." % str(bundle_idx))
             except Exception as e:  # TODO We should be more specific here ...
-                rt.update({'status': 'failed', 'msg': e})
+            run_results.update({'status': 'failed', 'msg': e})
                 logger.info("Workflow run failed for bundle %s." % str(bundle_idx))
                 # ... however this is run inside a pool.map: do not raise
                 # Exception
@@ -396,7 +391,7 @@ def build_and_run_qap_pipeline(args, run=True):
             return workflow
 
     else:
-        rt['status'] = 'cached'
+        run_results['status'] = 'cached'
         logger.info("\nEverything is already done for bundle %s." % str(bundle_idx))
 
     # Remove working directory when done
@@ -409,8 +404,8 @@ def build_and_run_qap_pipeline(args, run=True):
             logger.warn("Couldn\'t remove the working directory!")
             pass
 
-    if rt["status"] == "failed":
-        logger.error(rt["msg"])
+    if run_results["status"] == "failed":
+        logger.error(run_results["msg"])
     else:
         pipeline_end_stamp = strftime("%Y-%m-%d_%H:%M:%S")
         pipeline_end_time = time.time()
@@ -418,4 +413,4 @@ def build_and_run_qap_pipeline(args, run=True):
                     % ((pipeline_end_time - pipeline_start_time) / 60))
         logger.info("Pipeline end time: %s" % pipeline_end_stamp)
 
-    return rt
+    return run_results
