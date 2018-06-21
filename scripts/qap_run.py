@@ -21,48 +21,25 @@ def create_bundles(data_configuration_dict, bundle_size):
     sub-session-session combos with bundle_size being set by the user
     """
 
-    tranche_count = 0
-    bundles = []
-    new_bundle = {}
+    session_dicts = {
+        (site, participant, session): session_dict
+        for site, site_dict in data_configuration_dict.items()
+        for participant, participant_dict in site_dict.items()
+        for session, session_dict in participant_dict.items()
+    }
 
-    for site in data_configuration_dict.keys():
-        for participant in data_configuration_dict[site].keys():
-            for session in data_configuration_dict[site][participant].keys():
+    bundle_size = min(bundle_size, len(session_dicts))
 
-                # each tranche corresponds to a scanning session, a plank of
-                # the tranche corresponds to a scan collected during the
-                # session
-                if tranche_count % bundle_size == 0:
-                    if new_bundle:
-                        bundles.append(new_bundle)
-                    new_bundle = {}
-
-                for scan in data_configuration_dict[site][participant][session].keys():
-                    tranche_plank_identifier = (site, participant, session, scan)
-
-                    if tranche_plank_identifier in new_bundle:
-                        print("WARNING: tranche {0}, {1}, {2}, {3} already "
-                              "found in bundle, overwriting".format(*tranche_plank_identifier))
-
-                    new_bundle[tranche_plank_identifier] = data_configuration_dict[site][participant][session][scan]
-
-                tranche_count += 1
-
-    # if there is a bundle still hanging around, add it to the list
-    if new_bundle:
-        bundles.append(new_bundle)
+    bundles = [
+        {
+            session + (scan, ): scan_dict
+            for session, session_dict in session_dicts.items()[bundle::bundle_size]
+            for scan, scan_dict in session_dict.items()
+        }
+        for bundle in range(bundle_size)
+    ]
 
     return bundles
-
-
-def write_bundles(bundles, bundle_filename):
-
-    import yaml
-    if not bundle_filename.endswith('yml'):
-        bundle_filename += '.yml'
-
-    with open(bundle_filename, 'w') as ofd:
-        yaml.dump(bundles, ofd, encoding='utf-8')
 
 
 def run_qap(pipeline_configuration, data_bundles, bundle_index=''):
