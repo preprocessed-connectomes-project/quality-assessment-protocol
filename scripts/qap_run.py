@@ -457,7 +457,7 @@ def main():
 
     timestamp_string = datetime.now().strftime("%Y%m%d%H%M")
 
-    pipeline_configuration_filename = "qap-pipe-config-{}.yml".format(timestamp_string)
+    pipeline_configuration_filename = os.path.join(args.output_dir, "qap-pipe-config-{}.yml".format(timestamp_string))
     qap_cfg.write_pipeline_configuration(pipeline_configuration_filename, pipeline_configuration)
 
     # the easiest case is when a data configuration file is passed in
@@ -501,7 +501,7 @@ def main():
             bids_utils.bids_generate_qap_data_configuration(bids_dir, bids_image_files,
                                                             credentials_path=args.s3_read_credentials, debug=True)
 
-    data_configuration_filename = "qap-data-config-{}.yml".format(timestamp_string)
+    data_configuration_filename = os.path.join(args.output_dir, "qap-data-config-{}.yml".format(timestamp_string))
     bids_utils.write_data_configuration(data_configuration_filename, data_configuration_dict)
 
     if "test_config" in args.analysis_level:
@@ -528,7 +528,7 @@ def main():
         # --- Now Execute
         bundle_index = ''
         if args.bundle_index:
-            bundle_index = int(bundle_index)
+            bundle_index = int(args.bundle_index)
 
         run_qap(pipeline_configuration, data_bundles, bundle_index)
 

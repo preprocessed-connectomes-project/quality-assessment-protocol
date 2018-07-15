@@ -155,8 +155,7 @@ def load_image(image_file, return_affine=False):
         dat = dat.astype('float32')
         # Check for negative values
         if (dat < 0).any():
-            print "found negative values, setting to zero (see file: %s)" \
-                  % image_file
+            print("found negative values, setting to zero (see file: %s)".format(image_file))
             dat[dat<0] = 0
 
     elif np.issubdtype(dat.dtype, int):
@@ -239,10 +238,10 @@ def get_masked_data(data, mask):
     import numpy as np
     import nibabel as nb
 
-    if isinstance(data, basestring):
+    if isinstance(data, str):
         img = nb.load(data)
         data = img.get_data()
-    if isinstance(mask, basestring):
+    if isinstance(mask, str):
         mask_img = nb.load(mask)
         mask = mask_img.get_data()
 
