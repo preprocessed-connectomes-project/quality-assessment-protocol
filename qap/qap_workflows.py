@@ -865,6 +865,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     import copy
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as niu
+    from nipype.interfaces import afni
 
     from qap_workflows_utils import qap_functional_temporal, \
         qap_functional_spatial, global_signal_time_series
@@ -982,12 +983,14 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
 
     temporal = pe.Node(niu.Function(
         input_names=['func_timeseries', 'func_mean', 'func_brain_mask',
-                     'bg_func_brain_mask', 'fd_file', 'sfs', 'subject_id',
+                     'bg_func_brain_mask', 'fd_file', 'sfs', 'quality',
+                     'outliers', 'oob_outliers', 'subject_id',
                      'session_id', 'scan_id', 'run_name', 'site_name',
                      'session_output_dir', 'starter'],
         output_names=['qap'],
         function=qap_functional_temporal),
         name='qap_functional_temporal%s' % name)
+
     temporal.inputs.subject_id = config['subject_id']
     temporal.inputs.session_id = config['session_id']
     temporal.inputs.scan_id = config['scan_id']
@@ -998,21 +1001,38 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     if 'site_name' in config.keys():
         temporal.inputs.site_name = config['site_name']
 
+    tqual = pe.Node(afni.QualityIndex(), name='functional_quality_index%s' % name)
+    workflow.connect(tqual, 'out_file', temporal, 'quality')
+
     gs_ts = pe.Node(niu.Function(input_names=["functional_file"], 
       output_names=["output"], function=global_signal_time_series), 
       name="global_signal_time_series%s" % name)
+    
+    outliers = pe.Node(afni.OutlierCount(), name='functional_outliers%s' % name)
+    outliers.inputs.fraction = True
+    workflow.connect(outliers, 'out_file', temporal, 'outliers')
+
+    oob_outliers = pe.Node(afni.OutlierCount(), name='functional_oob_outliers%s' % name)
+    oob_outliers.inputs.fraction = True
+    workflow.connect(oob_outliers, 'out_file', temporal, 'oob_outliers')
 
     # func reorient (timeseries) -> QAP func temp
     if len(resource_pool['func_reorient']) == 2:
         node, out_file = resource_pool['func_reorient']
         workflow.connect(node, out_file, temporal, 'func_timeseries')
         workflow.connect(node, out_file, gs_ts, 'functional_file')
+        workflow.connect(node, out_file, tqual, 'in_file')
+        workflow.connect(node, out_file, outliers, 'in_file')
+        workflow.connect(node, out_file, oob_outliers, 'in_file')
     else:
         from qap_utils import check_input_resources
         check_input_resources(resource_pool, 'func_reorient')
         input_file = resource_pool['func_reorient']
         temporal.inputs.func_timeseries = input_file
         gs_ts.inputs.functional_file = input_file
+        tqual.inputs.in_file = input_file
+        outliers.inputs.in_file = input_file
+        oob_outliers.inputs.in_file = input_file
 
     # func mean (one volume) -> QAP func temp
     if len(resource_pool['func_mean']) == 2:
@@ -1028,16 +1048,20 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     if len(resource_pool['func_brain_mask']) == 2:
         node, out_file = resource_pool['func_brain_mask']
         workflow.connect(node, out_file, temporal, 'func_brain_mask')
+        workflow.connect(node, out_file, outliers, 'mask')
     else:
         temporal.inputs.func_brain_mask = \
+        outliers.inputs.mask = \
             resource_pool['func_brain_mask']
 
     # inverted functional brain mask -> QAP func temp
     if len(resource_pool['func_inverted_brain_mask']) == 2:
         node, out_file = resource_pool['func_inverted_brain_mask']
         workflow.connect(node, out_file, temporal, 'bg_func_brain_mask')
+        workflow.connect(node, out_file, oob_outliers, 'mask')
     else:
         temporal.inputs.bg_func_brain_mask = \
+        oob_outliers.inputs.mask = \
             resource_pool['func_inverted_brain_mask']
 
     # temporal STD -> QAP func temp

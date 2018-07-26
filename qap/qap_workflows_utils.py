@@ -810,7 +810,8 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
 def qap_functional_temporal(
         func_timeseries, func_mean, func_brain_mask, bg_func_brain_mask,
-        fd_file, sfs, subject_id, session_id, scan_id, run_name,
+        fd_file, sfs, quality, outliers, oob_outliers,
+        subject_id, session_id, scan_id, run_name,
         site_name=None, session_output_dir=None, starter=None):
     """ Calculate the functional temporal QAP measures for a functional scan.
 
@@ -860,8 +861,8 @@ def qap_functional_temporal(
     from time import strftime
 
     import qap
-    from qap.temporal_qc import outlier_timepoints, quality_timepoints, \
-                                global_correlation, calculate_percent_outliers
+    from qap.temporal_qc import global_correlation, \
+                                calculate_percent_outliers
     from qap.dvars import calc_dvars
 
     # DVARS
@@ -875,19 +876,13 @@ def qap_functional_temporal(
     fd = np.loadtxt(fd_file)
     meanfd_outliers, meanfd_IQR = calculate_percent_outliers(fd)
 
-    # 3dTout
-    outliers = outlier_timepoints(func_timeseries, mask_file=func_brain_mask)
     # calculate the outliers of the outliers! AAHH!
     outlier_perc_out, outlier_IQR = calculate_percent_outliers(outliers)
 
-    # 3dTout (outside of brain)
-    oob_outliers = outlier_timepoints(func_timeseries,
-                                      mask_file=bg_func_brain_mask)
+    # outside of brain
     oob_outlier_perc_out, oob_outlier_IQR = \
         calculate_percent_outliers(oob_outliers)
 
-    # 3dTqual
-    quality = quality_timepoints(func_timeseries)
     quality_outliers, quality_IQR = calculate_percent_outliers(quality)
 
     # Signal Fluctuation Sensitivity (SFS)
