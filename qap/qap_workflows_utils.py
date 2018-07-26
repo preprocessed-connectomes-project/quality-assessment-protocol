@@ -1,13 +1,13 @@
 
-"""Calculates the global signal time series of a functional file
-   by averaging all voxels in each volume
+def global_signal_time_series(functional_file):
+    """Calculates the global signal time series of a functional file
+    by averaging all voxels in each volume
 
     :type functional_file: nifti file
     :param functional_file: Functional file
     :rtype: float array
     :return: global signal time series 
     """
-def global_signal_time_series(functional_file):
     import numpy as np
     import nibabel as nb
 
@@ -636,8 +636,7 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
             "Participant": str(subject_id),
             "Session": str(session_id),
             "Series": str(scan_id),
-            "anatomical_spatial":
-            {
+            "anatomical_spatial": {
                 "FBER": fber_out,
                 "EFC": efc_out,
                 "Qi1": qi1,
@@ -765,24 +764,22 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
     id_string = "%s %s %s" % (subject_id, session_id, scan_id)
     qap = {
-        id_string:
-        {
-           "QAP_Version": "QAP version %s" % qap.__version__,
-           "QAP_pipeline_id": run_name,
-           "Time": strftime("%Y-%m-%d %H:%M:%S"),
-           "Participant": str(subject_id),
-           "Session": str(session_id),
-           "Series": str(scan_id),
-           "functional_spatial":
-           {
-              "FBER": fber_out,
-              "EFC": efc_out,
-              "FWHM": fwhm_out,
-              "FWHM_x": fwhm_x,
-              "FWHM_y": fwhm_y,
-              "FWHM_z": fwhm_z,
-              "SNR": snr_out
-           }
+        id_string: {
+            "QAP_Version": "QAP version %s" % qap.__version__,
+            "QAP_pipeline_id": run_name,
+            "Time": strftime("%Y-%m-%d %H:%M:%S"),
+            "Participant": str(subject_id),
+            "Session": str(session_id),
+            "Series": str(scan_id),
+            "functional_spatial": {
+                "FBER": fber_out,
+                "EFC": efc_out,
+                "FWHM": fwhm_out,
+                "FWHM_x": fwhm_x,
+                "FWHM_y": fwhm_y,
+                "FWHM_z": fwhm_z,
+                "SNR": snr_out
+            }
         }
     }
 
@@ -896,44 +893,42 @@ def qap_functional_temporal(
     id_string = "%s %s %s" % (subject_id, session_id, scan_id)
     qap_version = qap.__version__
     qap = {
-        id_string:
-        {
-          "QAP_Version": "QAP version %s" % qap_version,
-          "QAP_pipeline_id": run_name,
-          "Time": strftime("%Y-%m-%d %H:%M:%S"),
-          "Participant": str(subject_id),
-          "Session": str(session_id),
-          "Series": str(scan_id),
-          "functional_temporal":
-          {
-             "Std DVARS (Mean)": mean_dvars,
-             "Std DVARS (Std Dev)": np.std(dvars),
-             "Std DVARS (Median)": np.median(dvars),
-             "Std DVARs IQR": dvars_IQR,
-             "Std DVARS percent outliers": dvars_outliers,
-             "RMSD (Mean)": np.mean(fd),
-             "RMSD (Std Dev)": np.std(fd),
-             "RMSD (Median)": np.median(fd),
-             "RMSD IQR": meanfd_IQR,
-             "RMSD percent outliers": meanfd_outliers,
-             "Fraction of Outliers (Mean)": np.mean(outliers),
-             "Fraction of Outliers (Std Dev)": np.std(outliers),
-             "Fraction of Outliers (Median)": np.median(outliers),
-             "Fraction of Outliers IQR": outlier_IQR,
-             "Fraction of Outliers percent outliers": outlier_perc_out,
-             "Fraction of OOB Outliers (Mean)": np.mean(oob_outliers),
-             "Fraction of OOB Outliers (Std Dev)": np.std(oob_outliers),
-             "Fraction of OOB Outliers (Median)": np.median(oob_outliers),
-             "Fraction of OOB Outliers IQR": oob_outlier_IQR,
-             "Fraction of OOB Outliers percent outliers": oob_outlier_perc_out,
-             "Quality (Mean)": np.mean(quality),
-             "Quality (Std Dev)": np.std(quality),
-             "Quality (Median)": np.median(quality),
-             "Quality IQR": quality_IQR,
-             "Quality percent outliers": quality_outliers,
-             "Signal Fluctuation Sensitivity (Mean)": np.mean(sfs_inbrain),
-             "GCOR": gcor
-          }
+        id_string: {
+            "QAP_Version": "QAP version %s" % qap_version,
+            "QAP_pipeline_id": run_name,
+            "Time": strftime("%Y-%m-%d %H:%M:%S"),
+            "Participant": str(subject_id),
+            "Session": str(session_id),
+            "Series": str(scan_id),
+            "functional_temporal": {
+                "Std DVARS (Mean)": mean_dvars,
+                "Std DVARS (Std Dev)": np.std(dvars),
+                "Std DVARS (Median)": np.median(dvars),
+                "Std DVARs IQR": dvars_IQR,
+                "Std DVARS percent outliers": dvars_outliers,
+                "RMSD (Mean)": np.mean(fd),
+                "RMSD (Std Dev)": np.std(fd),
+                "RMSD (Median)": np.median(fd),
+                "RMSD IQR": meanfd_IQR,
+                "RMSD percent outliers": meanfd_outliers,
+                "Fraction of Outliers (Mean)": np.mean(outliers),
+                "Fraction of Outliers (Std Dev)": np.std(outliers),
+                "Fraction of Outliers (Median)": np.median(outliers),
+                "Fraction of Outliers IQR": outlier_IQR,
+                "Fraction of Outliers percent outliers": outlier_perc_out,
+                "Fraction of OOB Outliers (Mean)": np.mean(oob_outliers),
+                "Fraction of OOB Outliers (Std Dev)": np.std(oob_outliers),
+                "Fraction of OOB Outliers (Median)": np.median(oob_outliers),
+                "Fraction of OOB Outliers IQR": oob_outlier_IQR,
+                "Fraction of OOB Outliers percent outliers": oob_outlier_perc_out,
+                "Quality (Mean)": np.mean(quality),
+                "Quality (Std Dev)": np.std(quality),
+                "Quality (Median)": np.median(quality),
+                "Quality IQR": quality_IQR,
+                "Quality percent outliers": quality_outliers,
+                "Signal Fluctuation Sensitivity (Mean)": np.mean(sfs_inbrain),
+                "GCOR": gcor
+            }
         }
     }
 
