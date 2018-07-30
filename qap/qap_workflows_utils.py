@@ -867,10 +867,10 @@ def qap_functional_temporal(
 
     # DVARS
     dvars = calc_dvars(func_timeseries, func_brain_mask)
+    dvars = dvars.flatten()
     dvars_outliers, dvars_IQR = calculate_percent_outliers(dvars)
 
-    mean_dvars = dvars.mean(0)
-    mean_dvars = mean_dvars[0]
+    mean_dvars = dvars.mean()
 
     # Mean FD (Jenkinson)
     fd = np.loadtxt(fd_file)
