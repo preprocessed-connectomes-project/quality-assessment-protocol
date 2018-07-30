@@ -1135,7 +1135,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         grayplot.inputs.metadata = [id_string]
         workflow.connect(fd, 'out_file', grayplot, 'meanfd_file')
         dict_id = "%s %s %s" % (config["subject_id"], config["session_id"],config["scan_id"])
-        workflow.connect(temporal, ('qa', pick_dvars, dict_id), grayplot, 'dvars')    
+        workflow.connect(temporal, ('qap', pick_dvars, dict_id), grayplot, 'dvars')    
         workflow.connect(gs_ts, 'output', grayplot, 'global_signal')
         resource_pool['timeseries_measures'] = (grayplot, 'out_file')
         resource_pool['grayplot-cluster'] = (grayplot, 'out_cluster')

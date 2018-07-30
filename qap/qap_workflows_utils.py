@@ -8,18 +8,11 @@ def global_signal_time_series(functional_file):
     :rtype: float array
     :return: global signal time series 
     """
-    import numpy as np
     import nibabel as nb
 
     func = nb.load(functional_file).get_data()
-    time = func.shape[-1]
-    output = [0]*time
-
-    # that is a stupid way of calculating the mean of each volume,
-    # maybe numpy can do it in one line
-    for i in range(time):
-        output[i] = func[:,:,:,i].mean()
-    return output
+    output = func.mean(tuple(range(0, func.ndim - 1)))
+    return output.tolist()
 
 
 def convert_allineate_xfm(mat_list):
