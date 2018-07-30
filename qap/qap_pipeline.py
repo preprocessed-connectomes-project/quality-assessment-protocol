@@ -79,7 +79,8 @@ def build_and_run_qap_pipeline(args, run=True):
     handler = logging.FileHandler(callback_log_filename)
     callback_logger.addHandler(handler)
 
-    runargs = {'plugin': 'MultiProc',
+    # runargs = {'plugin': 'Linear',
+    runargs = {'plugin': 'Linear',
                'plugin_args': {'memory_gb': config['available_memory'],
                                'n_procs': config['num_processors'],
                                'status_callback': log_nodes_cb}}
@@ -400,7 +401,7 @@ def build_and_run_qap_pipeline(args, run=True):
         logger.info("\nEverything is already done for bundle %s." % str(bundle_idx))
 
     # Remove working directory when done
-    if config['save_working_dir']:
+    if not config['save_working_dir']:
         try:
             if op.exists(config["working_directory"]):
                 import shutil
