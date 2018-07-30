@@ -829,6 +829,16 @@ def qap_functional_temporal(
                                brain mask.
     :type fd_file: str
     :param fd_file: File containing the RMSD values (calculated previously).
+
+    :type sfs: str
+    :param sfs: File 
+    :type quality: str
+    :param quality: File 
+    :type outliers: str
+    :param outliers: File 
+    :type oob_outliers: str
+    :param oob_outliers: File 
+
     :type subject_id: str
     :param subject_id: The participant ID.
     :type session_id: str
@@ -873,13 +883,18 @@ def qap_functional_temporal(
     fd = np.loadtxt(fd_file)
     meanfd_outliers, meanfd_IQR = calculate_percent_outliers(fd)
 
+    outliers = np.loadtxt(outliers)
+
     # calculate the outliers of the outliers! AAHH!
     outlier_perc_out, outlier_IQR = calculate_percent_outliers(outliers)
+
+    oob_outliers = np.loadtxt(oob_outliers)
 
     # outside of brain
     oob_outlier_perc_out, oob_outlier_IQR = \
         calculate_percent_outliers(oob_outliers)
 
+    quality = np.loadtxt(quality)
     quality_outliers, quality_IQR = calculate_percent_outliers(quality)
 
     # Signal Fluctuation Sensitivity (SFS)

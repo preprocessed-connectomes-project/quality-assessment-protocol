@@ -765,7 +765,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_",
             resource_pool['anat_fav_artifacts_background']
 
     if config.get('write_report', False):
-        plot = pe.Node(PlotMosaic(), name='plot_mosaic%s' % name)
+        plot = pe.Node(PlotMosaic(), name='anat_plot_mosaic%s' % name)
         plot.inputs.subject = config['subject_id']
 
         metadata = [config['session_id'], config['scan_id']]
@@ -963,7 +963,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
             resource_pool['func_brain_mask']
 
     if config.get('write_report', False):
-        plot = pe.Node(PlotMosaic(), name='plot_mosaic%s' % name)
+        plot = pe.Node(PlotMosaic(), name='func_plot_mosaic%s' % name)
         plot.inputs.subject = config['subject_id']
 
         metadata = [config['session_id'], config['scan_id']]
@@ -1008,12 +1008,16 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
       output_names=["output"], function=global_signal_time_series), 
       name="global_signal_time_series%s" % name)
     
-    outliers = pe.Node(afni.OutlierCount(), name='functional_outliers%s' % name)
+    outliers = pe.Node(afni.OutlierCount(), name='func_outliers%s' % name)
     outliers.inputs.fraction = True
+    outliers.inputs.save_outliers = False
+    outliers.inputs.out_file = 'func_outliers%s' % name
     workflow.connect(outliers, 'out_file', temporal, 'outliers')
 
-    oob_outliers = pe.Node(afni.OutlierCount(), name='functional_oob_outliers%s' % name)
+    oob_outliers = pe.Node(afni.OutlierCount(), name='func_oob_outliers%s' % name)
     oob_outliers.inputs.fraction = True
+    oob_outliers.inputs.save_outliers = False
+    oob_outliers.inputs.out_file = 'func_oob_outliers%s' % name
     workflow.connect(oob_outliers, 'out_file', temporal, 'oob_outliers')
 
     # func reorient (timeseries) -> QAP func temp
