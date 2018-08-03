@@ -1,8 +1,9 @@
 import unittest
-test_sub_dir = "test_data"
-
 import json
 import numpy as np
+
+test_sub_dir = "test_data"
+
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -15,6 +16,7 @@ class NumpyEncoder(json.JSONEncoder):
 
         return json.JSONEncoder.default(self, obj)
 
+
 def get_test_dir(key):
 
     import datetime
@@ -24,7 +26,7 @@ def get_test_dir(key):
     working_dir = os.path.join('/tmp', '{0}_{1}'.format(key, time_stamp_string))
     os.makedirs(working_dir)
 
-    return(working_dir)
+    return working_dir
 
 
 class TestSFS(unittest.TestCase):
@@ -84,33 +86,20 @@ class TestSFS(unittest.TestCase):
 
         assert sfs
 
-    def test_calc_sfs_90pct(self):
+    def test_calc_sfs_95pct_erode(self):
         import json
-        import numpy as np
-        import numpy.testing as nt
         from qap.sfs import calc_sfs
         import os
 
-        working_directory = get_test_dir('sfs_90pct')
+        working_directory = get_test_dir('sfs_95pct_erode')
 
         sfs = calc_sfs(self.func_reorient, self.func_mask, detrend_polynomial_order=2,
-                       noise_voxel_standard_deviation_percentile=90, debug=True,
+                       noise_voxel_standard_deviation_percentile=95, mask_erosions=3, debug=True,
                        working_directory=working_directory)
 
         json_out_filename = os.path.join(working_directory, 'sfs_test_out.json')
         with open(json_out_filename, 'w') as ofd:
             json.dump(sfs, ofd, indent=2, cls=NumpyEncoder)
-
-        # ref_dvars = np.loadtxt(self.rdvars_reference)
-        # with open(self.dse_reference, 'r') as infd:
-        #     ref_dse = json.load(infd)
-        #
-        # nt.assert_array_almost_equal(dse['DSE_Relative_DVARS'], ref_dvars, decimal=5)
-        #
-        # for python_name, matlab_name in [('DSE_Total_Variance', 'Avar'),
-        #                                  ('DSE_Delta_Percent_DVAR', 'DeltapDvar'),
-        #                                  ('DSE_P_Values', 'pvals')]:
-        #     nt.assert_array_almost_equal(dse[python_name], ref_dse[matlab_name])
 
         assert sfs
 

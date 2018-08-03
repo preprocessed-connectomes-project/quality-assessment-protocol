@@ -1,60 +1,26 @@
-
-def scale_then_center(x, scale=1):
+def variance_scale_then_mean_center(x, var_scale=False, mean_center=True):
     """
     Multiply vector x by scalar scale and then subtract the mean.
 
     :param x: vector to be operated on.
-    :param scale: scalar to multiply against vector
+    :param var_scale: bool
+    :param var_scale: whether variance should be scaled to 1
+    :param mean_center: bool
+    :param mean_center: whether the vector should be mean centered
+
     :return: scaled then centered vector
     """
-    scaled_x = scale * x
-    mu = scaled_x.mean()
-    return scaled_x - mu
+    scaled_x = x.copy()
+    if var_scale is True:
+        scale = 1 / x.std()
+        scaled_x = scale * x
+    if mean_center is True:
+        mu = scaled_x.mean()
+        scaled_x = scaled_x - mu
+    return scaled_x
 
 
-def quantile(x, q=0.5):
-    """
-    calculate percentile q of x, this is designed to be more consistent with the Matlab function quantile
-
-    :param x: vector of length > 1
-    :param q: value between 0 and 1 that indicates the desired percentile
-    :return: the percentile, if lies between consecutive numbers of x, then interpolation is used
-       (pct_ndx - min_ndx)*x[min_ndx] + (max_ndx - pct_ndx)*x[max_ndx], if q=0 the min is returned,
-       if q = 1 max is returned, and if q=0.5 the median is returned
-    """
-    import numpy as np
-
-    if q < 0 or q > 1:
-        raise ValueError('q {0} is out of range, should be a fraction from 0 to 1'.format(q))
-
-    if len(x) < 2:
-        raise ValueError('quantile expects a vector, not a scalar')
-
-    if q == 1:
-        out = np.max(x)
-    elif q == 0.5:
-        out = np.median(x)
-    elif q == 0:
-        out = np.min(x)
-
-    else:
-
-        t_x = np.copy(x)
-        t_x.sort()
-
-        q_ndx = q * (len(t_x))
-        min_ndx = np.floor(q_ndx)
-        max_ndx = np.ceil(q_ndx)
-
-        if max_ndx == min_ndx:
-            out = t_x[q_ndx]
-        else:
-            out = (q_ndx - min_ndx)*t_x[int(min_ndx)] + (max_ndx-q_ndx)*t_x[int(max_ndx)]
-
-    return out
-
-
-def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_deviation_percentile=98, mask_erosions=None,
+def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_deviation_percentile=95, mask_erosions=3,
              noise_voxel_mask_filename=None, motion_regressors_filename=None, friston_twentyfour=True,
              detrend_polynomial_order=None, number_of_principle_components=5, debug=False, working_directory=None):
     """ Calculate signal fluctuation sensitivity
@@ -154,10 +120,10 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
     :rtype: dictionary
     :return: dictionary containing values calculated from time course data.
 
-        'SFS_STD_File_Path' : Path to nifti file containing voxelwise standard deviation
+        'SFS_Standard_Deviation_Image_Filename' : Path to nifti file containing voxelwise standard deviation
         'SFS_Noise_Mask_File_Path' : Path to nifti file containing mask used for selecting noise voxels
-        'SFS_Nose_Voxels_File_Path' : Path to nifti file with noise voxels indicated with a '1' and '0' otherwise
-        'SFS_File_Path': Path to nifti file containing voxelwise SFS
+        'SFS_Noise_Voxel_Mask_Filename' : Path to nifti file with noise voxels indicated with a '1' and '0' otherwise
+        'SFS_Image_Filename': Path to nifti file containing voxelwise SFS
         'SFS_Mean': The mean SFS across the brain voxels.
         'SFS_Std' : The standard deviation of SFS across brain voxels.
         'SFS_Median': The median SFS across the brain voxels.
@@ -169,11 +135,18 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
         'SFS_DBG_Dim': The dimensions of the functional imaging data after it has been conformed (# voxels x # frames)
         'SFS_DBG_Dim_Masked': The dimensions of the functional imaging data after it has been conformed and masked (#
             voxels x # frames)
-        'SFS_DBG_GrandMean0': The grand mean of the functional imaging data prior to scaling
+        'SFS_DBG_Mask_Voxel_Count': The number of voxels included in the brain mask
+        'SFS_DBG_Noise_Voxel_Mask_Pre_Thresh_Filename': path to nifti file containing mask after zero variance voxels
+            have been removed and before the percentile threshold has been applied
+        'SFS_DBG_Variance_Filtered_Mask_Voxel_Count': number of voxels after zero variance voxels have been removed
+        'SFS_DBG_Eroded_Mask_Voxel_Count': number of voxels after the mask has been eroded
+        'SFS_DBG_Noise_Voxel_Count': number of voxels determined to be noise voxels
+        'SFS_DBG_Nuisance_Singular_Values': singular values from PCA decomposition of noise voxel time courses
         'SFS_DBG_Scale2Norm': The scalar value that was used in scaling the functional imaging data
-        'SFS_DBG_GrandMean': The grand mean of the functional imaging data after scaling
-        'SFS_DBG_Std_Thresh': The standard deviation at the threshold percentile.
-
+        'SFS_Mean_Image_Filename': Path to a nifti file containing the mean of the masked functional data
+        'SFS_DBG_Critical_Value': The standard deviation at the threshold percentile.
+        'SFS_DBG_Nuisance_Regressors': The nuisance regressors used in SFS calculation, includes everything selected by
+            the user in the order [polynomial regressors, motion regressors, comp cor components]
 
     """
 
@@ -234,12 +207,8 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
     # scale values so that grand mean == 100 (keeping consistent with the DSE Matlab toolbox)
     functional_data_scale = 100 / functional_data.mean()
     if debug is True:
-        sfs_out_dictionary["DSE_DBG_GrandMean0"] = functional_data.mean()
         sfs_out_dictionary["DSE_DBG_Scale2Norm"] = 100 / functional_data.mean()
     functional_data = functional_data_scale * functional_data
-
-    if debug is True:
-        sfs_out_dictionary["DSE_DBG_GrandMean"] = functional_data.mean()
 
     # save the mean to use in SFS calculations
     functional_data_mean = functional_data.mean(1)
@@ -248,12 +217,13 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
         mean_output_filename = os.path.join(working_directory, "sfs_mean.nii.gz")
         mean_output_data = mask_data.copy()
         mean_output_data[mask_data == 1] = functional_data_mean
-        mean_output_image = nb.Nifti1Image(mean_output_data.reshape(mask_image.shape),  mask_image.affine)
+        mean_output_image = nb.Nifti1Image(mean_output_data.reshape(mask_image.shape), mask_image.affine)
         mean_output_image.to_filename(mean_output_filename)
         sfs_out_dictionary["SFS_Mean_Image_Filename"] = mean_output_filename
 
     # center the data by subtracting the mean
-    functional_data = np.apply_along_axis(lambda x: scale_then_center(x), 1, functional_data)
+    functional_data = np.apply_along_axis(func1d=variance_scale_then_mean_center, axis=1, arr=functional_data,
+                                          var_scale=False, mean_center=True)
 
     # now select noise voxels
     if noise_voxel_mask_filename:
@@ -290,7 +260,7 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
             noise_voxel_mask_output_image = nb.Nifti1Image(noise_voxel_mask.reshape(mask_image.shape).astype(np.uint8),
                                                            mask_image.affine)
             noise_voxel_mask_output_image.to_filename(noise_voxel_mask_output_filename)
-            sfs_out_dictionary["SFS_Noise_Voxel_Mask_Pre_Thresh_Filename"] = noise_voxel_mask_output_filename
+            sfs_out_dictionary["SFS_DBG_Noise_Voxel_Mask_Pre_Thresh_Filename"] = noise_voxel_mask_output_filename
 
         noise_voxels = noise_voxel_mask[mask_data == 1]
 
@@ -302,7 +272,6 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
                 not isinstance(noise_voxel_standard_deviation_percentile, int) or \
                 noise_voxel_standard_deviation_percentile < 0 or \
                 noise_voxel_standard_deviation_percentile > 100:
-
             raise ValueError(
                 "Noise voxel standard deviation percentile ({0}, {1}) should be an integer between 0 and 100".format(
                     noise_voxel_standard_deviation_percentile, type(noise_voxel_standard_deviation_percentile)))
@@ -357,10 +326,10 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
                 raise ValueError('Detrend polynomial order ({0}, {1}) should be an integer in the range [0,10)'.format(
                     detrend_polynomial_order, type(detrend_polynomial_order)))
 
-            # includes 0th order for the mean
-            nuisance_regressors = np.ones((functional_data.shape[1], detrend_polynomial_order+1))
-            for order in range(0, detrend_polynomial_order+1):
-                nuisance_regressors[:, order] = np.arange(0, functional_data.shape[1], dtype=np.float32) ** (order)
+            # don't include 0th order for the mean, we will remove the mean
+            nuisance_regressors = np.ones((functional_data.shape[1], detrend_polynomial_order))
+            for order in range(0, detrend_polynomial_order):
+                nuisance_regressors[:, order] = np.arange(0, functional_data.shape[1], dtype=np.float32) ** (order + 1)
 
         if motion_regressors_filename:
             temp_regressors = np.loadtxt(motion_regressors_filename)
@@ -377,9 +346,17 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
             else:
                 nuisance_regressors = temp_regressors
 
-        # perform the OLS fit
-        nuisance_betas = np.linalg.inv(nuisance_regressors.transpose().dot(nuisance_regressors)).dot(
-            nuisance_regressors.transpose()).dot(functional_data.transpose())
+        # demean the nuisance regressors
+        nuisance_regressors = np.apply_along_axis(func1d=variance_scale_then_mean_center, axis=0,
+                                                  arr=nuisance_regressors, var_scale=True, mean_center=True)
+
+        try:
+            # perform the OLS fit
+            nuisance_betas = np.linalg.inv(nuisance_regressors.transpose().dot(nuisance_regressors)).dot(
+                nuisance_regressors.transpose()).dot(functional_data.transpose())
+        except np.linalg.linalg.LinAlgError as exception_message:
+            print("First OLS regression failed with: {0}, SFS NOT calculated".format(exception_message))
+            return sfs_out_dictionary
 
         functional_residuals = functional_data - nuisance_regressors.dot(nuisance_betas).transpose()
 
@@ -391,7 +368,10 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
 
     # now get the top 5 principle components of the noise_voxel_time_series
     (left_principle_components, singular_values, right_principle_components_transposed) = svd(noise_voxel_time_series,
-                                                                                            full_matrices=False)
+                                                                                              full_matrices=False)
+
+    if debug is True:
+        sfs_out_dictionary['SFS_DBG_Nuisance_Singular_Values'] = singular_values
 
     noise_components = right_principle_components_transposed[0:number_of_principle_components, :].transpose()
 
@@ -401,12 +381,20 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
     else:
         nuisance_regressors = noise_components
 
-    if debug:
-        sfs_out_dictionary["SFS_Nuisance_Regressors"] = nuisance_regressors.transpose()
+    # demean the nuisance regressors
+    nuisance_regressors = np.apply_along_axis(func1d=variance_scale_then_mean_center, axis=0, arr=nuisance_regressors,
+                                              var_scale=True, mean_center=True)
 
-    # redo OLS regression, this time the results will be used to calculate SFS
-    nuisance_betas = np.linalg.inv(nuisance_regressors.transpose().dot(nuisance_regressors)).dot(
-        nuisance_regressors.transpose()).dot(functional_data.transpose())
+    if debug:
+        sfs_out_dictionary["SFS_DBG_Nuisance_Regressors"] = nuisance_regressors.transpose()
+
+    try:
+        # redo OLS regression, this time the results will be used to calculate SFS
+        nuisance_betas = np.linalg.inv(nuisance_regressors.transpose().dot(nuisance_regressors)).dot(
+            nuisance_regressors.transpose()).dot(functional_data.transpose())
+    except np.linalg.linalg.LinAlgError as exception_message:
+        print("Second OLS regression failed with: {0}, SFS NOT calculated".format(exception_message))
+        return sfs_out_dictionary
 
     modeled_var = nuisance_regressors.dot(nuisance_betas).transpose().var(1)
     residual_var = (functional_data - nuisance_regressors.dot(nuisance_betas).transpose()).var(1)
@@ -423,7 +411,7 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
         mask_image.affine)
 
     signal_fluctuation_sensitivity_output_image.to_filename(signal_fluctuation_sensitivity_output_filename)
-    sfs_out_dictionary["SFS_SImage_Filename"] = signal_fluctuation_sensitivity_output_filename
+    sfs_out_dictionary["SFS_Image_Filename"] = signal_fluctuation_sensitivity_output_filename
 
     sfs_out_dictionary["SFS_Mean"] = np.mean(signal_fluctuation_sensitivity)
     sfs_out_dictionary["SFS_Std"] = np.std(signal_fluctuation_sensitivity)
