@@ -1,23 +1,3 @@
-def variance_scale_then_mean_center(x, var_scale=False, mean_center=True):
-    """
-    Multiply vector x by scalar scale and then subtract the mean.
-
-    :param x: vector to be operated on.
-    :param var_scale: bool
-    :param var_scale: whether variance should be scaled to 1
-    :param mean_center: bool
-    :param mean_center: whether the vector should be mean centered
-
-    :return: scaled then centered vector
-    """
-    scaled_x = x.copy()
-    if var_scale is True:
-        scale = 1 / x.std()
-        scaled_x = scale * x
-    if mean_center is True:
-        mu = scaled_x.mean()
-        scaled_x = scaled_x - mu
-    return scaled_x
 
 
 def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_deviation_percentile=95, mask_erosions=3,
@@ -130,8 +110,7 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
         'SFS_25pct' : The 25th percentile of SFS.
         'SFS_75pct' : The 75th percentile of SFS.
 
-        If debug is True the following parameters will also be included in the dictionary. These variables are named
-        to make them consistent with the variables output by the DSE Matlab toolbox
+        If debug is True the following parameters will also be included in the dictionary.
         'SFS_DBG_Dim': The dimensions of the functional imaging data after it has been conformed (# voxels x # frames)
         'SFS_DBG_Dim_Masked': The dimensions of the functional imaging data after it has been conformed and masked (#
             voxels x # frames)
@@ -149,7 +128,7 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
             the user in the order [polynomial regressors, motion regressors, comp cor components]
 
     """
-
+    from qap.temporal_qc import variance_scale_then_mean_center
     import numpy as np
     import nibabel as nb
     from scipy.linalg import svd
@@ -204,10 +183,10 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
     if debug is True:
         sfs_out_dictionary["SFS_DBG_Dim_Masked"] = functional_data.shape
 
-    # scale values so that grand mean == 100 (keeping consistent with the DSE Matlab toolbox)
+    # scale values so that grand mean == 100
     functional_data_scale = 100 / functional_data.mean()
     if debug is True:
-        sfs_out_dictionary["DSE_DBG_Scale2Norm"] = 100 / functional_data.mean()
+        sfs_out_dictionary["SFS_DBG_Scale2Norm"] = 100 / functional_data.mean()
     functional_data = functional_data_scale * functional_data
 
     # save the mean to use in SFS calculations

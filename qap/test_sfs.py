@@ -1,32 +1,8 @@
 import unittest
-import json
-import numpy as np
+from qap.qap_utils import NumpyEncoder
+from qap.test_utils import get_test_dir
 
 test_sub_dir = "test_data"
-
-
-class NumpyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        if isinstance(obj, np.float32):
-            return float(obj)
-        if isinstance(obj, np.int64):
-            return int(obj)
-
-        return json.JSONEncoder.default(self, obj)
-
-
-def get_test_dir(key):
-
-    import datetime
-    import os
-
-    time_stamp_string = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d%H%M%S")
-    working_dir = os.path.join('/tmp', '{0}_{1}'.format(key, time_stamp_string))
-    os.makedirs(working_dir)
-
-    return working_dir
 
 
 class TestSFS(unittest.TestCase):

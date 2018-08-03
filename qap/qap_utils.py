@@ -1,5 +1,20 @@
-
 import json
+import numpy as np
+
+
+# encoder to help with exporting numpy arrays to json
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, np.float32):
+            return float(obj)
+        if isinstance(obj, np.int64):
+            return int(obj)
+        if isinstance(obj, np.uint64):
+            return int(obj)
+
+        return json.JSONEncoder.default(self, obj)
 
 
 def create_expr_string(clip_level_value):
