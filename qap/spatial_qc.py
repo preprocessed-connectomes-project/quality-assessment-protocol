@@ -146,7 +146,7 @@ def cortical_contrast(mean_gm, mean_wm):
     return cort_con
 
     
-def fber(anat_data, skull_mask_data, bg_mask_data):
+def calc_fber(anat_data, skull_mask_data, bg_mask_data):
     """Calculate the Foreground-to-Background Energy Ratio (FBER) of an image.
 
     - FBER = (mean foreground energy) / (mean background energy)
@@ -171,7 +171,7 @@ def fber(anat_data, skull_mask_data, bg_mask_data):
     return fber
 
 
-def efc(anat_data):
+def calc_efc(anat_data):
     """Calculate the Entropy Focus Criterion of the image.
 
     - EFC based on Atkinson 1997, IEEE TMI
@@ -191,17 +191,17 @@ def efc(anat_data):
         
     # Calculate the maximum value of the EFC (which occurs any time all 
     # voxels have the same value)
-    efc_max = 1.0 * np.prod(anat_data.shape) * (1.0 / np.sqrt(np.prod(anat_data.shape))) * \
-                np.log(1.0 / np.sqrt(np.prod(anat_data.shape)))
+    efc_max = 1.0 * np.prod(anat_data.shape) * (1.0 / np.sqrt(np.prod(anat_data.shape))) * np.log(
+        1.0 / np.sqrt(np.prod(anat_data.shape)))
     
     # Calculate the total image energy
-    b_max   = np.sqrt((anat_data**2).sum())
+    b_max = np.sqrt((anat_data**2).sum())
     
     # Calculate EFC (add 1e-16 to the image data to keep log happy)
-    efc     = (1.0 / efc_max) * np.sum((anat_data / b_max) * np.log((anat_data + 1e-16) / b_max))
+    efc = (1.0 / efc_max) * np.sum((anat_data / b_max) * np.log((anat_data + 1e-16) / b_max))
     
     if np.isnan(efc): 
-        print "NaN found for efc (%3.2f,%3.2f)" % (efc_max,b_max)
+        print("NaN found for efc ({0:3.2f},{1:3.2f})".format(efc_max, b_max))
     
     return efc
 
@@ -224,9 +224,8 @@ def artifacts(anatomical_reorient, qap_head_mask_path, exclude_zeroes=False):
     import numpy as np
     import nibabel as nb
     import scipy.ndimage as nd
-    from qap.spatial_qc import check_datatype
     from qap.qap_utils import load_image, load_mask, \
-        create_anatomical_background_mask, write_nifti_image
+        create_anatomical_background_mask
 
     # Load the data
     anat_data, anat_aff, anat_hdr = load_image(anatomical_reorient,
@@ -241,10 +240,10 @@ def artifacts(anatomical_reorient, qap_head_mask_path, exclude_zeroes=False):
     # outside bg_mask set to 0)
     background = anat_data.copy()
     background[bg_mask != 1] = 0
-    
+
     # make sure the datatype is an int
     background = check_datatype(background)
-       
+
     # Find the background threshold (the most frequently occurring value 
     # excluding 0)
     bg_counts = np.bincount(background.flatten())
@@ -256,14 +255,14 @@ def artifacts(anatomical_reorient, qap_head_mask_path, exclude_zeroes=False):
     background[background != 0] = 1
 
     # Create a structural element to be used in an opening operation.
-    struct_elmnt = np.zeros((3, 3, 3))
-    struct_elmnt[0, 1, 1] = 1
-    struct_elmnt[1, 1, :] = 1
-    struct_elmnt[1, :, 1] = 1
-    struct_elmnt[2, 1, 1] = 1
+    structure_element = np.zeros((3, 3, 3))
+    structure_element[0, 1, 1] = 1
+    structure_element[1, 1, :] = 1
+    structure_element[1, :, 1] = 1
+    structure_element[2, 1, 1] = 1
 
     # Perform an opening operation on the background data.
-    background = nd.binary_opening(background, structure=struct_elmnt)
+    background = nd.binary_opening(background, structure=structure_element)
 
     bg_mask_img = nb.Nifti1Image(bg_mask, anat_aff, anat_hdr)
     # this writes it into the node's folder in the working directory
@@ -278,8 +277,7 @@ def artifacts(anatomical_reorient, qap_head_mask_path, exclude_zeroes=False):
     return fav_bg_file, bg_mask_file
 
 
-def fav(fav_artifacts_bg, anatomical_reorient, bg_head_mask,
-        qap_head_mask_path, calculate_qi2=False):
+def fav(fav_artifacts_bg, anatomical_reorient, bg_head_mask, calculate_quality_index_2=False):
     """Calculate FAV, the fraction of total voxels that contain artifacts.
 
     - Detect artifacts in the anatomical image using the method described in
@@ -294,61 +292,68 @@ def fav(fav_artifacts_bg, anatomical_reorient, bg_head_mask,
                                 file.
     :param bg_head_mask: String filepath to the binary background mask NIFTI
                          file.
-    :param qap_head_mask_path: String filepath to the binary foreground mask
-                               NIFTI file.
-    :param calculate_qi2: Boolean switch determining whether to calculate Qi2.
+    :param calculate_quality_index_2: Boolean switch determining whether to calculate Qi2.
     :return: Float values of Qi1 and Qi2 (if Qi2 not calculated, return None).
     """
 
     import numpy as np
-    from qap.qap_utils import read_nifti_image, get_masked_data, load_image, \
-        load_mask
+    from qap.qap_utils import read_nifti_image, load_image, load_mask
 
-    # Load the data
+    # Load the data and make sure that it is 0 or 1
     background = read_nifti_image(fav_artifacts_bg).get_data()
-    bg_mask_data = get_masked_data(anatomical_reorient, bg_head_mask)
+    background[np.isclose(background, 0)] = 0
+    background[background != 0] = 1
+
+    bg_mask = read_nifti_image(bg_head_mask).get_data()
+    bg_mask[np.isclose(bg_mask, 0)] = 0
+    bg_mask[bg_mask != 0] = 1
 
     # Count the number of voxels that remain after the opening operation. 
     # These are artifacts.
-    QI1 = background.sum() / float(bg_mask_data.sum())
+    quality_index_1 = float(background.sum()) / float(bg_mask.sum())
 
-    if calculate_qi2:
+    if calculate_quality_index_2:
+        import scipy.stats as ss
         # Load the data
         anat_data = load_image(anatomical_reorient, return_affine=False)
 
-        fg_mask_data = load_mask(qap_head_mask_path, anatomical_reorient)
+        background_artifacts = load_image(fav_artifacts_bg, return_affine=False)
 
         # Now lets focus on the noise, which is everything in the background
         # that was not identified as artifact
-        bgNoise = anat_data[(fg_mask_data-bg_mask_data)==1]
+        print("{0} background noise voxels {1}".format((bg_mask - background_artifacts).sum(),
+              (bg_mask - background_artifacts).sum() / float(bg_mask.sum())))
+        background_noise = anat_data[(bg_mask - background_artifacts) == 1]
+        print("{0}".format(np.sum(background_noise > 0)))
 
         # calculate the histogram of the noise and its derivative
-        H = np.bincount(bgNoise)
-        H = 1.0*H/H.sum()
-        dH = H[1:]-H[:-1]
+        histogram = np.histogram(background_noise, bins='auto')[0]
+        histogram = 1.0 * histogram / float(histogram.sum())
+        delta_histogram = histogram[1:] - histogram[:-1]
 
         # find the first value on the right tail, i.e. tail with negative
         # slope, i.e. dH < 0 that is less than or equal to half of the
         # histograms max
-        firstNegSlope = np.nonzero(dH<0)[0][0]
-        halfMaxRightTail = np.nonzero(H[firstNegSlope:]<(H.max()/2))[0][0]
+        first_negative_slope = np.nonzero(delta_histogram < 0)[0][0]
+        half_max_right_tail = np.nonzero(histogram[first_negative_slope:] < (histogram.max()/2))[0][0]
 
         # divide by the standard deviation
-        bgNoiseZ = bgNoise / bgNoise.std()
-        bgChiParams = ss.chi.fit(bgNoiseZ)
-        #print bgChiParams
-    
+        background_noise_z_statistic = background_noise / background_noise.std()
+        background_chi_params = ss.chi.fit(background_noise_z_statistic)
+        # print background_chi_params
+
         # now generate values that are consistent with the histogram
-        yx = range(0,H.size)/bgNoise.std()
-        rvs = ss.chi.pdf(yx,bgChiParams[0],loc=bgChiParams[1],scale=bgChiParams[2])
+        yx = [float(y) / background_noise.std() for y in range(0, histogram.size)]
+        rvs = ss.chi.pdf(yx, background_chi_params[0], loc=background_chi_params[1], scale=background_chi_params[2])
 
         # now we can calculate the goodness of fit
-        gof = np.average(np.absolute(H[halfMaxRightTail:]-rvs[halfMaxRightTail:]))
-        QI2 = QI1+gof
-    else:
-        QI2 = None
+        gof = np.average(np.absolute(histogram[half_max_right_tail:] - rvs[half_max_right_tail:]))
+        quality_index_2 = quality_index_1 + gof
 
-    return (QI1, QI2)
+    else:
+        quality_index_2 = None
+
+    return quality_index_1, quality_index_2
 
 
 def fwhm(anat_file, mask_file, out_vox=False):
@@ -447,25 +452,24 @@ def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
     # rotate by n/2
     if direction == "x":
         n2 = int(np.floor(mask_data.shape[0]/2))
-        n2_mask_data[:n2,:,:] = mask_data[n2:(n2*2),:,:]
-        n2_mask_data[n2:(n2*2),:,:] = mask_data[:n2,:,:]
+        n2_mask_data[:n2, :, :] = mask_data[n2:(n2*2), :, :]
+        n2_mask_data[n2:(n2*2), :, :] = mask_data[:n2, :, :]
     elif direction == "y":
         n2 = int(np.floor(mask_data.shape[1]/2))
-        n2_mask_data[:,:n2,:] = mask_data[:,n2:(n2*2),:]
-        n2_mask_data[:,n2:(n2*2),:] = mask_data[:,:n2,:]
+        n2_mask_data[:, :n2, :] = mask_data[:, n2:(n2*2), :]
+        n2_mask_data[:, n2:(n2*2), :] = mask_data[:, :n2, :]
     elif direction == "z":
         n2 = int(np.floor(mask_data.shape[2]/2))
-        n2_mask_data[:,:,:n2] = mask_data[:,:,n2:(n2*2)]
-        n2_mask_data[:,:,n2:(n2*2)] = mask_data[:,:,:n2]
+        n2_mask_data[:, :, :n2] = mask_data[:, :, n2:(n2*2)]
+        n2_mask_data[:, :, n2:(n2*2)] = mask_data[:, :, :n2]
     else:
-        raise Exception("Unknown direction %s, should be x, y, or z" \
-                        % direction)
-    
+        raise ValueError("Unknow direction {0}, should be x, y, or z".format(direction))
+
     # now remove the intersection with the original mask
-    n2_mask_data = n2_mask_data * (1-mask_data)
+    n2_mask_data = n2_mask_data * (1 - mask_data)
     
     # now create a non-ghost background region, that contains 2s
-    n2_mask_data = n2_mask_data + 2*(1-n2_mask_data-mask_data)
+    n2_mask_data = n2_mask_data + 2 * (1 - n2_mask_data - mask_data)
     
     # Save mask
     if ref_file is not None and out_file is not None:
@@ -476,7 +480,7 @@ def ghost_direction(epi_data, mask_data, direction="y", ref_file=None,
    
     # now we calculate the Ghost to signal ratio, but here we define signal
     # as the entire foreground image
-    gsr = (epi_data[n2_mask_data==1].mean() - epi_data[n2_mask_data==2].mean())/epi_data[n2_mask_data==0].mean()
+    gsr = (epi_data[n2_mask_data == 1].mean() - epi_data[n2_mask_data == 2].mean())/epi_data[n2_mask_data == 0].mean()
 
     return gsr
 
@@ -492,10 +496,9 @@ def ghost_all(epi_data, mask_data):
     :rtype: tuple
     :return: The ghost-to-signal ratios (GSR) of each phase encoding direction.
     """
+    import numpy as np
     
     directions = ["x", "y"]
-    gsrs = [ghost_direction(epi_data, mask_data, d) for d in directions]
+    ghost_signal_ratios = [ghost_direction(epi_data, mask_data, d) for d in directions] + [np.NaN]
     
-    return tuple(gsrs + [None])
-
-
+    return tuple(ghost_signal_ratios)

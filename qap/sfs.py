@@ -2,7 +2,7 @@
 
 def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_deviation_percentile=95, mask_erosions=3,
              noise_voxel_mask_filename=None, motion_regressors_filename=None, friston_twentyfour=True,
-             detrend_polynomial_order=None, number_of_principle_components=5, debug=False, working_directory=None):
+             detrend_polynomial_order=2, number_of_principle_components=5, debug=False, working_directory=None):
     """ Calculate signal fluctuation sensitivity
 
 

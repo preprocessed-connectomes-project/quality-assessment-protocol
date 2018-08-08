@@ -67,9 +67,7 @@ def qap_mask_workflow(workflow, resource_pool, config, name="_"):
     if 'anat_linear_xfm' not in resource_pool.keys():
         from anatomical_preproc import afni_anatomical_linear_registration
         old_rp = copy.copy(resource_pool)
-        workflow, resource_pool = \
-            afni_anatomical_linear_registration(workflow, resource_pool,
-                                                    config, name)
+        workflow, resource_pool = afni_anatomical_linear_registration(workflow, resource_pool, config, name)
 
         if resource_pool == old_rp:
             return workflow, resource_pool
@@ -240,11 +238,8 @@ def run_qap_mask_wf(anatomical_reorient=None, allineate_linear_xfm=None):
 
     if not allineate_linear_xfm:
         allineate_linear_xfm = p.resource_filename("qap",
-                                            os.path.join("test_data",
-                                                         "bids_data",
-                                                         "site-1_sub-1_ses-1",
-                                                         "anat",
-                                                         "site-1_sub-1_ses-1_run-1_allineate-linear-xfm.aff12.1D"))
+                                                   os.path.join("test_data", "bids_data", "site-1_sub-1_ses-1", "anat",
+                                                                "site-1_sub-1_ses-1_run-1_allineate-linear-xfm.aff12.1D"))
 
     resource_pool = {"anatomical_reorient": anatomical_reorient,
                      "allineate_linear_xfm": allineate_linear_xfm}
@@ -327,8 +322,7 @@ def run_qap_mask(anatomical_reorient, allineate_out_xfm,
         return workflow, workflow.base_dir
 
 
-def qap_gather_header_info(workflow, resource_pool, config, name="_",
-                           data_type="anatomical"):
+def qap_gather_header_info(workflow, resource_pool, config, name="_", data_type="anat"):
     """Build and run a Nipype workflow to extract the NIFTI header information
     from an input file and insert it into a dictionary.
 
@@ -367,6 +361,10 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
     :type name: str
     :param name: (default: "_") A string to append to the end of each node
                  name.
+
+    :type data_type: str
+    :param data_type: The BIDS type for the data being extracted, either 'anat' or 'func'
+
     :rtype: Nipype workflow object
     :return: The Nipype workflow originally provided, but with this function's
               sub-workflow connected into it.
@@ -402,14 +400,23 @@ def qap_gather_header_info(workflow, resource_pool, config, name="_",
         if "anatomical_scan" in resource_pool.keys():
             gather_header.inputs.in_file = resource_pool["anatomical_scan"]
             gather_header.inputs.type = data_type
+        else:
+            raise ValueError("Could not find anatomical_scan in resource pool for data type {0}.".format(data_type))
+
     elif "func" in data_type:
         if "functional_scan" in resource_pool.keys():
             gather_header.inputs.in_file = resource_pool["functional_scan"]
             gather_header.inputs.type = data_type
+        else:
+            raise ValueError("Could not find anatomical_scan in resource pool for data type {0}.".format(data_type))
+
+    else:
+        raise ValueError("Do not know how to handle data type {0}".format(data_type))
 
     out_dir = os.path.join(config['output_directory'], config["run_name"],
                            config["site_name"], config["subject_id"],
                            config["session_id"])
+    
     out_json = os.path.join(out_dir, "%s_%s_%s_qap-%s.json"
                             % (config["subject_id"], config["session_id"],
                                config["scan_id"],
@@ -1106,7 +1113,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         id_string = "%s %s %s" % (config["subject_id"], config["session_id"], config["scan_id"])
         grayplot.inputs.metadata = [id_string]
         workflow.connect(fd, 'out_file', grayplot, 'meanfd_file')
-        dict_id = "%s %s %s" % (config["subject_id"], config["session_id"],config["scan_id"])
+        dict_id = "%s %s %s" % (config["subject_id"], config["session_id"], config["scan_id"])
         workflow.connect(temporal, ('qa', pick_dvars, dict_id), grayplot, 'dvars')    
         workflow.connect(gs_ts, 'output', grayplot, 'global_signal')
         resource_pool['timeseries_measures'] = (grayplot, 'out_file')
