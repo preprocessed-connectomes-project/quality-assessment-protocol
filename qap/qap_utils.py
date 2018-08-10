@@ -125,7 +125,7 @@ def write_json(output_dict, json_file):
 
     import os
     import json
-    from qap.qap_utils import NumpyEncoder
+    from qap.qap_utils import NumpyEncoder, read_json
 
     write = True
     if os.path.exists(json_file):

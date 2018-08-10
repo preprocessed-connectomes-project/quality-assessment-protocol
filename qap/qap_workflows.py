@@ -975,11 +975,6 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
                                                                                          config["session_id"],
                                                                                          config["scan_id"]))
 
-        def pick_dvars(qa, dvars_dict_id):
-            print qa[dvars_dict_id]
-            dvars = qa[dvars_dict_id]['metrics']['Standardized DVARS']
-            return dvars
-
         grayplot = nipype_pipe_engine.Node(qap_viz.GrayPlot(), name='grayplot{0}'.format(name))
         grayplot.inputs.subject = config['subject_id']
         grayplot.inputs.out_file = out_ts_measures
@@ -1008,3 +1003,8 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
             grayplot.inputs.mask_file = resource_pool['func_brain_mask']
 
     return workflow, resource_pool
+
+
+def pick_dvars(qa, dvars_dict_id):
+    print(qa[dvars_dict_id])
+    return qa[dvars_dict_id]['metrics']['Standardized DVARS']
