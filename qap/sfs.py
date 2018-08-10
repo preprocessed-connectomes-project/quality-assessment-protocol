@@ -135,7 +135,7 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
     import scipy.ndimage.morphology as morph
     import os
 
-    if working_directory is 'None':
+    if not working_directory or working_directory is 'None':
         working_directory = os.getcwd()
 
     sfs_out_dictionary = {}
