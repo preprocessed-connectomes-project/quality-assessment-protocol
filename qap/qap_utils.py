@@ -123,8 +123,11 @@ def write_json(output_dict, json_file):
     :return: Filepath of the JSON file written to.
     """
 
-    write = True
+    import os
+    import json
+    from qap.qap_utils import NumpyEncoder, read_json
 
+    write = True
     if os.path.exists(json_file):
         current_dict = read_json(json_file)
         if current_dict == output_dict:
@@ -143,7 +146,8 @@ def write_json(output_dict, json_file):
 
     if write:
         with open(json_file, "wt") as f:
-            json.dump(current_dict, f, indent=2, sort_keys=True, cls=NumpyEncoder)
+            json.dump(current_dict, f, indent=2,
+                      sort_keys=True, cls=NumpyEncoder)
 
     if os.path.exists(json_file):
         return json_file

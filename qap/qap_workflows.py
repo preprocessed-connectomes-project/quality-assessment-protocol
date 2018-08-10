@@ -639,7 +639,7 @@ def qap_anatomical_spatial_workflow(workflow, resource_pool, config, name="_"):
             resource_pool['anat_fav_artifacts_background']
 
     if config.get('write_report', False):
-        plot = nipype_pipe_engine.Node(qap_viz.PlotMosaic(), name='plot_mosaic{0}'.format(name))
+        plot = nipype_pipe_engine.Node(qap_viz.PlotMosaic(), name='anat_plot_mosaic{0}'.format(name))
         plot.inputs.subject = config['subject_id']
 
         metadata = [config['session_id'], config['scan_id']]
@@ -814,7 +814,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
             resource_pool['func_brain_mask']
 
     if config.get('write_report', False):
-        plot = nipype_pipe_engine.Node(qap_viz.PlotMosaic(), name='plot_mosaic{0}'.format(name))
+        plot = nipype_pipe_engine.Node(qap_viz.PlotMosaic(), name='func_plot_mosaic{0}'.format(name))
         plot.inputs.subject = config['subject_id']
 
         metadata = [config['session_id'], config['scan_id']]
@@ -834,7 +834,8 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
 
     temporal = nipype_pipe_engine.Node(nipype_utility.Function(
         input_names=['func_timeseries', 'func_mean', 'func_brain_mask',
-                     'bg_func_brain_mask', 'fd_file', 'sfs', 'subject_id',
+                     'bg_func_brain_mask', 'fd_file', 'motion_file', 'sfs',
+                     'quality', 'outliers', 'oob_outliers', 'subject_id',
                      'session_id', 'scan_id', 'run_name', 'site_name',
                      'session_output_dir', 'starter'],
         output_names=['qap'],
@@ -850,21 +851,49 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     if 'site_name' in config.keys():
         temporal.inputs.site_name = config['site_name']
 
+    tqual = nipype_pipe_engine.Node(nipype_afni_preprocess.QualityIndex(), name='functional_quality_index%s' % name)
+    workflow.connect(tqual, 'out_file', temporal, 'quality')
+
     gs_ts = nipype_pipe_engine.Node(nipype_utility.Function(input_names=["functional_file"],
                                                             output_names=["output"],
                                                             function=qap_workflows_utils.global_signal_time_series),
                                     name="global_signal_time_series{0}".format(name))
+    
+    outliers = nipype_pipe_engine.Node(nipype_afni_preprocess.OutlierCount(), name='func_outliers%s' % name)
+    outliers.inputs.fraction = True
+    outliers.inputs.save_outliers = False
+    outliers.inputs.out_file = 'func_outliers%s' % name
+    workflow.connect(outliers, 'out_file', temporal, 'outliers')
+
+    oob_outliers = nipype_pipe_engine.Node(nipype_afni_preprocess.OutlierCount(), name='func_oob_outliers%s' % name)
+    oob_outliers.inputs.fraction = True
+    oob_outliers.inputs.save_outliers = False
+    oob_outliers.inputs.out_file = 'func_oob_outliers%s' % name
+    workflow.connect(oob_outliers, 'out_file', temporal, 'oob_outliers')
+
+    if len(resource_pool['func_coordinate_transformation']) == 2:
+        node, out_file = resource_pool['func_coordinate_transformation']
+        workflow.connect(node, out_file, temporal, 'motion_file')
+    else:
+        temporal.inputs.motion_file = \
+            resource_pool['func_coordinate_transformation']
 
     # func reorient (timeseries) -> QAP func temp
     if len(resource_pool['func_reorient']) == 2:
         node, out_file = resource_pool['func_reorient']
         workflow.connect(node, out_file, temporal, 'func_timeseries')
         workflow.connect(node, out_file, gs_ts, 'functional_file')
+        workflow.connect(node, out_file, tqual, 'in_file')
+        workflow.connect(node, out_file, outliers, 'in_file')
+        workflow.connect(node, out_file, oob_outliers, 'in_file')
     else:
         qap_utils.check_input_resources(resource_pool, 'func_reorient')
         input_file = resource_pool['func_reorient']
         temporal.inputs.func_timeseries = input_file
         gs_ts.inputs.functional_file = input_file
+        tqual.inputs.in_file = input_file
+        outliers.inputs.in_file = input_file
+        oob_outliers.inputs.in_file = input_file
 
     # func mean (one volume) -> QAP func temp
     if len(resource_pool['func_mean']) == 2:
@@ -879,16 +908,20 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     if len(resource_pool['func_brain_mask']) == 2:
         node, out_file = resource_pool['func_brain_mask']
         workflow.connect(node, out_file, temporal, 'func_brain_mask')
+        workflow.connect(node, out_file, outliers, 'mask')
     else:
         temporal.inputs.func_brain_mask = \
+        outliers.inputs.mask = \
             resource_pool['func_brain_mask']
 
     # inverted functional brain mask -> QAP func temp
     if len(resource_pool['func_inverted_brain_mask']) == 2:
         node, out_file = resource_pool['func_inverted_brain_mask']
         workflow.connect(node, out_file, temporal, 'bg_func_brain_mask')
+        workflow.connect(node, out_file, oob_outliers, 'mask')
     else:
         temporal.inputs.bg_func_brain_mask = \
+        oob_outliers.inputs.mask = \
             resource_pool['func_inverted_brain_mask']
 
     # temporal STD -> QAP func temp
@@ -942,11 +975,6 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
                                                                                          config["session_id"],
                                                                                          config["scan_id"]))
 
-        def pick_dvars(qa, dvars_dict_id):
-            print qa[dvars_dict_id]
-            dvars = qa[dvars_dict_id]['metrics']['Standardized DVARS']
-            return dvars
-
         grayplot = nipype_pipe_engine.Node(qap_viz.GrayPlot(), name='grayplot{0}'.format(name))
         grayplot.inputs.subject = config['subject_id']
         grayplot.inputs.out_file = out_ts_measures
@@ -955,7 +983,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
         grayplot.inputs.metadata = [id_string]
         workflow.connect(fd, 'out_file', grayplot, 'meanfd_file')
         dict_id = "{0} {1} {2}".format(config["subject_id"], config["session_id"], config["scan_id"])
-        workflow.connect(temporal, ('qa', pick_dvars, dict_id), grayplot, 'dvars')    
+        workflow.connect(temporal, ('qap', pick_dvars, dict_id), grayplot, 'dvars')    
         workflow.connect(gs_ts, 'output', grayplot, 'global_signal')
         resource_pool['timeseries_measures'] = (grayplot, 'out_file')
         resource_pool['grayplot-cluster'] = (grayplot, 'out_cluster')
@@ -975,3 +1003,8 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
             grayplot.inputs.mask_file = resource_pool['func_brain_mask']
 
     return workflow, resource_pool
+
+
+def pick_dvars(qa, dvars_dict_id):
+    print(qa[dvars_dict_id])
+    return qa[dvars_dict_id]['metrics']['Standardized DVARS']

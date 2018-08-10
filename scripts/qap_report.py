@@ -7,11 +7,13 @@
 # @Last Modified by:   oesteban
 # @Last Modified time: 2015-10-08 14:53:20
 
+
 if __name__ == "__main__":
     import logging
     import argparse
     import os.path as op
     from qap.viz.reports import workflow_report
+    from qap.script_utils import qap_types
 
     logger = logging.getLogger('report')
 
@@ -22,8 +24,7 @@ if __name__ == "__main__":
 
     req.add_argument(
         '-m', '--qap_mode', type=str, help='report type',
-        choices=['qap_anatomical_spatial', 'qap_functional_temporal',
-                 'qap_functional_spatial'], required=True)
+        choices=qap_types, required=True)
 
     args = parser.parse_args()
     in_csv = args.input_csv

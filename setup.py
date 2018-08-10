@@ -1,12 +1,19 @@
 
 def main():
 
+    import re
     from glob import glob
     from setuptools import setup
 
-    exec(open('qap/version.py').read())
+    version = "unknown"
+    try:
+        with open('qap/version.py') as f:
+            version = re.findall('"([^"]*)"', f.read())[0]
+    except:
+        pass
+
     setup(name='qap',
-          version=__version__,
+          version=version,
           description='A collection of three quality assessment pipelines '
                       'for anatomical MRI and functional MRI scans.',
           author='Cameron Craddock, Zarrar Shehzad, Steven Giavasis,'
