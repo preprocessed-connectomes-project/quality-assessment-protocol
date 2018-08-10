@@ -18,17 +18,9 @@ def global_signal_time_series(functional_file):
         :rtype: float array
         :return: global signal time series
         """
-
-
     func = nb.load(functional_file).get_data()
-    time = func.shape[-1]
-    output = [0]*time
-
-    # that is a stupid way of calculating the mean of each volume,
-    # maybe numpy can do it in one line
-    for i in range(time):
-        output[i] = func[:,:,:,i].mean()
-    return output
+    output = func.mean(tuple(range(0, func.ndim - 1)))
+    return output.tolist()
 
 
 def convert_allineate_xfm(mat_list):
@@ -632,8 +624,7 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
             "Participant": str(subject_id),
             "Session": str(session_id),
             "Series": str(scan_id),
-            "anatomical_spatial":
-            {
+            "anatomical_spatial": {
                 "FBER": fber_out,
                 "EFC": efc_out,
                 "Qi1": qi1,
@@ -761,24 +752,22 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
     id_string = "%s %s %s" % (subject_id, session_id, scan_id)
     qap = {
-        id_string:
-        {
-           "QAP_Version": "QAP version %s" % qap.__version__,
-           "QAP_pipeline_id": run_name,
-           "Time": strftime("%Y-%m-%d %H:%M:%S"),
-           "Participant": str(subject_id),
-           "Session": str(session_id),
-           "Series": str(scan_id),
-           "functional_spatial":
-           {
-              "FBER": fber_out,
-              "EFC": efc_out,
-              "FWHM": fwhm_out,
-              "FWHM_x": fwhm_x,
-              "FWHM_y": fwhm_y,
-              "FWHM_z": fwhm_z,
-              "SNR": snr_out
-           }
+        id_string: {
+            "QAP_Version": "QAP version %s" % qap.__version__,
+            "QAP_pipeline_id": run_name,
+            "Time": strftime("%Y-%m-%d %H:%M:%S"),
+            "Participant": str(subject_id),
+            "Session": str(session_id),
+            "Series": str(scan_id),
+            "functional_spatial": {
+                "FBER": fber_out,
+                "EFC": efc_out,
+                "FWHM": fwhm_out,
+                "FWHM_x": fwhm_x,
+                "FWHM_y": fwhm_y,
+                "FWHM_z": fwhm_z,
+                "SNR": snr_out
+            }
         }
     }
 
@@ -806,7 +795,8 @@ def qap_functional_spatial(mean_epi, func_brain_mask, direction, subject_id,
 
 def qap_functional_temporal(
         func_timeseries, func_mean, func_brain_mask, bg_func_brain_mask,
-        fd_file, motion_file, sfs, subject_id, session_id, scan_id, run_name,
+        fd_file, motion_file, sfs, quality, outliers, oob_outliers,
+        subject_id, session_id, scan_id, run_name,
         site_name=None, session_output_dir=None, starter=None):
     """ Calculate the functional temporal QAP measures for a functional scan.
 
@@ -827,9 +817,18 @@ def qap_functional_temporal(
                                brain mask.
     :type fd_file: str
     :param fd_file: File containing the RMSD values (calculated previously).
-
+ 
     :type motion_file: str
     :param motion_file: File containing motion estimates from motion correction (x, y, z, del, theta, phi)
+    
+    :type sfs: str
+    :param sfs: File 
+    :type quality: str
+    :param quality: File 
+    :type outliers: str
+    :param outliers: File 
+    :type oob_outliers: str
+    :param oob_outliers: File
 
     :type subject_id: str
     :param subject_id: The participant ID.
@@ -870,44 +869,42 @@ def qap_functional_temporal(
     id_string = "%s %s %s" % (subject_id, session_id, scan_id)
     qap_version = qap.__version__
     qap = {
-        id_string:
-        {
-          "QAP_Version": "QAP version %s" % qap_version,
-          "QAP_pipeline_id": run_name,
-          "Time": strftime("%Y-%m-%d %H:%M:%S"),
-          "Participant": str(subject_id),
-          "Session": str(session_id),
-          "Series": str(scan_id),
-          "functional_temporal":
-          {
-             # "Std DVARS (Mean)": mean_dvars,
-             # "Std DVARS (Std Dev)": np.std(dvars),
-             # "Std DVARS (Median)": np.median(dvars),
-             # "Std DVARs IQR": dvars_IQR,
-             # "Std DVARS percent outliers": dvars_outliers,
-             # "RMSD (Mean)": np.mean(fd),
-             # "RMSD (Std Dev)": np.std(fd),
-             # "RMSD (Median)": np.median(fd),
-             # "RMSD IQR": meanfd_IQR,
-             # "RMSD percent outliers": meanfd_outliers,
-             # "Fraction of Outliers (Mean)": np.mean(outliers),
-             # "Fraction of Outliers (Std Dev)": np.std(outliers),
-             # "Fraction of Outliers (Median)": np.median(outliers),
-             # "Fraction of Outliers IQR": outlier_IQR,
-             # "Fraction of Outliers percent outliers": outlier_perc_out,
-             # "Fraction of OOB Outliers (Mean)": np.mean(oob_outliers),
-             # "Fraction of OOB Outliers (Std Dev)": np.std(oob_outliers),
-             # "Fraction of OOB Outliers (Median)": np.median(oob_outliers),
-             # "Fraction of OOB Outliers IQR": oob_outlier_IQR,
-             # "Fraction of OOB Outliers percent outliers": oob_outlier_perc_out,
-             # "Quality (Mean)": np.mean(quality),
-             # "Quality (Std Dev)": np.std(quality),
-             # "Quality (Median)": np.median(quality),
-             # "Quality IQR": quality_IQR,
-             # "Quality percent outliers": quality_outliers,
-             # "Signal Fluctuation Sensitivity (Mean)": np.mean(sfs_inbrain),
-             # "GCOR": gcor
-          }
+        id_string: {
+            "QAP_Version": "QAP version %s" % qap_version,
+            "QAP_pipeline_id": run_name,
+            "Time": strftime("%Y-%m-%d %H:%M:%S"),
+            "Participant": str(subject_id),
+            "Session": str(session_id),
+            "Series": str(scan_id),
+            "functional_temporal": {
+                # "Std DVARS (Mean)": mean_dvars,
+                # "Std DVARS (Std Dev)": np.std(dvars),
+                # "Std DVARS (Median)": np.median(dvars),
+                # "Std DVARs IQR": dvars_IQR,
+                # "Std DVARS percent outliers": dvars_outliers,
+                # "RMSD (Mean)": np.mean(fd),
+                # "RMSD (Std Dev)": np.std(fd),
+                # "RMSD (Median)": np.median(fd),
+                # "RMSD IQR": meanfd_IQR,
+                # "RMSD percent outliers": meanfd_outliers,
+                # "Fraction of Outliers (Mean)": np.mean(outliers),
+                # "Fraction of Outliers (Std Dev)": np.std(outliers),
+                # "Fraction of Outliers (Median)": np.median(outliers),
+                # "Fraction of Outliers IQR": outlier_IQR,
+                # "Fraction of Outliers percent outliers": outlier_perc_out,
+                # "Fraction of OOB Outliers (Mean)": np.mean(oob_outliers),
+                # "Fraction of OOB Outliers (Std Dev)": np.std(oob_outliers),
+                # "Fraction of OOB Outliers (Median)": np.median(oob_outliers),
+                # "Fraction of OOB Outliers IQR": oob_outlier_IQR,
+                # "Fraction of OOB Outliers percent outliers": oob_outlier_perc_out,
+                # "Quality (Mean)": np.mean(quality),
+                # "Quality (Std Dev)": np.std(quality),
+                # "Quality (Median)": np.median(quality),
+                # "Quality IQR": quality_IQR,
+                # "Quality percent outliers": quality_outliers,
+                # "Signal Fluctuation Sensitivity (Mean)": np.mean(sfs_inbrain),
+                # "GCOR": gcor
+            }
         }
     }
 
@@ -927,8 +924,7 @@ def qap_functional_temporal(
     qap["functional_temporal"]["RMSD percent outliers"] = meanfd_outliers
 
     # 3dTout
-    outliers = outlier_timepoints(func_timeseries, mask_file=func_brain_mask)
-    # calculate the outliers of the outliers! AAHH!
+    outliers = np.loadtxt(outliers)
     outlier_perc_out, outlier_IQR = calculate_percent_outliers(outliers)
 
     qap["functional_temporal"]["Fraction of Outliers (Mean)"] = np.mean(outliers)
@@ -938,8 +934,7 @@ def qap_functional_temporal(
     qap["functional_temporal"]["Fraction of Outliers percent outliers"] = outlier_perc_out
 
     # 3dTout (outside of brain)
-    oob_outliers = outlier_timepoints(func_timeseries,
-                                      mask_file=bg_func_brain_mask)
+    oob_outliers = np.loadtxt(oob_outliers)
     oob_outlier_perc_out, oob_outlier_IQR = \
         calculate_percent_outliers(oob_outliers)
 
@@ -950,7 +945,7 @@ def qap_functional_temporal(
     qap["functional_temporal"]["Fraction of OOB Outliers percent outliers"] = oob_outlier_perc_out
 
     # 3dTqual
-    quality = quality_timepoints(func_timeseries)
+    quality = np.loadtxt(quality)
     quality_outliers, quality_IQR = calculate_percent_outliers(quality)
 
     qap["functional_temporal"]["Quality (Mean)"] = np.mean(quality)

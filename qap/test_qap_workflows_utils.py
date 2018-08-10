@@ -64,12 +64,6 @@ class TestQapFunctionalTemporal(unittest.TestCase):
             fd_lines = f.readlines()
         self.fd_floats = [float(x) for x in fd_lines]
 
-        qual_ts_file = \
-            p.resource_filename("qap", os.path.join("test_data",
-                                                    "quality_timepoints_output.p"))
-        with open(qual_ts_file, "r") as f:
-            self.qual_ts = pickle.load(f)
-
     def test_qap_measures_dict(self):
         qap_dict, qa_dict = self.qft(self.func_ts, self.func_mask,
                                      self.func_bg_mask, self.rmsd_file,
@@ -87,5 +81,3 @@ class TestQapFunctionalTemporal(unittest.TestCase):
                                      "sub1", "ses1", "scan1", "site1")
         fd = qa_dict['sub1 ses1 scan1']['RMSD']
         self.assertListEqual(self.fd_floats, fd)
-        qual_ts = qa_dict['sub1 ses1 scan1']['Quality']
-        self.assertListEqual(self.qual_ts, qual_ts)
