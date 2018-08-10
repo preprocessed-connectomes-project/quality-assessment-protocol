@@ -834,8 +834,8 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
 
     temporal = nipype_pipe_engine.Node(nipype_utility.Function(
         input_names=['func_timeseries', 'func_mean', 'func_brain_mask',
-                     'bg_func_brain_mask', 'fd_file', 'sfs', 'quality',
-                     'outliers', 'oob_outliers', 'subject_id',
+                     'bg_func_brain_mask', 'fd_file', 'motion_file', 'sfs',
+                     'quality', 'outliers', 'oob_outliers', 'subject_id',
                      'session_id', 'scan_id', 'run_name', 'site_name',
                      'session_output_dir', 'starter'],
         output_names=['qap'],
@@ -870,6 +870,13 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     oob_outliers.inputs.save_outliers = False
     oob_outliers.inputs.out_file = 'func_oob_outliers%s' % name
     workflow.connect(oob_outliers, 'out_file', temporal, 'oob_outliers')
+
+    if len(resource_pool['func_coordinate_transformation']) == 2:
+        node, out_file = resource_pool['func_coordinate_transformation']
+        workflow.connect(node, out_file, temporal, 'motion_file')
+    else:
+        temporal.inputs.motion_file = \
+            resource_pool['func_coordinate_transformation']
 
     # func reorient (timeseries) -> QAP func temp
     if len(resource_pool['func_reorient']) == 2:
