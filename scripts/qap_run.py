@@ -9,6 +9,7 @@ from qap import qap_cfg
 
 from qap.qap_pipeline import build_and_run_qap_pipeline
 
+
 def create_bundles(data_configuration_dict, bundle_size):
     """
 
@@ -68,7 +69,7 @@ def write_bundles(bundles, bundle_filename):
         yaml.dump(bundles, ofd, encoding='utf-8')
 
 
-def run_qap(pipeline_configuration, data_bundles, bundle_index=''):
+def run_qap(pipeline_configuration, data_bundles, bundle_index=None):
     """
 
     Build and execute the qap pipeline based on the configuration parameters.
@@ -98,7 +99,7 @@ def run_qap(pipeline_configuration, data_bundles, bundle_index=''):
 
     # set up callback logging
     import logging
-    from nipype.pipeline.plugins.callback_log import log_nodes_cb
+    # from nipype.pipeline.plugins.callback_log import log_nodes_cb
 
     callback_log_filename = os.path.join(pipeline_configuration["log_directory"], "callback.log")
 
@@ -112,35 +113,32 @@ def run_qap(pipeline_configuration, data_bundles, bundle_index=''):
 
     if bundle_index:
         if bundle_index < 0 or bundle_index >= num_bundles:
-            raise ValueError("Invalid bundle_index {0}, should be in the "
-                             "range 0 < x < {1}".format(
-                bundle_index, num_bundles))
+            raise ValueError(
+                "Invalid bundle_index {0}, should be in the range 0 < x < {1}".format(bundle_index, num_bundles))
 
         data_bundles = [data_bundles[int(bundle_index)]]
 
     results = []
     for index, bundle_dict in enumerate(data_bundles):
 
-        # the QAP pipeline uses the bundle index in the names of various files
-        # and directories, we want to preserve the actual bundle index to make
-        # sure that values in these names correctly map back out to the actual
-        # data, so, if we were passed a bundle index, use it, otherwise use
-        # our internally calculated index
+        #  the QAP pipeline uses the bundle index in the names of various files
+        #  and directories, we want to preserve the actual bundle index to make
+        #  sure that values in these names correctly map back out to the actual
+        #  data, so, if we were passed a bundle index, use it, otherwise use
+        #  our internally calculated index
         if not bundle_index:
             bundle_index = index
 
         # if input values are in s3, go get 'em
         for tranche_key, tranche_dict in bundle_dict.iteritems():
-            #for scan_key, scan_dict in tranche_dict.iteritems():
-            for resource_key, resource_path in tranche_dict.iteritems(): #scan_dict.iteritems():
+            for resource_key, resource_path in tranche_dict.iteritems():
                 if "s3://" in resource_path.lower():
                     bundle_dict[tranche_key][resource_key] = \
                         download_single_s3_path(resource_path,
                                                 pipeline_configuration)
 
-        qap_pipeline_arguments = (bundle_dict, bundle_dict.keys(),
-                                  pipeline_configuration, "qap_run",
-                                  bundle_index, num_bundles)
+        qap_pipeline_arguments = (bundle_dict, bundle_dict.keys(), pipeline_configuration, "qap_run", bundle_index,
+                                  num_bundles)
 
         pipeline_execution_output = build_and_run_qap_pipeline(qap_pipeline_arguments)
 
@@ -388,13 +386,11 @@ def main():
         pipeline_configuration["working_directory"] = args.working_dir
 
     if "s3://" in pipeline_configuration["working_directory"].lower():
-        raise ValueError("QAP does not support writing the working directory "
-                         "to S3 ({0})".format(
+        raise ValueError("QAP does not support writing the working directory to S3 ({0})".format(
             pipeline_configuration["working_directory"]))
 
     elif not os.path.exists(pipeline_configuration["working_directory"]):
-            raise ValueError('Working directory ({0}) could not be '
-                             'found'.format(pipeline_configuration["working_directory"]))
+           os.makedirs(pipeline_configuration["working_directory"])
 
     # now lets add in the other parameters
     if args.bundle_size:
@@ -411,8 +407,7 @@ def main():
     if args.functional_discard_volumes:
         pipeline_configuration["functional_start_index"] = int(args.functional_discard_volumes)
         if pipeline_configuration["functional_start_index"] < 0:
-            raise ValueError("functional_start_index cannot be a negative "
-                             "number {}".format(
+            raise ValueError("functional_start_index cannot be a negative number {}".format(
                 pipeline_configuration["functional_start_index"]))
 
     if args.exclude_zeros:
@@ -457,7 +452,7 @@ def main():
 
     timestamp_string = datetime.now().strftime("%Y%m%d%H%M")
 
-    pipeline_configuration_filename = "qap-pipe-config-{}.yml".format(timestamp_string)
+    pipeline_configuration_filename = os.path.join(args.output_dir, "qap-pipe-config-{}.yml".format(timestamp_string))
     qap_cfg.write_pipeline_configuration(pipeline_configuration_filename, pipeline_configuration)
 
     # the easiest case is when a data configuration file is passed in
@@ -479,16 +474,15 @@ def main():
             # possible that the user set the out_dir to the same value as
             # bids_dir
             out_derivative_files = []
-            if bids_dir != output_dir:
+            if bids_dir != pipeline_configuration["output_directory"]:
                 (out_image_files, out_derivative_files, out_parameters_dictionary) = \
-                    bids_utils.collect_bids_files_configs(output_dir,
+                    bids_utils.collect_bids_files_configs(pipeline_configuration["output_directory"],
                                                           args.s3_write_credentials,
                                                           raise_error=False)
 
-            print("Found {0} parameter dictionaries, {1} image files, and "
-                  "{2} derivatives".format(
-                len(bids_parameters_dictionary), len(bids_image_files), len(bids_derivative_files) +
-                len(out_derivative_files)))
+            print("Found {0} parameter dictionaries, {1} image files, and {2} derivatives".format(
+                len(bids_parameters_dictionary), len(bids_image_files),
+                len(bids_derivative_files) + len(out_derivative_files)))
 
             # add the derivatives to the files so that they will all be added
             # to the data configuration
@@ -501,7 +495,7 @@ def main():
             bids_utils.bids_generate_qap_data_configuration(bids_dir, bids_image_files,
                                                             credentials_path=args.s3_read_credentials, debug=True)
 
-    data_configuration_filename = "qap-data-config-{}.yml".format(timestamp_string)
+    data_configuration_filename = os.path.join(args.output_dir, "qap-data-config-{}.yml".format(timestamp_string))
     bids_utils.write_data_configuration(data_configuration_filename, data_configuration_dict)
 
     if "test_config" in args.analysis_level:
@@ -528,9 +522,10 @@ def main():
         # --- Now Execute
         bundle_index = ''
         if args.bundle_index:
-            bundle_index = int(bundle_index)
+            bundle_index = int(args.bundle_index)
 
         run_qap(pipeline_configuration, data_bundles, bundle_index)
+
 
 if __name__ == '__main__':
     main()

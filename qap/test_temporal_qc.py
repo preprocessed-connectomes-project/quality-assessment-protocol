@@ -121,7 +121,7 @@ def test_global_correlation():
 
     import numpy.testing as nt
 
-    from qap.temporal_qc import global_correlation
+    from qap.gcor import calc_global_correlation
 
     func_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "func_reorient.nii.gz"))
@@ -129,6 +129,6 @@ def test_global_correlation():
     func_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
                                     "functional_brain_mask.nii.gz"))
 
-    gcor = global_correlation(func_reorient, func_mask)
+    gcor = calc_global_correlation(func_reorient, func_mask)
 
-    nt.assert_almost_equal(gcor, 0.13903011798720202, decimal=4)
+    nt.assert_almost_equal(gcor['GCOR'], 0.13903011798720202, decimal=4)

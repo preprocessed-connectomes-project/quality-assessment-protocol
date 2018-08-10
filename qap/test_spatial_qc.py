@@ -10,31 +10,27 @@ class TestArtifacts(unittest.TestCase):
         pass
 
 
-
 @pytest.mark.quick
 def test_summary_mask():
 
     import os
-    import pickle
     import pkg_resources as p
 
     from qap.spatial_qc import summary_mask
     from qap.qap_utils import load_image, load_mask
 
-    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
-                                        "anat_reorient.nii.gz"))
+    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, "anat_reorient.nii.gz"))
                                    
-    head_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
-                                    "qap_head_mask.nii.gz"))
+    head_mask = p.resource_filename("qap", os.path.join(test_sub_dir, "qap_head_mask.nii.gz"))
 
     anat_data = load_image(anat_reorient)
     mask_data = load_mask(head_mask, anat_reorient)
 
     summary_tuple = summary_mask(anat_data, mask_data)
 
-    assert int(summary_tuple[0]) == 230
-    assert int(summary_tuple[1]) == 233
-    assert int(summary_tuple[2]) == 157221
+    assert int(summary_tuple[1]) == 230
+    assert int(summary_tuple[2]) == 233
+    assert int(summary_tuple[3]) == 157221
     
 
 @pytest.mark.quick
@@ -44,7 +40,7 @@ def test_check_datatype():
     
     from qap.spatial_qc import check_datatype
 
-    sample_array = [[[0,1,2],[3,4,5]],[[6,7,8],[9,10,11]]]
+    sample_array = [[[0, 1, 2], [3, 4, 5]], [[6, 7, 8], [9, 10, 11]]]
 
     # put it into NumPy format
     sample_array = np.asarray(sample_array)
@@ -67,7 +63,7 @@ def test_check_datatype():
     else:
         assert_list.append(0)
 
-    assert assert_list == [1,1]
+    assert assert_list == [1, 1]
     
 
 @pytest.mark.quick
@@ -117,12 +113,11 @@ def test_cortical_contrast():
 def test_fber():
 
     import os
-    import pickle
     import pkg_resources as p
     
     import numpy.testing as nt
 
-    from qap.spatial_qc import fber
+    from qap.spatial_qc import calc_fber
     from qap.qap_utils import load_image, load_mask
 
     anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
@@ -140,7 +135,7 @@ def test_fber():
 
     head_data = load_mask(skull_only_mask, anat_reorient)
 
-    fber_out = fber(anat_data, head_data, bg_data)
+    fber_out = calc_fber(anat_data, head_data, bg_data)
 
     nt.assert_almost_equal(fber_out, 341.72165992685609, decimal=4)
 
@@ -149,12 +144,11 @@ def test_fber():
 def test_efc():
 
     import os
-    import pickle
     import pkg_resources as p
     
     import numpy.testing as nt
 
-    from qap.spatial_qc import efc
+    from qap.spatial_qc import calc_efc
     from qap.qap_utils import load_image
 
     anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
@@ -162,7 +156,7 @@ def test_efc():
                                    
     anat_data = load_image(anat_reorient)
 
-    efc_out = efc(anat_data)
+    efc_out = calc_efc(anat_data)
 
     nt.assert_almost_equal(efc_out, 0.36522517588147252, decimal=3)
 
@@ -171,13 +165,11 @@ def test_efc():
 def test_artifacts_no_qi2():
 
     import os
-    import pickle
     import pkg_resources as p
 
     import numpy.testing as nt
 
-    from qap.spatial_qc import artifacts
-    from qap.qap_utils import load_image, load_mask
+    from qap.spatial_qc import artifacts, fav
 
     anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
                                         "anat_reorient.nii.gz"))
@@ -185,16 +177,11 @@ def test_artifacts_no_qi2():
     head_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
                                     "qap_head_mask.nii.gz"))
 
-    bg_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
-                                  "anat_bg_mask.nii.gz"))
+    artifact_image, bg_mask_image = artifacts(anat_reorient, head_mask, exclude_zeroes=False)
+    fraction_artifact_voxels = fav(artifact_image, anat_reorient, bg_mask_image, head_mask,
+                                   calculate_quality_index_2=False)
 
-    anat_data = load_image(anat_reorient)
-    mask_data = load_mask(head_mask, anat_reorient)
-    bg_data = load_mask(bg_mask, anat_reorient)
-
-    art_out = artifacts(anat_data, mask_data, bg_data, calculate_qi2=False)
-
-    nt.assert_almost_equal(art_out[0], 0.10064793870393487, decimal=4)
+    nt.assert_almost_equal(fraction_artifact_voxels[0], 0.10064793870393487, decimal=4)
 
 
 @pytest.mark.skip()
@@ -204,30 +191,21 @@ def test_artifacts_with_qi2():
     # this will fail until the code in 'if calculate_qi2' is updated
 
     import os
-    import pickle
     import pkg_resources as p
 
-    from qap.spatial_qc import artifacts
-    from qap.qap_utils import load_image, load_mask
+    from qap.spatial_qc import artifacts, fav
 
-    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir,
-                                        "anat_1",
-                                        "anatomical_reorient",
-                                        "mprage_resample.nii.gz"))
-                                   
-    head_mask = p.resource_filename("qap", os.path.join(test_sub_dir,
-                                    "anat_1",
-                                    "qap_head_mask",
-                                    "mprage_resample_thresh_maths_maths_" \
-                                    "maths.nii.gz"))
+    anat_reorient = p.resource_filename("qap", os.path.join(test_sub_dir, "anat_reorient.nii.gz"))
 
-    anat_data = load_image(anat_reorient)
-    mask_data = load_mask(head_mask, anat_reorient)
+    head_mask = p.resource_filename("qap", os.path.join(test_sub_dir, "qap_head_mask.nii.gz"))
 
-    art_out = artifacts(anat_data, mask_data, calculate_qi2=True)
+    artifact_image, bg_mask_image = artifacts(anat_reorient, head_mask, exclude_zeroes=False)
+
+    fraction_artifact_voxels = fav(artifact_image, anat_reorient, bg_mask_image, head_mask,
+                                   calculate_quality_index_2=True)
 
     # not the actual expected output, needs verification
-    assert art_out == 0
+    assert fraction_artifact_voxels[0] == 0
 
 
 @pytest.mark.quick
@@ -240,12 +218,9 @@ def test_fwhm_out_vox():
 
     from qap.spatial_qc import fwhm
 
-    anat_file = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "anat_reorient.nii.gz"))
+    anat_file = p.resource_filename("qap", os.path.join(test_sub_dir, "anat_reorient.nii.gz"))
     
-    mask_file = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "qap_head_mask.nii.gz"))
-    
+    mask_file = p.resource_filename("qap", os.path.join(test_sub_dir, "qap_head_mask.nii.gz"))
 
     fwhm_out = fwhm(anat_file, mask_file, out_vox=True)
 
@@ -265,11 +240,9 @@ def test_fwhm_no_out_vox():
 
     from qap.spatial_qc import fwhm
 
-    anat_file = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "anat_reorient.nii.gz"))
+    anat_file = p.resource_filename("qap", os.path.join(test_sub_dir, "anat_reorient.nii.gz"))
     
-    mask_file = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                    "qap_head_mask.nii.gz"))
+    mask_file = p.resource_filename("qap", os.path.join(test_sub_dir, "qap_head_mask.nii.gz"))
 
     fwhm_out = fwhm(anat_file, mask_file, out_vox=False)
 
@@ -290,12 +263,9 @@ def test_ghost_direction():
     from qap.spatial_qc import ghost_direction
     from qap.qap_utils import load_image, load_mask
 
-    mean_epi = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                   "mean_functional.nii.gz"))
+    mean_epi = p.resource_filename("qap", os.path.join(test_sub_dir, "mean_functional.nii.gz"))
                                    
-    func_brain_mask = p.resource_filename("qap", os.path.join(test_sub_dir, \
-                                          "functional_brain_mask" \
-                                          ".nii.gz"))
+    func_brain_mask = p.resource_filename("qap", os.path.join(test_sub_dir, "functional_brain_mask.nii.gz"))
 
     mean_epi_data = load_image(mean_epi)
     funcmask_data = load_mask(func_brain_mask, mean_epi)
@@ -309,4 +279,3 @@ def test_ghost_direction():
     nt.assert_almost_equal(gsr_out_all[0], -0.018987976014614105, decimal=4)
     nt.assert_almost_equal(gsr_out_all[1], 0.020795321092009544, decimal=4)
     nt.assert_almost_equal(gsr_out_all[2], 0.06708560138940811, decimal=4)  
-    
