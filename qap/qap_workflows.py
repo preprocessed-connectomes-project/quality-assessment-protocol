@@ -851,7 +851,7 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
     if 'site_name' in config.keys():
         temporal.inputs.site_name = config['site_name']
 
-    tqual = pe.Node(afni.QualityIndex(), name='functional_quality_index%s' % name)
+    tqual = nipype_pipe_engine.Node(nipype_afni_preprocess.QualityIndex(), name='functional_quality_index%s' % name)
     workflow.connect(tqual, 'out_file', temporal, 'quality')
 
     gs_ts = nipype_pipe_engine.Node(nipype_utility.Function(input_names=["functional_file"],
@@ -859,13 +859,13 @@ def qap_functional_workflow(workflow, resource_pool, config, name="_"):
                                                             function=qap_workflows_utils.global_signal_time_series),
                                     name="global_signal_time_series{0}".format(name))
     
-    outliers = pe.Node(afni.OutlierCount(), name='func_outliers%s' % name)
+    outliers = nipype_pipe_engine.Node(nipype_afni_preprocess.OutlierCount(), name='func_outliers%s' % name)
     outliers.inputs.fraction = True
     outliers.inputs.save_outliers = False
     outliers.inputs.out_file = 'func_outliers%s' % name
     workflow.connect(outliers, 'out_file', temporal, 'outliers')
 
-    oob_outliers = pe.Node(afni.OutlierCount(), name='func_oob_outliers%s' % name)
+    oob_outliers = nipype_pipe_engine.Node(nipype_afni_preprocess.OutlierCount(), name='func_oob_outliers%s' % name)
     oob_outliers.inputs.fraction = True
     oob_outliers.inputs.save_outliers = False
     oob_outliers.inputs.out_file = 'func_oob_outliers%s' % name
