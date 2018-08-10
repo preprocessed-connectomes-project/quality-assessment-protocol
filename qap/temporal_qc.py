@@ -160,51 +160,23 @@ def fd_jenkinson(in_file, rmax=80., out_file=None, out_array=False):
         return out_file
 
 
-def global_correlation(func_reorient, func_mask):
-    """Calculate the global correlation (GCOR) of the functional timeseries.
-
-    - From "Correcting Brain-Wide Correlation Differences in Resting-State
-      fMRI", Ziad S. Saad et al. More info here:
-        https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3749702
-
-    :type func_reorient: str
-    :param func_reorient: Filepath to the deobliqued, reoriented functional
-                          timeseries NIFTI file.
-    :type func_mask: str
-    :param func_mask: Filepath to the functional brain mask NIFTI file.
-    :rtype: float
-    :return: The global correlation (GCOR) value.
+def variance_scale_then_mean_center(x, var_scale=False, mean_center=True):
     """
+    Multiply vector x by scalar scale and then subtract the mean.
 
-    import scipy
-    import numpy as np
-    from .dvars import load
+    :param x: vector to be operated on.
+    :type var_scale: bool
+    :param var_scale: whether variance should be scaled to 1
+    :type mean_center: bool
+    :param mean_center: whether the vector should be mean centered
 
-    zero_variance_func = load(func_reorient, func_mask)
-
-    list_of_ts = zero_variance_func.transpose()
-
-    # get array of z-scored values of each voxel in each volume of the
-    # timeseries
-    demeaned_normed = []
-
-    for ts in list_of_ts:
-        demeaned_normed.append(scipy.stats.mstats.zscore(ts))
-
-    demeaned_normed = np.asarray(demeaned_normed)
-
-    # make an average of the normalized timeseries, into one averaged
-    # timeseries, a vector of N volumes
-    volume_list = demeaned_normed.transpose()
-
-    avg_ts = []
-
-    for voxel in volume_list:
-        avg_ts.append(voxel.mean())
-
-    avg_ts = np.asarray(avg_ts)
-
-    # calculate the global correlation
-    gcor = (avg_ts.transpose().dot(avg_ts)) / len(avg_ts)
-
-    return gcor
+    :return: scaled then centered vector
+    """
+    scaled_x = x.copy()
+    if var_scale is True:
+        scale = 1 / x.std()
+        scaled_x = scale * x
+    if mean_center is True:
+        mu = scaled_x.mean()
+        scaled_x = scaled_x - mu
+    return scaled_x
