@@ -1,4 +1,13 @@
+import numpy as np
+import nibabel as nb
 
+import numpy as np
+import numpy.linalg as npl
+import nibabel as nb
+
+import os
+import nibabel as nb
+from scipy.ndimage.morphology import binary_fill_holes
 
 def global_signal_time_series(functional_file):
     """ Calculates the global signal time series of a functional file
@@ -10,8 +19,6 @@ def global_signal_time_series(functional_file):
         :return: global signal time series
         """
 
-    import numpy as np
-    import nibabel as nb
 
     func = nb.load(functional_file).get_data()
     time = func.shape[-1]
@@ -36,8 +43,6 @@ def convert_allineate_xfm(mat_list):
     :rtype: NumPy array
     :return: A NumPy array of the converted affine matrix.
     """
-
-    import numpy as np
 
     # put together the 4x4 matrix
     #   (encode the offset as the fourth row and include the 0,0,0,1
@@ -71,10 +76,6 @@ def warp_coordinates(inpoint, allineate_mat, infile_affine, infile_dims):
     :rtype: list
     :return: A list of three warped coordinates.
     """
-
-    import numpy as np
-    import numpy.linalg as npl
-    import nibabel as nb
 
     # using the transform, calculate what the three coordinates are in
     # native space, as it corresponds to the anatomical scan
@@ -120,8 +121,6 @@ def calculate_plane_coords(coords_list, infile_dims):
              pairs.
     """
 
-    import numpy as np
-
     # get the vectors connecting the points
     u = []
     for a_pt, c_pt in zip(coords_list[0], coords_list[2]):
@@ -160,10 +159,6 @@ def calculate_plane_coords(coords_list, infile_dims):
 
 
 def scipy_fill(in_file):
-
-    import os
-    import nibabel as nb
-    from scipy.ndimage.morphology import binary_fill_holes
 
     mask_img = nb.load(in_file)
     mask_data = mask_img.get_data()
@@ -298,14 +293,14 @@ def get_temporal_std_map(func_reorient, func_mask):
     import os
     import numpy as np
     import nibabel as nb
-    from qap.qap_utils import get_masked_data
 
-    func_data = get_masked_data(func_reorient, func_mask)
+    func_img = nb.load(func_reorient)
+    func_data = func_img.get_data()
+
     temporal_std_map = np.std(func_data, axis=-1)
 
     # write the image
-    mask_img = nb.load(func_mask)
-    tstd_img = nb.Nifti1Image(temporal_std_map, mask_img.affine)
+    tstd_img = nb.Nifti1Image(temporal_std_map, func_img.affine)
 
     # this writes it into the node's folder in the working directory
     temporal_std_map_file = os.path.join(os.getcwd(), "tstd.nii.gz")
@@ -338,7 +333,6 @@ def calc_estimated_tstd_nuisance_mask(temporal_std_map):
     """
 
     import numpy as np
-    from qap.qap_utils import get_masked_data
 
     cutoff = np.percentile(temporal_std_map, 98)
     return create_threshold_mask(temporal_std_map, cutoff)

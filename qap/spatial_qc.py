@@ -228,8 +228,7 @@ def artifacts(anatomical_reorient, qap_head_mask_path, exclude_zeroes=False):
         create_anatomical_background_mask
 
     # Load the data
-    anat_data, anat_aff, anat_hdr = load_image(anatomical_reorient,
-                                               return_affine=True)
+    anat_data, anat_img = load_image(anatomical_reorient, return_img=True)
     fg_mask = load_mask(qap_head_mask_path, anatomical_reorient)
 
     # bg_mask is the inversion of the "qap_head_mask"
@@ -264,12 +263,12 @@ def artifacts(anatomical_reorient, qap_head_mask_path, exclude_zeroes=False):
     # Perform an opening operation on the background data.
     background = nd.binary_opening(background, structure=structure_element)
 
-    bg_mask_img = nb.Nifti1Image(bg_mask, anat_aff, anat_hdr)
+    bg_mask_img = nb.Nifti1Image(bg_mask, anat_img.affine, anat_img.header)
     # this writes it into the node's folder in the working directory
     bg_mask_file = os.path.join(os.getcwd(), "qap-bg-head-mask.nii.gz")
     bg_mask_img.to_filename(bg_mask_file)
 
-    fav_bg_img = nb.Nifti1Image(background.astype(int), anat_aff, anat_hdr)
+    fav_bg_img = nb.Nifti1Image(background.astype(int), anat_img.affine, anat_img.header)
     # this writes it into the node's folder in the working directory
     fav_bg_file = os.path.join(os.getcwd(), "fav-artifacts-background.nii.gz")
     fav_bg_img.to_filename(fav_bg_file)
@@ -297,7 +296,7 @@ def fav(fav_artifacts_bg, anatomical_reorient, bg_head_mask, calculate_quality_i
     """
 
     import numpy as np
-    from qap.qap_utils import read_nifti_image, load_image, load_mask
+    from qap.qap_utils import read_nifti_image, load_image
 
     # Load the data and make sure that it is 0 or 1
     background = read_nifti_image(fav_artifacts_bg).get_data()
@@ -315,9 +314,9 @@ def fav(fav_artifacts_bg, anatomical_reorient, bg_head_mask, calculate_quality_i
     if calculate_quality_index_2:
         import scipy.stats as ss
         # Load the data
-        anat_data = load_image(anatomical_reorient, return_affine=False)
+        anat_data = load_image(anatomical_reorient, return_img=False)
 
-        background_artifacts = load_image(fav_artifacts_bg, return_affine=False)
+        background_artifacts = load_image(fav_artifacts_bg, return_img=False)
 
         # Now lets focus on the noise, which is everything in the background
         # that was not identified as artifact

@@ -1,32 +1,57 @@
 import json
-import numpy as np
+import numpy
+import nibabel
+import traceback
+import os
 
-
-# encoder to help with exporting numpy arrays to json
+# encoder to help with exporting numpy data types and exceptions to json
 class NumpyEncoder(json.JSONEncoder):
+
     def default(self, obj):
-        if isinstance(obj, np.ndarray):
+
+        if isinstance(obj, numpy.ndarray):
             return obj.tolist()
-        if isinstance(obj, np.float32):
+        if isinstance(obj, numpy.float32):
             return float(obj)
-        if isinstance(obj, np.int64):
+        if isinstance(obj, numpy.int64):
             return int(obj)
-        if isinstance(obj, np.uint64):
+        if isinstance(obj, numpy.uint64):
             return int(obj)
+        if isinstance(obj, Exception):
+            return str(obj)
 
         return json.JSONEncoder.default(self, obj)
+
+
+def raise_smart_exception(local_vars, msg=None):
+    """Raise an exception with more information about the traceback, and
+    enforce inclusion of the locals().
+
+    :type local_vars: dict
+    :param local_vars: Input for locals().
+    :type msg: str
+    :param msg: (default: None) The custom error message for the exception in
+                question.
+    """
+
+    ll = "\n".join([":".join([k, str(v)]) for k, v in local_vars.items()])
+
+    e = "\n\nLocal variables:\n{0}\n\n{1}\n\n".format(ll, str(traceback.format_exc()))
+    if msg:
+        e = "{0}\n\n{1}\n\n".format(e, str(msg))
+    raise Exception(e)
 
 
 def create_expr_string(clip_level_value):
     """Create the expression arg string to run AFNI 3dcalc via Nipype.
 
-    :type clip_level_value: int
-    :param clip_level_value: The integer of the clipping threshold.
+    :type clip_level_value: float
+    :param clip_level_value: The desired clipping threshold
     :rtype: str
     :return The string intended for the Nipype AFNI 3dcalc "expr" arg inputs.
     """
 
-    expr_string = "step(a-%s)" % clip_level_value
+    expr_string = "step(a-{0})".format(clip_level_value)
 
     return expr_string
 
@@ -39,18 +64,15 @@ def read_nifti_image(nifti_infile):
     :rtype: Nibabel image
     :return: Image data in Nibabel format.
     """
-
-    import nibabel as nb
-    from qap.qap_utils import raise_smart_exception
+    nifti_image = None
 
     try:
-        nifti_img = nb.load(nifti_infile)
-    except:
-        err = "\n\n[!] Could not load the NIFTI image using Nibabel:\n" \
-              "%s\n\n" % nifti_infile
+        nifti_image = nibabel.load(nifti_infile)
+    except: # TODO: figure out the right way to handle exceptions to avoid PEP8 problems
+        err = "\n\n[!] Could not load the NIFTI image using Nibabel:\n{0}\n\n".format(nifti_infile)
         raise_smart_exception(locals(), err)
 
-    return nifti_img
+    return nifti_image
 
 
 def write_nifti_image(nifti_img, file_path):
@@ -62,14 +84,10 @@ def write_nifti_image(nifti_img, file_path):
     :param file_path: The filepath of the NIFTI image to create.
     """
 
-    import nibabel as nb
-    from qap.qap_utils import raise_smart_exception
-
     try:
-        nb.save(nifti_img, file_path)
+        nibabel.save(nifti_img, file_path)
     except:
-        err = "\n\n[!] Could not save the NIFTI image using Nibabel:\n" \
-              "%s\n\n" % file_path
+        err = "\n\n[!] Could not save the NIFTI image using Nibabel:\n{0}\n\n".format(file_path)
         raise_smart_exception(locals(), err)
 
 
@@ -82,26 +100,17 @@ def read_json(json_filename):
     :return: Dictionary containing the info from the JSON file.
     """
 
-    import os
-    import json
-    from qap.qap_utils import raise_smart_exception
+    json_dict = {}
 
-    if not os.path.exists(json_filename):
-        err = "\n\n[!] The JSON file provided does not exist.\nFilepath: " \
-              "%s\n\n" % json_filename
+    try:
+        with open(json_filename, "r") as f:
+            json_dict = json.load(f)
+    except:
+        err = "\n\n[!] Could not load JSON file {0}\n\n".format(json_filename)
         raise_smart_exception(locals(), err)
-
-    with open(json_filename, "r") as f:
-        json_dict = json.load(f)
 
     return json_dict
 
-class ExceptionEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Exception):
-            return str(obj)
-        return super(ExceptionEncoder, self).default(obj)
-        
 
 def write_json(output_dict, json_file):
     """Either update or write a dictionary to a JSON file.
@@ -113,10 +122,6 @@ def write_json(output_dict, json_file):
     :rtype: str
     :return: Filepath of the JSON file written to.
     """
-
-    import os
-    import json
-    from qap.qap_utils import read_json, ExceptionEncoder
 
     write = True
 
@@ -138,55 +143,57 @@ def write_json(output_dict, json_file):
 
     if write:
         with open(json_file, "wt") as f:
-            json.dump(current_dict, f, indent=2, sort_keys=True, cls=ExceptionEncoder)
+            json.dump(current_dict, f, indent=2, sort_keys=True, cls=NumpyEncoder)
 
     if os.path.exists(json_file):
         return json_file
 
 
-def load_image(image_file, return_affine=False):
+def load_image(image_file, return_img=False):
     """Load a raw scan image from a NIFTI file and check it.
 
     :type image_file: str
     :param image_file: Path to the image, usually a structural or functional
                        scan.
-    :rtype: Nibabel data
-    :return: Image data in Nibabel format.
+    :type return_img: bool
+    :param return_img: flag to indicate whether a nibabel.NiftiImage object containing the header information should
+        be returned in addition to the voxel data
+    :rtype: tuple, or numpy array
+    :return: Depending on the value of return_img, returns either just the voxel data as a numpy array, or a tuple
+        that contains both the numpy array and a nibabel.NiftiImage object containing the header information
     """
 
-    import nibabel as nib
-    import numpy as np
-    from qap.qap_utils import raise_smart_exception
+    nifti_image = None
 
     try:
-        img = nib.load(image_file)
+        nifti_image = nibabel.load(image_file)
     except:
         raise_smart_exception(locals())
 
-    dat = img.get_data()
+    voxel_data = nifti_image.get_data()
 
     # Ensure that data is cast as at least 32-bit
-    if np.issubdtype(dat.dtype, float):
-        dat = dat.astype('float32')
+    if numpy.issubdtype(voxel_data.dtype, float):
+        dat = voxel_data.astype('float32')
         # Check for negative values
-        if (dat < 0).any():
+        if (voxel_data < 0).any():
             print("found negative values, setting to zero (see file: %s)".format(image_file))
-            dat[dat<0] = 0
+            dat[dat < 0] = 0
 
-    elif np.issubdtype(dat.dtype, int):
-        dat = dat.astype('int32')
+    elif numpy.issubdtype(voxel_data.dtype, int):
+        dat = voxel_data.astype('int32')
 
-    elif np.issubdtype(dat.dtype, np.uint8):
-        dat = dat.astype(np.uint8)
+    elif numpy.issubdtype(voxel_data.dtype, numpy.uint8):
+        dat = voxel_data.astype(numpy.uint8)
 
     else:
-        msg = "Error: Unknown datatype %s" % dat.dtype
-        raise_smart_exception(locals(),msg)
+        msg = "Error: Unknown datatype %s" % voxel_data.dtype
+        raise_smart_exception(locals(), msg)
 
-    if return_affine:
-        return dat, img.affine, img.header
+    if return_img:
+        return voxel_data, nifti_image
     else:
-        return dat
+        return voxel_data
 
 
 def load_mask(mask_file, ref_file):
@@ -200,80 +207,39 @@ def load_mask(mask_file, ref_file):
     :return: The mask data in Nibabel format.
     """
 
-    import nibabel as nib
-    import numpy as np
-
-    from qap.qap_utils import raise_smart_exception
+    nifti_image = None
 
     try:
-        mask_img = nib.load(mask_file)
+        nifti_image = nibabel.load(mask_file)
     except:
         raise_smart_exception(locals())
 
-    mask_dat = mask_img.get_data()
-    ref_img = nib.load(ref_file)
+    mask_data = nifti_image.get_data()
+    ref_img = nibabel.load(ref_file)
 
     # Check that the specified mask is binary.
-    mask_vals = np.unique(mask_dat)
-    if (mask_vals.size != 2) or not (mask_vals == [0, 1]).all():
-        err = "Error: Mask is not binary, has %i unique val(s) of %s " \
-              "(see file %s)" % (mask_vals.size, mask_vals, mask_file)
+    mask_values = numpy.unique(mask_data)
+    if (mask_values.size != 2) or not (mask_values == [0, 1]).all():
+        err = "Error: Mask is not binary, has {0} unique val(s) of {1} (see file {2})".format(mask_values.size,
+                                                                                              mask_values,
+                                                                                              mask_file)
         raise_smart_exception(locals(), err)
 
-    # Verify that the mask and anatomical images have the same dimensions.
-    if ref_img.shape != mask_img.shape:
-        err = "Error: Mask and anatomical image are different dimensions " \
-              "for %s" % mask_file
+    # Verify that the mask and reference images have the same dimensions.
+    if ref_img.shape != nifti_image.shape:
+        err = "Error: Mask and anatomical image are different dimensions for {0}".format(mask_file)
         raise_smart_exception(locals(), err)
 
-    # Verify that the mask and anatomical images are in the same space
+    # Verify that the mask and reference images are in the same space
     # (have the same affine matrix)
-    if (mask_img.get_affine() == ref_img.get_affine()).all == False:
-        err = "Error: Mask and anatomical image are not in the same space " \
-              "for %s vs %s" % (mask_file, ref_file)
+    if not numpy.alltrue(nifti_image.get_affine() == ref_img.get_affine()):
+        err = "Error: Mask and anatomical image are not in the same space for {0} vs {1}".format(mask_file, ref_file)
         raise_smart_exception(locals(), err)
 
-    return mask_dat
+    return mask_data
 
 
-def get_masked_data(data, mask):
-    """Extract data from a NIFTI file and apply a mask to it.
-
-    :type data: NumPy array or str
-    :param data: The data (either in a NumPy array, or the filepath to a NIFTI
-                 file).
-    :type mask: NumPy array or str
-    :param mask: The mask data (either in a NumPy array, or the filepath to a
-                 NIFTI file).
-    :type files: bool
-    :param files: Whether or not the input parameters are filepath strings or
-                  NumPy array objects.
-    """
-
-    import numpy as np
-    import nibabel as nb
-
-    if isinstance(data, str):
-        img = nb.load(data)
-        data = img.get_data()
-    if isinstance(mask, str):
-        mask_img = nb.load(mask)
-        mask = mask_img.get_data()
-
-    data = np.asarray(data, dtype=float)
-    mask = np.asarray(mask, dtype=float)
-
-    if len(data.shape) > 3:
-        # if timeseries
-        masked_data = np.asarray([volume * mask.T for volume in data.T]).T
-    else:
-        masked_data = np.asarray(data * mask)
-
-    return masked_data
-
-
-def create_anatomical_background_mask(anatomical_data, fg_mask_data,
-    exclude_zeroes=False):
+def create_anatomical_background_mask(anatomical_data, fg_mask_data, exclude_zeroes=False):
     """Create a mask of the area outside the head in an anatomical scan by
     inverting a provided foreground mask.
 
@@ -288,43 +254,22 @@ def create_anatomical_background_mask(anatomical_data, fg_mask_data,
     :return bg_mask_data: Background mask data in Nibabel format.
     """
 
-    from qap.qap_utils import raise_smart_exception
-
     # invert the foreground mask
+    bg_mask_data = None
+
     try:
         bg_mask_data = 1 - fg_mask_data
     except Exception as e:
-        err = "\n\n[!] Input data must be a NumPy array object, and not a " \
-              "list.\n\nError details: %s\n\n" % e
-        raise_smart_exception(locals(),err)
+        err = "\n\n[!] Error calculating background mask. {0}\n\n".format(e)
+        raise_smart_exception(locals(), err)
 
     if exclude_zeroes:
         # modify the mask to exclude zeroes in the background of the
         # anatomical image, as these are often introduced artificially and can
         # skew the QAP metric results
-        bool_anat_data = anatomical_data > 0
-        bg_mask_data = bg_mask_data * bool_anat_data
+        bg_mask_data[numpy.isclose(anatomical_data, 0)] = 0
 
     return bg_mask_data
-
-
-def raise_smart_exception(local_vars, msg=None):
-    """Raise an exception with more information about the traceback, and
-    enforce inclusion of the locals().
-
-    :type local_vars: dict
-    :param local_vars: Input for locals().
-    :type msg: str
-    :param msg: (default: None) The custom error message for the exception in
-                question.
-    """
-
-    import traceback
-    e = "\n\nLocal variables:\n%s\n\n%s\n\n" \
-        % (str(local_vars), str(traceback.format_exc()))
-    if msg:
-        e = "%s\n\n%s\n\n" % (e, str(msg))
-    raise Exception(e)
 
 
 def check_input_resources(resource_pool, resource_name):
@@ -340,22 +285,16 @@ def check_input_resources(resource_pool, resource_name):
                           for within the resource pool.
     """
 
-    import os
-
     if resource_name not in resource_pool.keys():
-        err = "Resource pool: %s\n\n[!] The resource '%s' is missing " \
-              "from the resource pool, and it is needed in one of the steps " \
-              "of the pipeline. Please make sure it is specified " \
-              "properly." % (resource_pool, resource_name)
-
+        err = "[!] Mandatory resource '{0}' is missing from resource pool ({1})".format(resource_pool, resource_name)
         raise_smart_exception(locals(), err)
 
     else:
         if len(resource_pool[resource_name]) > 2:
             if not os.path.isfile(resource_pool[resource_name]):
-                err = "[!] The path provided for the resource '%s' " \
-                      "does not exist!\nPath provided: %s" % \
-                      (resource_name, resource_pool[resource_name])
+                err = "[!] Could not find resource '{0}' on the path provided ({1})!".format(resource_name,
+                                                                                             resource_pool[
+                                                                                                 resource_name])
 
                 raise_smart_exception(locals(), err)
 
@@ -372,15 +311,15 @@ def check_config_settings(config, parameter):
     """
 
     if parameter not in config.keys():
-        err = "[!] The parameter '%s' is missing from your pipeline " \
-              "configuration .YML file. Please make sure this is specified " \
-              "properly." % parameter
+        err = "[!] The parameter '%s' is missing from your pipeline configuration .YML file.".format(parameter)
         raise_smart_exception(locals(), err)
 
 
 def generate_nipype_workflow_graphs(workflow, out_dir=None):
     """Generate the Nipype workflow dependency graphs given the workflow
     object.
+
+    TODO: Why are the contents of this function comment out?
 
     :type workflow: Nipype workflow object
     :param workflow: The connected workflow object.
