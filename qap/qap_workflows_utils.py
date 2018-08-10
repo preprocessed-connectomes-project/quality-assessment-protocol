@@ -1,14 +1,3 @@
-import numpy as np
-import nibabel as nb
-
-import numpy as np
-import numpy.linalg as npl
-import nibabel as nb
-
-import os
-import nibabel as nb
-from scipy.ndimage.morphology import binary_fill_holes
-
 def global_signal_time_series(functional_file):
     """ Calculates the global signal time series of a functional file
        by averaging all voxels in each volume
@@ -18,6 +7,9 @@ def global_signal_time_series(functional_file):
         :rtype: float array
         :return: global signal time series
         """
+
+    import nibabel as nb
+
     func = nb.load(functional_file).get_data()
     output = func.mean(tuple(range(0, func.ndim - 1)))
     return output.tolist()
@@ -35,6 +27,8 @@ def convert_allineate_xfm(mat_list):
     :rtype: NumPy array
     :return: A NumPy array of the converted affine matrix.
     """
+
+    import numpy as np
 
     # put together the 4x4 matrix
     #   (encode the offset as the fourth row and include the 0,0,0,1
@@ -68,6 +62,11 @@ def warp_coordinates(inpoint, allineate_mat, infile_affine, infile_dims):
     :rtype: list
     :return: A list of three warped coordinates.
     """
+
+    import nibabel as nb
+    import numpy as np
+    import numpy.linalg as npl
+
 
     # using the transform, calculate what the three coordinates are in
     # native space, as it corresponds to the anatomical scan
@@ -112,6 +111,7 @@ def calculate_plane_coords(coords_list, infile_dims):
     :return: A dictionary mapping the z coordinates to the (x,y) coordinate
              pairs.
     """
+    import numpy as np
 
     # get the vectors connecting the points
     u = []
@@ -151,6 +151,9 @@ def calculate_plane_coords(coords_list, infile_dims):
 
 
 def scipy_fill(in_file):
+    import os
+    import nibabel as nb
+    from scipy.ndimage.morphology import binary_fill_holes
 
     mask_img = nb.load(in_file)
     mask_data = mask_img.get_data()
@@ -264,14 +267,6 @@ def slice_head_mask(infile, transform):
     return outfile_path
 
 
-def calc_temporal_std(voxel_ts):
-    '''this can be used in a map in the below function later when you move to
-    optimize it
-    '''
-    import numpy as np
-    return np.std(voxel_ts)
-
-
 def get_temporal_std_map(func_reorient, func_mask):
     """Create a map of the standard deviations of each voxel's timeseries.
 
@@ -301,21 +296,6 @@ def get_temporal_std_map(func_reorient, func_mask):
     return temporal_std_map_file
 
 
-def create_threshold_mask(data, threshold):
-    """Create a binary mask of a dataset based on a given threshold value.
-
-    :param data: Numpy array of a dataset.
-    :param threshold: The value to threshold the dataset with in order to
-                      define the binary mask.
-    :return: Numpy array of the binary mask values for each voxel.
-    """
-
-    import numpy as np
-    mask = np.zeros(data.shape)
-    mask[data > threshold] = 1
-    return mask
-
-
 def calc_estimated_tstd_nuisance_mask(temporal_std_map):
     """Calculate the estimated nuisance using a map of the temporal
     standard deviation.
@@ -327,7 +307,9 @@ def calc_estimated_tstd_nuisance_mask(temporal_std_map):
     import numpy as np
 
     cutoff = np.percentile(temporal_std_map, 98)
-    return create_threshold_mask(temporal_std_map, cutoff)
+    mask = np.zeros(temporal_std_map.shape)
+    mask[temporal_std_map > cutoff] = 1
+    return mask
 
 
 def sfs_voxel(voxel_ts, voxel_mean, total_mean, noise_components, betas):
@@ -431,6 +413,8 @@ def create_header_dict_entry(in_file, subject, session, scan, type):
     :return: A dictionary with the header information of the file, keyed by
              the participant's ID data.
     """
+    import os
+    import nibabel as nb
 
     if not os.path.isfile(in_file):
         err = "Filepath doesn't exist!\nFilepath: %s" % in_file
@@ -554,16 +538,16 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     """
 
     import os
-    from time import strftime
     import qap
+    from time import strftime
     from qap.spatial_qc import summary_mask, snr, cnr, calc_fber, calc_efc, fav, fwhm, \
         cortical_contrast, skew_and_kurt
     from qap.qap_utils import load_image, load_mask, \
                               create_anatomical_background_mask
 
     # Load the data
-    anat_data, anat_aff, anat_hdr = \
-        load_image(anatomical_reorient, return_affine=True)
+    anat_data, _ = \
+        load_image(anatomical_reorient, return_img=True)
 
     fg_mask = load_mask(qap_head_mask_path, anatomical_reorient)
 
@@ -579,7 +563,7 @@ def qap_anatomical_spatial(anatomical_reorient, qap_head_mask_path,
     csf_mask = load_mask(anatomical_csf_mask, anatomical_reorient)
 
     # FBER
-    fber_out = fber(anat_data, skull_mask, bg_mask)
+    fber_out = calc_fber(anat_data, skull_mask, bg_mask)
 
     # EFC
     efc_out = calc_efc(anat_data)
@@ -859,7 +843,7 @@ def qap_functional_temporal(
     from time import strftime
 
     import qap
-    from qap.temporal_qc import outlier_timepoints, quality_timepoints, calculate_percent_outliers
+    from qap.temporal_qc import calculate_percent_outliers
     from qap.dvars import calc_dse
     from qap.sfs import calc_sfs
     from qap.gcor import calc_global_correlation
@@ -912,51 +896,51 @@ def qap_functional_temporal(
         qap[id_string]['Site'] = str(site_name)
 
     # DVARS
-    qap['functional_temporal'].update(calc_dse(func_timeseries, func_brain_mask))
+    qap[id_string]['functional_temporal'].update(calc_dse(func_timeseries, func_brain_mask))
 
     # Mean FD (Jenkinson)
     fd = np.loadtxt(fd_file)
     meanfd_outliers, meanfd_IQR = calculate_percent_outliers(fd)
-    qap["functional_temporal"]["RMSD (Mean)"] = np.mean(fd)
-    qap["functional_temporal"]["RMSD (Std Dev)"] = np.std(fd)
-    qap["functional_temporal"]["RMSD (Median)"] = np.median(fd)
-    qap["functional_temporal"]["RMSD IQR"] = meanfd_IQR
-    qap["functional_temporal"]["RMSD percent outliers"] = meanfd_outliers
+    qap[id_string]["functional_temporal"]["RMSD (Mean)"] = np.mean(fd)
+    qap[id_string]["functional_temporal"]["RMSD (Std Dev)"] = np.std(fd)
+    qap[id_string]["functional_temporal"]["RMSD (Median)"] = np.median(fd)
+    qap[id_string]["functional_temporal"]["RMSD IQR"] = meanfd_IQR
+    qap[id_string]["functional_temporal"]["RMSD percent outliers"] = meanfd_outliers
 
     # 3dTout
     outliers = np.loadtxt(outliers)
     outlier_perc_out, outlier_IQR = calculate_percent_outliers(outliers)
 
-    qap["functional_temporal"]["Fraction of Outliers (Mean)"] = np.mean(outliers)
-    qap["functional_temporal"]["Fraction of Outliers (Std Dev)"] = np.std(outliers)
-    qap["functional_temporal"]["Fraction of Outliers (Median)"] = np.median(outliers)
-    qap["functional_temporal"]["Fraction of Outliers IQR"] = outlier_IQR
-    qap["functional_temporal"]["Fraction of Outliers percent outliers"] = outlier_perc_out
+    qap[id_string]["functional_temporal"]["Fraction of Outliers (Mean)"] = np.mean(outliers)
+    qap[id_string]["functional_temporal"]["Fraction of Outliers (Std Dev)"] = np.std(outliers)
+    qap[id_string]["functional_temporal"]["Fraction of Outliers (Median)"] = np.median(outliers)
+    qap[id_string]["functional_temporal"]["Fraction of Outliers IQR"] = outlier_IQR
+    qap[id_string]["functional_temporal"]["Fraction of Outliers percent outliers"] = outlier_perc_out
 
     # 3dTout (outside of brain)
     oob_outliers = np.loadtxt(oob_outliers)
     oob_outlier_perc_out, oob_outlier_IQR = \
         calculate_percent_outliers(oob_outliers)
 
-    qap["functional_temporal"]["Fraction of OOB Outliers (Mean)"] = np.mean(oob_outliers)
-    qap["functional_temporal"]["Fraction of OOB Outliers (Std Dev)"] = np.std(oob_outliers)
-    qap["functional_temporal"]["Fraction of OOB Outliers (Median)"] = np.median(oob_outliers)
-    qap["functional_temporal"]["Fraction of OOB Outliers IQR"] = oob_outlier_IQR
-    qap["functional_temporal"]["Fraction of OOB Outliers percent outliers"] = oob_outlier_perc_out
+    qap[id_string]["functional_temporal"]["Fraction of OOB Outliers (Mean)"] = np.mean(oob_outliers)
+    qap[id_string]["functional_temporal"]["Fraction of OOB Outliers (Std Dev)"] = np.std(oob_outliers)
+    qap[id_string]["functional_temporal"]["Fraction of OOB Outliers (Median)"] = np.median(oob_outliers)
+    qap[id_string]["functional_temporal"]["Fraction of OOB Outliers IQR"] = oob_outlier_IQR
+    qap[id_string]["functional_temporal"]["Fraction of OOB Outliers percent outliers"] = oob_outlier_perc_out
 
     # 3dTqual
     quality = np.loadtxt(quality)
     quality_outliers, quality_IQR = calculate_percent_outliers(quality)
 
-    qap["functional_temporal"]["Quality (Mean)"] = np.mean(quality)
-    qap["functional_temporal"]["Quality (Std Dev)"] = np.std(quality)
-    qap["functional_temporal"]["Quality (Median)"] = np.median(quality)
-    qap["functional_temporal"]["Quality IQR"] = quality_IQR
-    qap["functional_temporal"]["Quality percent outliers"] = quality_outliers
+    qap[id_string]["functional_temporal"]["Quality (Mean)"] = np.mean(quality)
+    qap[id_string]["functional_temporal"]["Quality (Std Dev)"] = np.std(quality)
+    qap[id_string]["functional_temporal"]["Quality (Median)"] = np.median(quality)
+    qap[id_string]["functional_temporal"]["Quality IQR"] = quality_IQR
+    qap[id_string]["functional_temporal"]["Quality percent outliers"] = quality_outliers
 
     # Signal Fluctuation Sensitivity (SFS)
-    qap["functional_temporal"].update(calc_sfs(func_timeseries, func_brain_mask, motion_regressors_filename=motion_file))
-    qap["functional_temporal"].update(calc_global_correlation(func_timeseries, func_brain_mask))
+    qap[id_string]["functional_temporal"].update(calc_sfs(func_timeseries, func_brain_mask, motion_regressors_filename=motion_file))
+    qap[id_string]["functional_temporal"].update(calc_global_correlation(func_timeseries, func_brain_mask))
 
     # prospective filepaths
     if session_output_dir:
