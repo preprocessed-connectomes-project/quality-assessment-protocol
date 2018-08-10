@@ -226,6 +226,7 @@ def artifacts(anatomical_reorient, qap_head_mask_path, exclude_zeroes=False):
     import scipy.ndimage as nd
     from qap.qap_utils import load_image, load_mask, \
         create_anatomical_background_mask
+    from qap.spatial_qc import check_datatype
 
     # Load the data
     anat_data, anat_img = load_image(anatomical_reorient, return_img=True)
