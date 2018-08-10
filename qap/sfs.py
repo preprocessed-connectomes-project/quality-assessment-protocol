@@ -47,7 +47,7 @@ def calc_sfs(functional_data_filename, mask_filename, noise_voxel_standard_devia
     in the noise model.
 
     Behzadi, Y., Restom, K., Liau, J., & Liu, T. T. (2007). A Component Based Noise Correction Method (CompCor) for
-        BOLD and Perfusion Based fMRI. NeuroImage, 37(1), 90–101. http://doi.org/10.1016/j.neuroimage.2007.04.042
+        BOLD and Perfusion Based fMRI. NeuroImage, 37(1), 90-101. http://doi.org/10.1016/j.neuroimage.2007.04.042
 
     :type functional_data_filename: str
     :param functional_data_filename: The filepath to the NIFTI file containing the functional
