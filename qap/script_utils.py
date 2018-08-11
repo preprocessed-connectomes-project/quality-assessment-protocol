@@ -2,7 +2,8 @@
 qap_types = ["anatomical_spatial",
              "functional_spatial",
              "functional_temporal"]
-                
+
+
 def read_txt_file(txt_file):
     """Read in a text file into a list of strings.
 
@@ -13,7 +14,7 @@ def read_txt_file(txt_file):
 
     """
 
-    with open(txt_file,"r") as f:
+    with open(txt_file, "r") as f:
         strings = f.read().splitlines()
     return strings
 
@@ -69,12 +70,13 @@ def csv_to_pandas_df(csv_file):
     import pandas as pd
     from qap.qap_utils import raise_smart_exception
 
+    data = []
     try:
         data = pd.read_csv(csv_file, dtype={"Participant": str})
     except Exception as e:
         err = "Could not load the CSV file into a DataFrame using Pandas." \
               "\n\nCSV file: %s\n\nError details: %s\n\n" % (csv_file, e)
-        raise_smart_exception(locals(),err)
+        raise_smart_exception(locals(), err)
 
     return data
 
@@ -120,10 +122,9 @@ def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None):
         if ".nii" not in filename:
             continue
 
-        try:
+        # the previous try catch block was 300ns longer than checking for the empty string first (514 vs 208ns)
+        if "" in second_half_list:
             second_half_list.remove("")
-        except:
-            pass
 
         try:
             site_id = second_half_list[-5]
@@ -133,12 +134,11 @@ def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None):
         except IndexError:
             err = "\n\n[!] Could not parse the data directory " \
                   "structure for this file - is it in the " \
-                  "correct format?\nFile path:\n%s\n\nIt should "\
+                  "correct format?\nFile path:\n{0}\n\nIt should "\
                   "be something like this:\n/site_folder/subject"\
-                  "_id/session_id/scan_id/file.nii.gz\n\n" \
-                  % rel_path
+                  "_id/session_id/scan_id/file.nii.gz\n\n".format(rel_path)
             # do not raise an exception, just want to warn the user
-            print err
+            print(err)
             continue
 
         if not inclusion:
@@ -146,12 +146,10 @@ def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None):
 
         resource = None
 
-        if ("anat" in scan_id) or ("anat" in filename) or \
-            ("mprage" in filename):
+        if ("anat" in scan_id) or ("anat" in filename) or ("mprage" in filename):
             resource = "anatomical_scan"
             
-        if ("rest" in scan_id) or ("rest" in filename) or \
-            ("func" in scan_id) or ("func" in filename):
+        if ("rest" in scan_id) or ("rest" in filename) or ("func" in scan_id) or ("func" in filename):
             resource = "functional_scan"
 
         if (resource == "anatomical_scan") and \
@@ -170,8 +168,7 @@ def parse_raw_data_list(filepath_list, site_folder, inclusion_list=None):
             if scan_id not in sub_dict[subject_id][session_id][resource].keys():
                 sub_dict[subject_id][session_id][resource][scan_id] = fullpath
                 
-        if (resource == "functional_scan") and \
-                 (subject_id in inclusion_list):
+        if (resource == "functional_scan") and (subject_id in inclusion_list):
 
             if subject_id not in sub_dict.keys():
                 sub_dict[subject_id] = {}
@@ -250,8 +247,8 @@ def populate_custom_data_dict(data_dict, filepath, part_id, session_id,
     return data_dict
 
 
-def gather_custom_raw_data(filepath_list, base_folder, directory_format, 
-    anatomical_keywords=None, functional_keywords=None):
+def gather_custom_raw_data(filepath_list, base_folder, directory_format, anatomical_keywords=None,
+                           functional_keywords=None):
     """Parse a list of NIFTI filepaths into a participant data dictionary 
     when the NIFTI filepaths are based on a custom data directory format, for
     the 'qap_flexible_sublist_generator.py' script.
@@ -283,7 +280,6 @@ def gather_custom_raw_data(filepath_list, base_folder, directory_format,
     """
 
     import os
-    from qap.script_utils import populate_custom_data_dict
 
     if "{participant}" not in directory_format:
         pass
@@ -328,26 +324,24 @@ def gather_custom_raw_data(filepath_list, base_folder, directory_format,
         if anatomical_keywords:
             for word in anatomical_keywords:
                 if (word in filename) or (word in session_id):
-
                     data_dict = populate_custom_data_dict(data_dict,
-                                                   filepath, part_id,
-                                                   session_id,
-                                                   series_id,
-                                                   site_id,
-                                                   "anatomical_scan",
-                                                   "anat_1")
+                                                          filepath, part_id,
+                                                          session_id,
+                                                          series_id,
+                                                          site_id,
+                                                          "anatomical_scan",
+                                                          "anat_1")
 
         if functional_keywords:
             for word in functional_keywords:
                 if (word in filename) or (word in session_id):
-
                     data_dict = populate_custom_data_dict(data_dict,
-                                                   filepath, part_id,
-                                                   session_id,
-                                                   series_id,
-                                                   site_id,
-                                                   "functional_scan",
-                                                   "func_1")
+                                                          filepath, part_id,
+                                                          session_id,
+                                                          series_id,
+                                                          site_id,
+                                                          "functional_scan",
+                                                          "func_1")
 
     if len(data_dict) == 0:
         err = "\n\n[!] No data files were found given the inputs you " \
@@ -391,7 +385,7 @@ def pull_s3_sublist(data_folder, creds_path=None):
 
     # Build S3-subjects to download
     for bk in bucket.objects.filter(Prefix=bucket_prefix):
-        s3_list.append(str(bk.key).replace(bucket_prefix,""))
+        s3_list.append(str(bk.key).replace(bucket_prefix, ""))
 
     return s3_list
 
@@ -436,9 +430,9 @@ def json_to_csv(json_dict, csv_output_dir=None):
 
     import os
     import pandas as pd
-    from qap.qap_utils import raise_smart_exception
 
     output_dict = {}
+    csv_file = ""
 
     for sub_sess_scan in json_dict.keys():
         # flatten the JSON dict
@@ -446,6 +440,7 @@ def json_to_csv(json_dict, csv_output_dir=None):
         header_dict = {}
         qap_dict = {}
 
+        # TODO: this code doesnt seem to do anything ?? header_dict is overwritten at the next opportunity
         try:
             header_dict = sub_json_dict["anatomical_header_info"]
         except KeyError:
@@ -476,19 +471,14 @@ def json_to_csv(json_dict, csv_output_dir=None):
     for qap_type in output_dict.keys():
 
         json_df = pd.DataFrame(output_dict[qap_type])
-        json_df.sort_values(by=["Participant","Session","Series"],
+        json_df.sort_values(by=["Participant", "Session", "Series"],
                             inplace=True)
         if not csv_output_dir:
             csv_output_dir = os.getcwd()
-        csv_file = os.path.join(csv_output_dir, "qap_%s.csv" % qap_type)
+        csv_file = os.path.join(csv_output_dir, "qap_{0}.csv".format(qap_type))
 
-        try:
-            json_df.to_csv(csv_file)
-        except:
-            err = "Could not write CSV file!\nCSV file: %s" % csv_file
-            raise_smart_exception(locals(), err)
-
-        print "CSV file created successfully: %s" % csv_file
+        json_df.to_csv(csv_file)
+        print("CSV file created successfully: {0}".format(csv_file))
 
     return csv_file
 
@@ -520,12 +510,11 @@ def qap_csv_correlations(data_old, data_new, replacements=None):
 
     import pandas as pd
     import scipy.stats
-    from qap.qap_utils import raise_smart_exception
 
-    metric_list = ["EFC","SNR","FBER","CNR","FWHM","Qi1","Cortical Contrast",
-        "Ghost_x", "Ghost_y", "Ghost_z", "GCOR", "RMSD (Mean)", 
-        "Quality (Mean)", "Fraction of Outliers (Mean)", "Std. DVARS (Mean)", 
-        "Fraction of OOB Outliers (Mean)"]
+    metric_list = ["EFC", "SNR", "FBER", "CNR", "FWHM", "Qi1", "Cortical Contrast",
+                   "Ghost_x", "Ghost_y", "Ghost_z", "GCOR", "RMSD (Mean)",
+                   "Quality (Mean)", "Fraction of Outliers (Mean)", "Std. DVARS (Mean)",
+                   "Fraction of OOB Outliers (Mean)"]
 
     # update datasets if necessary
     if replacements:
@@ -557,6 +546,7 @@ def qap_csv_correlations(data_old, data_new, replacements=None):
     # mistakenly read in as ints or floats)
     if data_old["Participant"].dtype != str:
         try:
+            # TODO: This is confusing, why is this needed?
             data_old["Participant"] = data_old["Participant"].astype(
                 int).astype(str)
         except ValueError:
@@ -577,6 +567,7 @@ def qap_csv_correlations(data_old, data_new, replacements=None):
 
     if len(data_merged) == 0:
         # try a last-ditch approach
+        # TODO: This is confusing, why is this needed?
         try:
             data_old["Participant"] = data_old["Participant"].astype(int)
             data_new["Participant"] = data_new["Participant"].astype(int)
@@ -589,7 +580,7 @@ def qap_csv_correlations(data_old, data_new, replacements=None):
         if len(data_merged) == 0:
             err = "[!] There were no participant matches between the two " \
                   "CSVs."
-            raise_smart_exception(locals(), err)
+            raise Exception(err)
 
     # correlate the numbers!
     correlations_dict = {}
@@ -627,22 +618,20 @@ def write_inputs_dict_to_yaml_file(input_dict, yaml_outpath):
 
     # write yaml file
     try:
-        with open(yaml_outpath,"wt") as f:
+        with open(yaml_outpath, "wt") as f:
             f.write(yaml.dump(input_dict))
     except:
         err = "\n\n[!] Error writing YAML file output.\n1. Do you have " \
               "write permissions for the output path provided?\n2. Did you " \
               "provide a full path for the output path? Example: /home/data" \
-              "/sublist.yml\n\nOutput path provided: %s\n\n" % yaml_outpath
+              "/sublist.yml\n\nOutput path provided: {0}\n\n".format(yaml_outpath)
         raise Exception(err)
         
     if os.path.isfile(yaml_outpath):
-        print "\nInputs dictionary file successfully created: %s\n" \
-              % yaml_outpath
+        print("\nInputs dictionary file successfully created: {0}\n".format(yaml_outpath))
     else:
-        err = "\n[!] Filepaths from the have not been successfully " \
-              "saved to the YAML file!\nOutput filepath: %s\n" \
-              % yaml_outpath
+        err = "\n[!] Filepaths from the have not been successfully saved to the YAML file!\n" \
+              "Output filepath: %s\n".format(yaml_outpath)
         raise Exception(err)
 
 
@@ -669,17 +658,16 @@ def check_csv_missing_subs(csv_df, data_dict, data_type):
         err = "\n[!] data_type parameter must be either 'anat' or 'func'\n"
         raise Exception(err)
 
-    if data_type == "anat":
-        type = "anatomical_scan"
-    elif data_type == "func":
-        type = "functional_scan"
+    scan_type = "anatomical_scan"
+    if data_type == "func":
+        scan_type = "functional_scan"
 
     uniques = []
     for sub in data_dict.keys():
         for ses in data_dict[sub].keys():
-            if type not in data_dict[sub][ses].keys():
+            if scan_type not in data_dict[sub][ses].keys():
                 continue
-            for scan in data_dict[sub][ses][type].keys():
+            for scan in data_dict[sub][ses][scan_type].keys():
                 uniques.append((sub, ses, scan))
 
     df_ids = csv_df[["Participant", "Session", "Series"]]
@@ -688,25 +676,24 @@ def check_csv_missing_subs(csv_df, data_dict, data_type):
     missing = list(set(uniques) - set(df_uniques))
 
     if len(missing) > 0:
-        print "\n%d scans missing in the output CSV compared to the input " \
-              "data config file." % len(missing)
+        print("\n{0} scans missing in the output CSV compared to the input data config file.".format(len(missing)))
         # create subset of missing subs from input data config
         new_data = {}
-        for id in missing:
-            sub = id[0]
-            ses = id[1]
-            scan = id[2]
+        for data_id in missing:
+            sub = data_id[0]
+            ses = data_id[1]
+            scan = data_id[2]
             if sub not in new_data.keys():
                 new_data[sub] = {}
             if ses not in new_data[sub].keys():
                 new_data[sub][ses] = {}
             if type not in new_data[sub][ses].keys():
                 new_data[sub][ses][type] = {}
-            if scan not in new_data[sub][ses][type].keys():
-                new_data[sub][ses][type][scan] = \
-                    data_dict[sub][ses][type][scan]
+            if scan not in new_data[sub][ses][scan_type].keys():
+                new_data[sub][ses][scan_type][scan] = \
+                    data_dict[sub][ses][scan_type][scan]
         return new_data
 
     else:
-        print "\nThe output CSV and input data config file match."
+        print("\nThe output CSV and input data config file match.")
         return None

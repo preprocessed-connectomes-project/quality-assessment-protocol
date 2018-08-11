@@ -17,12 +17,13 @@ RUN curl https://afni.nimh.nih.gov/pub/dist/tgz/linux_openmp_64.tgz -o /tmp/linu
     tar xzvf /tmp/linux_openmp_64.tgz -C /opt && mv /opt/linux_openmp_64 /opt/afni
 
 # install miniconda
-RUN curl -s https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -o /tmp/Miniconda2-latest-Linux-x86_64.sh && \
-    bash /tmp/Miniconda2-latest-Linux-x86_64.sh -b -p /usr/local/bin/miniconda 
+RUN curl -s https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/Miniconda3-latest-Linux-x86_64.sh && \
+    bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /usr/local/bin/miniconda
     
 # install python requirements
 RUN conda install -y pip scipy ipython
-RUN pip install prov==1.5.0 networkx==1.11 nipype==0.13.1 python-dateutil==2.6.1 nibabel nitime pyyaml pandas seaborn pyPdf2 xhtml2pdf indi-tools configparser
+RUN pip install prov==1.5.0 networkx==1.11 nipype==1.1.1 python-dateutil==2.6.1 nibabel nitime pyyaml \
+    pandas seaborn pyPdf2 xhtml2pdf indi-tools configparser
     
 COPY . /code
 

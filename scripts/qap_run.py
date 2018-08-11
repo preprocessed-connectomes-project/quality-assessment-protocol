@@ -6,8 +6,26 @@
 import argparse
 from qap import bids_utils
 from qap import qap_cfg
-
 from qap.qap_pipeline import build_and_run_qap_pipeline
+import sys, traceback
+
+
+def smart_exception(type, value, tb):
+    """ extends the default exception handler to include printing the locals and globals for the frame where
+        the execption occurd
+
+    :param type: the exception that occured
+    :param value: exception value
+    :param tb: traceback
+    :return: nada
+    """
+    traceback.print_exception(type, value, tb)
+
+    while tb.tb_next:
+        tb = tb.tb_next
+
+    print('Locals: {}'.format(tb.tb_frame.f_locals), file=sys.stderr)
+    print('Globals: {}'.format(tb.tb_frame.f_globals), file=sys.stderr)
 
 
 def create_bundles(data_configuration_dict, bundle_size):
@@ -175,6 +193,9 @@ def main():
     import pkg_resources as p
     from datetime import datetime
 
+    # install the smart exception handler, which adds locals and global variables to exception output
+    sys.excepthook = smart_exception
+
     parser = argparse.ArgumentParser()
 
     in_data_config_group = parser.add_argument_group('Input Data Configuration')
@@ -227,7 +248,8 @@ def main():
                                        help='Path to YAML file specifying QAP configuration (i.e. the arguments '
                                             'to this command). Command line arguments will overload file values. To '
                                             'specify a file in s3, prepend s3://<bucket_name>/ to the path.',
-                                       default=p.resource_filename("qap", os.path.join("configs", "qap_pipe_config_template.yml")))
+                                       default=p.resource_filename("qap", os.path.join("configs",
+                                                                                       "qap_pipe_config_template.yml")))
 
     pipeline_config_group.add_argument('--working_dir', type=str,
                                        help='The directory to be used for intermediary files. Can be specified by a '
@@ -390,7 +412,7 @@ def main():
             pipeline_configuration["working_directory"]))
 
     elif not os.path.exists(pipeline_configuration["working_directory"]):
-           os.makedirs(pipeline_configuration["working_directory"])
+        os.makedirs(pipeline_configuration["working_directory"])
 
     # now lets add in the other parameters
     if args.bundle_size:
