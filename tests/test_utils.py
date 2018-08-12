@@ -29,14 +29,16 @@ def build_and_run_workflow(workflow_builder, resource_pool, workflow_name, outpu
 
     workflow, resource_pool = workflow_builder(workflow, resource_pool, config)
 
+    print("resource pool: {0}".format(resource_pool))
+
     for output_key in output_keys:
         ds = pe.Node(nio.DataSink(), name='datasink_{0}_{1}'.format(workflow_name, output_key))
         ds.inputs.base_directory = workflow.base_dir
         node, out_file = resource_pool[output_key]
         workflow.connect(node, out_file, ds, output_key)
 
-    num_cores_per_subject = 1
-    workflow.run(plugin='MultiProc', plugin_args={'n_procs': num_cores_per_subject})
+    num_cores = 2
+    workflow.run(plugin='MultiProc', plugin_args={'n_procs': num_cores})
 
     outpaths = []
     for output_key in output_keys:

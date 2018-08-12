@@ -70,7 +70,12 @@ def build_and_run_qap_pipeline(args, run=True):
 
     # set up callback logging
     import logging
-    from nipype.pipeline.plugins.callback_log import log_nodes_cb
+
+    # log_nodes_cb is moved around in the newer versions of nipype
+    try:
+        from nipype.pipeline.plugins.callback_log import log_nodes_cb
+    except ModuleNotFoundError:
+        from nipype.utils.profiler import log_nodes_cb
 
     callback_log_filename = os.path.join(config["log_directory"],
                                          "callback.log")
@@ -81,6 +86,7 @@ def build_and_run_qap_pipeline(args, run=True):
     handler = logging.FileHandler(callback_log_filename)
     callback_logger.addHandler(handler)
 
+    # TODO: why are we using linear plugin instead of multiproc?
     # runargs = {'plugin': 'Linear',
     runargs = {'plugin': 'Linear',
                'plugin_args': {'memory_gb': config['available_memory'],
@@ -92,13 +98,11 @@ def build_and_run_qap_pipeline(args, run=True):
 
     try:
         os.makedirs(bundle_log_dir)
-    except:
-        if not op.isdir(bundle_log_dir):
-            err = "[!] Bundle log directory unable to be created.\n" \
-                    "Path: %s\n\n" % bundle_log_dir
-            raise Exception(err)
-        else:
-            pass
+    except PermissionError:
+        print("[!] Bundle log directory {0} could not be created. Check your permissions\n".format(bundle_log_dir))
+        raise()
+    except FileExistsError:
+        pass
 
     # update Nipype logging (not callback)
     nyconfig.update_config({'logging': {'log_directory': bundle_log_dir, 'log_to_file': True}})
@@ -111,8 +115,7 @@ def build_and_run_qap_pipeline(args, run=True):
     workflow.base_dir = config["working_directory"]
 
     # set up crash directory
-    workflow.config['execution'] = \
-        {'crashdump_dir': config["output_directory"]}
+    workflow.config['execution'] = {'crashdump_dir': config["output_directory"]}
 
     # create the one node all participants will start from
     starter_node = pe.Node(niu.Function(input_names=['starter'],
@@ -179,18 +182,17 @@ def build_and_run_qap_pipeline(args, run=True):
 
         try:
             os.makedirs(output_dir)
-        except:
-            # TODO: catch path exists exception and leave all the rest
-            if not op.isdir(output_dir):
-                err = "[!] Output directory unable to be created.\nPath: %s\n\n".format(output_dir)
-                raise Exception(err)
-            else:
-                pass
+        except PermissionError:
+            print("[!] Output directory {0} could not be created. Check your permissions\n".format(bundle_log_dir))
+            raise ()
+        except FileExistsError:
+            pass
 
         # for QAP spreadsheet generation only
         config.update({"subject_id": sub_id, "session_id": session_id, "scan_id": scan_id, "run_name": run_name})
 
         if "site_name" in resource_pool:
+
             config.update({"site_name": resource_pool["site_name"]})
         else:
             config.update({"site_name": site_id})
@@ -199,6 +201,7 @@ def build_and_run_qap_pipeline(args, run=True):
 
         qap_types = ["anatomical_spatial", "functional"]
 
+        # TODO: Straighten out this logic
         # update that resource pool with what's already in the output
         # directory
         for resource in os.listdir(output_dir):

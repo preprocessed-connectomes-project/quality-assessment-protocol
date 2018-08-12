@@ -1,8 +1,20 @@
+import nipype.pipeline.engine as pe
+import nipype.interfaces.utility as util
+import nipype.interfaces.afni as afni
+import qap.cloud_utils as cloud_utils
+
+if hasattr(afni.preprocess, 'Calc'):
+    afni_utils = afni.preprocess
+else:
+    afni_utils = afni.utils
+afni_preprocess = afni.preprocess
 
 
 def get_idx(in_files, stop_idx=None, start_idx=None):
     """Validate and return the first and the last volume of the functional 
     timeseries (if selected).
+
+    Runs in a nipype node, so it must contain all of its includes.
 
     :type in_files: str
     :param in_files: The filepath to the NIFTI image of the functional
@@ -10,25 +22,31 @@ def get_idx(in_files, stop_idx=None, start_idx=None):
     :type start_idx: int
     :param start_idx: (default: None) First volume to be considered, specified
                        by user in the configuration file.
-    :type stop_idx: int
+    :type stop_idx: int or string
     :param stop_idx: (default: None) Last volume to be considered, specified
-                     by user in the configuration file.
+                     by user in the configuration file. If 'End' or None the last
+                     volume of the file (nvols - 1) will be used.
     :rtype: int
     :return: Value of first volume to consider for the functional run.
     :rtype: int
     :return: Value of last volume to consider for the functional run.
     """
+    import nibabel
 
-    from nibabel import load
+    if isinstance(stop_idx, str):
+        if stop_idx.lower() == "end":
+            stop_idx = None
+        else:
+            stop_idx = int(stop_idx)
 
-    nvols = load(in_files).shape[3]
+    nvols = nibabel.load(in_files).shape[3]
 
-    if (start_idx == None) or (start_idx < 0) or (start_idx > (nvols - 1)):
+    if (start_idx is None) or (start_idx < 0) or (start_idx > (nvols - 1)):
         startidx = 0
     else:
         startidx = start_idx
 
-    if (stop_idx == None) or (stop_idx > (nvols - 1)):
+    if (stop_idx is None) or (stop_idx > (nvols - 1)):
         stopidx = nvols - 1
     else:
         stopidx = stop_idx
@@ -88,16 +106,17 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
              applicable) with the newest outputs and connections.
     """
 
-    import nipype.pipeline.engine as pe
-    import nipype.interfaces.utility as util
-    from nipype.interfaces.afni import preprocess
-
-    if "functional_scan" not in resource_pool.keys():
+    # if this workflows output is already in the resource pool, we have nothing to do, so move on
+    if "func_reorient" in resource_pool:
         return workflow, resource_pool
+
+    # since most of the necessary files can be made form the functional_scan, raising a failure here
+    # should trickle down through the entire workflows.
+    if "functional_scan" not in resource_pool.keys():
+        raise ValueError("Error! No functional scan was found in the resource pool and do not know how to make one.")
     elif "s3://" in resource_pool["functional_scan"]:
-        from qap.cloud_utils import download_single_s3_path
         resource_pool["functional_scan"] = \
-            download_single_s3_path(resource_pool["functional_scan"], config)
+            cloud_utils.download_single_s3_path(resource_pool["functional_scan"], config)
 
     if "start_idx" not in config.keys():
         config["start_idx"] = 0
@@ -106,24 +125,29 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
         config["stop_idx"] = None
 
     drop_trs = False
-    if (config["start_idx"] != 0) and (config["stop_idx"] != None):
+    if (config["start_idx"] != 0) and (config["stop_idx"] is not None):
         drop_trs = True
 
-    func_get_idx = pe.Node(util.Function(input_names=['in_files', 
-                                                      'stop_idx', 
+    func_get_idx = pe.Node(util.Function(input_names=['in_files',
+                                                      'stop_idx',
                                                       'start_idx'],
-                                         output_names=['stopidx', 
+                                         output_names=['stopidx',
                                                        'startidx'],
                                          function=get_idx),
-                                         name='func_get_idx%s' % name)
+                           name='func_get_idx{0}'.format(name))
 
     func_get_idx.inputs.in_files = resource_pool["functional_scan"]
     func_get_idx.inputs.start_idx = config["start_idx"]
     func_get_idx.inputs.stop_idx = config["stop_idx"]
-    
+
+    func_deoblique = pe.Node(interface=afni_utils.Refit(),
+                             name='func_deoblique{0}'.format(name))
+
+    func_deoblique.inputs.deoblique = True
+
     if drop_trs:
-        func_drop_trs = pe.Node(interface=preprocess.Calc(),
-                                name='func_drop_trs%s' % name)
+        func_drop_trs = pe.Node(interface=afni_utils.Calc(),
+                                name='func_drop_trs{0}'.format(name))
 
         func_drop_trs.inputs.in_file_a = resource_pool["functional_scan"]
         func_drop_trs.inputs.expr = 'a'
@@ -134,121 +158,25 @@ def func_preproc_workflow(workflow, resource_pool, config, name="_"):
 
         workflow.connect(func_get_idx, 'stopidx',
                          func_drop_trs, 'stop_idx')
-    
-    try:
-        func_deoblique = pe.Node(interface=preprocess.Refit(),
-                                 name='func_deoblique%s' % name)
-    except AttributeError:
-        from nipype.interfaces.afni import utils as afni_utils
-        func_deoblique = pe.Node(interface=afni_utils.Refit(),
-                                 name='func_deoblique%s' % name)
-    func_deoblique.inputs.deoblique = True
-    
-    if drop_trs:
+
         workflow.connect(func_drop_trs, 'out_file',
                          func_deoblique, 'in_file')
     else:
         func_deoblique.inputs.in_file = resource_pool["functional_scan"]
 
-    try:
-        func_reorient = pe.Node(interface=preprocess.Resample(),
-                                name='func_reorient%s' % name)
-    except AttributeError:
-        func_reorient = pe.Node(interface=afni_utils.Resample(),
-                                name='func_reorient%s' % name)
+    func_reorient = pe.Node(interface=afni_utils.Resample(),
+                            name='func_reorient{0}'.format(name))
+
     func_reorient.inputs.orientation = 'RPI'
     func_reorient.inputs.outputtype = 'NIFTI_GZ'
 
     workflow.connect(func_deoblique, 'out_file',
-                    func_reorient, 'in_file')
+                     func_reorient, 'in_file')
 
     resource_pool["func_reorient"] = (func_reorient, 'out_file')
 
     return workflow, resource_pool
 
-
-def run_func_preproc(functional_scan, start_idx=None, stop_idx=None, \
-                         out_dir=None, run=True):
-    """Run the 'func_preproc_workflow' function to execute the modular
-    workflow with the provided inputs.
-
-    :type functional_scan: str
-    :param functional_scan: Filepath to the raw functional timeseries image in
-                             a NIFTI file.
-    :type start_idx: int
-    :param start_idx: (default: None) The timeseries timepoint/volume to start
-                       with - i.e. will only include this timepoint and the
-                      ones after it - setting this to None will include all
-                      timepoints from the beginning.
-    :type stop_idx: int
-    :param stop_idx: (default: None) The timeseries timepoint/volume to end
-                     with - i.e. will only include this timepoint and the
-                     ones before it - setting this to None will include all
-                     timepoints up until the end of the timeseries.
-    :type out_dir: str
-    :param out_dir: (default: None) The output directory to write the results
-                    to; if left as None, will write to the current directory.
-    :type run: bool
-    :param run: (default: True) Will run the workflow; if set to False, will
-                connect the Nipype workflow and return the workflow object
-                instead.
-    :rtype: str
-    :return: (if run=True) The filepath of the generated anatomical_reorient
-             file.
-    :rtype: Nipype workflow object
-    :return: (if run=False) The connected Nipype workflow object.
-    :rtype: str
-    :return: (if run=False) The base directory of the workflow if it were to
-             be run.
-    """
-
-    import os
-    import glob
-
-    import nipype.interfaces.io as nio
-    import nipype.pipeline.engine as pe
-
-    output = "func_preproc"
-
-    workflow = pe.Workflow(name='%s_workflow' % output)
-
-    if not out_dir:
-        out_dir = os.getcwd()
-
-    workflow_dir = os.path.join(out_dir, "workflow_output", output)
-    workflow.base_dir = workflow_dir
-
-    resource_pool = {}
-    config = {}
-    num_cores_per_subject = 1
-
-    resource_pool["functional_scan"] = functional_scan
-
-    if start_idx:
-        config["start_idx"] = start_idx
-    if stop_idx:
-        config["stop_idx"] = stop_idx
-    
-    workflow, resource_pool = \
-            func_preproc_workflow(workflow, resource_pool, config)
-
-    ds = pe.Node(nio.DataSink(), name='datasink_func_motion_correct')
-    ds.inputs.base_directory = workflow_dir
-    
-    node, out_file = resource_pool["func_reorient"]
-
-    workflow.connect(node, out_file, ds, 'func_reorient')
-
-    if run:
-        workflow.run(plugin='MultiProc', plugin_args= \
-                         {'n_procs': num_cores_per_subject})
-        outpath = glob.glob(os.path.join(workflow_dir, "func_reorient",\
-                                         "*"))[0]
-        return outpath
-        
-    else:
-        return workflow, workflow.base_dir
-    
 
 def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to calculate the motion correction
@@ -294,27 +222,21 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
              applicable) with the newest outputs and connections.
     """
 
-    import copy
-    import nipype.pipeline.engine as pe
-    from nipype.interfaces.afni import preprocess
+    # if this workflows output is already in the resource pool, we have nothing to do, so move on
+    if "func_motion_correct" in resource_pool and "func_coordinate_transformation" in resource_pool and \
+            "func_motion_estimates" in resource_pool:
+        return workflow, resource_pool
 
     if "func_reorient" not in resource_pool.keys():
-        from functional_preproc import func_preproc_workflow
-        old_rp = copy.copy(resource_pool)
+        # this should raise an exception that will kill the workflow builder
+        # if func_preproc_workflow could not be installed
         workflow, resource_pool = \
             func_preproc_workflow(workflow, resource_pool, config, name)
-        if resource_pool == old_rp:
-            return workflow, resource_pool
     
     # get the first volume of the time series
-    try:
-        get_func_volume = pe.Node(interface=preprocess.Calc(),
-                                  name='get_func_volume%s' % name)
-    except AttributeError:
-        from nipype.interfaces.afni import utils as afni_utils
-        get_func_volume = pe.Node(interface=afni_utils.Calc(),
-                                  name='get_func_volume%s' % name)
-         
+    get_func_volume = pe.Node(interface=afni_utils.Calc(),
+                              name='get_func_volume{0}'.format(name))
+
     get_func_volume.inputs.expr = 'a'
     get_func_volume.inputs.single_idx = 0
     get_func_volume.inputs.outputtype = 'NIFTI_GZ'
@@ -326,8 +248,8 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
         get_func_volume.inputs.in_file_a = resource_pool["func_reorient"]
         
     # calculate motion parameters
-    func_motion_correct = pe.Node(interface=preprocess.Volreg(),
-                                  name='func_motion_correct%s' % name)
+    func_motion_correct = pe.Node(interface=afni_preprocess.Volreg(),
+                                  name='func_motion_correct{0}'.format(name))
 
     func_motion_correct.inputs.args = '-Fourier -twopass'
     func_motion_correct.inputs.zpad = 4
@@ -345,84 +267,10 @@ def func_motion_correct_workflow(workflow, resource_pool, config, name="_"):
     resource_pool["func_motion_correct"] = (func_motion_correct, 'out_file')
     resource_pool["func_coordinate_transformation"] = \
         (func_motion_correct, 'oned_matrix_save')
+    resource_pool["func_motion_estimates"] = \
+        (func_motion_correct, 'oned_file')
 
     return workflow, resource_pool
-
-
-def run_func_motion_correct(func_reorient, out_dir=None, run=True):
-    """Run the 'func_motion_correct_workflow' function to execute the modular
-    workflow with the provided inputs.
-
-    :type func_reorient: str
-    :param func_reorient: Filepath to the deobliqued, reoriented functional
-                          timeseries.
-    :type out_dir: str
-    :param out_dir: (default: None) The output directory to write the results
-                    to; if left as None, will write to the current directory.
-    :type run: bool
-    :param run: (default: True) Will run the workflow; if set to False, will
-                connect the Nipype workflow and return the workflow object
-                instead.
-    :rtype: str
-    :return: (if run=True) The filepath of the generated anatomical_reorient
-             file.
-    :rtype: Nipype workflow object
-    :return: (if run=False) The connected Nipype workflow object.
-    :rtype: str
-    :return: (if run=False) The base directory of the workflow if it were to
-             be run.
-    """
-
-    import os
-    import glob
-
-    import nipype.interfaces.io as nio
-    import nipype.pipeline.engine as pe
-
-    output = "func_motion_correct"
-
-    workflow = pe.Workflow(name='%s_workflow' % output)
-
-    if not out_dir:
-        out_dir = os.getcwd()
-
-    workflow_dir = os.path.join(out_dir, "workflow_output", output)
-    workflow.base_dir = workflow_dir
-
-    resource_pool = {}
-    config = {}
-    num_cores_per_subject = 1
-
-    resource_pool["func_reorient"] = func_reorient
-
-    
-    workflow, resource_pool = \
-            func_motion_correct_workflow(workflow, resource_pool, config)
-
-
-    ds = pe.Node(nio.DataSink(), name='datasink_func_motion_correct')
-    ds.inputs.base_directory = workflow_dir
-    
-    node, out_file = resource_pool["func_motion_correct"]
-
-    workflow.connect(node, out_file, ds, 'func_motion_correct')
-    
-    
-    ds = pe.Node(nio.DataSink(), name='datasink_coordinate_transformation')
-    ds.inputs.base_directory = workflow_dir
-    
-    node, out_file = resource_pool["coordinate_transformation"]
-
-    workflow.connect(node, out_file, ds, 'coordinate_transformation')
-
-    if run:
-        workflow.run(plugin='MultiProc', plugin_args= \
-                         {'n_procs': num_cores_per_subject})
-        outpath = glob.glob(os.path.join(workflow_dir, "func_motion_correct",\
-                                         "*"))[0]
-        return outpath      
-    else:
-        return workflow, workflow.base_dir
 
 
 def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
@@ -465,21 +313,18 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
     :return: The resource pool originally provided, but updated (if
              applicable) with the newest outputs and connections.
     """
-
-    import copy
-    import nipype.pipeline.engine as pe
-    from nipype.interfaces.afni import preprocess
+    # if this workflows output is already in the resource pool, we have nothing to do, so move on
+    if "func_brain_mask" in resource_pool:
+        return workflow, resource_pool
 
     if "func_reorient" not in resource_pool.keys():
-        from functional_preproc import func_preproc_workflow
-        old_rp = copy.copy(resource_pool)
+        # this should raise an exception that will kill the workflow builder
+        # if func_preproc_workflow could not be installed
         workflow, resource_pool = \
             func_preproc_workflow(workflow, resource_pool, config, name)
-        if resource_pool == old_rp:
-            return workflow, resource_pool
   
-    func_get_brain_mask = pe.Node(interface=preprocess.Automask(),
-                                  name='func_get_brain_mask%s' % name)
+    func_get_brain_mask = pe.Node(interface=afni_preprocess.Automask(),
+                                  name='func_get_brain_mask{0}'.format(name))
     func_get_brain_mask.inputs.outputtype = 'NIFTI_GZ'
 
     if isinstance(resource_pool["func_reorient"], tuple):
@@ -494,75 +339,7 @@ def functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
     return workflow, resource_pool
 
 
-def run_functional_brain_mask(func_reorient, out_dir=None, run=True):
-    """Run the 'functional_brain_mask_workflow' function to execute the 
-    modular workflow with the provided inputs.
-
-    :type func_reorient: str
-    :param func_reorient: Filepath to the deobliqued, reoriented functional
-                          timeseries.
-    :type out_dir: str
-    :param out_dir: (default: None) The output directory to write the results
-                    to; if left as None, will write to the current directory.
-    :type run: bool
-    :param run: (default: True) Will run the workflow; if set to False, will
-                connect the Nipype workflow and return the workflow object
-                instead.
-    :rtype: str
-    :return: (if run=True) The filepath of the generated anatomical_reorient
-             file.
-    :rtype: Nipype workflow object
-    :return: (if run=False) The connected Nipype workflow object.
-    :rtype: str
-    :return: (if run=False) The base directory of the workflow if it were to
-             be run.
-    """
-
-    import os
-    import glob
-
-    import nipype.interfaces.io as nio
-    import nipype.pipeline.engine as pe
-
-    output = "functional_brain_mask"
-
-    workflow = pe.Workflow(name='%s_workflow' % output)
-
-    if not out_dir:
-        out_dir = os.getcwd()
-
-    workflow_dir = os.path.join(out_dir, "workflow_output", output)
-
-    workflow.base_dir = workflow_dir
-
-    resource_pool = {}
-    config = {}
-    num_cores_per_subject = 1
-
-    resource_pool["func_reorient"] = func_reorient
-    
-    workflow, resource_pool = \
-            functional_brain_mask_workflow(workflow, resource_pool, config)
-
-    ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
-    ds.inputs.base_directory = workflow_dir
-    
-    node, out_file = resource_pool[output]
-
-    workflow.connect(node, out_file, ds, output)
-
-    if run:
-        workflow.run(plugin='MultiProc', plugin_args= \
-                         {'n_procs': num_cores_per_subject})
-        outpath = glob.glob(os.path.join(workflow_dir, "functional_brain" \
-                                "_mask", "*"))[0]
-        return outpath      
-    else:
-        return workflow, workflow.base_dir
-
-
-def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
-    name="_"):
+def invert_functional_brain_mask_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to generate a background mask of a
     functional scan (the inversion of the functional brain mask) using AFNI's
     3dCalc.
@@ -606,27 +383,19 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
     :return: The resource pool originally provided, but updated (if
              applicable) with the newest outputs and connections.
     """
-
-    import copy
-    import nipype.pipeline.engine as pe
-    from nipype.interfaces.afni import preprocess
+    # if this workflows output is already in the resource pool, we have nothing to do, so move on
+    if "func_inverted_brain_mask" in resource_pool:
+        return workflow, resource_pool
 
     if "func_brain_mask" not in resource_pool.keys():
-        from functional_preproc import functional_brain_mask_workflow
-        old_rp = copy.copy(resource_pool)
+        # this should raise an exception that will kill the workflow builder
+        # if func_preproc_workflow could not be installed
         workflow, resource_pool = \
             functional_brain_mask_workflow(workflow, resource_pool, config, name)
-        if resource_pool == old_rp:
-            return workflow, resource_pool
-  
+
     # 3dcalc to invert the binary functional brain mask
-    try:
-        invert_mask = pe.Node(interface=preprocess.Calc(),
-                              name='invert_mask%s' % name)
-    except AttributeError:
-        from nipype.interfaces.afni import utils as afni_utils
-        invert_mask = pe.Node(interface=afni_utils.Calc(),
-                              name='invert_mask%s' % name)
+    invert_mask = pe.Node(interface=afni_utils.Calc(),
+                          name='invert_mask{0}'.format(name))
 
     invert_mask.inputs.expr = "iszero(a)"
     invert_mask.inputs.outputtype = "NIFTI_GZ"
@@ -639,75 +408,7 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config,
         invert_mask.inputs.in_file_a = resource_pool["func_brain_mask"]
 
     resource_pool["func_inverted_brain_mask"] = (invert_mask, 'out_file')
-
     return workflow, resource_pool
-
-
-def run_invert_functional_brain_mask(functional_brain_mask, out_dir=None,
-    run=True):
-    """Run the 'invert_functional_brain_mask_workflow' function to execute the
-    modular workflow with the provided inputs.
-
-    :type functional_brain_mask: str
-    :param functional_brain_mask: Filepath to the binary functional brain
-                                  mask.
-    :type out_dir: str
-    :param out_dir: (default: None) The output directory to write the results
-                    to; if left as None, will write to the current directory.
-    :type run: bool
-    :param run: (default: True) Will run the workflow; if set to False, will
-                connect the Nipype workflow and return the workflow object
-                instead.
-    :rtype: str
-    :return: (if run=True) The filepath of the generated anatomical_reorient
-             file.
-    :rtype: Nipype workflow object
-    :return: (if run=False) The connected Nipype workflow object.
-    :rtype: str
-    :return: (if run=False) The base directory of the workflow if it were to
-             be run.
-    """
-
-    import os
-    import glob
-
-    import nipype.interfaces.io as nio
-    import nipype.pipeline.engine as pe
-
-    output = "inverted_functional_brain_mask"
-
-    workflow = pe.Workflow(name='%s_workflow' % output)
-
-    if not out_dir:
-        out_dir = os.getcwd()
-
-    workflow_dir = os.path.join(out_dir, "workflow_output", output)
-    workflow.base_dir = workflow_dir
-
-    resource_pool = {}
-    config = {}
-    num_cores_per_subject = 1
-
-    resource_pool["functional_brain_mask"] = functional_brain_mask
-    
-    workflow, resource_pool = \
-            invert_functional_brain_mask_workflow(workflow, resource_pool, config)
-
-    ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
-    ds.inputs.base_directory = workflow_dir
-    
-    node, out_file = resource_pool[output]
-
-    workflow.connect(node, out_file, ds, output)
-
-    if run:
-        workflow.run(plugin='MultiProc', plugin_args= \
-                         {'n_procs': num_cores_per_subject})
-        outpath = glob.glob(os.path.join(workflow_dir, "inverted_functional_"\
-                                "brain_mask", "*"))[0]
-        return outpath      
-    else:
-        return workflow, workflow.base_dir
 
 
 def mean_functional_workflow(workflow, resource_pool, config, name="_"):
@@ -752,26 +453,18 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
     :return: The resource pool originally provided, but updated (if
              applicable) with the newest outputs and connections.
     """
-
-    import copy
-    import nipype.pipeline.engine as pe
-    from nipype.interfaces.afni import preprocess
+    # if this workflows output is already in the resource pool, we have nothing to do, so move on
+    if "func_mean" in resource_pool:
+        return workflow, resource_pool
 
     if "func_reorient" not in resource_pool.keys():
-        from functional_preproc import func_preproc_workflow
-        old_rp = copy.copy(resource_pool)
+        # this should raise an exception that will kill the workflow builder
+        # if func_preproc_workflow could not be installed
         workflow, resource_pool = \
             func_preproc_workflow(workflow, resource_pool, config, name)
-        if resource_pool == old_rp:
-            return workflow, resource_pool
 
-    try:
-        func_mean_tstat = pe.Node(interface=preprocess.TStat(),
-                                  name='func_mean_tstat%s' % name)
-    except AttributeError:
-        from nipype.interfaces.afni import utils as afni_utils
-        func_mean_tstat = pe.Node(interface=afni_utils.TStat(),
-                                  name='func_mean_tstat%s' % name)
+    func_mean_tstat = pe.Node(interface=afni_utils.TStat(),
+                              name='func_mean_tstat{0}'.format(name))
 
     func_mean_tstat.inputs.options = '-mean'
     func_mean_tstat.inputs.outputtype = 'NIFTI_GZ'
@@ -787,70 +480,72 @@ def mean_functional_workflow(workflow, resource_pool, config, name="_"):
 
     return workflow, resource_pool
 
- 
-def run_mean_functional(func_reorient, out_dir=None, run=True):
-    """Run the 'mean_functional_workflow' function to execute the modular
-    workflow with the provided inputs.
 
-    - This workflow will NOT remove background noise.
+def tstd_functional_workflow(workflow, resource_pool, config, name="_"):
+    """Build and run a Nipype workflow to generate a one-volume image from a
+    functional timeseries comprising of the tstd of its time point values,
+    using AFNI's 3dTstat.
 
-    :type func_reorient: str
-    :param func_reorient: Filepath to the deobliqued, reoriented functional
-                          timeseries.
-    :type out_dir: str
-    :param out_dir: (default: None) The output directory to write the results
-                    to; if left as None, will write to the current directory.
-    :type run: bool
-    :param run: (default: True) Will run the workflow; if set to False, will
-                connect the Nipype workflow and return the workflow object
-                instead.
-    :rtype: str
-    :return: (if run=True) The filepath of the generated anatomical_reorient
-             file.
+    - If any resources/outputs required by this workflow are not in the
+      resource pool, this workflow will call pre-requisite workflow builder
+      functions to further populate the pipeline with workflows which will
+      calculate/generate these necessary pre-requisites.
+    - For QAP: This workflow will NOT remove background noise from the
+      image, to maintain as accurate of a quality metric as possible.
+
+    Expected Resources in Resource Pool
+      - func_reorient: The deobliqued, reoriented functional timeseries.
+
+    New Resources Added to Resource Pool
+      - mean_functional: The one-volume image of the averaged timeseries.
+
+    Workflow Steps:
+      1. AFNI 3dTstat to calculate the tstd of the functional timeseries.
+
+    :type workflow: Nipype workflow object
+    :param workflow: A Nipype workflow object which can already contain other
+                     connected nodes; this function will insert the following
+                     workflow into this one provided.
+    :type resource_pool: dict
+    :param resource_pool: A dictionary defining input files and pointers to
+                          Nipype node outputs / workflow connections; the keys
+                          are the resource names.
+    :type config: dict
+    :param config: A dictionary defining the configuration settings for the
+                   workflow, such as directory paths or toggled options.
+    :type name: str
+    :param name: (default: "_") A string to append to the end of each node
+                 name.
     :rtype: Nipype workflow object
-    :return: (if run=False) The connected Nipype workflow object.
-    :rtype: str
-    :return: (if run=False) The base directory of the workflow if it were to
-             be run.
+    :return: The Nipype workflow originally provided, but with this function's
+              sub-workflow connected into it.
+    :rtype: dict
+    :return: The resource pool originally provided, but updated (if
+             applicable) with the newest outputs and connections.
     """
+    # if this workflows output is already in the resource pool, we have nothing to do, so move on
+    if "func_tstd" in resource_pool:
+        return workflow, resource_pool
 
-    import os
-    import glob
+    if "func_reorient" not in resource_pool.keys():
+        # this should raise an exception that will kill the workflow builder
+        # if func_preproc_workflow could not be installed
+        workflow, resource_pool = \
+            func_preproc_workflow(workflow, resource_pool, config, name)
 
-    import nipype.interfaces.io as nio
-    import nipype.pipeline.engine as pe
+    func_tstd_tstat = pe.Node(interface=afni_utils.TStat(),
+                              name='func_tstd_tstat{0}'.format(name))
 
-    output = "mean_functional"
-    workflow = pe.Workflow(name='%s_workflow' % output)
+    func_tstd_tstat.inputs.options = '-stdev'
+    func_tstd_tstat.inputs.outputtype = 'NIFTI_GZ'
 
-    if not out_dir:
-        out_dir = os.getcwd()
-
-    workflow_dir = os.path.join(out_dir, "workflow_output", output)
-    workflow.base_dir = workflow_dir
-
-    resource_pool = {}
-    config = {}
-    num_cores_per_subject = 1
-
-    resource_pool["func_reorient"] = func_reorient
-
-    workflow, resource_pool = \
-        mean_functional_workflow(workflow, resource_pool, config)
-
-    ds = pe.Node(nio.DataSink(), name='datasink_%s' % output)
-    ds.inputs.base_directory = workflow_dir
-    
-    node, out_file = resource_pool[output]
-
-    workflow.connect(node, out_file, ds, output)
-
-    if run:
-        workflow.run(plugin='MultiProc', plugin_args= \
-                         {'n_procs': num_cores_per_subject})
-        outpath = glob.glob(os.path.join(workflow_dir, "mean_functional",
-                                         "*"))[0] 
-        return outpath
+    if len(resource_pool["func_reorient"]) == 2:
+        node, out_file = resource_pool["func_reorient"]
+        workflow.connect(node, out_file, func_tstd_tstat, 'in_file')
     else:
-        return workflow, workflow.base_dir
-        
+        func_tstd_tstat.inputs.in_file = \
+            resource_pool["func_reorient"]
+
+    resource_pool["func_tstd"] = (func_tstd_tstat, 'out_file')
+
+    return workflow, resource_pool

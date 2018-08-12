@@ -280,6 +280,7 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
     :param credentials_path: if using S3 bucket, this path credentials needed to
        access the bucket, if accessing anonymous bucket, this can be set
        to None
+    :param inclusion_list: only include participants on this list
     :param debug: boolean indicating whether or not the debug statements should
        be printed
     :return: a data configuration dictionary suitable for use by QAP to
@@ -408,12 +409,16 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
     return data_configuration
 
 
-def collect_bids_files_configs(bids_dir, aws_input_credentials=None,
-                               raise_error=True):
+def collect_bids_files_configs(bids_dir, aws_input_credentials=None, raise_error=True):
     """
+    collect all of the files of interest from the bids directory. returns a list of unprocessed niftis from the main
+    bids directory and a list of preprocessed niftis from the derivatives directory along with a dictionary containing
+    parameters from their corresponding json files
 
-    :param bids_dir:
-    :param aws_input_credentials:
+    :param bids_dir: directory containing bids formatted data
+    :param aws_input_credentials: aws credentials required to read data
+    :param raise_error: raise an exceptoin if no bids resources are found in bids_dir, otherwise will
+        quietly return empty lists
     :return: raw_file_paths = list of paths to raw files
              derivative_file_paths = list of paths to derivatives
              parameter_dict = dictionary containing parameters for the various files
@@ -444,8 +449,8 @@ def collect_bids_files_configs(bids_dir, aws_input_credentials=None,
                     try:
                         parameter_dict[s3_obj.key.replace(prefix, "").lstrip('/')] \
                             = json.loads(s3_obj.get()["Body"].read())
-                    except Exception as e:
-                        print("Error retrieving {0} ({1})".format(s3_obj.key.replace(prefix, ""), e.message))
+                    except Exception:
+                        print("Error retrieving {0}".format(s3_obj.key.replace(prefix, "")))
                         raise
                         
                 elif str(s3_obj.key).endswith("json") or str(s3_obj.key).endswith("nii") or \
@@ -497,95 +502,3 @@ def write_data_configuration(data_configuration_filename, data_configuration_dic
 
     with open(data_configuration_filename, 'w') as ofd:
         yaml.dump(data_configuration_dictionary, ofd, encoding='utf-8')
-
-
-def test_bids_decode(bids_dir, dbg=True):
-  
-    (bids_files, derivative_files, config) = collect_bids_files_configs(bids_dir, [])
-    if dbg:
-        print("Found %d config files for %d image files and %d derivatives" % (len(config), len(bids_files),
-                                                                               len(derivative_files)))
-    bids_files = bids_files + derivative_files
-
-    for bids_file in bids_files:
-        print("{0} :: {1}".format(bids_file, bids_decode_filename(bids_file)))
-
-    return
-
-def test_gen_bids_sublist_qap(bids_dir, test_yml, aws_input_credentials=None, debug=False, cfg=False):
-
-    (bids_files, derivative_files, config) = collect_bids_files_configs(bids_dir,
-                                                                        aws_input_credentials=aws_input_credentials)
-    if debug:
-        num_json = 0
-        for df in derivative_files:
-            if df.endswith("json"):
-                num_json += 1
-        print("Found {0} config files for {1} image files and {2} derivatives ({3} json derivatives)".format(
-            len(config), len(bids_files), len(derivative_files), num_json))
-
-    bids_files = bids_files + derivative_files
-
-    if cfg:
-        data_configuration = bids_generate_qap_data_configuration(bids_dir, bids_files, config,
-                                                                  credentials_path=aws_input_credentials, debug=debug)
-    else:
-        data_configuration = bids_generate_qap_data_configuration(bids_dir, bids_files,
-                                                                  credentials_path=aws_input_credentials, debug=debug)
-
-    with open(test_yml, "w") as ofd:
-        yaml.dump(data_configuration, ofd, encoding='utf-8')
-
-    assert data_configuration
-
-if __name__ == '__main__':
-
-    test_gen_bids_sublist_qap("/Users/cameron.craddock/workspace/git_temp/qap_v1.9/qap_test_data/bids_dir",
-                              "/Users/cameron.craddock/workspace/git_temp/qap_v1.9/qap_test_data/qap_test.yml",
-                              debug=True)
-    #     "/Users/cameron.craddock/workspace/git_temp/CPAC"
-    #     "/data/ADHD200/RawDataBIDS/",
-    #     "/Users/cameron.craddock/workspace/git_temp/CPAC"
-    #     "/test/rs_subject_list.yml",
-    #     "/Users/cameron.craddock/AWS/ccraddock-fcp-indi-keys2.csv",
-    #     dbg=False)
-
-    # test_bids_decode("/Users/cameron.craddock/workspace/git_temp/qap_v1.9/qap_test_data/bids_dir")
-
-    #
-    # test_gen_bids_sublist(
-    #     "/Users/cameron.craddock/workspace/git_temp/CPAC"
-    #     "/data/ADHD200/RawDataBIDS/",
-    #     "/Users/cameron.craddock/workspace/git_temp/CPAC"
-    #     "/test/rs_subject_list.yml",
-    #     "/Users/cameron.craddock/AWS/ccraddock-fcp-indi-keys2.csv",
-    #     dbg=False)
-    #
-    # test_gen_bids_sublist(
-    #     "/Users/cameron.craddock/workspace/git_temp/CPAC"
-    #     "/data/ADHD200/RawDataBIDS/Peking_3",
-    #     "/Users/cameron.craddock/workspace/git_temp/CPAC"
-    #     "/test/rs_subject_list_pk3.yml",
-    #     "/Users/cameron.craddock/AWS/ccraddock-fcp-indi-keys2.csv",
-    #     dbg=False)
-    #
-    test_gen_bids_sublist_qap(
-        "s3://fcp-indi/data/Projects/ADHD200/RawDataBIDS/",
-        "/Users/cameron.craddock/workspace/git_temp/qap_v1.9/qap_test_data/rs_subject_list_s3.yml",
-        aws_input_credentials="/Users/cameron.craddock/AWS/ccraddock-fcp-indi-keys2.csv",
-        debug=False)
-    #
-    # test_gen_bids_sublist(
-    #     "s3://fcp-indi/data/Projects/ADHD200/RawDataBIDS/Peking_3",
-    #     "/Users/cameron.craddock/workspace/git_temp/CPAC/test/"
-    #        "rs_subject_list_pk3_s3.yml",
-    #     "/Users/cameron.craddock/AWS/ccraddock-fcp-indi-keys2.csv",
-    #     dbg=False)
-    #
-    # test_gen_bids_sublist(
-    #     "s3://fcp-indi/data/Projects/CORR/RawDataBIDS/BMB_1",
-    #     "/Users/cameron.craddock/workspace/git_temp/CPAC/test/"
-    #        "rs_subject_list_corr_bmb3_s3.yml",
-    #     "/Users/cameron.craddock/AWS/ccraddock-fcp-indi-keys2.csv",
-    #     dbg=False)
-    #

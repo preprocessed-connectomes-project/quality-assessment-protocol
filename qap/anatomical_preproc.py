@@ -1,3 +1,16 @@
+import nipype.pipeline.engine as pe
+from nipype.interfaces import afni
+
+# older versions of Nipype had the needed interfaces in the preprocess modules, for newer versions
+# they are in utils, choose between them by determining which one includes Refit, this makes it cleaner
+# to switch between the two
+if hasattr(afni.preprocess, 'Refit'):
+    afni_utils = afni.preprocess
+else:
+    afni_utils = afni.utils
+afni_preprocess = afni.preprocess
+
+
 def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     """Build a Nipype workflow to deoblique and reorient an anatomical scan
     from a NIFTI file.
@@ -45,21 +58,13 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     :return: The resource pool originally provided, but updated (if
              applicable) with the newest outputs and connections.
     """
-
-    import nipype.pipeline.engine as pe
-    from nipype.interfaces import afni
-
-    # older versions of Nipype had the needed interfaces in the preprocess modules, for newer versions
-    # they are in utils, choose between them by determining which one includes Refit, this makes it cleaner
-    # to switch between the two
-    if hasattr(afni.preprocess, 'Refit'):
-        afni_utils = afni.preprocess
-    else:
-        afni_utils = afni.utils
-
-    if "anatomical_scan" not in resource_pool.keys():
+    if "anat_reorient" in resource_pool:
         return workflow, resource_pool
 
+    # since most of the necessary files can be made form the functional_scan, raising a failure here
+    # should trickle down through the entire workflows.
+    if "anatomical_scan" not in resource_pool.keys():
+        raise ValueError("Error! No anatomical scan was found in the resource pool and do not know how to make one.")
     elif "s3://" in resource_pool["anatomical_scan"]:
         from qap.cloud_utils import download_single_s3_path
         resource_pool["anatomical_scan"] = \
@@ -126,30 +131,13 @@ def anatomical_skullstrip_workflow(workflow, resource_pool, config, name="_"):
     :return: The resource pool originally provided, but updated (if
              applicable) with the newest outputs and connections.
     """
-
-    import copy
-    import nipype.pipeline.engine as pe
-
-    from nipype.interfaces import afni
-
-    # TODO: How long do we want to keep compatibility with the past?
-
-    # older versions of Nipype had the needed interfaces in the preprocess modules, for newer versions
-    # they are in utils, choose between them by determining which one includes Refit, this makes it cleaner
-    # to switch between the two
-    if hasattr(afni.preprocess, 'Calc'):
-        afni_utils = afni.preprocess
-    else:
-        afni_utils = afni.utils
-    afni_preprocess = afni.preprocess
+    if "anat_brain" in resource_pool:
+        return workflow, resource_pool
 
     if "anat_reorient" not in resource_pool.keys():
-        old_rp = copy.copy(resource_pool)
         workflow, new_resource_pool = \
             anatomical_reorient_workflow(workflow, resource_pool, config,
                                          name)
-        if resource_pool == old_rp:
-            return workflow, resource_pool
 
     anat_skullstrip = pe.Node(interface=afni_preprocess.SkullStrip(),
                               name='anat_skullstrip{0}'.format(name))
@@ -245,23 +233,21 @@ def afni_anatomical_linear_registration(workflow, resource_pool, config, name="_
     :return: The resource pool originally provided, but updated (if
              applicable) with the newest outputs and connections.
     """
-
-    import copy
-    import nipype.pipeline.engine as pe
-    from nipype.interfaces.afni import preprocess
-
-    calc_allineate_warp = pe.Node(interface=preprocess.Allineate(),
-                                  name='calc_3dAllineate_warp{0}'.format(name))
-    calc_allineate_warp.inputs.outputtype = "NIFTI_GZ"
+    # if outputs already exist, then we have nothing left to do
+    warped_out_key = "anat_linear_warped_{0}".format(in_file)
+    if (in_file == "anat_reorient" and "anat_linear_xfm" in resource_pool and warped_out_key in resource_pool) or (
+            in_file != "anat_reorient" and warped_out_key in resource_pool):
+        return workflow, resource_pool
 
     if in_file == "anat_reorient":
         if "anat_reorient" not in resource_pool.keys():
-            old_rp = copy.copy(resource_pool)
             workflow, new_resource_pool = \
                 anatomical_reorient_workflow(workflow, resource_pool,
                                              config, name)
-            if resource_pool == old_rp:
-                return workflow, resource_pool
+
+    calc_allineate_warp = pe.Node(interface=afni_preprocess.Allineate(),
+                                  name='calc_3dAllineate_warp{0}'.format(name))
+    calc_allineate_warp.inputs.outputtype = "NIFTI_GZ"
 
     if len(resource_pool[in_file]) == 2:
         node, out_file = resource_pool[in_file]
@@ -276,14 +262,16 @@ def afni_anatomical_linear_registration(workflow, resource_pool, config, name="_
 
     calc_allineate_warp.inputs.out_file = "allineate_warped_{0}.nii.gz".format(in_file)
 
-    calc_allineate_warp.inputs.out_matrix = "3dallineate_warp"
+    calc_allineate_warp.inputs.out_matrix = "3dallineate_warp.aff12.1D"
 
     if in_file == "anat_reorient":
-        resource_pool["anat_linear_xfm"] = \
-            (calc_allineate_warp, 'matrix')
+        # for compatibility with older versions of nipype
+        if hasattr(calc_allineate_warp.outputs, 'out_matrix'):
+            resource_pool["anat_linear_xfm"] = (calc_allineate_warp, 'out_matrix')
+        else:
+            resource_pool["anat_linear_xfm"] = (calc_allineate_warp, 'matrix')
 
-    resource_pool["anat_linear_warped_{0}".format(in_file)] = \
-        (calc_allineate_warp, 'out_file')
+    resource_pool[warped_out_key] = (calc_allineate_warp, 'out_file')
 
     return workflow, resource_pool
 
@@ -334,27 +322,13 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
     :return: The resource pool originally provided, but updated (if
              applicable) with the newest outputs and connections.
     """
-
-    import copy
-    import nipype.pipeline.engine as pe
-    from nipype.interfaces import afni
-
-    # older versions of Nipype had the needed interfaces in the preprocess modules, for newer versions
-    # they are in utils, choose between them by determining which one includes Refit, this makes it cleaner
-    # to switch between the two
-    if hasattr(afni.preprocess, 'Calc'):
-        afni_utils = afni.preprocess
-    else:
-        afni_utils = afni.utils
-    afni_preprocess = afni.preprocess
+    if "anat_csf_mask" in resource_pool and "anat_wm_mask" in resource_pool and "anat_gm_mask" in resource_pool:
+        return workflow, resource_pool
 
     if "anat_brain" not in resource_pool.keys():
-        old_rp = copy.copy(resource_pool)
         workflow, new_resource_pool = \
             anatomical_skullstrip_workflow(workflow, resource_pool, config,
                                            name)
-        if resource_pool == old_rp:
-            return workflow, resource_pool
 
     segment = pe.Node(interface=afni_preprocess.Seg(), name='segmentation{0}'.format(name))
 
@@ -396,4 +370,3 @@ def afni_segmentation_workflow(workflow, resource_pool, config, name="_"):
     resource_pool["anat_wm_mask"] = (extract_wm, 'out_file')
 
     return workflow, resource_pool
-
