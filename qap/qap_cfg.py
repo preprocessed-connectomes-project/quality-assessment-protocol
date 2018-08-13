@@ -223,18 +223,3 @@ def validate_pipeline_configuration(pipeline_configuration):
         error_string = '\n[!] The following rquired parameters are missing from the pipeline configuration:'
         error_string += ",".join([parameter for parameter in missing_parameters]) + '\n'
         raise Exception(error_string)
-
-if __name__ == "__main__":
-    write_pipeline_configuration("test_config.yml", default_pipeline_configuration)
-
-    print(configuration_output_string.format(**default_pipeline_configuration))
-
-    import yaml
-
-    test_configuration = yaml.load(open("test_config.yml", "r"))
-    print(configuration_output_string.format(**test_configuration))
-
-    validate_pipeline_configuration(test_configuration)
-    validate_pipeline_configuration(default_pipeline_configuration)
-
-    assert(test_configuration != default_pipeline_configuration)

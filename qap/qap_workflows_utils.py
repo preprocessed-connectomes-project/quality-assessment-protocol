@@ -215,14 +215,9 @@ def slice_head_mask(infile, transform):
     import nibabel as nb
 
     from qap.script_utils import read_txt_file
-    from qap.qap_workflows_utils import convert_allineate_xfm, \
-                                        warp_coordinates, \
-                                        calculate_plane_coords, \
-                                        create_slice_mask
-    from qap.qap_utils import read_nifti_image, write_nifti_image
 
     # get file info
-    infile_img = read_nifti_image(infile)
+    infile_img = nb.load(infile)
 
     infile_header = infile_img.get_header()
     infile_affine = infile_img.get_affine()
@@ -262,38 +257,9 @@ def slice_head_mask(infile, transform):
     outfile_name = "_".join([infile_filename, "slice_mask.nii.gz"])
     outfile_path = os.path.join(os.getcwd(), outfile_name)
 
-    write_nifti_image(new_mask_img, outfile_path)
+    nb.save(new_mask_img, outfile_path)
 
     return outfile_path
-
-
-def get_temporal_std_map(func_reorient, func_mask):
-    """Create a map of the standard deviations of each voxel's timeseries.
-
-    :param func_reorient: String filepath of the deobliqued, reoriented
-                          functional timeseries NIFTI file.
-    :param func_mask: String filepath of the functional brain mask NIFTI file.
-    :return: String filepath of the temporal standard deviation map NIFTI
-             file.
-    """
-
-    import os
-    import numpy as np
-    import nibabel as nb
-
-    func_img = nb.load(func_reorient)
-    func_data = func_img.get_data()
-
-    temporal_std_map = np.std(func_data, axis=-1)
-
-    # write the image
-    tstd_img = nb.Nifti1Image(temporal_std_map, func_img.affine)
-
-    # this writes it into the node's folder in the working directory
-    temporal_std_map_file = os.path.join(os.getcwd(), "tstd.nii.gz")
-    tstd_img.to_filename(temporal_std_map_file)
-
-    return temporal_std_map_file
 
 
 def calc_estimated_tstd_nuisance_mask(temporal_std_map):
@@ -350,7 +316,6 @@ def sfs_timeseries(func, func_mean, func_mask, temporal_std_file):
     import numpy as np
     import nibabel as nb
     from itertools import starmap
-    from qap.qap_workflows_utils import calc_estimated_tstd_nuisance_mask, sfs_voxel
 
     func_img = nb.load(func)
     func_data = func_img.get_data()
@@ -839,7 +804,6 @@ def qap_functional_temporal(
 
     import os
     import numpy as np
-    import nibabel as nb
     from time import strftime
 
     import qap

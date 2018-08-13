@@ -1,8 +1,10 @@
 import json
-import numpy
-import nibabel
-import traceback
 import os
+import traceback
+
+import nibabel
+import numpy
+
 
 # encoder to help with exporting numpy data types and exceptions to json
 class NumpyEncoder(json.JSONEncoder):
@@ -56,25 +58,6 @@ def create_expr_string(clip_level_value):
     return expr_string
 
 
-def read_nifti_image(nifti_infile):
-    """Read a NIFTI file into Nibabel-format image data.
-
-    :type nifti_infile: str
-    :param nifti_infile: The filepath of the NIFTI image to read in.
-    :rtype: Nibabel image
-    :return: Image data in Nibabel format.
-    """
-    nifti_image = None
-
-    try:
-        nifti_image = nibabel.load(nifti_infile)
-    except: # TODO: figure out the right way to handle exceptions to avoid PEP8 problems
-        err = "\n\n[!] Could not load the NIFTI image using Nibabel:\n{0}\n\n".format(nifti_infile)
-        raise_smart_exception(locals(), err)
-
-    return nifti_image
-
-
 def write_nifti_image(nifti_img, file_path):
     """Write image data in Nibabel format into a NIFTI file.
 
@@ -125,7 +108,6 @@ def write_json(output_dict, json_file):
 
     import os
     import json
-    from qap.qap_utils import NumpyEncoder, read_json
 
     write = True
     if os.path.exists(json_file):
@@ -167,13 +149,7 @@ def load_image(image_file, return_img=False):
         that contains both the numpy array and a nibabel.NiftiImage object containing the header information
     """
 
-    nifti_image = None
-
-    try:
-        nifti_image = nibabel.load(image_file)
-    except:
-        raise_smart_exception(locals())
-
+    nifti_image = nibabel.load(image_file)
     voxel_data = nifti_image.get_data()
 
     # Ensure that data is cast as at least 32-bit

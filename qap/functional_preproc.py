@@ -1,6 +1,7 @@
-import nipype.pipeline.engine as pe
-import nipype.interfaces.utility as util
 import nipype.interfaces.afni as afni
+import nipype.interfaces.utility as util
+import nipype.pipeline.engine as pe
+
 import qap.cloud_utils as cloud_utils
 
 if hasattr(afni.preprocess, 'Calc'):
@@ -413,7 +414,7 @@ def invert_functional_brain_mask_workflow(workflow, resource_pool, config, name=
 
 def mean_functional_workflow(workflow, resource_pool, config, name="_"):
     """Build and run a Nipype workflow to generate a one-volume image from a
-    functional timeseries comprising of the mean of its timepoint values,
+    functional timeseries comprising of the mean of its time point values,
     using AFNI's 3dTstat.
 
     - If any resources/outputs required by this workflow are not in the
@@ -524,7 +525,7 @@ def tstd_functional_workflow(workflow, resource_pool, config, name="_"):
              applicable) with the newest outputs and connections.
     """
     # if this workflows output is already in the resource pool, we have nothing to do, so move on
-    if "func_tstd" in resource_pool:
+    if "func_temporal_std_map" in resource_pool:
         return workflow, resource_pool
 
     if "func_reorient" not in resource_pool.keys():
@@ -546,6 +547,6 @@ def tstd_functional_workflow(workflow, resource_pool, config, name="_"):
         func_tstd_tstat.inputs.in_file = \
             resource_pool["func_reorient"]
 
-    resource_pool["func_tstd"] = (func_tstd_tstat, 'out_file')
+    resource_pool["func_temporal_std_map"] = (func_tstd_tstat, 'out_file')
 
     return workflow, resource_pool

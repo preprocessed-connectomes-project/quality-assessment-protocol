@@ -27,6 +27,7 @@ functional_stop_index: End
 # results of the QAP metrics.
 write_report: False
 
+
 # Output Paths:
 # -------------
 #
@@ -38,6 +39,7 @@ output_directory:
 # Directory for log files. To upload log files to the AWS S3 cloud service prepend the output path with
 # s3://bucket_name/". This may require setting s3_write_credentials (next section)
 log_directory: 
+
 
 # Calculating the QAP measures requires  a variety of intermediary files that are derived from the input
 # data (e.g., brain mask, white matter mask). These files are written to a working directory that can be
@@ -61,6 +63,7 @@ s3_read_credentials:
 # AWS credentials will probably be needed if writing to S3, if so edit the path to point to the credential
 # file downloaded from AWS. If unset, and s3 paths are encountered, QAP will try to upload the data anonymously.
 s3_write_credentials: 
+
 
 # Multicore Parallelization and Bundles
 # -------------------------------
@@ -103,12 +106,13 @@ bundle_size: 1
 num_processors: 1
 available_memory: 4
 
+
 # Debugging
 # -------------------------------
-
 # If you do not want to automatically delete the working directory at the end of QAP, change the following
 # flag to `True'.
 save_working_dir: False
+
 
 # Produce a graph for visualizing the workflow
 write_graph: False

@@ -39,22 +39,19 @@ def check_datatype(background):
         background2 = background.astype('int32')    
         # Ensure downgrading datatype didn't really change the values
         if np.abs(background2.astype('float32') - background).mean() > 0.05:
-            print "WARNING: Downgraded float to an int but values are " \
-                  "different by more than 0.05"
+            print("WARNING: Downgraded float to an int but values are different by more than 0.05")
         background = background2
         del background2
    
     # We only allow integer values for now
     if not np.issubdtype(background.dtype, int):
-        print "QI1 can not be calculated for data that is not integer or " \
-              "floating point: %s" % background.dtype
+        print("QI1 can not be calculated for data that is not integer or floating point: {0}".format(background.dtype))
         raise TypeError
         
     # convert any negative voxel values to zero, provide warning
     for vox in background.flatten():
         if vox < 0:
-            print "\nWARNING: Negative voxel values in anatomical scan " \
-                  "converted to zero.\n"
+            print("\nWARNING: Negative voxel values in anatomical scan converted to zero.\n")
             background = background.clip(0)
             break
 
@@ -72,8 +69,7 @@ def convert_negatives(img_data):
 
     for vox in img_data.flatten():
         if vox < 0:
-            print "\nWARNING: Negative voxel values in anatomical scan " \
-                  "converted to zero.\n"
+            print("\nWARNING: Negative voxel values in anatomical scan converted to zero.\n")
             img_data = img_data.clip(0)
             break
 
@@ -226,7 +222,6 @@ def artifacts(anatomical_reorient, qap_head_mask_path, exclude_zeroes=False):
     import scipy.ndimage as nd
     from qap.qap_utils import load_image, load_mask, \
         create_anatomical_background_mask
-    from qap.spatial_qc import check_datatype
 
     # Load the data
     anat_data, anat_img = load_image(anatomical_reorient, return_img=True)
@@ -297,14 +292,15 @@ def fav(fav_artifacts_bg, anatomical_reorient, bg_head_mask, calculate_quality_i
     """
 
     import numpy as np
-    from qap.qap_utils import read_nifti_image, load_image
+    import nibabel
+    from qap.qap_utils import load_image
 
     # Load the data and make sure that it is 0 or 1
-    background = read_nifti_image(fav_artifacts_bg).get_data()
+    background = nibabel.load(fav_artifacts_bg).get_data()
     background[np.isclose(background, 0)] = 0
     background[background != 0] = 1
 
-    bg_mask = read_nifti_image(bg_head_mask).get_data()
+    bg_mask = nibabel.load(bg_head_mask).get_data()
     bg_mask[np.isclose(bg_mask, 0)] = 0
     bg_mask[bg_mask != 0] = 1
 

@@ -1,9 +1,10 @@
-import os
-import yaml
-import json
 import copy
-
+import json
+import os
 import re
+
+import yaml
+from indi_aws import fetch_creds
 
 
 def bids_decode_filename(file_path, dbg=False):
@@ -30,11 +31,11 @@ def bids_decode_filename(file_path, dbg=False):
 
     # first figure out if there is a site directory level, this isn't
     # specified in BIDS currently, but hopefully will be in the future
-    file_path_values = os.path.dirname(file_path).split('/')
+    file_path_values = [str(f) for f in os.path.dirname(file_path).split('/')]
 
     # if this is a derivative, then the site directory is just above the "derivative" directory
     if "derivatives" in file_path_values:
-        site_index = file_path_values.index(b"derivatives") - 1
+        site_index = file_path_values.index("derivatives") - 1
 
         if site_index + 2 > 0 and file_path_values[site_index + 2] and \
                 "sub-" in file_path_values[site_index + 3]:
@@ -45,7 +46,8 @@ def bids_decode_filename(file_path, dbg=False):
             raise ValueError("Could not find pipeline level for derivative {0}. Does the path conform to the "
                              "BIDS standard?".format(file_path))
     else:
-        reg_result = re.search("(sub-[0-9]+)", file_path)
+        # otherwise the site directory is just above the "sub-<participant id>" directory
+        reg_result = re.search("(sub-[a-zA_Z0-9]+)", file_path)
         if reg_result:
             site_index = file_path_values.index(reg_result.group(0)) - 1
 
@@ -56,14 +58,14 @@ def bids_decode_filename(file_path, dbg=False):
         bids_dict["site"] = "none"
 
     # remove filename extensions
-    filename = filename.split(".")[0]
+    filename = str(filename.split(".")[0])
 
     # convert the filename string into a dictionary to pull out the other
     # key value pairs
     singleton_count = 0
-    for key_val_pair in filename.split(b'_'):
+    for key_val_pair in filename.split('_'):
         if "-" in key_val_pair:
-            chunks = key_val_pair.split(b'-')
+            chunks = key_val_pair.split('-')
             bids_dict[chunks[0]] = "-".join([str(c) for c in chunks[1:]])
         else:
             if singleton_count == 0:
@@ -315,15 +317,15 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
             # 1. decode file path
             file_bids_dict = bids_decode_filename(file_path)
 
-            if inclusion_list and file_bids_dict["sub"] not in inclusion_list:
-                continue
-
             if "ses" not in file_bids_dict:
                 file_bids_dict["ses"] = "1"
 
             if "sub" not in file_bids_dict:
-                raise IOError('"sub" not found in {}, perhaps it is not '
-                              'in BIDS format?'.format(file_path))
+                # this isn't a file that we know how to handle, move on to the next one
+                continue
+
+            if inclusion_list and file_bids_dict["sub"] not in inclusion_list:
+                continue
 
             # 2. construct site, participant, and session keys
             participant = "-".join(["sub", file_bids_dict["sub"]])
@@ -417,7 +419,7 @@ def collect_bids_files_configs(bids_dir, aws_input_credentials=None, raise_error
 
     :param bids_dir: directory containing bids formatted data
     :param aws_input_credentials: aws credentials required to read data
-    :param raise_error: raise an exceptoin if no bids resources are found in bids_dir, otherwise will
+    :param raise_error: raise an exception if no bids resources are found in bids_dir, otherwise will
         quietly return empty lists
     :return: raw_file_paths = list of paths to raw files
              derivative_file_paths = list of paths to derivatives
@@ -437,7 +439,6 @@ def collect_bids_files_configs(bids_dir, aws_input_credentials=None, raise_error
         if aws_input_credentials and not os.path.isfile(aws_input_credentials):
             raise IOError("Could not find aws input credentials ({0})".format(aws_input_credentials))
 
-        from indi_aws import fetch_creds
         bucket = fetch_creds.return_bucket(aws_input_credentials, bucket_name)
 
         print("gathering files from S3 bucket {0} for {1}".format(bucket, prefix))
