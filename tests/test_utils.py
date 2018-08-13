@@ -25,20 +25,35 @@ def build_and_run_workflow(workflow_builder, resource_pool, workflow_name, outpu
     """
 
     workflow = pe.Workflow(name='{0}_workflow'.format(workflow_name))
-    workflow.base_dir = os.path.join(os.getcwd(), "workflow_output", workflow_name)
+
+    num_cores = 2
+    plugin = "MultiProc"
+    plugin_args = {"n_procs": num_cores}
+    working_dir = os.path.join(os.getcwd(), "workflow_output", workflow_name)
+
+    if "execution" in config:
+        execution = config["execution"]
+        if "plugin" in execution:
+            plugin = execution["plugin"]
+        if "plugin_args" in execution:
+            plugin_args = execution["plugin_args"]
+        if "working_dir" in execution:
+            working_dir = execution["working_dir"]
+
+    workflow.base_dir = working_dir
 
     workflow, resource_pool = workflow_builder(workflow, resource_pool, config)
 
     print("resource pool: {0}".format(resource_pool))
 
     for output_key in output_keys:
-        ds = pe.Node(nio.DataSink(), name='datasink_{0}_{1}'.format(workflow_name, output_key))
+        ds = pe.Node(nio.DataSink(), name='datasink_{0}_{1}'.format(
+            workflow_name, output_key))
         ds.inputs.base_directory = workflow.base_dir
         node, out_file = resource_pool[output_key]
         workflow.connect(node, out_file, ds, output_key)
 
-    num_cores = 2
-    workflow.run(plugin='MultiProc', plugin_args={'n_procs': num_cores})
+    workflow.run(plugin=plugin, plugin_args=plugin_args)
 
     outpaths = []
     for output_key in output_keys:
