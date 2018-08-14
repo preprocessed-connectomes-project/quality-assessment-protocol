@@ -1,6 +1,6 @@
-# cloud_utils.py
-#
-# Contributing authors: Daniel Clark, Steve Giavasis, 2015
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def download_single_s3_path(s3_path, cfg_dict):
@@ -21,16 +21,15 @@ def download_single_s3_path(s3_path, cfg_dict):
 
     # Init variables
     working_dir = cfg_dict["working_directory"]
-    try:
+    creds_path = None
+    if "creds_path" in cfg_dict:
         creds_path = cfg_dict["creds_path"]
-    except KeyError:
-        creds_path = None
 
     if "s3://" in s3_path:
         s3_prefix = s3_path.replace("s3://", "")
     else:
-        err = "[!] S3 filepaths must be pre-pended with the 's3://' prefix."
-        raise ValueError(err)
+        raise ValueError(
+            "S3 filepaths must be pre-pended with the 's3://' prefix.")
 
     bucket_name = s3_prefix.split("/")[0]
     bucket = fetch_creds.return_bucket(creds_path, bucket_name)
@@ -39,9 +38,9 @@ def download_single_s3_path(s3_path, cfg_dict):
     local_dl = os.path.join(working_dir, data_dir)
 
     if os.path.isfile(local_dl):
-        print("\nS3 bucket file already downloaded! Skipping download.")
-        print("S3 file: {0}".format(s3_path))
-        print("Local file already exists: {0}\n".format(local_dl))
+        logger.info("S3 bucket file already downloaded! Skipping download.")
+        logger.info("S3 file: %s", s3_path)
+        logger.info("Local file: %s", local_dl)
     else:
         aws_utils.s3_download(bucket, ([data_dir], [local_dl]))
 
@@ -63,17 +62,18 @@ def copy_directory_to_s3(from_path, to_path, cfg):
     import os
 
     if "s3://" not in to_path.lower():
-        raise ValueError("Destination path {0} does not appear to be a correctly formatted S3 path.".format(to_path))
+        raise ValueError(
+            "Destination path {0} does not appear to be a correctly formatted S3 path.".format(to_path))
 
     bucket_name = to_path.replace('s3://', '').split('/')[0]
 
-    bucket = fetch_creds.return_bucket(cfg["s3_write_credentials"], bucket_name)
+    bucket = fetch_creds.return_bucket(
+        cfg["s3_write_credentials"], bucket_name)
 
     # And upload data
     upl_files = []
-    for root, dirs, files in os.walk(from_path):
-        if files:
-            upl_files.extend([os.path.join(root, fil) for fil in files])
+    for root, _, files in os.walk(from_path):
+        upl_files.extend([os.path.join(root, fil) for fil in files])
 
     # Using INDI AWS utils
     s3_upl_files = [ufile.replace(from_path, to_path) for ufile in upl_files]
