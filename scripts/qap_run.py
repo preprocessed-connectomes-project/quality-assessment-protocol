@@ -497,10 +497,12 @@ def main():
             # bids_dir
             out_derivative_files = []
             if bids_dir != pipeline_configuration["output_directory"]:
-                (out_image_files, out_derivative_files, out_parameters_dictionary) = \
-                    bids_utils.collect_bids_files_configs(pipeline_configuration["output_directory"],
-                                                          args.s3_write_credentials,
-                                                          raise_error=False)
+                try:
+                    _, out_derivative_files, _ = \
+                        bids_utils.collect_bids_files_configs(pipeline_configuration["output_directory"],
+                                                              args.s3_write_credentials)
+                except IOError as e:
+                    out_derivative_files = []
 
             print("Found {0} parameter dictionaries, {1} image files, and {2} derivatives".format(
                 len(bids_parameters_dictionary), len(bids_image_files),
@@ -515,7 +517,7 @@ def main():
 
         data_configuration_dict = \
             bids_utils.bids_generate_qap_data_configuration(bids_dir, bids_image_files,
-                                                            credentials_path=args.s3_read_credentials, debug=True)
+                                                            credentials_path=args.s3_read_credentials)
 
     data_configuration_filename = os.path.join(args.output_dir, "qap-data-config-{}.yml".format(timestamp_string))
     bids_utils.write_data_configuration(data_configuration_filename, data_configuration_dict)

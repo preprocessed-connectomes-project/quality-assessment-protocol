@@ -2,17 +2,19 @@ import copy
 import json
 import os
 import re
-
+import logging
 import yaml
 from indi_aws import fetch_creds
 
 
-def bids_decode_filename(file_path, dbg=False):
+logger = logging.getLogger(__name__)
+
+
+def bids_decode_filename(file_path):
     """
     Decode BIDS filename into a dictionary.
 
     :param file_path: path containing the filename to be decoded
-    :param dbg: indicates whether or not debugging messages should be printed
     :return: dictionary containing information decoded from the filename
     """
 
@@ -22,10 +24,8 @@ def bids_decode_filename(file_path, dbg=False):
 
     # first lets make sure that we know how to handle the file
     if 'nii' not in filename.lower() and 'json' not in filename.lower():
-        raise IOError("File {0} does not appear to be a nifti or json file".format(filename))
-
-    if dbg:
-        print("Parsing BIDS information from {0}".format(file_path))
+        raise IOError(
+            "File {0} does not appear to be a nifti or json file".format(filename))
 
     site_index = -1
 
@@ -102,7 +102,7 @@ def bids_decode_filename(file_path, dbg=False):
     return bids_dict
 
 
-def bids_retrieve_parameters(bids_parameters_dict, bids_dict, dbg=False):
+def bids_retrieve_parameters(bids_parameters_dict, bids_dict):
     """
 
     Retrieve the BIDS parameters from bids_parameters_dict for BIDS file
@@ -119,12 +119,8 @@ def bids_retrieve_parameters(bids_parameters_dict, bids_dict, dbg=False):
     :param bids_dict: Dictionary built from the name of a file in the BIDS
       format. This is built using the bids_decode_filename by splitting on
       "-" and "_" delimiters
-    :param dbg: boolean flag that indicates whether or not debug statements
-      should be printed, defaults to "False"
     :return: returns a dictionary that contains the BIDS parameters
     """
-
-    params = {}
 
     t_dict = bids_parameters_dict  # pointer to current dictionary
 
@@ -137,16 +133,11 @@ def bids_retrieve_parameters(bids_parameters_dict, bids_dict, dbg=False):
         else:
             key = "-".join([level, "none"])
 
-        if dbg:
-            print("Key: {0}".format(key))
-
         # if the key doesn't exist in the config dictionary, check to see if
         # the generic key exists and return that
         if key in t_dict:
             t_dict = t_dict[key]
         else:
-            if dbg:
-                print("Could find {0}, so going with {1}".format(key, "-".join([level, "none"])))
             key = "-".join([level, "none"])
             if key in t_dict:
                 t_dict = t_dict[key]
@@ -155,10 +146,7 @@ def bids_retrieve_parameters(bids_parameters_dict, bids_dict, dbg=False):
     # initialize our configuration we look for "RepetitionTime", because
     # according to the spec it is a mandatory parameter for JSON
     # side car files
-
-    if dbg:
-        print(t_dict)
-
+    params = {}
     for key in t_dict.keys():
         if u'RepetitionTime' in key:
             params = copy.deepcopy(t_dict)
@@ -167,7 +155,7 @@ def bids_retrieve_parameters(bids_parameters_dict, bids_dict, dbg=False):
     return params
 
 
-def bids_parse_sidecar(bids_dict, dbg=False):
+def bids_parse_sidecar(bids_dict):
     """
     Uses the BIDS principle of inheritance to build a data structure that
     maps parameters in side car .json files to components in the names of
@@ -175,8 +163,6 @@ def bids_parse_sidecar(bids_dict, dbg=False):
 
     :param bids_dict: dictionary that maps paths of sidecar json files
        (the key) to a dictionary containing the contents of the files (the values)
-    :param dbg: boolean flag that indicates whether or not debug statements
-       should be printed
     :return: a dictionary that maps parameters to components from BIDS file names
        such as sub, sess, run, acq, and scan type
     """
@@ -194,25 +180,16 @@ def bids_parse_sidecar(bids_dict, dbg=False):
         t_dict[key] = {}
         t_dict = t_dict[key]
 
-    if dbg:
-        print(bids_parameters_dict)
-
     # get the paths to the json yaml files in config_dict, the paths contain
     # the information needed to map the parameters from the json files (the
     # values of the config_dict) to corresponding nifti files. We sort the
     # list by the number of path components, so that we can iterate from the
     # outer most path to inner-most, which will help us address the BIDS
     # inheritance principle
-    parameter_file_path_list = sorted(bids_dict.keys(), key=lambda p: len(p.split('/')))
-
-    if dbg:
-        print("parameter_file_paths {}".format(", ".join(parameter_file_path_list)))
-        print(bids_dict)
+    parameter_file_path_list = sorted(
+        bids_dict.keys(), key=lambda p: len(p.split('/')))
 
     for parameter_file_path in parameter_file_path_list:
-
-        if dbg:
-            print("processing {0}".format(parameter_file_path))
 
         # decode the filepath into its various components as defined by  BIDS
         filename_bids_dict = bids_decode_filename(parameter_file_path)
@@ -224,7 +201,8 @@ def bids_parse_sidecar(bids_dict, dbg=False):
 
         # first lets try to find any parameters that already apply at this
         # level using the information in the json's file path
-        t_params = bids_retrieve_parameters(bids_parameters_dict, filename_bids_dict)
+        t_params = bids_retrieve_parameters(
+            bids_parameters_dict, filename_bids_dict)
 
         # now populate the parameters
         bids_config = {}
@@ -234,11 +212,8 @@ def bids_parse_sidecar(bids_dict, dbg=False):
         # add in the information from this config file
         t_config = bids_parameters_dict[parameter_file_path]
         while isinstance(t_config, list):
-            print("{0} contents are in a list?".format(parameter_file_path))
+            logger.warning("File \"%s\" contents are in a list?", parameter_file_path)
             t_config = t_config[0]
-
-        if dbg:
-            print("updating {0} with {1}".format(bids_config, t_config))
 
         bids_config.update(t_config)
 
@@ -267,7 +242,7 @@ def bids_parse_sidecar(bids_dict, dbg=False):
 
 
 def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dictionary=None, credentials_path="",
-                                         inclusion_list=None, debug=False):
+                                         inclusion_list=None):
     """
     Generates a QAP formatted subject list from information contained in a
     BIDS formatted set of data.
@@ -283,24 +258,16 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
        access the bucket, if accessing anonymous bucket, this can be set
        to None
     :param inclusion_list: only include participants on this list
-    :param debug: boolean indicating whether or not the debug statements should
-       be printed
     :return: a data configuration dictionary suitable for use by QAP to
     """
-
-    if debug:
-        print("gen_bids_sublist called with:")
-        print("  bids_dir: {0}".format(bids_dir))
-        print("  # paths: {0}".format(str(len(paths_list))))
-        print("  configuration_dictionary: {0}".format("missing" if not configuration_dictionary else "found"))
-        print("  credentials_path: {0}".format(credentials_path))
-
+    
     # if configuration information is not desired, config_dict will be empty,
     # otherwise parse the information in the sidecar json files into a dict
     # we can use to extract data for our nifti files
     bids_configuration_dictionary = {}
     if configuration_dictionary:
-        bids_configuration_dictionary = bids_parse_sidecar(configuration_dictionary, debug)
+        bids_configuration_dictionary = bids_parse_sidecar(
+            configuration_dictionary)
 
     data_configuration = {}
 
@@ -346,9 +313,11 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
             for bids_key in ["run", "acq"]:
                 if bids_key in file_bids_dict:
                     if scan_name:
-                        scan_name = "_".join([scan_name, "-".join([bids_key, file_bids_dict[bids_key]])])
+                        scan_name = "_".join(
+                            [scan_name, "-".join([bids_key, file_bids_dict[bids_key]])])
                     else:
-                        scan_name = "-".join([bids_key, file_bids_dict[bids_key]])
+                        scan_name = "-".join([bids_key,
+                                              file_bids_dict[bids_key]])
 
             if scan_name:
                 scan_name = "_".join([scan_name, file_bids_dict["scantype"]])
@@ -363,20 +332,19 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
                     resource_name = 'anatomical_scan'
                 elif "bold" in file_bids_dict["scantype"]:
                     resource_name = 'functional_scan'
-                else:
-                    if debug:
-                        print("Do not know how to map {0} to a resource, skipping".format(file_path))
-                        continue
             else:
                 for bids_key in ["pipeline", "variant", "space", "res", "atlas", "roi"]:
                     if bids_key in file_bids_dict:
                         if resource_name:
-                            resource_name = "_".join([resource_name, "-".join([bids_key, file_bids_dict[bids_key]])])
+                            resource_name = "_".join(
+                                [resource_name, "-".join([bids_key, file_bids_dict[bids_key]])])
                         else:
-                            resource_name = "-".join([bids_key, file_bids_dict[bids_key]])
+                            resource_name = "-".join([bids_key,
+                                                      file_bids_dict[bids_key]])
 
                 if resource_name:
-                    resource_name = "_".join([resource_name, file_bids_dict["derivative"]])
+                    resource_name = "_".join(
+                        [resource_name, file_bids_dict["derivative"]])
                 else:
                     resource_name = file_bids_dict["derivative"]
 
@@ -386,10 +354,11 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
             # if not a derivative, populate the resource pool with information
             # from bids sidecar files, if they exist
             if "derivative" not in file_bids_dict and bids_configuration_dictionary:
-                file_params = bids_retrieve_parameters(bids_configuration_dictionary, file_bids_dict)
+                file_params = bids_retrieve_parameters(
+                    bids_configuration_dictionary, file_bids_dict)
                 if not file_params:
-                    print("Did not receive any parameters for {0}, is "
-                          "this a problem?".format(file_path))
+                    logger.warning("Did not receive any parameters for %s, is "
+                                   "this a problem?", file_path)
                 else:
                     resource_dict.update(file_params)
 
@@ -406,12 +375,13 @@ def bids_generate_qap_data_configuration(bids_dir, paths_list, configuration_dic
             if scan_name not in data_configuration[site][participant][session]:
                 data_configuration[site][participant][session][scan_name] = {}
 
-            data_configuration[site][participant][session][scan_name].update(resource_dict)
+            data_configuration[site][participant][session][scan_name].update(
+                resource_dict)
 
     return data_configuration
 
 
-def collect_bids_files_configs(bids_dir, aws_input_credentials=None, raise_error=True):
+def collect_bids_files_configs(bids_dir, aws_input_credentials=None):
     """
     collect all of the files of interest from the bids directory. returns a list of unprocessed niftis from the main
     bids directory and a list of preprocessed niftis from the derivatives directory along with a dictionary containing
@@ -419,8 +389,6 @@ def collect_bids_files_configs(bids_dir, aws_input_credentials=None, raise_error
 
     :param bids_dir: directory containing bids formatted data
     :param aws_input_credentials: aws credentials required to read data
-    :param raise_error: raise an exception if no bids resources are found in bids_dir, otherwise will
-        quietly return empty lists
     :return: raw_file_paths = list of paths to raw files
              derivative_file_paths = list of paths to derivatives
              parameter_dict = dictionary containing parameters for the various files
@@ -437,11 +405,12 @@ def collect_bids_files_configs(bids_dir, aws_input_credentials=None, raise_error
         prefix = bids_dir.replace(s3_prefix, '').lstrip('/')
 
         if aws_input_credentials and not os.path.isfile(aws_input_credentials):
-            raise IOError("Could not find aws input credentials ({0})".format(aws_input_credentials))
+            raise IOError("Could not find aws input credentials ({0})".format(
+                aws_input_credentials))
 
         bucket = fetch_creds.return_bucket(aws_input_credentials, bucket_name)
 
-        print("gathering files from S3 bucket {0} for {1}".format(bucket, prefix))
+        logger.info("Gathering files from S3 bucket %s for %s", bucket, prefix)
 
         for s3_obj in bucket.objects.filter(Prefix=prefix):
             # we only know how to handle T1w and BOLD files, for now
@@ -451,9 +420,9 @@ def collect_bids_files_configs(bids_dir, aws_input_credentials=None, raise_error
                         parameter_dict[s3_obj.key.replace(prefix, "").lstrip('/')] \
                             = json.loads(s3_obj.get()["Body"].read())
                     except Exception:
-                        print("Error retrieving {0}".format(s3_obj.key.replace(prefix, "")))
-                        raise
-                        
+                        raise IOError("Error retrieving {0}".format(
+                            s3_obj.key.replace(prefix, "")))
+
                 elif str(s3_obj.key).endswith("json") or str(s3_obj.key).endswith("nii") or \
                         str(s3_obj.key).endswith("nii.gz"):
 
@@ -479,19 +448,20 @@ def collect_bids_files_configs(bids_dir, aws_input_credentials=None, raise_error
                         elif f.endswith('json'):
                             file_contents = json.load(open(file_path, 'r'))
                             while isinstance(file_contents, list):
-                                print("file ({}) contents are in a list?".format(file_path))
+                                logger.warning(
+                                    "file \"%s\" contents are in a list?", file_path)
                                 file_contents = file_contents[0]
                             parameter_dict.update({os.path.join(root.replace(bids_dir, '').lstrip('/'), f):
                                                    file_contents})
-
-                        # don't know what other files are, so just drop then
+                        else:
+                            # don't know what other files are, so just drop then
+                            pass
 
     if not raw_file_paths and not parameter_dict and not derivative_file_paths:
-        if raise_error:
-            raise IOError("Didn't find any files in {}. Please verify that "
-                          "the path is typed correctly, that you have read "
-                          "access to the directory, and that it is not "
-                          "empty.".format(bids_dir))
+        raise IOError("Didn't find any files in {}. Please verify that "
+                        "the path is typed correctly, that you have read "
+                        "access to the directory, and that it is not "
+                        "empty.".format(bids_dir))
 
     return raw_file_paths, derivative_file_paths, parameter_dict
 
