@@ -13,12 +13,21 @@ RUN apt-get update && \
                        netpbm libpng-dev libfreetype6-dev libxml2-dev libxslt1-dev python-dev \
                        build-essential g++ libxft2 curl
 
-RUN curl https://afni.nimh.nih.gov/pub/dist/tgz/linux_openmp_64.tgz -o /tmp/linux_openmp_64.tgz && \
-    tar xzvf /tmp/linux_openmp_64.tgz -C /opt && mv /opt/linux_openmp_64 /opt/afni
+# install afni
+COPY required_afni_pkgs.txt /opt/required_afni_pkgs.txt
+RUN libs_path=/usr/lib/x86_64-linux-gnu && \
+    if [ -f $libs_path/libgsl.so.19 ]; then \
+           ln $libs_path/libgsl.so.19 $libs_path/libgsl.so.0; \
+    fi && \
+    mkdir -p /opt/afni && \
+    curl -s https://afni.nimh.nih.gov/pub/dist/tgz/linux_openmp_64.tgz -o /tmp/linux_openmp_64.tgz  && \
+    tar zxv -C /opt/afni --strip-components=1 -f /tmp/linux_openmp_64.tgz $(cat /opt/required_afni_pkgs.txt) && \
+    rm /tmp/linux_openmp_64.tgz
 
 # install miniconda
 RUN curl -s https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/Miniconda3-latest-Linux-x86_64.sh && \
-    bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /usr/local/bin/miniconda
+    bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /usr/local/bin/miniconda && \
+    rm /tmp/Miniconda3-latest-Linux-x86_64.sh 
     
 # install python requirements
 RUN conda install -y pip scipy ipython
