@@ -63,6 +63,12 @@ def main():
                             'six >=1.10.0', 'traits >=4.5.0',
                             'xhtml2pdf >=0.1a4', 'configparser >=3.5.0',
                             'numpy >=1.11.0', 'lockfile >=0.12'],
+
+          extras_require={
+              'dev': [
+                  'moto'
+              ]
+          }
           zip_safe=False)
 
 
