@@ -156,3 +156,46 @@ def test_create_anatomical_background_mask_failure():
         	anat_data)
 
     assert "must be a NumPy" in str(excinfo.value)
+
+
+@pytest.mark.quick
+def test_create_bundles():
+
+    from qap.qap_utils import create_bundles
+    
+    scans = {
+        'task-read': {},
+        'task-listen': {},
+        'rest': {},
+    }
+
+    sessions = {
+        'ses-0001': scans,
+        'ses-0002': scans,
+    }
+
+    subjects = {
+        'sub-0001': sessions,
+        'sub-0002': sessions,
+        'sub-0003': sessions,
+        'sub-0004': sessions,
+    }
+
+    sites = {
+        'NYU': subjects,
+        'CALTECH': subjects,
+    }
+
+    bundles = create_bundles(sites, 5)
+
+    keys = {
+        tranche_id: i
+        for i, bundle in enumerate(bundles)
+        for tranche_id, _ in bundle.items()
+    }
+
+    # Scans must be in the same bundle
+    for (site_1, sub_1, ses_1, _), bundle_1 in keys.items():
+        for (site_2, sub_2, ses_2, _), bundle_2 in keys.items():
+            if site_1 == site_2 and sub_1 == sub_2 and ses_1 == ses_2:
+                assert bundle_1 == bundle_2

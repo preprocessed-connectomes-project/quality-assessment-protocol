@@ -291,39 +291,40 @@ def check_config_settings(config, parameter):
     """
 
     if parameter not in config.keys():
-        err = "[!] The parameter '%s' is missing from your pipeline configuration .YML file.".format(parameter)
+        err = "[!] The parameter '{0}' is missing from your pipeline configuration .YML file.".format(parameter)
         raise_smart_exception(locals(), err)
 
 
-def generate_nipype_workflow_graphs(workflow, out_dir=None):
-    """Generate the Nipype workflow dependency graphs given the workflow
-    object.
-
-    TODO: Why are the contents of this function comment out?
-
-    :type workflow: Nipype workflow object
-    :param workflow: The connected workflow object.
-    :type out_dir: str
-    :param out_dir: (default: None) The directory where to write the
-                    dependency graph .dot and .png files to.
+def create_bundles(data_configuration_dict, bundle_size):
     """
 
-    if not out_dir:
-        pass
+    Create a list of participant "bundles".
 
+    :param data_configuration_dict: A nested dictionary session->participant->session->scan->{resource pool}
+    :param bundle_size: the number of sub-session-session combos (tranches) in a bundle
+
+    :return: A list of bundles - each bundle being a dictionary that is a starting resource pool for N
+    sub-session-session combos with bundle_size being set by the user
     """
-    workflow.write_graph(
-        dotfilename=op.join(config["output_directory"], \
-                            "".join([run_name, ".dot"])),
-        simple_form=False)
-    workflow.write_graph(
-        graph2use="orig",
-        dotfilename=op.join(config["output_directory"], \
-                            "".join([run_name, ".dot"])),
-        simple_form=False)
-    workflow.write_graph(
-        graph2use="hierarchical",
-        dotfilename=op.join(config["output_directory"], \
-                            "".join([run_name, ".dot"])),
-        simple_form=False)
-    """
+
+    # each tranche corresponds to a scanning session, a plank of
+    # the tranche corresponds to a scan collected during the
+    # session
+    bundles = [
+        {
+            (site, participant, session, scan): config
+            for scan, config in scans.iteritems()
+        }
+        for site, participants in data_configuration_dict.iteritems()
+        for participant, sessions in participants.iteritems()
+        for session, scans in sessions.iteritems()
+    ]
+
+    return [
+        {
+            tranche_plank_id: scan
+            for bundle in bundles[i::bundle_size]
+            for tranche_plank_id, scan in bundle.items()
+        }
+        for i in range(bundle_size)
+    ]

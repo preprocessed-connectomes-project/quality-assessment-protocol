@@ -6,6 +6,7 @@
 import argparse
 from qap import bids_utils
 from qap import qap_cfg
+from qap.qap_utils import create_bundles
 from qap.qap_pipeline import build_and_run_qap_pipeline
 import sys, traceback
 
@@ -26,65 +27,6 @@ def smart_exception(type, value, tb):
 
     print('Locals: {}'.format(tb.tb_frame.f_locals), file=sys.stderr)
     print('Globals: {}'.format(tb.tb_frame.f_globals), file=sys.stderr)
-
-
-def create_bundles(data_configuration_dict, bundle_size):
-    """
-
-    Create a list of participant "bundles".
-
-    :param data_configuration_dict: A nested dictionary session->participant->session->scan->{resource pool}
-    :param bundle_size: the number of sub-session-session combos (tranches) in a bundle
-
-    :return: A list of bundles - each bundle being a dictionary that is a starting resource pool for N
-    sub-session-session combos with bundle_size being set by the user
-    """
-
-    tranche_count = 0
-    bundles = []
-    new_bundle = {}
-
-    for site in data_configuration_dict.keys():
-        for participant in data_configuration_dict[site].keys():
-            for session in data_configuration_dict[site][participant].keys():
-
-                # each tranche corresponds to a scanning session, a plank of
-                # the tranche corresponds to a scan collected during the
-                # session
-                if tranche_count % bundle_size == 0:
-                    if new_bundle:
-                        bundles.append(new_bundle)
-                    new_bundle = {}
-
-                for scan in data_configuration_dict[site][participant][session].keys():
-                    tranche_plank_identifier = (site, participant, session, scan)
-
-                    if tranche_plank_identifier in new_bundle:
-                        print("WARNING: tranche {0}, {1}, {2}, {3} already "
-                              "found in bundle, overwriting".format(tranche_plank_identifier[0],
-                                                                    tranche_plank_identifier[1],
-                                                                    tranche_plank_identifier[2],
-                                                                    tranche_plank_identifier[3]))
-
-                    new_bundle[tranche_plank_identifier] = data_configuration_dict[site][participant][session][scan]
-
-                tranche_count += 1
-
-    # if there is a bundle still hanging around, add it to the list
-    if new_bundle:
-        bundles.append(new_bundle)
-
-    return bundles
-
-
-def write_bundles(bundles, bundle_filename):
-
-    import yaml
-    if not bundle_filename.endswith('yml'):
-        bundle_filename += '.yml'
-
-    with open(bundle_filename, 'w') as ofd:
-        yaml.dump(bundles, ofd, encoding='utf-8')
 
 
 def run_qap(pipeline_configuration, data_bundles, bundle_index=None):
@@ -537,8 +479,6 @@ def main():
         # prepare the bundles
         data_bundles = create_bundles(data_configuration_dict,
                                       pipeline_configuration["bundle_size"])
-        # data_bundle_filename = "qap-data-bundles-{}.yml".format(timestamp_string)
-        # write_bundles(data_bundles, data_bundle_filename)
 
         num_bundles = len(data_bundles)
         print("Created {} bundle(s)".format(num_bundles))
