@@ -70,15 +70,15 @@ def copy_directory_to_s3(from_path, to_path, cfg):
     bucket = fetch_creds.return_bucket(cfg["s3_write_credentials"], bucket_name)
 
     # And upload data
-    upl_files = []
+    upload_files = []
     for root, dirs, files in os.walk(from_path):
         if files:
-            upl_files.extend([os.path.join(root, fil) for fil in files])
+            upload_files.extend([os.path.join(root, fil) for fil in files])
 
     # Using INDI AWS utils
-    s3_upl_files = [ufile.replace(from_path, to_path) for ufile in upl_files]
+    s3_upl_files = [upload_file.replace(from_path, to_path) for upload_file in upload_files]
 
-    aws_utils.s3_upload(bucket, (upl_files, s3_upl_files))
+    aws_utils.s3_upload(bucket, (upload_files, s3_upl_files))
 
 
 def upl_qap_output(cfg_file):
@@ -108,12 +108,12 @@ def upl_qap_output(cfg_file):
     output_dir = cfg_dict['output_directory']
 
     # And upload data
-    upl_files = []
+    upload_files = []
     for root, dirs, files in os.walk(output_dir):
         if files:
-            upl_files.extend([os.path.join(root, fil) for fil in files])
+            upload_files.extend([os.path.join(root, fil) for fil in files])
 
     # Using INDI AWS utils
-    s3_upl_files = [ufile.replace(output_dir, bucket_out_prefix) for ufile in upl_files]
+    s3_upload_files = [upload_file.replace(output_dir, bucket_out_prefix) for upload_file in upload_files]
 
-    aws_utils.s3_upload(bucket, (upl_files, s3_upl_files))
+    aws_utils.s3_upload(bucket, (upload_files, s3_upload_files))

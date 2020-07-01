@@ -277,18 +277,20 @@ def calc_dse(functional_data_filename, mask_filename, debug=False):
     # consistent with the way that fslmaths works
     functional_voxel_lower_quartiles = np.percentile(functional_data, 25, axis=1, interpolation="higher")
     functional_voxel_upper_quartiles = np.percentile(functional_data, 75, axis=1, interpolation="higher")
-    functional_robust_stdev = (functional_voxel_upper_quartiles - functional_voxel_lower_quartiles) / 1.349
+    functional_robust_standard_deviation = (functional_voxel_upper_quartiles - functional_voxel_lower_quartiles) / 1.349
     if debug is True:
-        dvars_out_dictionary['DSE_DBG_Mu0'] = functional_robust_stdev.mean()
+        dvars_out_dictionary['DSE_DBG_Mu0'] = functional_robust_standard_deviation.mean()
 
     # Calculate AR1 coefficients
     functional_ar1_coefficients = np.apply_along_axis(lambda x: ar_nitime(x, center=True), 1, functional_data)
 
     # Calculate standard deviation of temporal derivative
-    functional_robust_stdev_predicted = np.sqrt(2 * (1 - functional_ar1_coefficients)) * functional_robust_stdev
+    functional_robust_standard_deviation_predicted = np.sqrt(2 * (1 - functional_ar1_coefficients)) * \
+        functional_robust_standard_deviation
 
     # Transform
-    functional_relative_dvars = np.sqrt(functional_dvars_square_timeseries) / functional_robust_stdev_predicted.mean()
+    functional_relative_dvars = np.sqrt(functional_dvars_square_timeseries) / \
+        functional_robust_standard_deviation_predicted.mean()
     dvars_out_dictionary['DSE_Relative_DVARS'] = functional_relative_dvars
 
     return dvars_out_dictionary

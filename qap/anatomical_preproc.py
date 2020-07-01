@@ -12,7 +12,7 @@ afni_preprocess = afni.preprocess
 
 
 def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
-    """Build a Nipype workflow to deoblique and reorient an anatomical scan
+    """Build a Nipype workflow to de-oblique and reorient an anatomical scan
     from a NIFTI file.
 
     - This is a seminal workflow that can only take an input directly from

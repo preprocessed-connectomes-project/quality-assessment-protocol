@@ -1,33 +1,28 @@
-FROM ubuntu:trusty
-MAINTAINER John Pellman <john.pellman@childmind.org>
+FROM afni/afni:latest
 
-ENV AFNIPATH /opt/afni
-ENV PATH /code:/opt/afni:/usr/local/bin/miniconda/bin:${PATH}
+MAINTAINER Cameron Craddock <cameron.craddock@gmail.com>
 
-# install dependencies
-RUN apt-get update && \
-    apt-get install -y pkg-config graphviz gsl-bin \
-                       libexpat1-dev libgiftiio-dev libglu1-mesa libglu1-mesa-dev \
-                       libgsl0-dev libjpeg-progs libxml2 libxml2-dev libxext-dev \
-                       libxpm-dev libxp6 libxp-dev mesa-common-dev mesa-utils \
-                       netpbm libpng-dev libfreetype6-dev libxml2-dev libxslt1-dev python-dev \
-                       build-essential g++ libxft2 curl
+ENV PATH /code:/usr/local/bin/miniconda/bin:${PATH}
 
-RUN curl https://afni.nimh.nih.gov/pub/dist/tgz/linux_openmp_64.tgz -o /tmp/linux_openmp_64.tgz && \
-    tar xzvf /tmp/linux_openmp_64.tgz -C /opt && mv /opt/linux_openmp_64 /opt/afni
+COPY . /code
+
+# install system packages
+RUN apt-get update -y && \
+    apt-get install -y xvfb
 
 # install miniconda
 RUN curl -s https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/Miniconda3-latest-Linux-x86_64.sh && \
     bash /tmp/Miniconda3-latest-Linux-x86_64.sh -b -p /usr/local/bin/miniconda
-    
+
 # install python requirements
 RUN conda install -y pip scipy ipython
-RUN pip install prov==1.5.0 networkx==1.11 nipype==1.1.1 python-dateutil==2.6.1 nibabel nitime pyyaml \
-    pandas seaborn pyPdf2 xhtml2pdf indi-tools configparser
-    
-COPY . /code
 
-RUN cd /code && \
+# install requirements and qap
+RUN which pip && \
+    cd /code && \
+    pip install -r /code/requirements.txt && \
     pip install -e .
+
+WORKDIR "/work"
 
 ENTRYPOINT [ "qap_run.py" ]

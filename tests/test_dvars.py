@@ -9,15 +9,12 @@ class TestStandardizedDVARS(unittest.TestCase):
         import pkg_resources as p
 
         self.func_reorient = \
-            p.resource_filename("qap", os.path.join(test_sub_dir,
-                                                    "func_reorient.nii.gz"))
+            p.resource_filename("tests", os.path.join(test_sub_dir, "func_reorient.nii.gz"))
         self.func_mask = \
-            p.resource_filename("qap",
-                                os.path.join(test_sub_dir,
-                                             "fsl_bet_mask.nii.gz"))
+            p.resource_filename("tests", os.path.join(test_sub_dir, "fsl_bet_mask.nii.gz"))
 
-        self.rdvars_reference = p.resource_filename("qap", os.path.join(test_sub_dir, "DVARSout_nomask_noz"))
-        self.dse_reference = p.resource_filename("qap", os.path.join(test_sub_dir, "dvars_matlab_result.json"))
+        self.rdvars_reference = p.resource_filename("tests", os.path.join(test_sub_dir, "DVARSout_nomask_noz"))
+        self.dse_reference = p.resource_filename("tests", os.path.join(test_sub_dir, "dvars_matlab_result.json"))
 
     def test_calc_dvars(self):
         import json
