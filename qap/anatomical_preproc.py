@@ -8,7 +8,7 @@ def anatomical_reorient_workflow(workflow, resource_pool, config, name="_"):
     - This is a seminal workflow that can only take an input directly from
       disk (i.e. no Nipype workflow connections/pointers, and this is where
       the pipeline will actually begin). For the sake of building the
-      pipeine in reverse, if this workflow is called when there is no input
+      pipeline in reverse, if this workflow is called when there is no input
       file available, this function will return the unmodified workflow and
       resource pool directly back.
     - In conjunction with the other workflow-building functions, if this

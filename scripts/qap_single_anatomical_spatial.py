@@ -44,4 +44,3 @@ qw.run_everything_qap_anatomical_spatial(args.anatomical_scan,
     	                                 args.series_id,
     	                                 args.site_name,
     	                                 args.output_directory)
-

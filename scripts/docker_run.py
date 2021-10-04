@@ -58,7 +58,7 @@ print(args)
 c = cpac_utils.Configuration(yaml.load(open(\
     os.path.realpath(args.pipeline_file), 'r')))
 
-# set the parameters using the command line arguements
+# set the parameters using the command line arguments
 
 # we will need to check that the directories exist, and
 # make them if they do not

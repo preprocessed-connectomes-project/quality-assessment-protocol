@@ -25,7 +25,7 @@ def check_datatype(background):
     """Process the image data to only include non-negative integer values.
 
     :type background: NumPy array
-    :param background: The voxel values of teh background (outside of the head
+    :param background: The voxel values of the background (outside of the head
                        ) of the anatomical image.
     :rtype: NumPy array
     :return: The input array with floats converted to integers and
@@ -435,5 +435,3 @@ def ghost_all(epi_data, mask_data):
     gsrs = [ghost_direction(epi_data, mask_data, d) for d in directions]
     
     return tuple(gsrs + [None])
-
-

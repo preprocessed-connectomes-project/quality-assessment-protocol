@@ -255,4 +255,3 @@ With the above commands, the outputs will be stored in a directory named `qap_ou
 [^12]: Shehzad, Z., Giavasis, S., Li, Q., Benhajali, Y., Yan, C., Yang, Z., Milham, M., Bellec, P., Craddock, R.C., 2015. The Preprocessed Connectomes Project Quality Assessment Protocol - a Resource for Measuring the Quality of Mri Data. Front. Neurosci. 9. 
 
 [^13]: Yan CG, Cheung B, Kelly C, Colcombe S, Craddock RC, Di Martino A, Li Q, Zuo XN, Castellanos FX, Milham MP (2013). A comprehensive assessment of regional variation in the impact of head micromovements on functional connectomics. Neuroimage. 76:183-201.
-
