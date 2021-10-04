@@ -85,7 +85,7 @@ def bids_retrieve_params(bids_config_dict, f_dict, dbg=False):
       using the bids_parse_configs function
     :param f_dict: Dictionary built from the name of a file in the BIDS
       format. This is built using the bids_decode_fname by splitting on
-      "-" and "_" delimeters
+      "-" and "_" delimiters
     :param dbg: boolean flag that indicates whether or not debug statements
       should be printed, defaults to "False"
     :return: returns a dictionary that contains the BIDS parameters

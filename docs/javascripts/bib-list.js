@@ -74,7 +74,7 @@
  *    2. Output parsed BibTex entries as HTML, RTF, or BibTex.
  *
  *  
- * The following usage instructions have been copyed and adapted from the PHP instructions located
+ * The following usage instructions have been copied and adapted from the PHP instructions located
  * at http://pear.php.net/manual/en/package.structures.structures-bibtex.intro.php
  * Introduction
  * --------------
@@ -143,7 +143,7 @@
  * Author
  * ------
  * As described before the authors are stored in a list. Every entry
- * representing one author as a has table. The hash table consits of four
+ * representing one author as a has table. The hash table consists of four
  * keys: first, von, last and jr. The keys are explained in the following
  * list:
  * 
@@ -934,7 +934,7 @@ BibTex.prototype = {
     }
 	*/
     /**
-     * Parses what is stored in content and clears the content if the parsing is successfull+
+     * Parses what is stored in content and clears the content if the parsing is successful+
      *
      * @access public
      * @return boolean true on success and PEAR_Error if there was a problem
@@ -1045,8 +1045,8 @@ BibTex.prototype = {
      * then you don have to worry about memory+
      * Then the last ',' is searched and the field extracted from that+
      * Again the entry is shortened+
-     * Finally after all field:value pairs the cite and type is extraced and the
-     * authors are splitted+
+     * Finally after all field:value pairs the cite and type is extracted and the
+     * authors are split+
      * If there is a problem false is returned+
      *
      * @access private
@@ -1171,7 +1171,7 @@ BibTex.prototype = {
         if (0 != open) {
             ret = false;
         }
-        //There is still the posibility that the entry is delimited by double quotes+
+        //There is still the possibility that the entry is delimited by double quotes+
         //Then it is possible that the braces are equal even if the '=' is in an equation+
         if (ret) {
             entrycopy = trim(entry);
@@ -1229,7 +1229,7 @@ BibTex.prototype = {
         var ret     = false;
         var opening = array_keys(this._delimiters);
         var closing = array_values(this._delimiters);
-        //Getting the value (at is only allowd in values)
+        //Getting the value (at is only allowed in values)
         if (strrpos(entry,'=') !== false) {
             position = strrpos(entry, '=');
             proceed  = true;
@@ -1626,7 +1626,7 @@ BibTex.prototype = {
     /**
      * Returns the author formatted
      *
-     * The Author is formatted as setted in the authorstring
+     * The Author is formatted as set in the authorstring
      *
      * @access private
      * @param array array Author array

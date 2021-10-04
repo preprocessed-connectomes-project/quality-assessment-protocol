@@ -74,7 +74,7 @@
  *    2. Output parsed BibTex entries as HTML, RTF, or BibTex.
  *
  *  
- * The following usage instructions have been copyed and adapted from the PHP instructions located
+ * The following usage instructions have been copied and adapted from the PHP instructions located
  * at http://pear.php.net/manual/en/package.structures.structures-bibtex.intro.php
  * Introduction
  * --------------
@@ -143,7 +143,7 @@
  * Author
  * ------
  * As described before the authors are stored in a list. Every entry
- * representing one author as a has table. The hash table consits of four
+ * representing one author as a has table. The hash table consists of four
  * keys: first, von, last and jr. The keys are explained in the following
  * list:
  * 
