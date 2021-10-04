@@ -40,5 +40,3 @@ qc_func         <- rename(qc_func, c(SITE_ID="site", DX_GROUP="dx", DSM_IV_TR="d
 #+ save
 write.csv(qc_anat, file="../abide_anat.csv")
 write.csv(qc_func, file="../abide_func.csv")
-
-

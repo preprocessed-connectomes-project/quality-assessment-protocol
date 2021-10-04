@@ -56,5 +56,3 @@ upload_to_s3: False
 
 # bucket output prefix (where to push output files to S3, if applicable)
 bucket_out_prefix: bucket/prefix/output/destination
-
-

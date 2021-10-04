@@ -435,5 +435,3 @@ def ghost_all(epi_data, mask_data):
     gsrs = [ghost_direction(epi_data, mask_data, d) for d in directions]
     
     return tuple(gsrs + [None])
-
-

@@ -950,10 +950,3 @@ def parse_logs(bundle_log_dir):
 
     print avg_scans
     print avg_mins
-
-
-
-
-
-
-
